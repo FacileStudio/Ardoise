@@ -4,7 +4,12 @@ Clean, minimal tRPC-based monorepo with Hono backend, SvelteKit frontends, and E
 
 ## Architecture Overview
 
-End-to-end type-safe architecture with tRPC connecting all apps through a unified API layer.
+This project is structured as a monorepo, leveraging Turborepo for efficient development and build processes. It features an end-to-end type-safe architecture, with tRPC connecting various applications through a unified API layer.
+
+### Monorepo Structure
+
+-   **`apps/`**: Contains all independent applications within the monorepo (e.g., `frontend`, `backend`, `backoffice`, `mobile`). Each app is a distinct deployable unit.
+-   **`packages/`**: Houses shared libraries, utilities, configurations, and core functionalities (`database`, `trpc`, `validators`, `types`, `tsconfig`) that are consumed by the applications. This promotes code reuse and consistency across the monorepo.
 
 ### Apps
 
