@@ -1,0 +1,15 @@
+{
+  "extends": "@repo/tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["bun-types"],
+    "baseUrl": ".",
+    "paths": {
+      "@/lib": ["./src/lib"],
+      "@/lib/*": ["./src/lib/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

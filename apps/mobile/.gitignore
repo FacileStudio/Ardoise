@@ -1,0 +1,5 @@
+.expo
+dist
+.env
+.env.local
+*.log
