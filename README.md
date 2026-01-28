@@ -114,15 +114,6 @@ cd apps/mobile && bun run dev       # Expo app
 - `contact.list` - List all contacts (protected, requires JWT)
 - `auth.login` - Admin login with password
 
-## Admin Credentials
-
-**Default Password**: `admin-super-secret-password-12345`
-
-Change in `.env`:
-```bash
-ADMIN_PASSWORD=your-secure-password
-```
-
 ## Database
 
 Using Prisma with SQLite for simplicity. Located at `packages/database/prisma/dev.db`.
