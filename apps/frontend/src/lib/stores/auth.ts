@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
+import { authClient } from '../auth-client';
 
 interface User {
   id: string;
@@ -11,28 +12,44 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  token: string | null;
+  session: any | null;
   loading: boolean;
 }
 
 const initialState: AuthState = {
   user: null,
-  token: browser ? localStorage.getItem('token') : null,
-  loading: false,
+  session: null,
+  loading: true,
 };
 
 function createAuthStore() {
   const { subscribe, set, update } = writable<AuthState>(initialState);
 
+  if (browser) {
+    authClient.getSession().then((session) => {
+      if (session) {
+        update(state => ({
+          ...state,
+          session: session.session,
+          user: session.user as User,
+          loading: false
+        }));
+      } else {
+        update(state => ({ ...state, loading: false }));
+      }
+    });
+  }
+
   return {
     subscribe,
-    setAuth: (token: string, user: User) => {
-      if (browser) localStorage.setItem('token', token);
-      update(state => ({ ...state, token, user }));
+    setAuth: (session: any, user: User) => {
+      update(state => ({ ...state, session, user, loading: false }));
     },
-    logout: () => {
-      if (browser) localStorage.removeItem('token');
-      set({ user: null, token: null, loading: false });
+    logout: async () => {
+      if (browser) {
+        await authClient.signOut();
+      }
+      set({ user: null, session: null, loading: false });
     },
     setLoading: (loading: boolean) => {
       update(state => ({ ...state, loading }));
@@ -41,4 +58,3 @@ function createAuthStore() {
 }
 
 export const auth = createAuthStore();
-export const getToken = () => browser ? localStorage.getItem('token') : null;

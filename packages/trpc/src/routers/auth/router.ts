@@ -4,11 +4,11 @@ import { authService } from './service';
 
 export const authRouter = router({
   login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
-    return authService.login(ctx.db, input);
+    return authService.login(input);
   }),
 
   register: publicProcedure.input(registerSchema).mutation(async ({ input, ctx }) => {
-    return authService.register(ctx.db, input);
+    return authService.register(input);
   }),
 
   me: protectedProcedure.query(async ({ ctx }) => {

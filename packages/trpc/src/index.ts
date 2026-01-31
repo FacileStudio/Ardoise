@@ -8,6 +8,8 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-export { createContext } from './context';
+export { createContext, type Context } from './context';
 export { verifyToken, generateToken, hashPassword, comparePassword } from './lib/jwt';
 export type { JwtPayload } from './lib/jwt';
+export { auth } from './lib/auth';
+export type { Auth } from './lib/auth';

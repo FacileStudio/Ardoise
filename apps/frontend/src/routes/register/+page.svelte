@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { trpc } from '$lib/trpc';
+  import { authClient } from '$lib/auth-client';
   import { auth } from '$lib/stores/auth';
   import { goto } from '$app/navigation';
 
@@ -14,11 +14,21 @@
     loading = true;
     error = '';
     try {
-      const result = await trpc.auth.register.mutate({ email, password, firstName, lastName });
-      auth.setAuth(result.token, result.user);
-      goto('/profile');
+      const result = await authClient.signUp.email({
+        email,
+        password,
+        name: `${firstName} ${lastName}`,
+        firstName,
+        lastName,
+      });
+      if (result.data) {
+        auth.setAuth(result.data.session, result.data.user);
+        goto('/profile');
+      } else {
+        error = result.error?.message || 'Registration failed. Please try again.';
+      }
     } catch (err: any) {
-      error = err.shape?.message || 'Registration failed. Please try again.';
+      error = err.message || 'Registration failed. Please try again.';
     }
     loading = false;
   }

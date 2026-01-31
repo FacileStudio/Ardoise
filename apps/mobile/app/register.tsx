@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { trpc } from '@/lib/trpc';
+import { authClient } from '@/lib/auth-client';
 import { useAuth } from '@/lib/auth-context';
 
 export default function Register() {
@@ -19,11 +19,21 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const result = await trpc.auth.register.mutate({ email, password, firstName, lastName });
-      await setAuth(result.token, result.user);
-      router.replace('/profile');
+      const result = await authClient.signUp.email({
+        email,
+        password,
+        name: `${firstName} ${lastName}`,
+        firstName,
+        lastName,
+      });
+      if (result.data) {
+        setAuth(result.data.session, result.data.user);
+        router.replace('/profile');
+      } else {
+        setError(result.error?.message || 'Registration failed');
+      }
     } catch (err: any) {
-      setError(err.shape?.message || 'Registration failed');
+      setError(err.message || 'Registration failed');
     }
     setLoading(false);
   };

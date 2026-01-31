@@ -1,0 +1,10 @@
+model Contact {
+  id          String   @id @default(uuid())
+  hashedEmail String   @unique
+
+  /// Stores encrypted firstName and lastName.
+  /// The decrypted data conforms to the ContactEncryptedData type.
+  encryptedData     String @default("{}")
+
+  createdAt   DateTime @default(now())
+}

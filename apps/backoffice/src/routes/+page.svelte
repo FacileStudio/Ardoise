@@ -1,13 +1,12 @@
 <script lang="ts">
   import { trpc } from '$lib/trpc';
   import { onMount } from 'svelte';
-  import type { Contact } from '@repo/types';
   import 'iconify-icon';
 
   let isAuthenticated = false;
   let email = '';
   let password = '';
-  let contacts: Contact[] = [];
+  let contacts= [];
   let loading = false;
   let error = '';
 
@@ -24,7 +23,7 @@
     error = '';
     try {
       const result = await trpc.auth.login.mutate({ email, password });
-      localStorage.setItem('token', result.token);
+      localStorage.setItem('token', result.session.token);
       isAuthenticated = true;
       await loadContacts();
     } catch (err) {
@@ -44,9 +43,8 @@
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this contact?')) {
+    if (!confirm('Are you sure you want to delete this contact?'))
       return;
-    }
     try {
       await trpc.contact.delete.mutate({ id });
       await loadContacts();

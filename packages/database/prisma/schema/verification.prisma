@@ -1,0 +1,10 @@
+model Verification {
+  id         String   @id
+  hashedIdentifier String
+  hashedValue      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([hashedIdentifier, hashedValue])
+}

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authClient } from './auth-client';
 
 interface User {
   id: string;
@@ -11,9 +11,9 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  session: any | null;
   loading: boolean;
-  setAuth: (token: string, user: User) => Promise<void>;
+  setAuth: (session: any, user: User) => void;
   logout: () => Promise<void>;
 }
 
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,8 +30,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadAuth = async () => {
     try {
-      const storedToken = await AsyncStorage.getItem('token');
-      setToken(storedToken);
+      const sessionData = await authClient.getSession();
+      if (sessionData) {
+        setSession(sessionData.session);
+        setUser(sessionData.user as User);
+      }
     } catch (error) {
       console.error('Failed to load auth:', error);
     } finally {
@@ -39,20 +42,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setAuth = async (newToken: string, newUser: User) => {
-    try {
-      await AsyncStorage.setItem('token', newToken);
-      setToken(newToken);
-      setUser(newUser);
-    } catch (error) {
-      console.error('Failed to save auth:', error);
-    }
+  const setAuthHandler = (newSession: any, newUser: User) => {
+    setSession(newSession);
+    setUser(newUser);
   };
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('token');
-      setToken(null);
+      await authClient.signOut();
+      setSession(null);
       setUser(null);
     } catch (error) {
       console.error('Failed to logout:', error);
@@ -60,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, setAuth, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, setAuth: setAuthHandler, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -72,12 +70,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
-}
-
-export async function getToken() {
-  try {
-    return await AsyncStorage.getItem('token');
-  } catch {
-    return null;
-  }
 }

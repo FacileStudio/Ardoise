@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { trpc } from '@/lib/trpc';
+import { authClient } from '@/lib/auth-client';
 import { useAuth } from '@/lib/auth-context';
 
 export default function Login() {
@@ -17,11 +17,15 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      const result = await trpc.auth.login.mutate({ email, password });
-      await setAuth(result.token, result.user);
-      router.replace('/profile');
+      const result = await authClient.signIn.email({ email, password });
+      if (result.data) {
+        setAuth(result.data.session, result.data.user);
+        router.replace('/profile');
+      } else {
+        setError(result.error?.message || 'Login failed');
+      }
     } catch (err: any) {
-      setError(err.shape?.message || 'Login failed');
+      setError(err.message || 'Login failed');
     }
     setLoading(false);
   };

@@ -1,101 +1,84 @@
 import { TRPCError } from '@trpc/server';
-import type { PrismaClient } from '@repo/database';
-import { comparePassword, generateToken, hashPassword } from '../../lib/jwt';
+import { type PrismaClient } from '@repo/database';
+import { type User, type UserEncryptedData, PrismaUser } from '@repo/types';
+import { auth } from '../../lib/auth';
 import type { LoginInput, RegisterInput } from '@repo/validators';
+import crypto from '@repo/crypto';
 
 export const authService = {
-  login: async (db: PrismaClient, input: LoginInput) => {
-    const user = await db.user.findUnique({
-      where: { email: input.email },
-    });
+  login: async (input: LoginInput) => {
+    try {
+      const { token, user }: { token: string; user: PrismaUser } = await auth.api.signInEmail({
+        body: {
+          email: input.email,
+          password: input.password,
+        },
+      });
 
-    if (!user) {
+      if (!token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid credentials' });
+
+      if (!user || !user.isActive)
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Account is deactivated' });
+
+      return {
+        session: { token },
+        user: {
+          ...user,
+          data: crypto.object.decrypt<UserEncryptedData>(user.encryptedData),
+        } as User,
+      };
+    } catch (error) {
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid credentials' });
     }
-
-    if (!user.isActive) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Account is deactivated' });
-    }
-
-    const isValidPassword = await comparePassword(input.password, user.password);
-    if (!isValidPassword) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid credentials' });
-    }
-
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    return {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-    };
   },
 
-  register: async (db: PrismaClient, input: RegisterInput) => {
-    const existingUser = await db.user.findUnique({
-      where: { email: input.email },
-    });
+  register: async (input: RegisterInput) => {
+    try {
+      const hashedPassword = await crypto.hash.heavy(input.password);
+      const { token, user }: { token: string | null; user: PrismaUser } =
+        await auth.api.signUpEmail({
+          body: {
+            email: input.email,
+            name: input.email,
+            password: input.password,
+            isActive: true,
+            role: 'user',
+            hashedEmail: crypto.hash.light(input.email),
+            hashedPassword: hashedPassword,
+            encryptedData: crypto.object.encrypt<UserEncryptedData>({
+              email: input.email,
+              username: input.username,
+              firstName: input.firstName,
+              lastName: input.lastName,
+            }),
+          },
+        });
 
-    if (existingUser) {
-      throw new TRPCError({ code: 'CONFLICT', message: 'Email already exists' });
+      if (!token || !user)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Registration failed' });
+
+      return {
+        session: { token },
+        user: {
+          ...user,
+          data: crypto.object.decrypt<UserEncryptedData>(user.encryptedData),
+        } as User,
+      };
+    } catch (error) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Registration failed' });
     }
-
-    const hashedPassword = await hashPassword(input.password);
-
-    const user = await db.user.create({
-      data: {
-        email: input.email,
-        password: hashedPassword,
-        firstName: input.firstName,
-        lastName: input.lastName,
-      },
-    });
-
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    return {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-    };
   },
 
   getProfile: async (db: PrismaClient, userId: string) => {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
     });
 
-    if (!user) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
-    }
+    if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
-    return user;
+    return {
+      ...user,
+      data: crypto.object.decrypt<UserEncryptedData>(user.encryptedData),
+    } as User;
   },
 };

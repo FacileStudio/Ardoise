@@ -1,28 +1,28 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const emailValidator = z
   .string()
-  .min(1, "Email is required")
-  .email("Please enter a valid email address");
+  .min(1, 'Email is required')
+  .email('Please enter a valid email address');
 
-export const passwordValidator = z
-  .string()
-  .min(6, "Password must be at least 6 characters");
+export const passwordValidator = z.string().min(6, 'Password must be at least 6 characters');
 
 export const nameValidator = z
   .string()
-  .min(1, "This field is required")
-  .max(50, "Name must be less than 50 characters");
+  .min(1, 'This field is required')
+  .max(50, 'Name must be less than 50 characters');
 
 export const userSchema = z.object({
   email: emailValidator,
-  name: nameValidator,
   password: passwordValidator,
+  firstName: nameValidator,
+  lastName: nameValidator,
+  username: nameValidator,
 });
 
 export const loginSchema = z.object({
   email: emailValidator,
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, 'Password is required'),
 });
 
 export const registerSchema = z.object({
@@ -30,6 +30,7 @@ export const registerSchema = z.object({
   password: passwordValidator,
   firstName: nameValidator,
   lastName: nameValidator,
+  username: nameValidator,
 });
 
 export const contactSchema = z.object({
@@ -44,7 +45,7 @@ export const paginationSchema = z.object({
 });
 
 export const adminLoginSchema = z.object({
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, 'Password is required'),
 });
 
 export type UserInput = z.infer<typeof userSchema>;
