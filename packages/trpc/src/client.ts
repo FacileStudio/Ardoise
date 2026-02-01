@@ -6,18 +6,25 @@ export const createClient = (url: string, getToken?: () => string | null) =>
     links: [
       httpBatchLink({
         url,
-        fetch: (url, options) => {
+        async headers() {
+          const headers: Record<string, string> = {
+            'x-trpc-source': 'svelte',
+          };
+
+          if (getToken) {
+            const token = getToken();
+            if (token) {
+              headers.Authorization = `Bearer ${token}`;
+            }
+          }
+          return headers;
+        },
+        fetch(url, options) {
           return fetch(url, {
             ...options,
             credentials: 'include',
           });
         },
-        headers: getToken
-          ? () => {
-              const token = getToken();
-              return token ? { Authorization: `Bearer ${token}` } : {};
-            }
-          : undefined,
       }),
     ],
   });

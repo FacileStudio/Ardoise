@@ -17,9 +17,6 @@
 ## Encryption
 - [ ] Chiffrer les données à nouveau
 
-## Logs
-- [ ] Log avec le webhook discord quand on a nouvel utilisateur premium
-
 ## Backoffice
 - [ ] Modération des utilisateurs
 
@@ -29,4 +26,7 @@
     pour fonctionner pour les avatars et partout ailleur si besoin
 
 ## Realtime
-- Messages realtime
+- [ ] Messages realtime
+
+## Logs
+- [ ] Log avec le webhook discord quand on a nouvel utilisateur premium

@@ -8,8 +8,13 @@ model User {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
+
+  messages      Message[]
+  rooms         RoomParticipant[]
+
   sessions       Session[]
   accounts       Account[]
+
   subscription   Subscription?
   paymentHistory PaymentHistory[]
 

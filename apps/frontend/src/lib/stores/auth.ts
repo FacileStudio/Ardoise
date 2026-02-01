@@ -16,7 +16,7 @@ function createAuthStore() {
         authStore.update((state) => ({
           ...state,
           session: session.data?.session,
-          user: session.data?.user,
+          user: session.data?.user as User,
           loading: false,
         }));
       } else {

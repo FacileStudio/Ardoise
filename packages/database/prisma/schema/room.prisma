@@ -1,0 +1,23 @@
+model Room {
+  id          String            @id @default(cuid())
+  name        String?           // Nom pour les groupes, null pour les MP
+  isGroup     Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  messages     Message[]
+  participants RoomParticipant[]
+}
+
+// Table pivot pour les membres d'une room
+model RoomParticipant {
+  id        String   @id @default(cuid())
+  userId    String
+  roomId    String
+  joinedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId]) // Empêche les doublons dans une room
+}

@@ -26,10 +26,7 @@ export const auth = betterAuth({
       },
     },
   },
-  secret:
-    process.env.BETTER_AUTH_SECRET ||
-    process.env.JWT_SECRET ||
-    'your-super-secret-change-in-production',
+  secret: process.env.BETTER_AUTH_SECRET || 'your-super-secret-change-in-production',
   trustedOrigins: [
     process.env.TRUSTED_ORIGINS || 'http://localhost:3000',
     'http://localhost:3002',

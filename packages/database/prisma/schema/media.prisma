@@ -1,15 +1,18 @@
 model Media {
-  id        String   @id @default(uuid())
-  url       String
-  key       String
-  mimeType  String
-  size      Int
+    id        String   @id @default(uuid())
+        url       String
+        key       String  @unique
+        mimeType  String
+        size      Int
 
-  avatarUser    User?   @relation("UserAvatar", fields: [avatarUserId], references: [id])
-  avatarUserId  String? @unique
+        avatarUser    User?   @relation("UserAvatar", fields: [avatarUserId], references: [id])
+        avatarUserId  String? @unique
 
-  coverUser     User?   @relation("UserCover", fields: [coverUserId], references: [id])
-  coverUserId   String? @unique
+        coverUser     User?   @relation("UserCover", fields: [coverUserId], references: [id])
+        coverUserId   String? @unique
 
-  createdAt DateTime @default(now())
+        messageId    String?
+        message      Message? @relation("MessageAttachments", fields: [messageId], references: [id])
+
+        createdAt DateTime @default(now())
 }
