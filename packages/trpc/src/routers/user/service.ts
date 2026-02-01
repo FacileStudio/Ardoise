@@ -5,9 +5,18 @@ export const userService = {
   getProfile: async (db: PrismaClient, userId: string) => {
     const user = await db.user.findUnique({
       where: { id: userId },
+      include: {
+        avatar: true,
+        coverImage: true,
+      },
     });
 
-    if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+    if (!user) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'User not found',
+      });
+    }
 
     return user;
   },

@@ -1,14 +1,18 @@
 model User {
-    id            String    @id @default(uuid())
-        email         String    @unique
-        name          String
-        emailVerified Boolean   @default(false)
-        role          String    @default("user")
-        isPremium              Boolean               @default(false)
-        createdAt     DateTime  @default(now())
-        updatedAt     DateTime  @updatedAt
-        sessions      Session[]
-        accounts      Account[]
-        subscription  Subscription?
-        paymentHistory PaymentHistory[]
+  id             String           @id @default(uuid())
+  email          String           @unique
+  name           String
+  emailVerified  Boolean          @default(false)
+  role           String           @default("user")
+  isPremium      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  sessions       Session[]
+  accounts       Account[]
+  subscription   Subscription?
+  paymentHistory PaymentHistory[]
+
+  avatar         Media?           @relation("UserAvatar")
+  coverImage     Media?           @relation("UserCover")
 }

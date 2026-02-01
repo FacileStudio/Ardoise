@@ -1,0 +1,15 @@
+model Media {
+  id        String   @id @default(uuid())
+  url       String
+  key       String
+  mimeType  String
+  size      Int
+
+  avatarUser    User?   @relation("UserAvatar", fields: [avatarUserId], references: [id])
+  avatarUserId  String? @unique
+
+  coverUser     User?   @relation("UserCover", fields: [coverUserId], references: [id])
+  coverUserId   String? @unique
+
+  createdAt DateTime @default(now())
+}

@@ -27,3 +27,5 @@ export const stripeRouter = router({
     return stripeService.syncSubscription(ctx.db, ctx.user.id);
   }),
 });
+
+export default stripeRouter;

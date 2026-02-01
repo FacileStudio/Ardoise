@@ -2,6 +2,7 @@ import { browser } from '$app/environment';
 import { authClient } from '../auth-client';
 import { type AuthState, type User } from '@repo/types';
 import storage from '$lib/storage';
+import { goto } from '$app/navigation';
 
 function createAuthStore() {
   const authStore = storage<AuthState>('events', {
@@ -32,6 +33,7 @@ function createAuthStore() {
     logout: async () => {
       if (browser) {
         await authClient.signOut();
+        goto('/');
       }
       authStore.set({ user: null, session: null, loading: false });
     },
