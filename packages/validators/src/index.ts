@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  stripePriceIdValidator,
+  stripeCustomerIdValidator,
+  stripeSubscriptionIdValidator,
+  createCheckoutSessionSchema,
+  type CreateCheckoutSessionInput,
+} from './stripe';
 
 export const emailValidator = z
   .string()
@@ -54,3 +61,12 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type ContactInput = z.infer<typeof contactSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
+
+// Export Stripe validators and types
+export {
+  stripePriceIdValidator,
+  stripeCustomerIdValidator,
+  stripeSubscriptionIdValidator,
+  createCheckoutSessionSchema,
+  CreateCheckoutSessionInput,
+};

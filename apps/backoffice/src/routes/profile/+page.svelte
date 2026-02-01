@@ -54,32 +54,27 @@
       <div class="bg-white rounded-lg shadow p-6 space-y-6">
         <div class="grid md:grid-cols-2 gap-4">
           <div>
-            <label class="text-sm font-semibold text-gray-600">First Name</label>
+            <div class="text-sm font-semibold text-gray-600">First Name</div>
             <p class="text-lg text-gray-900">{user.firstName}</p>
           </div>
 
           <div>
-            <label class="text-sm font-semibold text-gray-600">Last Name</label>
+            <div class="text-sm font-semibold text-gray-600">Last Name</div>
             <p class="text-lg text-gray-900">{user.lastName}</p>
           </div>
 
           <div>
-            <label class="text-sm font-semibold text-gray-600">Email</label>
+            <div class="text-sm font-semibold text-gray-600">Email</div>
             <p class="text-lg text-gray-900">{user.email}</p>
           </div>
 
           <div>
-            <label class="text-sm font-semibold text-gray-600">Role</label>
+            <div class="text-sm font-semibold text-gray-600">Role</div>
             <p class="text-lg text-gray-900 capitalize">{user.role}</p>
           </div>
 
           <div>
-            <label class="text-sm font-semibold text-gray-600">Account Status</label>
-            <p class="text-lg text-gray-900">{user.isActive ? 'Active' : 'Inactive'}</p>
-          </div>
-
-          <div>
-            <label class="text-sm font-semibold text-gray-600">Member Since</label>
+            <div class="text-sm font-semibold text-gray-600">Member Since</div>
             <p class="text-lg text-gray-900">{new Date(user.createdAt).toLocaleDateString()}</p>
           </div>
         </div>

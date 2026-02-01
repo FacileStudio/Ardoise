@@ -7,18 +7,24 @@
   let loading = true;
   let user: any = null;
   let error = '';
+  let isPremiumUser: boolean | null = null; // New state for premium status
 
   onMount(async () => {
-    if (!$auth.token) {
+    if (!$auth.session) {
       goto('/login');
       return;
     }
 
     try {
-      user = await trpc.auth.me.query();
+      user = await trpc.user.me.query();
+      // Fetch premium status
+      const subscriptionStatus = await trpc.stripe.getSubscription.query();
+      isPremiumUser = subscriptionStatus.isPremium;
+
       loading = false;
     } catch (err: any) {
       error = 'Failed to load profile';
+      console.error('Error loading profile or subscription status:', err);
       loading = false;
       if (err.shape?.code === 'UNAUTHORIZED') {
         auth.logout();
@@ -51,27 +57,37 @@
     {:else if user}
       <div class="bg-white rounded-lg shadow p-6 space-y-4">
         <div>
-          <label class="text-sm font-semibold text-gray-600">Name</label>
+          <div class="text-sm font-semibold text-gray-600">Name</div>
           <p class="text-lg text-gray-900">{user.firstName} {user.lastName}</p>
         </div>
 
         <div>
-          <label class="text-sm font-semibold text-gray-600">Email</label>
+          <div class="text-sm font-semibold text-gray-600">Email</div>
           <p class="text-lg text-gray-900">{user.email}</p>
         </div>
 
         <div>
-          <label class="text-sm font-semibold text-gray-600">Role</label>
+          <div class="text-sm font-semibold text-gray-600">Role</div>
           <p class="text-lg text-gray-900 capitalize">{user.role}</p>
         </div>
 
-        <div>
-          <label class="text-sm font-semibold text-gray-600">Account Status</label>
-          <p class="text-lg text-gray-900">{user.isActive ? 'Active' : 'Inactive'}</p>
-        </div>
+        <!-- Display Premium Status -->
+        {#if isPremiumUser !== null}
+          <div>
+            <div class="text-sm font-semibold text-gray-600">Membership</div>
+            <p class="text-lg text-gray-900">
+              {#if isPremiumUser}
+                <span class="text-green-600 font-bold">Premium</span>
+              {:else}
+                <span class="text-blue-600">Standard</span>
+                (<a href="/premium" class="text-indigo-600 hover:underline">Upgrade</a>)
+              {/if}
+            </p>
+          </div>
+        {/if}
 
         <div>
-          <label class="text-sm font-semibold text-gray-600">Member Since</label>
+          <div class="text-sm font-semibold text-gray-600">Member Since</div>
           <p class="text-lg text-gray-900">{new Date(user.createdAt).toLocaleDateString()}</p>
         </div>
 

@@ -1,58 +1,42 @@
-import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { authClient } from '../auth-client';
-
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-}
-
-interface AuthState {
-  user: User | null;
-  session: any | null;
-  loading: boolean;
-}
-
-const initialState: AuthState = {
-  user: null,
-  session: null,
-  loading: true,
-};
+import { type AuthState, type User } from '@repo/types';
+import storage from '$lib/storage';
 
 function createAuthStore() {
-  const { subscribe, set, update } = writable<AuthState>(initialState);
-
+  const authStore = storage<AuthState>('events', {
+    user: null,
+    session: null,
+    loading: true,
+  });
   if (browser) {
     authClient.getSession().then((session) => {
-      if (session) {
-        update(state => ({
+      if (session && session.data) {
+        authStore.update((state) => ({
           ...state,
-          session: session.session,
-          user: session.user as User,
-          loading: false
+          session: session.data?.session,
+          user: session.data?.user,
+          loading: false,
         }));
       } else {
-        update(state => ({ ...state, loading: false }));
+        authStore.update((state) => ({ ...state, loading: false }));
       }
     });
   }
 
   return {
-    subscribe,
+    subscribe: authStore.subscribe,
     setAuth: (session: any, user: User) => {
-      update(state => ({ ...state, session, user, loading: false }));
+      authStore.update((state) => ({ ...state, session, user, loading: false }));
     },
     logout: async () => {
       if (browser) {
         await authClient.signOut();
       }
-      set({ user: null, session: null, loading: false });
+      authStore.set({ user: null, session: null, loading: false });
     },
     setLoading: (loading: boolean) => {
-      update(state => ({ ...state, loading }));
+      authStore.update((state) => ({ ...state, loading }));
     },
   };
 }

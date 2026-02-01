@@ -12,35 +12,17 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      encryptedData: {
-        type: 'string',
-        required: true,
-      },
       role: {
-        type: 'string',
+        type: ['admin', 'user'],
         required: true,
         defaultValue: 'user',
+        input: false,
       },
-      isActive: {
+      isPremium: {
         type: 'boolean',
         required: true,
-        defaultValue: true,
-      },
-      name: {
-        type: 'string',
-        required: false,
-      },
-      image: {
-        type: 'string',
-        required: false,
-      },
-      hashedEmail: {
-        type: 'string',
-        required: true,
-      },
-      hashedPassword: {
-        type: 'string',
-        required: true,
+        defaultValue: false,
+        input: false,
       },
     },
   },
@@ -48,7 +30,11 @@ export const auth = betterAuth({
     process.env.BETTER_AUTH_SECRET ||
     process.env.JWT_SECRET ||
     'your-super-secret-change-in-production',
-  trustedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3001'],
+  trustedOrigins: [
+    process.env.TRUSTED_ORIGINS || 'http://localhost:3000',
+    'http://localhost:3002',
+    'http://localhost:3000',
+  ],
 });
 
 export type Auth = typeof auth;

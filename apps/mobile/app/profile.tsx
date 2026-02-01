@@ -81,11 +81,6 @@ export default function Profile() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Account Status</Text>
-              <Text style={styles.value}>{user.isActive ? 'Active' : 'Inactive'}</Text>
-            </View>
-
-            <View style={styles.field}>
               <Text style={styles.label}>Member Since</Text>
               <Text style={styles.value}>{new Date(user.createdAt).toLocaleDateString()}</Text>
             </View>

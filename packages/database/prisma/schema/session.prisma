@@ -1,16 +1,17 @@
 model Session {
-  id        String   @id
-  expiresAt DateTime
-  hashedToken String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        String   @id
+        userId    String
+        token String   @unique
+        expiresAt DateTime
 
-  /// Stores encrypted ipAddress and userAgent.
-  /// The decrypted data conforms to the SessionEncryptedData type.
-  encryptedData     String @default("{}")
+        ipAddress String?
+        userAgent String?
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+        createdAt DateTime @default(now())
+        updatedAt DateTime @updatedAt
 
-  @@index([userId])
+
+        user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+        @@index([userId])
 }

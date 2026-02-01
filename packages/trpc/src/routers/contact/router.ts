@@ -1,7 +1,7 @@
+import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from '../../trpc';
 import { contactSchema } from '@repo/validators';
-import { contactService } from './service';
-import { z } from 'zod';
+import contactService from './service';
 
 export const contactRouter = router({
   create: publicProcedure.input(contactSchema).mutation(async ({ ctx, input }) => {
@@ -12,7 +12,11 @@ export const contactRouter = router({
     return contactService.list(ctx.db);
   }),
 
-  delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    return contactService.delete(ctx.db, input.id);
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return contactService.delete(ctx.db, input.id);
+    }),
 });
+
+export default contactRouter;

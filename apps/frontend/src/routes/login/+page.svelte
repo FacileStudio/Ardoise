@@ -2,6 +2,7 @@
   import { authClient } from '$lib/auth-client';
   import { auth } from '$lib/stores/auth';
   import { goto } from '$app/navigation';
+    import type { User } from '@repo/types';
 
   let email = '';
   let password = '';
@@ -14,7 +15,7 @@
     try {
       const result = await authClient.signIn.email({ email, password });
       if (result.data) {
-        auth.setAuth(result.data.session, result.data.user);
+        auth.setAuth(result.data, result.data.user as User);
         goto('/profile');
       } else {
         error = result.error?.message || 'Login failed. Please try again.';

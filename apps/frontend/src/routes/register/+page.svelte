@@ -2,6 +2,7 @@
   import { authClient } from '$lib/auth-client';
   import { auth } from '$lib/stores/auth';
   import { goto } from '$app/navigation';
+  import type { User } from '@repo/types';
 
   let email = '';
   let password = '';
@@ -18,11 +19,9 @@
         email,
         password,
         name: `${firstName} ${lastName}`,
-        firstName,
-        lastName,
       });
       if (result.data) {
-        auth.setAuth(result.data.session, result.data.user);
+        auth.setAuth(result.data.token, result.data.user as User);
         goto('/profile');
       } else {
         error = result.error?.message || 'Registration failed. Please try again.';
