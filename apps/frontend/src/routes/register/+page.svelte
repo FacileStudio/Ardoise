@@ -36,7 +36,7 @@
       });
 
       if (result.data) {
-        auth.setAuth(result.data.token, result.data.user as User);
+        auth.setAuth({ token: result.data.token }, result.data.user as User);
         setTimeout(() => goto('/profile'), 500);
       } else {
         error = result.error?.message || 'Une erreur est survenue lors de l\'inscription.';

@@ -10,7 +10,12 @@ const app = new Hono();
 app.use(
   '*',
   cors({
-    origin: [process.env.TRUSTED_ORIGINS || 'http://localhost:3000'],
+    origin: (origin) => {
+      if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://192.168')) {
+        return origin;
+      }
+      return process.env.TRUSTED_ORIGINS?.split(',')[0] || 'http://localhost:3000';
+    },
     credentials: true,
     allowMethods: ['GET', 'POST', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'x-trpc-source'],

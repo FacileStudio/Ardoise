@@ -1,168 +1,95 @@
 <script lang="ts">
-  import { trpc } from '$lib/trpc';
-  import { onMount } from 'svelte';
-  import 'iconify-icon';
+    import { auth } from '$lib/stores/auth';
+    import { authClient } from '$lib/auth-client';
+    import { goto } from '$app/navigation';
+    import 'iconify-icon';
+    import type { User } from '@repo/database';
 
-  let isAuthenticated = false;
-  let email = '';
-  let password = '';
-  let contacts= [];
-  let loading = false;
-  let error = '';
+    let email = '', password = '', error = '', isLoggingIn = false;
 
-  onMount(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      isAuthenticated = true;
-      loadContacts();
+    $: if ($auth.user?.role === 'admin') {
+        goto('/admin/contacts');
     }
-  });
 
-  async function handleLogin() {
-    loading = true;
-    error = '';
-    try {
-      const result = await trpc.auth.login.mutate({ email, password });
-      localStorage.setItem('token', result.session.token);
-      isAuthenticated = true;
-      await loadContacts();
-    } catch (err) {
-      error = 'Invalid email or password';
+    async function handleLogin() {
+        isLoggingIn = true;
+        error = '';
+
+        try {
+            const { data, error: authError } = await authClient.signIn.email({ email, password });
+
+            if (authError || !data) {
+                error = "Identifiants incorrects";
+                isLoggingIn = false;
+                return;
+            }
+
+            const user = data.user as User;
+
+            if (user.role !== 'admin') {
+                await authClient.signOut();
+                error = "Accès refusé : espace réservé aux administrateurs.";
+                isLoggingIn = false;
+                return;
+            }
+
+            auth.setAuth(data, user);
+            goto('/admin/contacts');
+
+        } catch (err) {
+            error = "Une erreur est survenue lors de la connexion";
+            isLoggingIn = false;
+        }
     }
-    loading = false;
-  }
-
-  async function loadContacts() {
-    loading = true;
-    try {
-      contacts = await trpc.contact.list.query();
-    } catch (err) {
-      error = 'Failed to load contacts';
-    }
-    loading = false;
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this contact?'))
-      return;
-    try {
-      await trpc.contact.delete.mutate({ id });
-      await loadContacts();
-    } catch (err) {
-      error = 'Failed to delete contact';
-    }
-  }
-
-  function handleLogout() {
-    localStorage.removeItem('token');
-    isAuthenticated = false;
-    contacts = [];
-  }
 </script>
 
-<main class="min-h-screen bg-gray-50">
-  {#if !isAuthenticated}
-    <div class="min-h-screen flex items-center justify-center px-4">
-      <div class="max-w-md w-full space-y-8">
-        <div class="text-center">
-          <h1 class="text-4xl font-bold text-gray-900">Admin Login</h1>
-          <p class="mt-2 text-gray-600">Enter admin credentials</p>
+<main class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    {#if $auth.loading}
+        <iconify-icon icon="line-md:loading-twotone-loop" width="40" class="text-indigo-600"></iconify-icon>
+    {:else}
+        <div class="max-w-md w-full bg-white p-10 rounded-[40px] shadow-2xl shadow-slate-200/50 border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+                    <iconify-icon icon="solar:shield-keyhole-bold" width="32"></iconify-icon>
+                </div>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Backoffice</h1>
+                <p class="text-slate-400 font-medium">Connectez-vous pour gérer le site</p>
+            </div>
+
+            <form on:submit|preventDefault={handleLogin} class="space-y-4">
+                <div class="space-y-1">
+                    <input
+                        type="email"
+                        bind:value={email}
+                        placeholder="Email"
+                        class="w-full p-4 bg-slate-50 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-500/20 focus:bg-white transition-all"
+                        required
+                    />
+                </div>
+                <div class="space-y-1">
+                    <input
+                        type="password"
+                        bind:value={password}
+                        placeholder="Mot de passe"
+                        class="w-full p-4 bg-slate-50 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-500/20 focus:bg-white transition-all"
+                        required
+                    />
+                </div>
+
+                {#if error}
+                    <div class="bg-rose-50 text-rose-600 p-4 rounded-2xl text-sm font-bold flex items-center gap-2 border border-rose-100">
+                        <iconify-icon icon="solar:danger-bold"></iconify-icon>
+                        {error}
+                    </div>
+                {/if}
+
+                <button
+                    disabled={isLoggingIn}
+                    class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-lg hover:bg-indigo-600 transition-all disabled:opacity-50 shadow-xl shadow-slate-200 active:scale-[0.98]"
+                >
+                    {isLoggingIn ? 'Vérification...' : 'Connexion'}
+                </button>
+            </form>
         </div>
-
-        <form on:submit|preventDefault={handleLogin} class="mt-8 space-y-4">
-          <input
-            type="email"
-            bind:value={email}
-            placeholder="Email"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-          />
-
-          <input
-            type="password"
-            bind:value={password}
-            placeholder="Password"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            class="w-full bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <iconify-icon icon="solar:login-2-bold" width="20" height="20"></iconify-icon>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-
-          {#if error}
-            <p class="text-center text-sm text-red-600">{error}</p>
-          {/if}
-        </form>
-      </div>
-    </div>
-  {:else}
-    <div class="max-w-7xl mx-auto px-4 py-8">
-      <div class="flex justify-between items-center mb-8">
-        <h1 class="text-4xl font-bold text-gray-900">Contact Submissions</h1>
-        <div class="flex gap-3">
-          <a
-            href="/profile"
-            class="bg-gray-100 text-gray-900 py-2 px-4 rounded-lg hover:bg-gray-200 transition flex items-center gap-2"
-          >
-            <iconify-icon icon="solar:user-bold" width="20" height="20"></iconify-icon>
-            Profile
-          </a>
-          <button
-            on:click={handleLogout}
-            class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-400 transition cursor-pointer flex items-center gap-2"
-          >
-            <iconify-icon icon="solar:logout-2-bold" width="20" height="20"></iconify-icon>
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {#if loading}
-        <p class="text-gray-600">Loading contacts...</p>
-      {:else if contacts.length === 0}
-        <p class="text-gray-600">No contacts yet.</p>
-      {:else}
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">First Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              {#each contacts as contact}
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contact.firstName}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contact.lastName}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contact.email}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(contact.createdAt).toLocaleDateString()}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      on:click={() => handleDelete(contact.id)}
-                      class="text-red-600 hover:text-red-800 transition cursor-pointer"
-                      title="Delete contact"
-                    >
-                      <iconify-icon icon="solar:trash-bin-trash-bold" width="20" height="20"></iconify-icon>
-                    </button>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
-    </div>
-  {/if}
+    {/if}
 </main>

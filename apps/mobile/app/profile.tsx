@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator
 import { useRouter } from 'expo-router';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/lib/auth-context';
+import { auth} from '@/lib/auth-store';
 
 export default function Profile() {
   const router = useRouter();
-  const { token, logout } = useAuth();
+  const { session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [error, setError] = useState('');
@@ -15,30 +16,21 @@ export default function Profile() {
     loadProfile();
   }, []);
 
+  const handleLogout = async () =>  await auth.logout(() => router.replace('/login'));
+
   const loadProfile = async () => {
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
+    if (!session) return await handleLogout();
 
     try {
-      const profile = await trpc.auth.me.query();
+      const profile = await trpc.user.me.query();
       setUser(profile);
     } catch (err: any) {
       setError('Failed to load profile');
-      if (err.shape?.code === 'UNAUTHORIZED') {
-        await logout();
-        router.replace('/login');
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/login');
-  };
 
   if (loading) {
     return (

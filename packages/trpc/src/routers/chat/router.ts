@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../../trpc';
+import { router, protectedProcedure } from '../../context';
 import { chatService, chatEvents } from './service';
 import { observable } from '@trpc/server/observable';
 import { TRPCError } from '@trpc/server';

@@ -1,3 +1,5 @@
+const COLOR: number = 0x5865f2;
+
 export class DiscordWebhook {
   private webhookUrl: string | undefined;
 
@@ -27,7 +29,7 @@ export class DiscordWebhook {
   public sendEmbed = async (
     title: string,
     description: string,
-    color: number = 0x5865f2 // Couleur "Blurple" par défaut
+    color: number = COLOR
   ): Promise<void> => {
     try {
       const payload = {

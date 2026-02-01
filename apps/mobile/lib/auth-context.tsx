@@ -1,64 +1,29 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authClient } from './auth-client';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { auth } from './auth-store';
+import type { AuthState } from '@repo/shared';
 
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  session: any | null;
-  loading: boolean;
-  setAuth: (session: any, user: User) => void;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    session: null,
+    loading: true
+  });
 
   useEffect(() => {
-    loadAuth();
+    const unsubscribe = auth.subscribe((newState) => {
+      setState(newState);
+    });
+
+    // On enveloppe pour satisfaire le type 'Destructor' de React
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
-  const loadAuth = async () => {
-    try {
-      const sessionData = await authClient.getSession();
-      if (sessionData) {
-        setSession(sessionData.session);
-        setUser(sessionData.user as User);
-      }
-    } catch (error) {
-      console.error('Failed to load auth:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const setAuthHandler = (newSession: any, newUser: User) => {
-    setSession(newSession);
-    setUser(newUser);
-  };
-
-  const logout = async () => {
-    try {
-      await authClient.signOut();
-      setSession(null);
-      setUser(null);
-    } catch (error) {
-      console.error('Failed to logout:', error);
-    }
-  };
-
   return (
-    <AuthContext.Provider value={{ user, session, loading, setAuth: setAuthHandler, logout }}>
+    <AuthContext.Provider value={state}>
       {children}
     </AuthContext.Provider>
   );
@@ -66,8 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 }
+
+export { auth as authActions };

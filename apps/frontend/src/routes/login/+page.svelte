@@ -9,11 +9,10 @@
   let email = '';
   let password = '';
   let loading = false;
-  let checkingAuth = true; // Pour éviter le flash du formulaire si déjà connecté
+  let checkingAuth = true;
   let error = '';
 
   onMount(async () => {
-    // 1. Check si une session existe déjà au montage
     if ($auth.session) {
       goto('/profile');
     } else {
@@ -22,29 +21,33 @@
   });
 
   async function handleLogin() {
-    if (!email || !password) return;
+  if (!email || !password || loading) return;
 
-    loading = true;
-    error = '';
+  loading = true;
+  error = '';
 
-    try {
-      const result = await authClient.signIn.email({ email, password });
+  try {
+    const { data, error: authError } = await authClient.signIn.email({
+      email,
+      password,
+    });
 
-      if (result.data) {
-        // Mise à jour du store global
-        auth.setAuth(result.data, result.data.user as User);
-
-        // Petite pause pour laisser l'animation de succès (optionnel)
-        setTimeout(() => goto('/profile'), 500);
-      } else {
-        error = result.error?.message || 'Identifiants incorrects.';
-        loading = false;
-      }
-    } catch (err: any) {
-      error = "Une erreur technique est survenue.";
+    if (authError) {
+      error = authError.message || 'Identifiants incorrects.';
       loading = false;
+      return;
     }
+
+    if (data) {
+      auth.setAuth({ token: data.token}, data.user as User);
+
+      await goto('/profile');
+    }
+  } catch (err: any) {
+    error = "Une erreur technique est survenue.";
+    loading = false;
   }
+}
 </script>
 
 <main class="min-h-screen flex items-center justify-center bg-white text-slate-900 px-4">
@@ -53,10 +56,7 @@
       <iconify-icon icon="svg-spinners:ring-resize" width="32" class="text-indigo-600"></iconify-icon>
     </div>
   {:else}
-    <div
-      in:scale={{ duration: 400, start: 0.95 }}
-      class="max-w-md w-full"
-    >
+    <div in:scale={{ duration: 400, start: 0.95 }} class="max-w-md w-full">
       <div class="text-center mb-10">
         <div class="inline-flex p-4 rounded-2xl bg-slate-50 mb-4">
           <iconify-icon icon="solar:shield-user-bold" width="40" class="text-indigo-600"></iconify-icon>
@@ -72,6 +72,7 @@
             id="email"
             type="email"
             bind:value={email}
+            autocomplete="email"
             placeholder="nom@exemple.com"
             required
             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white focus:border-transparent transition-all outline-none"
@@ -84,6 +85,7 @@
             id="password"
             type="password"
             bind:value={password}
+            autocomplete="current-password"
             placeholder="••••••••"
             required
             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white focus:border-transparent transition-all outline-none"

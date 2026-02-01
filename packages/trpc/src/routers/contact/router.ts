@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, publicProcedure, protectedProcedure } from '../../trpc';
+import { router, publicProcedure, protectedProcedure } from '../../context';
 import { contactSchema } from '@repo/validators';
 import contactService from './service';
 

@@ -10,7 +10,6 @@
   let inviteEmail = "";
   let loading = false;
 
-  // Sécurisation de l'accès aux participants (évite le crash si room est temporairement indéfini)
   $: participants = room?.participants || [];
   $: isAdmin = participants.find(p => p.userId === currentUserId)?.role === 'ADMIN' || room?.isGroup;
 
@@ -37,7 +36,7 @@
     if (!confirm("Supprimer définitivement ce groupe pour tout le monde ?")) return;
     try {
       await trpc.chat.deleteRoom.mutate({ roomId: room.id });
-      dispatch('left'); // On utilise 'left' pour rediriger vers l'état vide
+      dispatch('left');
     } catch (e) { console.error(e); }
   }
 
@@ -56,7 +55,9 @@
         <h3 class="text-2xl font-black text-slate-800 tracking-tight">Réglages</h3>
         <p class="text-sm text-slate-400 font-medium">{participants.length} membres actifs</p>
       </div>
-      <button on:click={() => dispatch('close')} class="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm hover:text-red-500 transition-colors">
+      <button on:click={() => dispatch('close')} class="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm hover:text-red-500 transition-colors"
+        aria-label="Fermer"
+      >
         <iconify-icon icon="solar:close-circle-bold" width="28"></iconify-icon>
       </button>
     </div>
@@ -89,7 +90,8 @@
               </div>
 
               {#if isAdmin && p.userId !== currentUserId}
-                <button on:click={() => kickMember(p.userId)} class="text-red-400 hover:text-red-600 p-2">
+                <button on:click={() => kickMember(p.userId)} class="text-red-400 hover:text-red-600 p-2"
+                aria-label="Retirer le membre">
                   <iconify-icon icon="solar:user-minus-bold" width="20"></iconify-icon>
                 </button>
               {/if}

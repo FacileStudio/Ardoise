@@ -1,7 +1,6 @@
 <script lang="ts">
   import { trpc } from '$lib/trpc';
   import { auth } from '$lib/stores/auth';
-  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { fade, scale, slide } from 'svelte/transition';
 
@@ -15,10 +14,7 @@
   let coverInput: HTMLInputElement;
 
   onMount(async () => {
-    if (!$auth.session) {
-      goto('/login');
-      return;
-    }
+    if (!$auth.session) auth.logout()
     await loadData();
   });
 

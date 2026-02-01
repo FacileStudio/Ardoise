@@ -32,7 +32,7 @@
     <nav class="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-6 z-10">
       <div class="text-2xl font-bold text-black">Monorepo Template</div>
 
-      {#if !$auth.token}
+      {#if !$auth.session}
         <div class="flex gap-4">
           <a
             href="/login"

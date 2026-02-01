@@ -2,18 +2,20 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
+    "db:generate": {
+      "inputs": ["schema.prisma"],
+      "cache": true
+    },
+    "check-env": {
+      "cache": false,
+      "inputs": ["**/.env*", "src/env.ts", "src/lib/env.ts"]
+    },
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "dist/**",
-        ".svelte-kit/**",
-        "packages/database/src/generated/**"
-      ]
+      "dependsOn": ["^build", "db:generate", "check-env"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", ".svelte-kit/**"]
     },
     "dev": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["db:generate", "check-env"],
       "cache": false,
       "persistent": true
     },
@@ -21,7 +23,7 @@
       "dependsOn": ["^lint"]
     },
     "type-check": {
-      "dependsOn": ["^type-check"]
+      "dependsOn": ["^type-check", "db:generate"]
     },
     "clean": {
       "cache": false

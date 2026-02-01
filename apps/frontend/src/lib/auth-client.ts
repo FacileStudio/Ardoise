@@ -3,7 +3,7 @@ import { inferAdditionalFields } from 'better-auth/client/plugins';
 import type { Auth } from '@repo/trpc';
 
 export const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_API_URL?.replace('/trpc', '') || 'http://localhost:3001',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
   plugins: [inferAdditionalFields<Auth>()],
 });
 

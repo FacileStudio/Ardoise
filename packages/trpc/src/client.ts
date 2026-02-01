@@ -13,9 +13,7 @@ export const createClient = (url: string, getToken?: () => string | null) =>
 
           if (getToken) {
             const token = getToken();
-            if (token) {
-              headers.Authorization = `Bearer ${token}`;
-            }
+            if (token) headers.Authorization = `Bearer ${token}`;
           }
           return headers;
         },

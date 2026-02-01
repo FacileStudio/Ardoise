@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../../trpc';
+import { router, protectedProcedure } from '../../context';
 import { stripeService } from './service';
 
 export const stripeRouter = router({

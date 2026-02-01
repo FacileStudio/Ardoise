@@ -13,7 +13,7 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       role: {
-        type: ['admin', 'user'],
+        type: 'string',
         required: true,
         defaultValue: 'user',
         input: false,
@@ -26,12 +26,11 @@ export const auth = betterAuth({
       },
     },
   },
-  secret: process.env.BETTER_AUTH_SECRET || 'your-super-secret-change-in-production',
-  trustedOrigins: [
-    process.env.TRUSTED_ORIGINS || 'http://localhost:3000',
-    'http://localhost:3002',
-    'http://localhost:3000',
-  ],
+  secret: process.env.BETTER_AUTH_SECRET,
+  trustedOrigins: process.env.TRUSTED_ORIGINS?.split(',').map((o) => o.trim()),
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === 'production',
+  },
 });
 
 export type Auth = typeof auth;
