@@ -1,6 +1,5 @@
 <script lang="ts">
     import { trpc } from '$lib/trpc';
-    import { auth } from '$lib/stores/auth';
     import { onMount } from 'svelte';
     import { fly, fade } from 'svelte/transition';
     import 'iconify-icon';

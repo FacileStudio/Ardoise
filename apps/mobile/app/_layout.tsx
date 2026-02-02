@@ -1,26 +1,35 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+
+    if (!user && !inAuthGroup) {
       router.replace('/login');
+    } else if (user && inAuthGroup) {
+      router.replace('/');
     }
-  }, [user, loading]);
+  }, [user, loading, segments]);
 
   if (loading) return null;
 
   return (
-    <Stack>
+    <Stack screenOptions={{
+      headerStyle: { backgroundColor: '#fff' },
+      headerShadowVisible: false
+    }}>
       <Stack.Screen name="index" options={{ title: 'Home' }} />
-      <Stack.Screen name="login" options={{ title: 'Login', headerShown: false }} />
-      <Stack.Screen name="register" options={{ title: 'Register' }} />
-      <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+      <Stack.Screen name="login" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="register" options={{ title: 'Inscription' }} />
+      <Stack.Screen name="profile" options={{ title: 'Mon Profil' }} />
     </Stack>
   );
 }

@@ -1,16 +1,17 @@
-import pino from "pino";
+import pino from 'pino';
+import env from '../lib/env';
 
-const isDevelopment = process.env.NODE_ENV !== "production";
+const isDevelopment = env.NODE_ENV !== 'production';
 
 export const logger = pino({
-  level: process.env.LOG_LEVEL || (isDevelopment ? "debug" : "info"),
+  level: isDevelopment ? 'debug' : 'info',
   transport: isDevelopment
     ? {
-        target: "pino-pretty",
+        target: 'pino-pretty',
         options: {
           colorize: true,
-          translateTime: "HH:MM:ss Z",
-          ignore: "pid,hostname",
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname',
         },
       }
     : undefined,

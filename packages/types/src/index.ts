@@ -1,9 +1,11 @@
-import { User } from '@repo/database';
-
-export type { Subscription, User, Session, Verification, Contact, Prisma } from '@repo/database';
-
-export interface AuthState {
-  user: User | undefined | null;
-  session: any | undefined | null;
-  loading: boolean;
-}
+export type {
+  Subscription,
+  User,
+  Session,
+  Verification,
+  Contact,
+  Media,
+  Prisma,
+  PrismaClient,
+} from '@repo/database';
+export { UserRole } from '@repo/database';

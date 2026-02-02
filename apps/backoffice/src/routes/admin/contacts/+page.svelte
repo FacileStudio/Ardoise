@@ -1,25 +1,23 @@
 <script lang="ts">
     import { trpc } from '$lib/trpc';
-    import { auth } from '$lib/stores/auth';
+    import authStore from '$lib/auth-store';
     import { onMount } from 'svelte';
-    import { fly, fade } from 'svelte/transition';
+    import { fade } from 'svelte/transition';
     import 'iconify-icon';
 
     let pageLoading = true;
     let error = '';
     let contacts: any[] = [];
 
-    $: if (!$auth.loading && !$auth.session) {
-        auth.logout();
+    $: if (!$authStore.loading && !$authStore.session) {
+        authStore.logout();
     }
 
     onMount(async () => {
         try {
-            // On récupère les soumissions du formulaire de contact
             contacts = await trpc.contact.list.query();
         } catch (err: any) {
             error = 'Impossible de récupérer les messages.';
-            if (err.data?.code === 'UNAUTHORIZED') auth.logout();
         } finally {
             pageLoading = false;
         }

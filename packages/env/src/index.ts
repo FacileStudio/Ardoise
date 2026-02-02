@@ -14,7 +14,7 @@ export const serverEnvSchema = baseSchema.extend({
   FRONTEND_URL: z.string().url(),
   TRUSTED_ORIGINS: z.string().transform((s) => s.split(',').map((u) => u.trim())),
 
-  BETTER_AUTH_SECRET: z.string().min(1),
+  ENCRYPTION_SECRET: z.string().min(1),
 
   STRIPE_SECRET_KEY: z.string().startsWith('sk_'),
   STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_'),

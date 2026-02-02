@@ -1,6 +1,6 @@
 <script lang="ts">
   import { trpc } from '$lib/trpc';
-  import { auth } from '$lib/stores/auth';
+  import authStore from '$lib/auth-store';
 
   let email = '';
   let firstName = '';
@@ -32,7 +32,7 @@
     <nav class="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-6 z-10">
       <div class="text-2xl font-bold text-black">Monorepo Template</div>
 
-      {#if !$auth.session}
+      {#if !$authStore.session}
         <div class="flex gap-4">
           <a
             href="/login"
@@ -51,7 +51,7 @@
         </div>
       {:else}
         <a
-          href="/profile"
+          href="/app/profile"
           class="px-6 py-2 bg-black text-white rounded-lg hover:bg-white hover:text-black hover:border hover:border-black transition flex items-center gap-2"
         >
           <iconify-icon icon="solar:user-bold-duotone" width="20" height="20"></iconify-icon>

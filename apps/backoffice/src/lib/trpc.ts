@@ -1,11 +1,16 @@
 import { createUniversalTrpcClient } from '@repo/shared';
-import { auth } from './stores/auth';
+import { authStore } from './auth-store';
 import { get } from 'svelte/store';
-import { browser } from '$app/environment';
-import { goto } from '$app/navigation';
+import env from '../lib/env';
 
 export const trpc = createUniversalTrpcClient({
-  baseUrl: import.meta.env.VITE_API_URL + '/trpc',
-  getToken: () => get(auth).session?.token || null,
-  onUnauthorized: () => auth.logout(() => browser && goto('/')),
+  baseUrl: `${env.API_URL}/trpc`,
+
+  getToken: () => {
+    const state = get(authStore);
+    return state.session?.token || null;
+  },
+  onUnauthorized: () => authStore.logout(),
 });
+
+export default trpc;

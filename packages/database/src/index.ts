@@ -11,3 +11,4 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
 }
 
 export type * from '@prisma/client';
+export { UserRole } from '@prisma/client';

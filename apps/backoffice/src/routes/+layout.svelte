@@ -1,10 +1,10 @@
 <script>
     import '../app.css';
     import { onMount } from 'svelte';
-    import { auth } from '$lib/stores/auth';
+    import authStore from '$lib/auth-store';
 
     onMount(async () => {
-        if (!$auth.user || !$auth.session) auth.logout(() => goto('/'));
+        if (!$authStore.user || !$authStore.session) authStore.logout(() => goto('/'));
     });
 </script>
 

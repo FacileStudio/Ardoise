@@ -1,50 +1,36 @@
-import { initTRPC, TRPCError } from '@trpc/server';
+import { type FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import { prisma } from '@repo/database';
-import { auth } from './lib/auth';
+import { type AuthManager } from '@repo/auth';
+import { type ServerEnv } from '@repo/env';
+import { StorageService } from '@repo/storage';
+import { StripeService } from '@repo/stripe';
 
-export const createContext = async (opts: any) => {
-  const headers = opts.req instanceof Request ? opts.req.headers : new Headers(opts.req?.headers);
-  const authHeader = headers.get('authorization');
-  const token = authHeader?.split(' ')[1];
+export interface CreateContextOptions extends FetchCreateContextFnOptions {
+  authManager: AuthManager;
+  storage: StorageService;
+  stripe: StripeService;
+  env: ServerEnv;
+}
 
-  let user = null;
+export const createContext = async ({
+  req,
+  authManager,
+  storage,
+  stripe,
+  env,
+}: CreateContextOptions) => {
+  const authHeader = req.headers.get('authorization');
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const user = token ? await authManager.verifyToken(token) : null;
 
-  if (!token) return { user, db: prisma };
-  const sessionRes = await auth.api.getSession({ headers });
-
-  if (sessionRes?.user) return { user: sessionRes.user, db: prisma };
-  const dbSession = await prisma.session.findFirst({
-    where: { token: token },
-    include: { user: true },
-  });
-  return { user: dbSession.user || null, db: prisma };
+  return {
+    user,
+    db: prisma,
+    auth: authManager,
+    storage,
+    stripe,
+    env,
+  };
 };
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
-
-const t = initTRPC.context<Context>().create();
-
-export const router = t.router;
-
-const isAuthed = t.middleware(({ next, ctx }) => {
-  if (!ctx.user) throw new TRPCError({ code: 'UNAUTHORIZED' });
-  return next({
-    ctx: { ...ctx, user: ctx.user },
-  });
-});
-
-const isAdmin = t.middleware(({ next, ctx }) => {
-  if (!ctx.user || ctx.user.role !== 'admin') {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Accès réservé aux administrateurs.',
-    });
-  }
-  return next({
-    ctx: { ...ctx, user: ctx.user },
-  });
-});
-
-export const adminProcedure = t.procedure.use(isAuthed).use(isAdmin);
-export const publicProcedure = t.procedure;
-export const protectedProcedure = t.procedure.use(isAuthed);

@@ -1,12 +1,6 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
-    import { authClient } from '$lib/auth-client';
-  import { auth } from '$lib/stores/auth';
-  import 'iconify-icon';
-
-  $: if (!$auth.loading && !$auth.user) {
-      auth.logout();
-  }
+import  authStore from '$lib/auth-store';
+import 'iconify-icon';
 </script>
 
 <main class="min-h-screen bg-slate-50">
@@ -29,12 +23,12 @@
       </div>
     </div>
 
-    {#if $auth.loading}
+    {#if $authStore.loading}
       <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 p-12 flex flex-col items-center justify-center">
         <iconify-icon icon="line-md:loading-twotone-loop" width="48" class="text-indigo-500 mb-4"></iconify-icon>
         <p class="text-slate-400 font-bold">Chargement de votre compte...</p>
       </div>
-    {:else if $auth.user}
+    {:else if $authStore.user}
       <div class="space-y-6">
         <div class="bg-white rounded-[40px] shadow-sm border border-slate-100 p-8 md:p-12 space-y-10">
 
@@ -42,7 +36,14 @@
             <div class="space-y-1">
               <div class="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">Prénom</div>
               <div class="bg-slate-50 px-6 py-4 rounded-2xl text-slate-700 font-bold border border-transparent focus-within:border-indigo-100 transition-all">
-                {$auth.user.name}
+                {$authStore.user.firstName}
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <div class="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">Prénom</div>
+              <div class="bg-slate-50 px-6 py-4 rounded-2xl text-slate-700 font-bold border border-transparent focus-within:border-indigo-100 transition-all">
+                {$authStore.user.lastName}
               </div>
             </div>
 
@@ -50,7 +51,7 @@
               <div class="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">Adresse Email</div>
               <div class="bg-slate-50 px-6 py-4 rounded-2xl text-slate-700 font-bold border border-transparent flex items-center gap-3">
                 <iconify-icon icon="solar:letter-bold" class="text-slate-400"></iconify-icon>
-                {$auth.user.email}
+                {$authStore.user.email}
               </div>
             </div>
 
@@ -59,16 +60,9 @@
               <div class="flex">
                 <span class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-tight flex items-center gap-2 border border-indigo-100">
                   <iconify-icon icon="solar:medal-star-bold"></iconify-icon>
-                  {$auth.user.role}
+                  {$authStore.user.role}
                 </span>
               </div>
-            </div>
-
-            <div class="space-y-1">
-              <div class="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">Membre depuis</div>
-              <p class="px-1 text-slate-500 font-medium">
-                {new Date($auth.user.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </p>
             </div>
           </div>
 
@@ -76,7 +70,7 @@
 
           <div class="flex flex-col md:flex-row gap-4">
             <button
-            on:click={() => auth.logout(() => goto('/'))}
+            on:click={() => authStore.logout()}
               class="bg-red-50 text-red-600 py-4 px-8 rounded-2xl hover:bg-red-600 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2 font-black shadow-sm active:scale-95"
             >
               <iconify-icon icon="solar:logout-2-bold" width="20"></iconify-icon>

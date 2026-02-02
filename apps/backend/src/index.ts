@@ -1,47 +1,48 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { trpcServer } from '@hono/trpc-server';
-import { appRouter, createContext, auth } from '@repo/trpc';
 import { loggerMiddleware } from './middleware/logger.middleware';
-import { stripeWebhookHandler } from './stripe';
+import env from './lib/env';
+import { AuthManager } from '@repo/auth';
+import { StorageService } from '@repo/storage';
+import { StripeService } from '@repo/stripe';
+import corsHandler from './handlers/cors';
+import { createStripeWebhookHandler } from './handlers/stripe';
+import trpcHandler from './handlers/trpc';
 
 const app = new Hono();
 
-app.use(
-  '*',
-  cors({
-    origin: (origin) => {
-      if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://192.168')) {
-        return origin;
-      }
-      return process.env.TRUSTED_ORIGINS?.split(',')[0] || 'http://localhost:3000';
-    },
-    credentials: true,
-    allowMethods: ['GET', 'POST', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'x-trpc-source'],
+const authManager = new AuthManager({
+  encryptionSecret: env.ENCRYPTION_SECRET,
+});
+
+const storage = new StorageService({
+  endpoint: env.MINIO_ENDPOINT,
+  accessKeyId: env.MINIO_ROOT_USER,
+  secretAccessKey: env.MINIO_ROOT_PASSWORD,
+  bucket: env.MINIO_BUCKET_NAME,
+});
+
+const stripe = new StripeService({
+  apiKey: env.STRIPE_SECRET_KEY,
+  webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+});
+
+app.use('*', corsHandler(env.TRUSTED_ORIGINS));
+app.use('*', loggerMiddleware);
+
+app.post('/webhook', createStripeWebhookHandler(stripe));
+
+app.all(
+  '/trpc/*',
+  trpcHandler({
+    authManager,
+    storage,
+    stripe,
+    env,
   })
 );
 
-app.use('*', loggerMiddleware);
+app.get('/', (c) => c.json({ message: 'Maxi Boilerplate API' }));
 
-app.post('/webhook', stripeWebhookHandler);
-
-app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
-
-app.all('/trpc/*', (c, next) => {
-  return trpcServer({
-    router: appRouter,
-    createContext: async (opts) => {
-      return await createContext({
-        ...opts,
-        req: c.req.raw,
-      });
-    },
-  })(c, next);
-});
-
-app.get('/', (c) => c.json({ message: 'tRPC Backend' }));
-
-const port = Number(process.env.PORT) || 3001;
+const port = Number(env.PORT);
 
 export default { port, fetch: app.fetch };

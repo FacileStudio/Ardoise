@@ -1,11 +1,13 @@
-import { router } from './context';
-import contactRouter from './routers/contact/router';
-import userRouter from './routers/user/router';
-import stripeRouter from './routers/stripe/router';
-import mediaRouter from './routers/media/router';
-import chatRouter from './routers/chat/router';
+import { router } from './trpc'; // Importe depuis ton fichier trpc (où t est défini)
+import { contactRouter } from './modules/contact/router';
+import { userRouter } from './modules/user/router';
+import { stripeRouter } from './modules/stripe/router';
+import { mediaRouter } from './modules/media/router';
+import { chatRouter } from './modules/chat/router';
+import { authRouter } from './modules/auth/router';
 
 export const appRouter = router({
+  auth: authRouter,
   contact: contactRouter,
   user: userRouter,
   stripe: stripeRouter,
@@ -14,8 +16,7 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-export { createContext, type Context } from './context';
-export { auth, type Auth } from './lib/auth';
 
-export { stripe, STRIPE_WEBHOOK_SECRET } from './lib/stripe';
-export { stripeService } from './routers/stripe/service';
+export { stripeService } from './modules/stripe/service';
+export { createContext, type Context, type CreateContextOptions } from './context';
+export { publicProcedure, protectedProcedure, adminProcedure } from './trpc';

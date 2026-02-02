@@ -1,13 +1,16 @@
 model User {
   id             String           @id @default(uuid())
   email          String           @unique
-  name           String
+  firstName     String
+  lastName      String
+  password      String
   emailVerified  Boolean          @default(false)
-  role           String           @default("user")
+  role           UserRole           @default(USER)
   isPremium      Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
 
+
+  avatar         Media?           @relation("UserAvatar")
+  coverImage     Media?           @relation("UserCover")
 
   messages      Message[]
   rooms         RoomParticipant[]
@@ -18,6 +21,12 @@ model User {
   subscription   Subscription?
   paymentHistory PaymentHistory[]
 
-  avatar         Media?           @relation("UserAvatar")
-  coverImage     Media?           @relation("UserCover")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
+
+enum UserRole {
+  USER
+  ADMIN
+}
+

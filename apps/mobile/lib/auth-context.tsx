@@ -1,25 +1,25 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from './auth-store';
-import type { AuthState } from '@repo/shared';
+import { authStore } from './auth-store';
+import type { AuthState } from '@repo/auth-shared';
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    session: null,
-    loading: true
+  const [state, setState] = useState<AuthState>(() => {
+    let initialState: AuthState = { user: null, session: null, loading: true };
+    const unsub = authStore.subscribe((s) => (initialState = s));
+    unsub();
+    return initialState;
   });
 
   useEffect(() => {
-    const unsubscribe = auth.subscribe((newState) => {
-      setState(newState);
-    });
+      const unsubscribe = authStore.subscribe((newState) => {
+          setState(newState);
+      });
 
-    // On enveloppe pour satisfaire le type 'Destructor' de React
-    return () => {
-      unsubscribe();
-    };
+      return () => {
+          unsubscribe();
+      };
   }, []);
 
   return (
@@ -31,8 +31,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
   return context;
 }
 
-export { auth as authActions };
+export { authStore as auth };

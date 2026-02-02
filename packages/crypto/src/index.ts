@@ -4,12 +4,12 @@ import { hash as argon2Hash, verify as argon2Verify } from 'argon2';
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
-class CryptoService {
+export class CryptoService {
   private key: Buffer;
 
-  constructor() {
-    if (!process.env.ENCRYPTION_KEY) throw new Error('ENCRYPTION_KEY required');
-    this.key = crypto.createHash('sha256').update(process.env.ENCRYPTION_KEY).digest();
+  constructor(env: { ENCRYPTION_KEY: string }) {
+    if (!env.ENCRYPTION_KEY) throw new Error('ENCRYPTION_KEY required');
+    this.key = crypto.createHash('sha256').update(env.ENCRYPTION_KEY).digest();
   }
 
   public encrypt = (text: string): string => {
@@ -69,4 +69,4 @@ class CryptoService {
   };
 }
 
-export default new CryptoService();
+export default CryptoService;

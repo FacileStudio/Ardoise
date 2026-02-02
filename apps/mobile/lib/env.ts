@@ -5,3 +5,5 @@ export const env = publicEnvSchema.parse({
   STRIPE_PRICE_ID: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID,
   NODE_ENV: process.env.NODE_ENV || 'development',
 });
+
+export default env;

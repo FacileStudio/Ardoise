@@ -1,61 +1,37 @@
 <script lang="ts">
-  import { authClient } from '$lib/auth-client';
-  import { auth } from '$lib/stores/auth';
+  import authStore from '$lib/auth-store';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
   import { fade, slide, scale } from 'svelte/transition';
   import type { User } from '@repo/types';
+  import { trpc } from '$lib/trpc';
 
   let email = '';
   let password = '';
   let loading = false;
-  let checkingAuth = true;
   let error = '';
 
-  onMount(async () => {
-    if ($auth.session) {
-      goto('/profile');
-    } else {
-      checkingAuth = false;
-    }
-  });
-
   async function handleLogin() {
-  if (!email || !password || loading) return;
+    if (!email || !password || loading) return;
 
-  loading = true;
-  error = '';
+    loading = true;
+    error = '';
 
-  try {
-    const { data, error: authError } = await authClient.signIn.email({
-      email,
-      password,
-    });
+    try {
+      const { token, user } = await trpc.auth.login.mutate({
+        email,
+        password,
+      });
 
-    if (authError) {
-      error = authError.message || 'Identifiants incorrects.';
+      authStore.setAuth({ token }, user as User);
+
+      await goto('/app/profile');
+    } catch (err: any) {
+      error = err.message || "Une erreur technique est survenue.";
       loading = false;
-      return;
     }
-
-    if (data) {
-      auth.setAuth({ token: data.token}, data.user as User);
-
-      await goto('/profile');
-    }
-  } catch (err: any) {
-    error = "Une erreur technique est survenue.";
-    loading = false;
-  }
-}
-</script>
+  }</script>
 
 <main class="min-h-screen flex items-center justify-center bg-white text-slate-900 px-4">
-  {#if checkingAuth}
-    <div in:fade class="flex flex-col items-center gap-4">
-      <iconify-icon icon="svg-spinners:ring-resize" width="32" class="text-indigo-600"></iconify-icon>
-    </div>
-  {:else}
     <div in:scale={{ duration: 400, start: 0.95 }} class="max-w-md w-full">
       <div class="text-center mb-10">
         <div class="inline-flex p-4 rounded-2xl bg-slate-50 mb-4">
@@ -121,5 +97,4 @@
         </div>
       </form>
     </div>
-  {/if}
 </main>

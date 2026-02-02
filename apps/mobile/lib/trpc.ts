@@ -1,18 +1,21 @@
-import { createUniversalTrpcClient } from '@repo/shared';
-import { auth } from './auth-store';
-import { router } from 'expo-router';
+import { createUniversalTrpcClient } from '@repo/shared'; // Importe le type ici
+import type { AuthState } from '@repo/auth-shared';
+import { authStore } from './auth-store';
+import env from './env';
 
-const getSnapshot = () => {
+const getSnapshot = (): AuthState => {
   let state: any;
-  const unsub = auth.subscribe((s) => (state = s));
+  const unsub = authStore.subscribe((s) => (state = s));
   unsub();
-  return state;
+  return state as AuthState;
 };
 
 export const trpc = createUniversalTrpcClient({
-  baseUrl: process.env.EXPO_PUBLIC_API_URL + '/trpc',
-  getToken: () => getSnapshot()?.session?.token || null,
+  baseUrl: env.API_URL + '/trpc',
+
+  getToken: () => getSnapshot().session?.token || null,
+
   onUnauthorized: () => {
-    auth.logout(() => router.replace('/login'));
+    authStore.logout();
   },
 });

@@ -1,60 +1,44 @@
 <script lang="ts">
-  import { authClient } from '$lib/auth-client';
-  import { auth } from '$lib/stores/auth';
+  import authStore from '$lib/auth-store';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { fade, slide, scale } from 'svelte/transition';
   import type { User } from '@repo/types';
+  import { trpc } from '$lib/trpc';
 
   let email = '';
   let password = '';
+  let confirmPassword = '';
   let firstName = '';
   let lastName = '';
   let loading = false;
-  let checkingAuth = true;
   let error = '';
 
-  onMount(async () => {
-    if ($auth.session) {
-      goto('/profile');
-    } else {
-      checkingAuth = false;
-    }
-  });
-
   async function handleRegister() {
-    if (!email || !password || !firstName) return;
+    if (!email || !password || !confirmPassword || !firstName || loading) return;
 
     loading = true;
     error = '';
 
     try {
-      const result = await authClient.signUp.email({
+      const { token, user } = await trpc.auth.register.mutate({
         email,
         password,
-        name: `${firstName} ${lastName}`.trim(),
+        confirmPassword,
+        firstName,
+        lastName,
       });
 
-      if (result.data) {
-        auth.setAuth({ token: result.data.token }, result.data.user as User);
-        setTimeout(() => goto('/profile'), 500);
-      } else {
-        error = result.error?.message || 'Une erreur est survenue lors de l\'inscription.';
-        loading = false;
-      }
+      authStore.setAuth({ token }, user as User);
+      await goto('/app/profile');
     } catch (err: any) {
-      error = "Impossible de créer le compte. Vérifiez vos informations.";
+      error = err.message || "Impossible de créer le compte. Vérifiez vos informations.";
       loading = false;
     }
   }
 </script>
-
 <main class="min-h-screen flex items-center justify-center bg-white text-slate-900 px-4">
-  {#if checkingAuth}
-    <div in:fade class="flex flex-col items-center gap-4">
-      <iconify-icon icon="svg-spinners:ring-resize" width="32" class="text-indigo-600"></iconify-icon>
-    </div>
-  {:else}
+
     <div
       in:scale={{ duration: 400, start: 0.95 }}
       class="max-w-md w-full py-12"
@@ -78,6 +62,7 @@
               bind:value={firstName}
               placeholder="Jean"
               required
+              autocomplete="given-name"
               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
             />
           </div>
@@ -89,6 +74,7 @@
               bind:value={lastName}
               placeholder="Dupont"
               required
+              autocomplete="family-name"
               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
             />
           </div>
@@ -102,6 +88,7 @@
             bind:value={email}
             placeholder="jean@exemple.com"
             required
+            autocomplete="email"
             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
           />
         </div>
@@ -115,6 +102,22 @@
             placeholder="••••••••"
             required
             minlength="6"
+            autocomplete="new-password"
+            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
+          />
+          <p class="text-[10px] text-slate-400 ml-1 italic">6 caractères minimum</p>
+        </div>
+
+        <div class="space-y-1">
+          <label for="password" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Mot de passe</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            bind:value={confirmPassword}
+            placeholder="••••••••"
+            required
+            minlength="6"
+            autocomplete="new-password"
             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
           />
           <p class="text-[10px] text-slate-400 ml-1 italic">6 caractères minimum</p>
@@ -149,5 +152,4 @@
         </div>
       </form>
     </div>
-  {/if}
 </main>

@@ -7,26 +7,15 @@
 ## Mail
 - [ ] Vérification par mail
 - [ ] Réinitialisation par mail
+- [ ] Email Service
 
 ## Auth
 - [ ] A2F
-- [ ] Utiliser trcp à la place de better auth comme client d'auth?
-    --> correction des erreurs de types
-    --> chiffrement des données plus facile
+- [ ] Google OAuth
+- [ ] Github OAuth
 
 ## Encryption
 - [ ] Chiffrer les données à nouveau
 
 ## Backoffice
 - [ ] Modération des utilisateurs
-
-
-## Backend
-- [x] Stockage d'images modulaire
-    pour fonctionner pour les avatars et partout ailleur si besoin
-
-## Realtime
-- [ ] Messages realtime
-
-## Logs
-- [ ] Log avec le webhook discord quand on a nouvel utilisateur premium

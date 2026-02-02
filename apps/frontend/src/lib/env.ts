@@ -5,3 +5,5 @@ export const env = publicEnvSchema.parse({
   STRIPE_PRICE_ID: import.meta.env.PUBLIC_STRIPE_PRICE_ID,
   NODE_ENV: import.meta.env.MODE,
 });
+
+export default env;

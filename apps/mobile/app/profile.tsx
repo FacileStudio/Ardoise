@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator
 import { useRouter } from 'expo-router';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/lib/auth-context';
-import { auth} from '@/lib/auth-store';
+import { authStore} from '@/lib/auth-store';
 
 export default function Profile() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function Profile() {
     loadProfile();
   }, []);
 
-  const handleLogout = async () =>  await auth.logout(() => router.replace('/login'));
+  const handleLogout = async () =>  await authStore.logout(() => router.replace('/login'));
 
   const loadProfile = async () => {
     if (!session) return await handleLogout();

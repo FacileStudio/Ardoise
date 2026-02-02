@@ -1,0 +1,14 @@
+{
+  "name": "@repo/auth-shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@types/js-cookie": "^3.0.6",
+    "js-cookie": "^3.0.5",
+    "zod": "^3.24.0"
+  }
+}
