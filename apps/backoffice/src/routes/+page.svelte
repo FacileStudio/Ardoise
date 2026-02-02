@@ -1,15 +1,11 @@
 <script lang="ts">
-    import authStore from '$lib/auth-store';
-    import { trpc } from '$lib/trpc'; // Vérifie que l'export est nommé
     import { goto } from '$app/navigation';
+    import authStore from '$lib/auth-store';
+    import { trpc } from '$lib/trpc'
     import { isAdmin, loginSchema, type SessionUser } from '@repo/auth-shared';
     import 'iconify-icon';
 
     let email = '', password = '', error = '', isLoggingIn = false;
-
-    $: if ($authStore.user && isAdmin($authStore.user)) {
-        goto('/admin/contacts');
-    }
 
     async function handleLogin() {
         isLoggingIn = true;
@@ -35,6 +31,7 @@
                 { token },
                 user as SessionUser
             );
+            goto('/admin/contacts');
         } catch (err: any) {
             console.error('Login error:', err);
             error = err.message || "Une erreur est survenue lors de la connexion";

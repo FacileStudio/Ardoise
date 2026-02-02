@@ -47,8 +47,8 @@ export const stripeService = {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${frontendUrl}/premium/success`,
-      cancel_url: `${frontendUrl}/premium?canceled=true`,
+      success_url: `${frontendUrl}/app/premium/success`,
+      cancel_url: `${frontendUrl}/app/premium?canceled=true`,
       metadata: { userId },
     });
 
@@ -71,7 +71,7 @@ export const stripeService = {
 
     const session = await stripe.client.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
-      return_url: `${frontendUrl}/premium`,
+      return_url: `${frontendUrl}/app/premium`,
     });
 
     return { url: session.url };

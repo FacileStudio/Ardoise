@@ -8,4 +8,7 @@ export type {
   Prisma,
   PrismaClient,
 } from '@repo/database';
-export { UserRole } from '@repo/database';
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  USER = 'USER',
+}

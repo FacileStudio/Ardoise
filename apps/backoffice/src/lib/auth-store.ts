@@ -18,11 +18,9 @@ export const authStore = new UniversalAuthStore(
       } catch (e) {
         console.error('Logout failed');
       }
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   }
 );
-
-if (browser) authStore.init();
 
 export default authStore;
