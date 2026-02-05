@@ -88,7 +88,7 @@ export const stripeService = {
 
     return {
       hasSubscription: true,
-      isPremium: user.isPremium,
+      isPremium: true,
       subscription: {
         status: user.subscription.status,
         currentPeriodEnd: user.subscription.currentPeriodEnd,

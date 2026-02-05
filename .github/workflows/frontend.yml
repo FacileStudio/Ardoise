@@ -36,4 +36,4 @@ jobs:
         run: bun run build --filter=@repo/frontend
 
       - name: Run type check
-        run: cd apps/frontend && bun run check
+        run: cd apps/frontend && bun run typecheck

@@ -99,6 +99,14 @@ export const en = {
     dashboard: 'Dashboard',
     profile: 'Profile',
   },
-} as const;
+};
 
-export type EnTranslations = typeof en;
+type DeepStringify<T> = {
+  [K in keyof T]: T[K] extends string
+    ? string
+    : T[K] extends object
+    ? DeepStringify<T[K]>
+    : T[K];
+};
+
+export type EnTranslations = DeepStringify<typeof en>;

@@ -9,7 +9,7 @@
     "./audit": "./src/audit.ts"
   },
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@repo/database": "workspace:*",

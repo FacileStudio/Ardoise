@@ -1,6 +1,6 @@
 export type Locale = 'en' | 'fr';
 
-export type TranslationValue = string | Record<string, string | TranslationValue>;
+export type TranslationValue = string | { [key: string]: TranslationValue };
 
 export type Translations = Record<string, TranslationValue>;
 

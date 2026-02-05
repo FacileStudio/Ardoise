@@ -1,520 +1,591 @@
 <script lang="ts">
-	import authStore from '$lib/auth-store';
-	import { trpc } from '$lib/trpc';
-	import { Button, Input, Spinner, Alert, Toggle, LanguageSwitcher } from '@repo/ui';
-	import { uploadFile } from '@repo/storage-client';
-	import { logger } from '@repo/logger';
-	import 'iconify-icon';
-    import type { SessionUser } from '@repo/auth-shared';
-    import { onMount } from 'svelte';
+  import authStore from '$lib/auth-store';
+  import { trpc } from '$lib/trpc';
+  import { Button, Input, Spinner, Alert, Toggle, LanguageSwitcher } from '@repo/ui';
+  import { uploadFile } from '@repo/storage-client';
+  import { logger } from '@repo/logger';
+  import 'iconify-icon';
+  import type { SessionUser } from '@repo/auth-shared';
+  import { onMount } from 'svelte';
+  import { fade, slide, scale } from 'svelte/transition';
 
-	let activeTab = $state('profile');
-	let saving = $state(false);
-	let message = $state<{ type: 'success' | 'error'; text: string } | null>(null);
-	let uploading = $state(false);
-	let uploadingBanner = $state(false);
-	let avatarInput: HTMLInputElement = $state(null);
-	let bannerInput: HTMLInputElement = $state(null);
-	let showSavedMessage = $state(false);
-	let deleting = $state(false);
-    let user = $state(null);
+  // --- LOGIC SECTION ---
+  let activeTab = $state('profile');
+  let saving = $state(false);
+  let message = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let uploading = $state(false);
+  let uploadingBanner = $state(false);
+  let avatarInput: HTMLInputElement = $state(null);
+  let bannerInput: HTMLInputElement = $state(null);
+  let showSavedMessage = $state(false);
 
-    onMount(async () => {
-        try {
-            user = await trpc.user.me.query();
-        } catch (err) {
-            logger.error({ err }, 'Failed to fetch user data on settings page');
-        }
-    });
+  // Delete Account Logic
+  let deleting = $state(false);
+  let deleteModalOpen = $state(false);
+  let deleteConfirmationText = $state('');
 
-	let formData = $state({
-		firstName: $authStore.user?.firstName || '',
-		lastName: $authStore.user?.lastName || '',
-		email: $authStore.user?.email || '',
-		currentPassword: '',
-		newPassword: '',
-		confirmPassword: '',
-	});
+  let user = $state(null);
 
-	let originalFormData = $state({
-		firstName: $authStore.user?.firstName || '',
-		lastName: $authStore.user?.lastName || '',
-	});
+  onMount(async () => {
+    try {
+      user = await trpc.user.me.query();
+    } catch (err) {
+      logger.error({ err }, 'Failed to fetch user data on settings page');
+    }
+  });
 
-	let hasProfileChanges = $derived(
-		formData.firstName !== originalFormData.firstName ||
-		formData.lastName !== originalFormData.lastName
-	);
+  let formData = $state({
+    firstName: $authStore.user?.firstName || '',
+    lastName: $authStore.user?.lastName || '',
+    email: $authStore.user?.email || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
-	let notifications = $state({
-		email: true,
-		push: false,
-		marketing: false,
-	});
+  let originalFormData = $state({
+    firstName: $authStore.user?.firstName || '',
+    lastName: $authStore.user?.lastName || '',
+  });
 
-	let privacy = $state({
-		profileVisible: true,
-		showOnline: true,
-		activityStatus: false,
-	});
+  let hasProfileChanges = $derived(
+    formData.firstName !== originalFormData.firstName ||
+      formData.lastName !== originalFormData.lastName
+  );
 
-	const tabs = [
-		{ id: 'profile', name: 'Profile', icon: 'solar:user-bold' },
-		{ id: 'account', name: 'Account', icon: 'solar:shield-user-bold' },
-		{ id: 'notifications', name: 'Notifications', icon: 'solar:bell-bold' },
-		{ id: 'privacy', name: 'Privacy', icon: 'solar:lock-bold' },
-	];
+  let notifications = $state({
+    email: true,
+    push: false,
+    marketing: false,
+  });
 
-	async function handleUpdateProfile() {
-		saving = true;
-		message = null;
-		showSavedMessage = false;
-		try {
-			const updatedUser = await trpc.user.updateProfile.mutate({
-				firstName: formData.firstName,
-				lastName: formData.lastName,
-			});
-			authStore.updateUser(updatedUser as SessionUser);
-			originalFormData.firstName = formData.firstName;
-			originalFormData.lastName = formData.lastName;
-			showSavedMessage = true;
-			setTimeout(() => {
-				showSavedMessage = false;
-			}, 3000);
-		} catch (err) {
-			message = { type: 'error', text: 'Failed to update profile' };
-		} finally {
-			saving = false;
-		}
-	}
+  let privacy = $state({
+    profileVisible: true,
+    showOnline: true,
+    activityStatus: false,
+  });
 
-	async function handleChangePassword() {
-		if (formData.newPassword !== formData.confirmPassword) {
-			message = { type: 'error', text: 'Passwords do not match' };
-			return;
-		}
-		if (formData.newPassword.length < 8) {
-			message = { type: 'error', text: 'Password must be at least 8 characters' };
-			return;
-		}
-		saving = true;
-		message = null;
-		try {
-			await trpc.user.changePassword.mutate({
-				currentPassword: formData.currentPassword,
-				newPassword: formData.newPassword,
-			});
-			formData.currentPassword = '';
-			formData.newPassword = '';
-			formData.confirmPassword = '';
-			message = { type: 'success', text: 'Password changed successfully!' };
-		} catch (err) {
-			message = { type: 'error', text: 'Failed to change password' };
-		} finally {
-			saving = false;
-		}
-	}
+  const tabs = [
+    { id: 'profile', name: 'Profile', icon: 'solar:user-bold' },
+    { id: 'account', name: 'Account', icon: 'solar:shield-user-bold' },
+    { id: 'notifications', name: 'Notifications', icon: 'solar:bell-bold' },
+    { id: 'privacy', name: 'Privacy', icon: 'solar:lock-bold' },
+  ];
 
-	async function handleAvatarChange(event: Event) {
-		const input = event.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+  async function handleUpdateProfile() {
+    saving = true;
+    message = null;
+    showSavedMessage = false;
+    try {
+      const updatedUser = await trpc.user.updateProfile.mutate({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      });
+      authStore.updateUser(updatedUser as SessionUser);
+      originalFormData.firstName = formData.firstName;
+      originalFormData.lastName = formData.lastName;
+      showSavedMessage = true;
+      setTimeout(() => {
+        showSavedMessage = false;
+      }, 3000);
+    } catch (err) {
+      message = { type: 'error', text: 'Failed to update profile' };
+    } finally {
+      saving = false;
+    }
+  }
 
-		uploading = true;
-		message = null;
-		try {
-			const uploadUrlResponse = await trpc.media.getUploadUrl.mutate({
-				fileName: file.name,
-				fileType: file.type,
-			});
+  async function handleChangePassword() {
+    if (formData.newPassword !== formData.confirmPassword) {
+      message = { type: 'error', text: 'Passwords do not match' };
+      return;
+    }
+    if (formData.newPassword.length < 8) {
+      message = { type: 'error', text: 'Password must be at least 8 characters' };
+      return;
+    }
+    saving = true;
+    message = null;
+    try {
+      await trpc.user.changePassword.mutate({
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+      });
+      formData.currentPassword = '';
+      formData.newPassword = '';
+      formData.confirmPassword = '';
+      message = { type: 'success', text: 'Password changed successfully!' };
+    } catch (err) {
+      message = { type: 'error', text: 'Failed to change password' };
+    } finally {
+      saving = false;
+    }
+  }
 
-			await uploadFile(file, uploadUrlResponse.uploadUrl);
+  async function handleAvatarChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
 
-			const newImage = await trpc.media.updateAvatar.mutate({
-				url: uploadUrlResponse.publicUrl,
-				key: uploadUrlResponse.fileKey,
-				size: file.size,
-			});
-            const updatedUser = { ...$authStore.user, avatarUrl: newImage.url };
+    uploading = true;
+    message = null;
+    try {
+      const uploadUrlResponse = await trpc.media.getUploadUrl.mutate({
+        fileName: file.name,
+        fileType: file.type,
+      });
 
-			authStore.updateUser(updatedUser as SessionUser);
-			message = { type: 'success', text: 'Avatar updated successfully!' };
-		} catch (err) {
-			logger.error({ err }, 'Failed to upload avatar');
-			message = { type: 'error', text: 'Failed to upload avatar' };
-		} finally {
-			uploading = false;
-		}
-	}
+      await uploadFile(file, uploadUrlResponse.uploadUrl);
 
-	async function handleBannerChange(event: Event) {
-		const input = event.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+      const newImage = await trpc.media.updateAvatar.mutate({
+        url: uploadUrlResponse.publicUrl,
+        key: uploadUrlResponse.fileKey,
+        size: file.size,
+      });
+      const updatedUser = { ...$authStore.user, avatarUrl: newImage.url };
 
-		uploadingBanner = true;
-		message = null;
-		try {
-			const uploadUrlResponse = await trpc.media.getUploadUrl.mutate({
-				fileName: file.name,
-				fileType: file.type,
-			});
+      authStore.updateUser(updatedUser as SessionUser);
+      message = { type: 'success', text: 'Avatar updated successfully!' };
+    } catch (err) {
+      logger.error({ err }, 'Failed to upload avatar');
+      message = { type: 'error', text: 'Failed to upload avatar' };
+    } finally {
+      uploading = false;
+    }
+  }
 
-			await uploadFile(file, uploadUrlResponse.uploadUrl);
+  async function handleBannerChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
 
-			const newImage = await trpc.media.updateCover.mutate({
-				url: uploadUrlResponse.publicUrl,
-				key: uploadUrlResponse.fileKey,
-				size: file.size,
-			});
-            const updatedUser = {
-                ...$authStore.user,
-                coverImageUrl: newImage.url,
-            };
+    uploadingBanner = true;
+    message = null;
+    try {
+      const uploadUrlResponse = await trpc.media.getUploadUrl.mutate({
+        fileName: file.name,
+        fileType: file.type,
+      });
 
+      await uploadFile(file, uploadUrlResponse.uploadUrl);
 
-			authStore.updateUser(updatedUser as SessionUser);
-			message = { type: 'success', text: 'Banner updated successfully!' };
-		} catch (err) {
-			logger.error({ err }, 'Failed to upload banner');
-			message = { type: 'error', text: 'Failed to upload banner' };
-		} finally {
-			uploadingBanner = false;
-		}
-	}
+      const newImage = await trpc.media.updateCover.mutate({
+        url: uploadUrlResponse.publicUrl,
+        key: uploadUrlResponse.fileKey,
+        size: file.size,
+      });
+      const updatedUser = {
+        ...$authStore.user,
+        coverImageUrl: newImage.url,
+      };
 
-	async function handleDeleteAccount() {
-		const confirmation = confirm(
-			'Are you absolutely sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.'
-		);
+      authStore.updateUser(updatedUser as SessionUser);
+      message = { type: 'success', text: 'Banner updated successfully!' };
+    } catch (err) {
+      logger.error({ err }, 'Failed to upload banner');
+      message = { type: 'error', text: 'Failed to upload banner' };
+    } finally {
+      uploadingBanner = false;
+    }
+  }
 
-		if (!confirmation) return;
+  async function handleDeleteAccount() {
+    // Instead of native confirm, we open our modal
+    deleteModalOpen = true;
+    deleteConfirmationText = '';
+  }
 
-		const doubleConfirmation = confirm(
-			'This is your last chance. Type "DELETE" in the next prompt to confirm account deletion.'
-		);
+  async function confirmDeleteAccount() {
+    if (deleteConfirmationText !== 'DELETE') return;
 
-		if (!doubleConfirmation) return;
-
-		const finalConfirmation = prompt('Type DELETE to confirm:');
-
-		if (finalConfirmation !== 'DELETE') {
-			message = { type: 'error', text: 'Account deletion cancelled. Confirmation text did not match.' };
-			return;
-		}
-
-		deleting = true;
-		message = null;
-		try {
-			await trpc.user.deleteOwnAccount.mutate();
-			authStore.logout();
-		} catch (err) {
-			logger.error({ err }, 'Failed to delete account');
-			message = { type: 'error', text: 'Failed to delete account. Please try again.' };
-		} finally {
-			deleting = false;
-		}
-	}
+    deleting = true;
+    message = null;
+    try {
+      await trpc.user.deleteOwnAccount.mutate();
+      authStore.logout();
+    } catch (err) {
+      logger.error({ err }, 'Failed to delete account');
+      message = { type: 'error', text: 'Failed to delete account.' };
+      deleteModalOpen = false;
+    } finally {
+      deleting = false;
+    }
+  }
 </script>
 
-<div class="p-8 max-w-5xl mx-auto space-y-6">
-	<header>
-		<h1 class="text-3xl font-black text-slate-900 tracking-tighter">Settings</h1>
-		<p class="text-slate-500 text-sm mt-1">Manage your account preferences and settings</p>
-	</header>
+<div class="min-h-screen p-8 lg:p-12 max-w-5xl mx-auto space-y-12 pb-32">
+  <header class="text-center space-y-4">
+    <div class="inline-flex items-center justify-center p-3 bg-neutral-100 rounded-2xl mb-2">
+      <iconify-icon icon="solar:settings-bold" width="32" class="text-neutral-900"></iconify-icon>
+    </div>
+    <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tighter text-black">
+      Settings<span class="text-neutral-300">.</span>
+    </h1>
+    <p class="text-neutral-600 font-medium text-lg max-w-md mx-auto">
+      Manage your personal information, security preferences and account visibility.
+    </p>
+  </header>
 
-	{#if message}
-		<Alert variant={message.type === 'success' ? 'success' : 'danger'}>
-			{message.text}
-		</Alert>
-	{/if}
+  <div class="flex justify-center">
+    <div class="inline-flex p-1.5 bg-neutral-100 rounded-[24px] gap-1 overflow-x-auto max-w-full">
+      {#each tabs as tab}
+        <button
+          onclick={() => (activeTab = tab.id)}
+          class="flex items-center gap-2 px-6 py-3 rounded-[20px] font-bold text-sm transition-all duration-300 whitespace-nowrap
+          {activeTab === tab.id
+            ? 'bg-white text-black shadow-lg shadow-neutral-200/50'
+            : 'text-neutral-500 hover:text-black hover:bg-white/50'}"
+        >
+          <iconify-icon icon={tab.icon} width="18"></iconify-icon>
+          {tab.name}
+        </button>
+      {/each}
+    </div>
+  </div>
 
-	<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-		<div class="border-b border-slate-100">
-			<div class="flex gap-1 p-2">
-				{#each tabs as tab}
-					<button
-						onclick={() => activeTab = tab.id}
-						class="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all
-							{activeTab === tab.id
-								? 'bg-indigo-50 text-indigo-600'
-								: 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
-					>
-						<iconify-icon icon={tab.icon} width="18"></iconify-icon>
-						{tab.name}
-					</button>
-				{/each}
-			</div>
-		</div>
+  {#if message}
+    <div in:slide class="max-w-xl mx-auto">
+      <Alert variant={message.type === 'success' ? 'success' : 'danger'}>
+        {message.text}
+      </Alert>
+    </div>
+  {/if}
 
-		<div class="p-6">
-			{#if activeTab === 'profile'}
-				<div class="space-y-6">
-					<div>
-						<h3 class="text-lg font-bold text-slate-900 mb-4">Profile Information</h3>
-						<div class="space-y-4">
-							<div>
-								<div class="block text-sm font-bold text-slate-700 mb-2">Profile Banner</div>
-								<div class="flex items-center gap-4">
-									<div class="relative w-full max-w-md h-32 bg-slate-100 rounded-2xl overflow-hidden border-2 border-slate-100">
-										{#if uploadingBanner}
-											<div class="absolute inset-0 flex items-center justify-center bg-white/80">
-												<Spinner size="sm" />
-											</div>
-										{:else}
-											<div class="flex items-center justify-center h-full text-slate-400">
-                                            <img src={user?.coverImage?.url} alt="Banner" class="w-full h-full object-cover" />
-											</div>
-										{/if}
-									</div>
-									<div class="flex flex-col gap-2">
-										<input
-											type="file"
-											bind:this={bannerInput}
-											onchange={handleBannerChange}
-											accept="image/*"
-											class="hidden"
-										/>
-										<button
-											type="button"
-											onclick={() => bannerInput.click()}
-											disabled={uploadingBanner}
-											class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
-										>
-											Upload Banner
-										</button>
-										<p class="text-xs text-slate-500">JPG, PNG or GIF (max. 5MB)</p>
-									</div>
-								</div>
-							</div>
+  <div class="max-w-3xl mx-auto">
+    {#if activeTab === 'profile'}
+      <div in:fade={{ duration: 300 }} class="space-y-8">
+        <div
+          class="group relative bg-white rounded-[32px] border border-neutral-200 overflow-hidden shadow-sm transition-shadow hover:shadow-md"
+        >
+          <div class="h-40 bg-neutral-100 relative overflow-hidden">
+            {#if user?.coverImage?.url}
+              <img src={user?.coverImage?.url} alt="Banner" class="w-full h-full object-cover" />
+            {:else}
+              <div
+                class="w-full h-full bg-[radial-gradient(#e5e5e5_1px,transparent_1px)] [background-size:16px_16px]"
+              ></div>
+            {/if}
 
-							<div>
-								<div class="block text-sm font-bold text-slate-700 mb-2">Avatar</div>
-								<div class="flex items-center gap-4">
-									<div class="relative">
-										{#if user?.avatar?.url}
-											<img
-												src={user.avatar.url}
-												alt="Avatar"
-												class="w-20 h-20 rounded-2xl object-cover border-2 border-slate-100"
-											/>
-										{:else}
-											<div class="w-20 h-20 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl font-black border-2 border-slate-100">
-												{$authStore.user?.firstName?.[0] || 'A'}
-											</div>
-										{/if}
-										{#if uploading}
-											<div class="absolute inset-0 flex items-center justify-center bg-white/80 rounded-2xl">
-												<Spinner size="sm" />
-											</div>
-										{/if}
-									</div>
-									<div class="flex flex-col gap-2">
-										<input
-											type="file"
-											bind:this={avatarInput}
-											onchange={handleAvatarChange}
-											accept="image/*"
-											class="hidden"
-										/>
-										<button
-											type="button"
-											onclick={() => avatarInput.click()}
-											disabled={uploading}
-											class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
-										>
-											Upload Photo
-										</button>
-										<p class="text-xs text-slate-500">JPG, PNG or GIF (max. 5MB)</p>
-									</div>
-								</div>
-							</div>
+            <button
+              type="button"
+              disabled={uploadingBanner}
+              onclick={() => bannerInput.click()}
+              class="absolute top-4 right-4 bg-white/90 backdrop-blur text-black px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-black hover:text-white transition-colors flex items-center gap-2 shadow-sm"
+            >
+              {#if uploadingBanner}
+                <Spinner size="sm" />
+              {/if}
+              <iconify-icon icon="solar:camera-add-bold"></iconify-icon>
+              Edit Cover
+            </button>
+            <input
+              type="file"
+              bind:this={bannerInput}
+              onchange={handleBannerChange}
+              accept="image/*"
+              class="hidden"
+            />
+          </div>
 
-							<div class="grid grid-cols-2 gap-4">
-								<div>
-									<div class="block text-sm font-bold text-slate-700 mb-2">First Name</div>
-									<Input bind:value={formData.firstName} placeholder="John" />
-								</div>
-								<div>
-									<div class="block text-sm font-bold text-slate-700 mb-2">Last Name</div>
-									<Input bind:value={formData.lastName} placeholder="Doe" />
-								</div>
-							</div>
+          <div class="px-8 pb-8 -mt-12 flex items-end justify-between">
+            <div class="relative group/avatar">
+              <div class="w-24 h-24 rounded-3xl bg-white p-1.5 shadow-xl">
+                <div
+                  class="w-full h-full rounded-2xl bg-neutral-100 overflow-hidden flex items-center justify-center border border-neutral-100 relative"
+                >
+                  {#if user?.avatar?.url}
+                    <img src={user.avatar.url} alt="Avatar" class="w-full h-full object-cover" />
+                  {:else}
+                    <span class="text-3xl font-black text-neutral-300"
+                      >{$authStore.user?.firstName?.[0]}</span
+                    >
+                  {/if}
 
-							<div>
-								<div class="block text-sm font-bold text-slate-700 mb-2">Email</div>
-								<Input value={formData.email} disabled placeholder="john@example.com" />
-								<p class="text-xs text-slate-500 mt-1">Email cannot be changed</p>
-							</div>
+                  <button
+                    onclick={() => avatarInput.click()}
+                    disabled={uploading}
+                    class="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer backdrop-blur-sm"
+                  >
+                    {#if uploading}
+                      <Spinner size="sm" />
+                    {:else}
+                      <iconify-icon icon="solar:camera-minimalistic-bold" width="24"></iconify-icon>
+                    {/if}
+                  </button>
+                </div>
+              </div>
+              <input
+                type="file"
+                bind:this={avatarInput}
+                onchange={handleAvatarChange}
+                accept="image/*"
+                class="hidden"
+              />
+            </div>
 
-							<div class="flex justify-end items-center gap-3">
-								{#if showSavedMessage}
-									<div class="flex items-center gap-2 text-green-600 font-bold text-sm animate-in fade-in slide-in-from-right-2 duration-300">
-										<iconify-icon icon="solar:check-circle-bold" width="20"></iconify-icon>
-										Changes saved successfully!
-									</div>
-								{/if}
-								<Button onclick={handleUpdateProfile} disabled={saving || !hasProfileChanges}>
-									{#if saving}
-										<Spinner size="sm" />
-									{:else}
-										<iconify-icon icon="solar:diskette-bold" width="18"></iconify-icon>
-										Save Changes
-									{/if}
-								</Button>
-							</div>
-						</div>
-					</div>
-				</div>
-			{:else if activeTab === 'account'}
-				<div class="space-y-6">
-					<div>
-						<h3 class="text-lg font-bold text-slate-900 mb-4">Change Password</h3>
-						<div class="space-y-4">
-							<div>
-								<div class="block text-sm font-bold text-slate-700 mb-2">Current Password</div>
-								<Input
-									type="password"
-									bind:value={formData.currentPassword}
-									placeholder="Enter current password"
-								/>
-							</div>
-							<div>
-								<div class="block text-sm font-bold text-slate-700 mb-2">New Password</div>
-								<Input
-									type="password"
-									bind:value={formData.newPassword}
-									placeholder="Enter new password"
-								/>
-							</div>
-							<div>
-								<div class="block text-sm font-bold text-slate-700 mb-2">Confirm Password</div>
-								<Input
-									type="password"
-									bind:value={formData.confirmPassword}
-									placeholder="Confirm new password"
-								/>
-							</div>
-							<div class="flex justify-end">
-								<Button onclick={handleChangePassword} disabled={saving}>
-									{#if saving}
-										<Spinner size="sm" />
-									{:else}
-										Change Password
-									{/if}
-								</Button>
-							</div>
-						</div>
-					</div>
+            <div class="mb-2 text-right">
+              <p class="text-sm font-bold text-neutral-500 uppercase tracking-wider">
+                Public Profile
+              </p>
+            </div>
+          </div>
+        </div>
 
-					<div class="pt-6 border-t border-slate-100">
-						<h3 class="text-lg font-bold text-slate-900 mb-4">Preferences</h3>
-						<div class="space-y-4">
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Language</div>
-									<div class="text-sm text-slate-500">Choose your preferred language</div>
-								</div>
-								<LanguageSwitcher />
-							</div>
-						</div>
-					</div>
+        <div class="bg-white p-8 rounded-[32px] border border-neutral-200 space-y-6 shadow-sm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label for="firstName" class="text-sm font-bold text-neutral-700 pl-1 block">First Name</label>
+              <Input
+                id="firstName"
+                bind:value={formData.firstName}
+                placeholder="John"
+                class="rounded-xl border-neutral-200 focus:border-black transition-colors bg-neutral-50/50"
+              />
+            </div>
+            <div class="space-y-2">
+              <label for="lastName" class="text-sm font-bold text-neutral-700 pl-1 block">Last Name</label>
+              <Input
+                id="lastName"
+                bind:value={formData.lastName}
+                placeholder="Doe"
+                class="rounded-xl border-neutral-200 focus:border-black transition-colors bg-neutral-50/50"
+              />
+            </div>
+          </div>
 
-					<div class="pt-6 border-t border-slate-100">
-						<h3 class="text-lg font-bold text-slate-900 mb-4">Session</h3>
-						<div class="space-y-4">
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Sign Out</div>
-									<div class="text-sm text-slate-500">Sign out of your account on this device</div>
-								</div>
-								<Button intent="secondary" onclick={() => authStore.logout()}>
-									<iconify-icon icon="solar:logout-2-bold" width="18"></iconify-icon>
-									Logout
-								</Button>
-							</div>
-						</div>
-					</div>
+          <div class="space-y-2">
+            <label for="email" class="text-sm font-bold text-neutral-700 pl-1 block">Email Address</label>
+            <Input
+              id="email"
+              value={formData.email}
+              disabled
+              class="bg-neutral-100 border-transparent text-neutral-500 cursor-not-allowed rounded-xl"
+            />
+          </div>
 
-					<div class="pt-6 border-t border-slate-100">
-						<h3 class="text-lg font-bold text-rose-600 mb-2">Danger Zone</h3>
-						<p class="text-sm text-slate-600 mb-4">
-							Once you delete your account, there is no going back. Please be certain.
-						</p>
-						<Button intent="danger" onclick={handleDeleteAccount} disabled={deleting}>
-							{#if deleting}
-								<Spinner size="sm" />
-								Deleting Account...
-							{:else}
-								<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-								Delete Account
-							{/if}
-						</Button>
-					</div>
-				</div>
-			{:else if activeTab === 'notifications'}
-				<div class="space-y-6">
-					<div>
-						<h3 class="text-lg font-bold text-slate-900 mb-4">Notification Preferences</h3>
-						<div class="space-y-4">
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Email Notifications</div>
-									<div class="text-sm text-slate-500">Receive email updates about your account</div>
-								</div>
-								<Toggle bind:checked={notifications.email} />
-							</div>
+          <div class="pt-6 flex items-center justify-end gap-4 border-t border-neutral-100">
+            {#if showSavedMessage}
+              <span class="text-sm font-bold text-green-600 flex items-center gap-2" in:fade>
+                <iconify-icon icon="solar:check-circle-bold"></iconify-icon> Saved
+              </span>
+            {/if}
+            <Button onclick={handleUpdateProfile} disabled={saving || !hasProfileChanges}>
+              {#if saving}
+                <Spinner size="sm" class="text-white" />
+              {:else}
+                <iconify-icon icon="solar:diskette-bold" width="18"></iconify-icon>
+              {/if}
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    {:else if activeTab === 'account'}
+      <div in:fade={{ duration: 300 }} class="space-y-6">
+        <div class="bg-white p-8 rounded-[32px] border border-neutral-200 space-y-6 shadow-sm">
+          <div class="flex items-center gap-4 mb-2">
+            <div class="p-3 bg-neutral-100 rounded-xl">
+              <iconify-icon icon="solar:key-square-bold" width="24"></iconify-icon>
+            </div>
+            <div>
+              <h3 class="text-lg font-black uppercase tracking-tight">Security</h3>
+              <p class="text-sm text-neutral-500">Update your password</p>
+            </div>
+          </div>
 
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Push Notifications</div>
-									<div class="text-sm text-slate-500">Receive push notifications on your device</div>
-								</div>
-								<Toggle bind:checked={notifications.push} />
-							</div>
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label for="currentPassword" class="text-sm font-bold text-neutral-700 pl-1 block">Current Password</label>
+              <Input
+                id="currentPassword"
+                type="password"
+                bind:value={formData.currentPassword}
+                placeholder="••••••••"
+                class="bg-neutral-50/50 rounded-xl"
+              />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label for="newPassword" class="text-sm font-bold text-neutral-700 pl-1 block">New Password</label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  bind:value={formData.newPassword}
+                  placeholder="••••••••"
+                  class="bg-neutral-50/50 rounded-xl"
+                />
+              </div>
+              <div class="space-y-2">
+                <label for="confirmPassword" class="text-sm font-bold text-neutral-700 pl-1 block">Confirm Password</label
+                >
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  bind:value={formData.confirmPassword}
+                  placeholder="••••••••"
+                  class="bg-neutral-50/50 rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
 
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Marketing Emails</div>
-									<div class="text-sm text-slate-500">Receive emails about new features and updates</div>
-								</div>
-								<Toggle bind:checked={notifications.marketing} />
-							</div>
-						</div>
-					</div>
-				</div>
-			{:else if activeTab === 'privacy'}
-				<div class="space-y-6">
-					<div>
-						<h3 class="text-lg font-bold text-slate-900 mb-4">Privacy Settings</h3>
-						<div class="space-y-4">
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Profile Visibility</div>
-									<div class="text-sm text-slate-500">Make your profile visible to other users</div>
-								</div>
-								<Toggle bind:checked={privacy.profileVisible} />
-							</div>
+          <div class="flex justify-end pt-2">
+            <Button onclick={handleChangePassword} disabled={saving}>
+              {#if saving}
+                <Spinner size="sm" class="text-white" />
+              {:else}
+                <iconify-icon icon="solar:diskette-bold" width="18"></iconify-icon>
+              {/if}
+              {saving ? 'Updating...' : 'Update Password'}
+            </Button>
+          </div>
+        </div>
 
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Show Online Status</div>
-									<div class="text-sm text-slate-500">Let others see when you're online</div>
-								</div>
-								<Toggle bind:checked={privacy.showOnline} />
-							</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div
+            class="bg-white p-6 rounded-[28px] border border-neutral-200 flex flex-col justify-between shadow-sm"
+          >
+            <div class="mb-4">
+              <h4 class="font-black uppercase text-sm mb-1">Language</h4>
+              <p class="text-sm text-neutral-500">Interface language</p>
+            </div>
+            <LanguageSwitcher />
+          </div>
 
-							<div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-								<div>
-									<div class="font-bold text-slate-900">Activity Status</div>
-									<div class="text-sm text-slate-500">Share your activity with connections</div>
-								</div>
-								<Toggle bind:checked={privacy.activityStatus} />
-							</div>
-						</div>
-					</div>
-				</div>
-			{/if}
-		</div>
-	</div>
+          <div
+            class="bg-white p-6 rounded-[28px] border border-neutral-200 flex flex-col justify-between shadow-sm"
+          >
+            <div class="mb-4">
+              <h4 class="font-black uppercase text-sm mb-1">Session</h4>
+              <p class="text-sm text-neutral-500">Log out from this device</p>
+            </div>
+            <Button onclick={() => authStore.logout()}>
+              <iconify-icon icon="solar:logout-2-bold" width="20"></iconify-icon>
+              Log Out
+            </Button>
+          </div>
+        </div>
+
+        <div class="mt-8 p-1 rounded-[34px] bg-gradient-to-r from-red-100 to-orange-100">
+          <div class="bg-white rounded-[32px] p-8">
+            <div class="flex flex-col md:flex-row items-start justify-between gap-6">
+              <div>
+                <h3
+                  class="text-red-600 font-black uppercase tracking-tight text-lg mb-2 flex items-center gap-2"
+                >
+                  <iconify-icon icon="solar:danger-triangle-bold"></iconify-icon>
+                  Danger Zone
+                </h3>
+                <p class="text-neutral-600 text-sm leading-relaxed max-w-md font-medium">
+                  Deleting your account is permanent. All your data will be wiped immediately and
+                  cannot be recovered.
+                </p>
+              </div>
+              <Button onclick={handleDeleteAccount} disabled={deleting}>
+                <iconify-icon icon="solar:trash-bin-trash-bold" width="20"></iconify-icon>
+                {deleting ? 'Deleting...' : 'Delete Account'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {:else if activeTab === 'notifications'}
+      <div
+        in:fade={{ duration: 300 }}
+        class="bg-white rounded-[32px] border border-neutral-200 overflow-hidden divide-y divide-neutral-100 shadow-sm"
+      >
+        <div class="p-8 pb-4">
+          <h3 class="text-xl font-black uppercase tracking-tight mb-1">Preferences</h3>
+          <p class="text-neutral-500 text-sm">Choose how we communicate with you.</p>
+        </div>
+
+        {#each [{ label: 'Email Notifications', sub: 'Receive updates about your account activity via email.', bind: 'email' }, { label: 'Push Notifications', sub: 'Receive real-time alerts on your device.', bind: 'push' }, { label: 'Marketing Emails', sub: 'Be the first to know about new features and offers.', bind: 'marketing' }] as item}
+          <div
+            class="p-6 flex items-center justify-between hover:bg-neutral-50/50 transition-colors"
+          >
+            <div class="pr-4">
+              <div class="font-bold text-neutral-900 text-base">{item.label}</div>
+              <div class="text-sm text-neutral-500 mt-0.5">{item.sub}</div>
+            </div>
+            <Toggle bind:checked={notifications[item.bind]} />
+          </div>
+        {/each}
+      </div>
+    {:else if activeTab === 'privacy'}
+      <div
+        in:fade={{ duration: 300 }}
+        class="bg-white rounded-[32px] border border-neutral-200 overflow-hidden divide-y divide-neutral-100 shadow-sm"
+      >
+        <div class="p-8 pb-4">
+          <h3 class="text-xl font-black uppercase tracking-tight mb-1">Privacy</h3>
+          <p class="text-neutral-500 text-sm">Control who can see your profile and activity.</p>
+        </div>
+
+        {#each [{ label: 'Public Profile', sub: 'Allow anyone to view your profile information.', bind: 'profileVisible' }, { label: 'Online Status', sub: 'Show the green dot when you are active.', bind: 'showOnline' }, { label: 'Activity Log', sub: 'Allow friends to see what you are working on.', bind: 'activityStatus' }] as item}
+          <div
+            class="p-6 flex items-center justify-between hover:bg-neutral-50/50 transition-colors"
+          >
+            <div class="pr-4">
+              <div class="font-bold text-neutral-900 text-base">{item.label}</div>
+              <div class="text-sm text-neutral-500 mt-0.5">{item.sub}</div>
+            </div>
+            <Toggle bind:checked={privacy[item.bind]} />
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
 </div>
+
+{#if deleteModalOpen}
+  <div
+    transition:fade={{ duration: 150 }}
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm"
+  >
+    <div
+      in:scale={{ start: 0.95, duration: 200 }}
+      class="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl space-y-6"
+    >
+      <div class="space-y-2 text-center">
+        <div
+          class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto text-red-500 mb-4"
+        >
+          <iconify-icon icon="solar:bomb-bold-duotone" width="32"></iconify-icon>
+        </div>
+        <h3 class="text-2xl font-black uppercase tracking-tight 900">Delete Account?</h3>
+        <p class="text-neutral-500 font-medium">
+          This action is absolute. Your data will be permanently removed.
+        </p>
+      </div>
+
+      <div class="bg-neutral-50 p-4 rounded-2xl border border-neutral-200">
+        <label for="deleteConfirm" class="text-xs font-bold text-neutral-500 uppercase tracking-wide block mb-2">
+          Type "DELETE" to confirm
+        </label>
+        <input
+          id="deleteConfirm"
+          type="text"
+          bind:value={deleteConfirmationText}
+          placeholder="DELETE"
+          class="w-full text-center font-black tracking-widest p-3 rounded-xl border-neutral-300 focus:border-red-500 focus:ring-red-500/20 uppercase"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          onclick={() => (deleteModalOpen = false)}
+          class="px-4 py-3 rounded-xl font-bold bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onclick={confirmDeleteAccount}
+          disabled={deleteConfirmationText !== 'DELETE' || deleting}
+          class="px-4 py-3 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {deleting ? 'Goodbye...' : 'Confirm Delete'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}

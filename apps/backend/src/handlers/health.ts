@@ -45,7 +45,7 @@ async function checkDatabase(): Promise<ServiceStatus> {
 async function checkStorage(storage: StorageService): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    await storage.client.bucketExists();
+    await storage.list();
     return {
       status: 'healthy',
       latency: Date.now() - start,

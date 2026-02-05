@@ -10,11 +10,15 @@
     "./svelte": "./src/svelte.ts",
     "./react": "./src/react.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@repo/logger": "workspace:*",
     "svelte": "^5.49.1"
   },
   "devDependencies": {
-    "@repo/tsconfig": "workspace:*"
+    "@repo/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
   }
 }

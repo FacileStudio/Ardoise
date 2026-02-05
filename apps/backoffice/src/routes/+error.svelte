@@ -4,91 +4,85 @@
   import 'iconify-icon';
 
   $: status = $page.status;
-  $: message = $page.error?.message || 'Something went wrong';
+  $: message = $page.error?.message || 'Unauthorized Action';
 
-  function goDashboard() {
-    goto('/admin/contacts');
-  }
-
-  function goBack() {
-    window.history.back();
-  }
+  const goDashboard = () => goto('/admin/contacts');
+  const goBack = () => window.history.back();
 </script>
 
-<div class="min-h-screen bg-white flex items-center justify-center px-4">
-  <div class="max-w-3xl w-full">
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-12">
-      <div class="text-center">
-        <div class="mb-6 flex justify-center">
-          <div class="relative bg-primary rounded-2xl p-8 shadow-xl">
-            <iconify-icon
-              icon="solar:shield-warning-bold"
-              width="80"
-              class="text-white"
-            ></iconify-icon>
-          </div>
+<div
+  class="min-h-screen bg-white text-black font-sans flex items-center justify-center px-6 selection:bg-black selection:text-white"
+>
+  <div class="absolute top-12 left-12 flex items-center gap-2 opacity-20 pointer-events-none">
+    <div class="w-2 h-2 bg-black rounded-full"></div>
+    <span class="text-[10px] font-black uppercase tracking-[0.3em]">Admin Protocol</span>
+  </div>
+
+  <div class="max-w-4xl w-full relative">
+    <div class="grid md:grid-cols-2 gap-12 items-center">
+      <div class="text-center md:text-left">
+        <div
+          class="inline-flex items-center justify-center w-16 h-16 bg-black text-white rounded-2xl mb-8"
+        >
+          <iconify-icon icon="solar:shield-warning-bold" width="32"></iconify-icon>
         </div>
 
-        <h1 class="text-8xl font-black text-primary mb-6 tracking-tight">
-          {status}
+        <h1
+          class="text-8xl md:text-[10rem] font-black italic uppercase tracking-tighter leading-none mb-4"
+        >
+          {status}.
         </h1>
 
-        <h2 class="text-3xl font-bold text-gray-800 mb-4">
+        <h2 class="text-2xl font-black uppercase tracking-tight mb-6">
           {#if status === 404}
-            Admin Page Not Found
-          {:else if status === 500}
-            Server Error
+            Resource Missing.
           {:else if status === 403}
-            Access Denied
+            Access Restricted.
           {:else}
-            Error Occurred
+            System Failure.
           {/if}
         </h2>
+      </div>
 
-        <div class="h-1 w-32 bg-primary rounded-full mx-auto mb-6"></div>
-
-        <p class="text-lg text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed">
+      <div class="bg-neutral-50 rounded-[40px] p-8 md:p-12 border border-neutral-100">
+        <p class="text-neutral-500 font-medium text-lg leading-relaxed mb-10">
           {#if status === 404}
-            This admin resource doesn't exist or has been moved. Please check the URL or navigate back to the dashboard.
-          {:else if status === 500}
-            An internal error occurred on the server. Our team has been notified and is working on a fix.
+            The admin resource you are trying to reach doesn't exist or has been moved. Check the
+            terminal logs or return to base.
           {:else if status === 403}
-            You don't have permission to access this resource. Please contact your administrator if you believe this is an error.
+            Your current security clearance does not allow access to this sector. Contact your root
+            administrator for elevation.
           {:else}
             {message}
           {/if}
         </p>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+        <div class="flex flex-col gap-4">
           <button
             on:click={goDashboard}
-            class="group relative px-8 py-4 bg-primary text-white font-semibold rounded-xl shadow-lg hover:bg-primary-hover transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+            class="w-full px-8 py-5 bg-black text-white font-black uppercase tracking-widest rounded-2xl hover:bg-neutral-800 transition active:scale-95 flex items-center justify-center gap-3"
           >
-            <iconify-icon icon="solar:widget-4-bold" width="22"></iconify-icon>
-            <span>Back to Dashboard</span>
-            <iconify-icon
-              icon="solar:arrow-right-bold"
-              width="22"
-              class="group-hover:translate-x-1 transition-transform"
-            ></iconify-icon>
+            <iconify-icon icon="solar:widget-4-bold" width="20"></iconify-icon>
+            Dashboard
           </button>
 
           <button
             on:click={goBack}
-            class="px-8 py-4 bg-white text-gray-700 font-semibold rounded-xl shadow-lg hover:bg-gray-50 border border-gray-300 transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+            class="w-full px-8 py-5 bg-white text-black border border-neutral-200 font-black uppercase tracking-widest rounded-2xl hover:bg-neutral-50 transition active:scale-95 flex items-center justify-center gap-3"
           >
-            <iconify-icon icon="solar:arrow-left-bold" width="22"></iconify-icon>
-            <span>Go Back</span>
+            <iconify-icon icon="solar:undo-left-round-bold" width="20"></iconify-icon>
+            Previous
           </button>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="mt-6 text-center">
-      <p class="text-sm text-gray-500">
-        <iconify-icon icon="solar:info-circle-bold" width="16" class="inline-block"></iconify-icon>
-        Error Code: {status} • Backoffice Admin Panel
-      </p>
-    </div>
+  <div
+    class="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-300"
+  >
+    <span>Status: {status}</span>
+    <span class="w-1 h-1 bg-neutral-200 rounded-full"></span>
+    <span>Backoffice Panel 2.0</span>
   </div>
 </div>

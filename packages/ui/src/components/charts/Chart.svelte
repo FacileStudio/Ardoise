@@ -1,10 +1,12 @@
 <script lang="ts">
     import { cn } from '@repo/utils';
+    import type { Snippet } from 'svelte';
 
     let {
         width = $bindable(0),
         height = 300,
         class: className = '',
+        children,
     }: {
         data?: any[];
         config?: Record<string, { label: string; color: string; icon?: string }>;
@@ -12,6 +14,7 @@
         width?: number;
         height?: number;
         class?: string;
+        children?: Snippet;
     } = $props();
 
     let container: HTMLDivElement;
@@ -23,11 +26,11 @@
     });
 </script>
 
-<svelte:window on:resize={() => {
+<svelte:window onresize={() => {
     if (container)
         width = container.clientWidth;
 }} />
 
 <div bind:this={container} class={cn("w-full", className)} style="height: {height}px">
-        <slot />
+        {@render children?.()}
 </div>

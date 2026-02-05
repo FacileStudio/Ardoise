@@ -17,7 +17,7 @@ on:
       - 'bun.lockb'
 
 jobs:
-  type-check:
+  typecheck:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,4 +33,4 @@ jobs:
         run: bun install
 
       - name: Run type check
-        run: cd apps/mobile && bun run type-check
+        run: cd apps/mobile && bun run typecheck

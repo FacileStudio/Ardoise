@@ -52,7 +52,7 @@
 </script>
 
 <div class="auto-form">
-  <form on:submit={handleSubmit}>
+  <form onsubmit={handleSubmit}>
     <div class="form-fields">
       {#each config.fields as field}
         {@const { error } = renderField(field)}
@@ -138,7 +138,7 @@
                 class:error={error}
                 disabled={isSubmitting}
                 rows="5"
-              />
+              ></textarea>
             {/if}
 
             {#if error}
@@ -153,7 +153,7 @@
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn-cancel" on:click={onCancel} disabled={isSubmitting}>
+      <button type="button" class="btn-cancel" onclick={onCancel} disabled={isSubmitting}>
         <iconify-icon icon="heroicons:x-mark" width="20"></iconify-icon>
         <span>Cancel</span>
       </button>

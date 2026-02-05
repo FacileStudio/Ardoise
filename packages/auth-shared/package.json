@@ -6,10 +6,17 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@repo/logger": "workspace:*",
     "@types/js-cookie": "^3.0.6",
     "js-cookie": "^3.0.5",
-    "zod": "^3.24.0"
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
   }
 }

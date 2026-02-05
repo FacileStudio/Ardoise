@@ -22,8 +22,9 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
-    "type-check": {
-      "dependsOn": ["^type-check", "db:generate"]
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
     },
     "clean": {
       "cache": false

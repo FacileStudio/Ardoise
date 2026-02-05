@@ -1,5 +1,6 @@
 <script lang="ts">
     import { cva, type VariantProps } from 'class-variance-authority';
+    import type { Snippet } from 'svelte';
 
     const badgeClass = cva(
         "inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight border min-w-[70px]",
@@ -19,9 +20,9 @@
         }
     );
 
-    let { variant = 'slate' }: { variant?: VariantProps<typeof badgeClass>['variant'] } = $props();
+    let { variant = 'slate', children }: { variant?: VariantProps<typeof badgeClass>['variant']; children?: Snippet } = $props();
 </script>
 
 <span class={badgeClass({ variant })}>
-    <slot />
+    {@render children?.()}
 </span>

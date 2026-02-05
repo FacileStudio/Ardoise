@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     port: Number(process.env.PORT) || 3000,
     fs: {
-      allow: ['..']
+      allow: ['..', '../../packages']
     }
   },
   assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.ttf', '**/*.otf']

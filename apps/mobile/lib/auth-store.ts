@@ -33,7 +33,7 @@ export const authStore = new UniversalAuthStore(
   mobileStorage,
   async () => {
     try {
-      await trpc.auth.logout.mutate();
+      await trpc.auth.logout.mutate({});
     } catch (e) {
       logger.error({ err: e }, 'Mobile Logout Error');
     }

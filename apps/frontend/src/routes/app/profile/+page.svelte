@@ -1,15 +1,15 @@
 <script lang="ts">
   import { trpc } from '$lib/trpc';
   import { onMount } from 'svelte';
-  import { fade, scale } from 'svelte/transition';
+  import { fade, scale, fly } from 'svelte/transition';
   import { uploadFileSimple } from '@repo/storage-client';
   import { t, locale } from '@repo/i18n/svelte';
-  import { Button, Spinner, Card } from '@repo/ui';
+  import { Button, Spinner } from '@repo/ui';
   import { toast } from '@repo/utils';
   import 'iconify-icon';
 
   let loading = true;
-  let actionLoading: 'avatar' | 'cover' | 'removeAvatar' | 'removeCover' | ''  = "";
+  let actionLoading: 'avatar' | 'cover' | 'removeAvatar' | 'removeCover' | '' = '';
   let user: any = null;
   let isPremiumUser = false;
   let error = '';
@@ -40,12 +40,10 @@
     if (!file) return;
 
     actionLoading = type;
-    error = "";
-
     try {
       const { uploadUrl, publicUrl, fileKey } = await trpc.media.getUploadUrl.mutate({
         fileName: file.name,
-        fileType: file.type
+        fileType: file.type,
       });
 
       await uploadFileSimple(file, uploadUrl);
@@ -57,175 +55,229 @@
       }
 
       await loadData();
-      toast.push(`${type === 'avatar' ? 'Avatar' : 'Cover'} updated successfully!`, 'success');
+      toast.push(`${type === 'avatar' ? 'Avatar' : 'Cover'} updated!`, 'success');
     } catch (err: any) {
-      error = "Unable to save image. Check your connection.";
-      toast.push('Unable to save image. Check your connection.', 'error');
+      toast.push('Upload failed. Try again.', 'error');
     } finally {
-      actionLoading = "";
-      target.value = "";
+      actionLoading = '';
+      target.value = '';
     }
   }
 
   async function handleRemoveMedia(type: 'avatar' | 'cover') {
-    if (!confirm(`Permanently delete this media?`)) return;
-    actionLoading = type === 'avatar' ? "removeAvatar" : "removeCover";
+    if (!confirm(`Delete this media?`)) return;
+    actionLoading = type === 'avatar' ? 'removeAvatar' : 'removeCover';
     try {
       if (type === 'avatar') await trpc.media.removeAvatar.mutate();
       else await trpc.media.removeCover.mutate();
       await loadData();
-      toast.push(`${type === 'avatar' ? 'Avatar' : 'Cover'} removed successfully!`, 'success');
+      toast.push('Media removed', 'success');
     } catch (err) {
-      error = "Error during deletion";
       toast.push('Error during deletion', 'error');
     } finally {
-      actionLoading = "";
+      actionLoading = '';
     }
   }
 </script>
 
-<main class="min-h-screen bg-white text-slate-900 pb-12">
+<main class="min-h-screen bg-white text-black pb-20 selection:bg-black selection:text-white">
   {#if loading}
-    <div class="flex flex-col items-center justify-center h-screen space-y-4" in:fade>
-      <Spinner size="xl" />
-      <p class="text-sm font-medium text-slate-400 uppercase tracking-widest">{$t('common.actions.loading')}</p>
+    <div class="flex flex-col items-center justify-center h-screen space-y-6" in:fade>
+      <iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48"></iconify-icon>
+      <p class="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400">
+        Loading Profile...
+      </p>
     </div>
   {:else if user}
-    <div class="relative h-48 md:h-72 w-full bg-slate-100 border-b border-slate-200 overflow-hidden">
+    <section
+      class="relative h-[35vh] min-h-[300px] w-full bg-neutral-100 group overflow-hidden border-b-2 border-neutral-100"
+    >
       {#if user.coverImage?.url && actionLoading !== 'cover'}
         <img
           src={user.coverImage.url}
           alt="Banner"
-          class="w-full h-full object-cover"
-          in:fade={{ duration: 400 }}
+          class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+          in:fade
         />
       {:else if actionLoading === 'cover' || actionLoading === 'removeCover'}
-        <div class="w-full h-full flex items-center justify-center bg-slate-200 animate-pulse">
-           <iconify-icon icon="svg-spinners:90-ring-with-bg" width="32" class="text-slate-400"></iconify-icon>
+        <div class="absolute inset-0 flex items-center justify-center bg-neutral-200">
+          <iconify-icon icon="svg-spinners:90-ring-with-bg" width="40"></iconify-icon>
         </div>
       {/if}
 
-      <div class="absolute bottom-4 right-4 flex gap-2 z-10">
+      <div
+        class="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 z-20"
+      >
         <button
           on:click={() => coverInput.click()}
-          class="bg-white/90 backdrop-blur border border-slate-300 px-4 py-2 rounded-lg text-sm font-bold hover:bg-white transition shadow-sm flex items-center gap-2"
-          disabled={actionLoading !== ""}
+          class="bg-white text-black px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition shadow-2xl flex items-center gap-2"
         >
           <iconify-icon icon="solar:camera-add-bold" width="18"></iconify-icon>
-          {$t('profile.changeCover')}
+          Change Cover
         </button>
         {#if user.coverImage}
           <button
             on:click={() => handleRemoveMedia('cover')}
-            class="bg-white/90 backdrop-blur border border-red-100 text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
-            aria-label="Remove banner"
+            class="bg-white text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition shadow-2xl"
           >
-            <iconify-icon icon="solar:trash-bin-trash-bold" width="20"></iconify-icon>
+            <iconify-icon icon="solar:trash-bin-trash-bold" width="22"></iconify-icon>
           </button>
         {/if}
       </div>
-      <input type="file" bind:this={coverInput} on:change={(e) => handleFileUpload(e, 'cover')} class="hidden" accept="image/*" />
-    </div>
+      <input
+        type="file"
+        bind:this={coverInput}
+        on:change={(e) => handleFileUpload(e, 'cover')}
+        class="hidden"
+        accept="image/*"
+      />
+    </section>
 
-    <div class="max-w-5xl mx-auto px-6">
-      <div class="relative -mt-20 flex flex-col md:flex-row items-center md:items-end gap-8">
-
-        <div class="relative group">
-          <div class="w-36 h-36 md:w-44 md:h-44 rounded-full border-[6px] border-white bg-slate-200 overflow-hidden shadow-xl relative">
-            {#if user.avatar?.url && actionLoading !== 'avatar'}
-              <img
-                src={user.avatar.url}
-                alt="Profil"
-                class="w-full h-full object-cover"
-                in:scale={{ start: 0.9, duration: 400 }}
-              />
-            {:else if actionLoading === 'avatar' || actionLoading === 'removeAvatar'}
-              <div class="w-full h-full flex items-center justify-center bg-slate-300 animate-pulse">
-                <iconify-icon icon="svg-spinners:ring-resize" width="32" class="text-indigo-600"></iconify-icon>
-              </div>
-            {:else}
-              <div class="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
-                <iconify-icon icon="solar:user-bold" width="80"></iconify-icon>
-              </div>
-            {/if}
-          </div>
-
-          <button
-            on:click={() => avatarInput.click()}
-            class="absolute bottom-2 right-2 bg-indigo-600 text-white w-12 h-12 rounded-full border-4 border-white hover:bg-indigo-700 transition flex items-center justify-center shadow-lg active:scale-95"
-            aria-label="Change photo"
-            disabled={actionLoading !== ""}
-          >
-            <iconify-icon icon="solar:camera-bold" width="24"></iconify-icon>
-          </button>
-
-          {#if user.avatar}
-            <button
-              on:click={() => handleRemoveMedia('avatar')}
-              class="absolute top-2 right-2 bg-white text-red-600 w-8 h-8 rounded-full border border-slate-200 hover:bg-red-50 transition flex items-center justify-center shadow-md"
-              aria-label="Remove photo"
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="relative -mt-24 flex flex-col md:flex-row items-start gap-12">
+        <aside class="w-full md:w-80 flex flex-col items-center md:items-start z-30">
+          <div class="relative group mb-10">
+            <div
+              class="w-56 h-56 rounded-[48px] border-[10px] border-white bg-neutral-100 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative transition-all duration-500 group-hover:rounded-[32px]"
             >
-              <iconify-icon icon="solar:close-circle-bold" width="18"></iconify-icon>
+              {#if user.avatar?.url && actionLoading !== 'avatar'}
+                <img
+                  src={user.avatar.url}
+                  alt="Profile"
+                  class="w-full h-full object-cover"
+                  in:scale
+                />
+              {:else if actionLoading === 'avatar' || actionLoading === 'removeAvatar'}
+                <div
+                  class="w-full h-full flex items-center justify-center bg-neutral-200 animate-pulse"
+                >
+                  <iconify-icon icon="svg-spinners:ring-resize" width="40" class="text-black"
+                  ></iconify-icon>
+                </div>
+              {:else}
+                <div
+                  class="w-full h-full flex items-center justify-center text-neutral-300 bg-neutral-50"
+                >
+                  <iconify-icon icon="solar:user-bold" width="80"></iconify-icon>
+                </div>
+              {/if}
+            </div>
+
+            <button
+              on:click={() => avatarInput.click()}
+              class="absolute -bottom-2 -right-2 bg-black text-white w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl hover:scale-110 transition active:scale-90 border-4 border-white"
+              disabled={actionLoading !== ''}
+            >
+              <iconify-icon icon="solar:camera-bold" width="24"></iconify-icon>
             </button>
-          {/if}
+            <input
+              type="file"
+              bind:this={avatarInput}
+              on:change={(e) => handleFileUpload(e, 'avatar')}
+              class="hidden"
+              accept="image/*"
+            />
+          </div>
 
-          <input type="file" bind:this={avatarInput} on:change={(e) => handleFileUpload(e, 'avatar')} class="hidden" accept="image/*" />
-        </div>
+          <div class="text-center md:text-left space-y-6 w-full">
+            <div>
+              <h1 class="text-4xl font-black uppercase tracking-tighter leading-none mb-3">
+                {`${user.firstName} ${user.lastName}` || 'Anonymous'}
+              </h1>
+              <p class="text-neutral-400 font-bold tracking-tight text-lg">{user.email}</p>
+            </div>
 
-        <div class="flex-1 text-center md:text-left pt-4">
-          <div class="flex flex-col md:flex-row items-center gap-3">
-            <h1 class="text-3xl font-black tracking-tight">{user.name || $t('profile.title')}</h1>
-            {#if isPremiumUser}
-              <div in:scale class="bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest flex items-center gap-1 shadow-md">
-                <iconify-icon icon="solar:crown-minimalistic-bold"></iconify-icon>
-                {$t('profile.subscription.premium')}
+            <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+              {#if isPremiumUser}
+                <span
+                  class="bg-black text-white text-[10px] px-4 py-2 rounded-xl font-black uppercase tracking-widest flex items-center gap-2"
+                >
+                  <iconify-icon icon="solar:crown-minimalistic-bold" class="text-yellow-400"
+                  ></iconify-icon>
+                  Premium
+                </span>
+              {:else}
+                <span
+                  class="bg-neutral-100 text-neutral-500 text-[10px] px-4 py-2 rounded-xl font-black uppercase tracking-widest"
+                >
+                  Free Plan
+                </span>
+              {/if}
+              <span
+                class="bg-neutral-100 text-neutral-800 text-[10px] px-4 py-2 rounded-xl font-black uppercase tracking-widest"
+              >
+                {user.role}
+              </span>
+            </div>
+
+            <div class="pt-4">
+              <a
+                href="/app/premium"
+                class="block w-full text-center py-4 {isPremiumUser
+                  ? 'bg-neutral-100 text-black'
+                  : 'bg-black text-white'} rounded-2xl font-black uppercase tracking-widest text-[13px] hover:scale-[1.02] transition active:scale-[0.98]"
+              >
+                {isPremiumUser ? 'Manage Subscription' : 'Upgrade to Pro'}
+              </a>
+            </div>
+          </div>
+        </aside>
+
+        <div class="flex-1 w-full pt-6 md:pt-32">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div
+              in:fly={{ y: 20, delay: 100 }}
+              class="p-10 bg-white border-2 border-neutral-100 rounded-[40px] hover:border-black transition-all group shadow-sm"
+            >
+              <div class="flex items-center justify-between mb-8">
+                <span
+                  class="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-300 group-hover:text-black transition-colors"
+                  >Timeline</span
+                >
+                <iconify-icon icon="solar:history-bold" width="20" class="text-neutral-200"
+                ></iconify-icon>
               </div>
-            {:else}
-              <div class="bg-slate-100 text-slate-500 text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest">
-                {$t('profile.subscription.free')}
+              <p class="text-xs font-black uppercase tracking-widest text-neutral-400 mb-2">
+                Member Since
+              </p>
+              <p class="text-3xl font-black uppercase tracking-tighter">
+                {new Date(user.createdAt).toLocaleDateString('en-US', {
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </p>
+            </div>
+
+            <div
+              in:fly={{ y: 20, delay: 200 }}
+              class="p-10 bg-neutral-900 text-white rounded-[40px] shadow-2xl shadow-neutral-200 group relative overflow-hidden"
+            >
+              <div class="relative z-10">
+                <p
+                  class="text-xs font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2"
+                >
+                  Current Status
+                </p>
+                <p class="text-3xl font-black uppercase tracking-tighter">
+                  {isPremiumUser ? 'Elite User' : 'Standard Member'}
+                </p>
               </div>
-            {/if}
+              <div
+                class="absolute -right-6 -bottom-6 opacity-[0.05] group-hover:scale-110 transition-transform duration-1000"
+              >
+                <iconify-icon icon="solar:medal-ribbon-bold" width="180"></iconify-icon>
+              </div>
+            </div>
           </div>
-          <p class="text-slate-500 font-medium text-lg mt-1">{user.email}</p>
         </div>
-
-        <div class="flex items-center gap-3">
-          {#if isPremiumUser}
-            <Button intent="secondary" size="sm" onclick={() => window.location.href = '/app/premium'}>
-              <iconify-icon icon="solar:settings-minimalistic-bold" width="18"></iconify-icon>
-              {$t('profile.subscription.manage')}
-            </Button>
-          {:else}
-            <Button intent="primary" size="sm" onclick={() => window.location.href = '/app/premium'}>
-              <iconify-icon icon="solar:star-fall-bold" width="18"></iconify-icon>
-              {$t('profile.subscription.upgrade')}
-            </Button>
-          {/if}
-        </div>
-      </div>
-
-      <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card padding="lg" rounded="xl" shadow="sm" class="transition hover:border-indigo-100">
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{$t('profile.stats.role')}</p>
-          <p class="text-xl font-bold capitalize text-slate-800">{user.role}</p>
-        </Card>
-        <Card padding="lg" rounded="xl" shadow="sm" class="transition hover:border-indigo-100">
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{$t('profile.stats.member_since')}</p>
-          <p class="text-xl font-bold text-slate-800">
-            {new Date(user.createdAt).toLocaleDateString($locale === 'fr' ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' })}
-          </p>
-        </Card>
-        <Card padding="lg" rounded="xl" shadow="sm" class="flex items-center justify-between group transition hover:border-indigo-200">
-          <div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{$t('profile.stats.experience')}</p>
-            <p class="text-xl font-bold text-slate-800">{isPremiumUser ? ($locale === 'fr' ? 'Élite' : 'Elite') : ($locale === 'fr' ? 'Explorateur' : 'Explorer')}</p>
-          </div>
-          <div class="p-3 rounded-xl {isPremiumUser ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-400'}">
-            <iconify-icon icon={isPremiumUser ? "solar:crown-bold" : "solar:star-bold"} width="24"></iconify-icon>
-          </div>
-        </Card>
       </div>
     </div>
   {/if}
 </main>
 
+<style>
+  :global(body) {
+    background-color: white;
+    overflow-x: hidden;
+  }
+</style>

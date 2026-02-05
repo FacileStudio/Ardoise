@@ -19,7 +19,8 @@
   <div class="max-w-2xl w-full text-center">
     <div class="mb-8 relative">
       <div class="absolute inset-0 flex items-center justify-center opacity-10">
-        <iconify-icon icon="solar:danger-triangle-bold" width="400" class="text-primary"></iconify-icon>
+        <iconify-icon icon="solar:danger-triangle-bold" width="400" class="text-primary"
+        ></iconify-icon>
       </div>
 
       <div class="relative z-10">
@@ -29,7 +30,8 @@
 
         <div class="flex items-center justify-center gap-3 mb-6">
           <div class="h-1 w-16 bg-primary rounded-full"></div>
-          <iconify-icon icon="solar:danger-circle-bold" width="32" class="text-primary"></iconify-icon>
+          <iconify-icon icon="solar:danger-circle-bold" width="32" class="text-primary"
+          ></iconify-icon>
           <div class="h-1 w-16 bg-primary rounded-full"></div>
         </div>
 
@@ -45,7 +47,8 @@
 
         <p class="text-lg text-gray-600 mb-8 max-w-md mx-auto">
           {#if status === 404}
-            The page you're looking for seems to have wandered off into the digital void. Let's get you back on track.
+            The page you're looking for seems to have wandered off into the digital void. Let's get
+            you back on track.
           {:else if status === 500}
             Our servers are having a moment. We're on it! Please try again in a few moments.
           {:else}

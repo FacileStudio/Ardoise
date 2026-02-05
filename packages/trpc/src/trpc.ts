@@ -5,7 +5,7 @@ import { UserRole } from '@repo/types';
 import { type OpenApiMeta } from 'trpc-to-openapi';
 
 const t = initTRPC.context<Context>().meta<OpenApiMeta>().create({
-  errorFormatter({ shape, error, ctx }) {
+  errorFormatter({ shape, error, ctx, path }) {
     if (ctx?.log && error.code === 'INTERNAL_SERVER_ERROR') {
       ctx.log.error({
         error: {
@@ -14,7 +14,7 @@ const t = initTRPC.context<Context>().meta<OpenApiMeta>().create({
           stack: error.stack,
           cause: error.cause,
         },
-        path: shape.path,
+        path,
       });
     }
 

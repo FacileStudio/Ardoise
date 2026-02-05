@@ -8,19 +8,21 @@ export default function Register() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleRegister = async () => {
-    if (!email || !password || !firstName || !lastName) return;
+    if (!email || !password || !confirmPassword || !firstName || !lastName) return;
     setLoading(true);
     setError('');
     try {
       const result = await trpc.auth.register.mutate({
         email,
         password,
+        confirmPassword,
         firstName,
         lastName,
       });
@@ -73,6 +75,15 @@ export default function Register() {
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
+            secureTextEntry
+            editable={!loading}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
             secureTextEntry
             editable={!loading}
           />

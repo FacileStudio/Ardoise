@@ -12,6 +12,7 @@ export { default as Toggle } from './components/atoms/Toggle.svelte';
 export { default as Pagination } from './components/molecules/Pagination.svelte';
 export { default as SearchInput } from './components/molecules/SearchInput.svelte';
 export { default as Stat } from './components/molecules/Stat.svelte';
+export { default as Map } from './components/molecules/Map.svelte';
 
 export { default as AutoForm } from './components/organisms/AutoForm.svelte';
 export { default as AutoTable } from './components/organisms/AutoTable.svelte';

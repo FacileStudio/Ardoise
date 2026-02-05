@@ -16,8 +16,8 @@
 		placeholder?: string;
 	} = $props();
 
-	let dialog: HTMLDialogElement;
-	let searchInput: HTMLInputElement;
+	let dialog = $state<HTMLDialogElement>();
+	let searchInput = $state<HTMLInputElement>();
 	let query = $state('');
 	let selectedIndex = $state(0);
 	let filteredCommands = $derived(commandRegistry.search(query));
@@ -109,8 +109,8 @@
 {#if open}
 	<dialog
 		bind:this={dialog}
-		on:close={close}
-		on:click|self={close}
+		onclose={close}
+		onclick={(e) => e.target === e.currentTarget && close()}
 		class="bg-transparent backdrop:bg-slate-900/50 backdrop:backdrop-blur-sm p-4 outline-none"
 	>
 		<div
@@ -128,7 +128,7 @@
 					<input
 						bind:this={searchInput}
 						bind:value={query}
-						on:keydown={handleKeydown}
+						onkeydown={handleKeydown}
 						type="text"
 						placeholder={placeholder}
 						class="w-full pl-12 pr-4 py-3 text-lg bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-200 focus:bg-white outline-none transition-all"
@@ -152,7 +152,7 @@
 								{#each commands as command, index}
 									{@const globalIndex = filteredCommands.indexOf(command)}
 									<button
-										on:click={() => executeCommand(command)}
+										onclick={() => executeCommand(command)}
 										data-selected={globalIndex === selectedIndex}
 										class="w-full text-left px-4 py-3 rounded-xl transition-all group hover:bg-indigo-50 {globalIndex === selectedIndex ? 'bg-indigo-50' : ''}"
 									>
