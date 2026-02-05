@@ -8,13 +8,12 @@
   import Button from '../atoms/Button.svelte';
   import ImageUpload from './ImageUpload.svelte';
 
-  // On utilise z.ZodObject<any, any, any> pour éviter l'erreur "Type instantiation is excessively deep"
-  export let schema: z.ZodObject<any, any, any>;
-  export let initialData: any = {};
-  export let onSubmit: (data: any) => Promise<void>;
+  export let schema: z.ZodObject<z.ZodRawShape, "strip", z.ZodTypeAny>;
+  export let initialData: Record<string, unknown> = {};
+  export let onSubmit: (data: Record<string, unknown>) => Promise<void>;
   export let submitLabel = "Enregistrer";
 
-  const adapter = zod(schema) as any;
+  const adapter = zod(schema) as unknown;
 
   const { form, errors, constraints, enhance, delayed } = superForm(
     defaults(initialData, adapter),
@@ -25,7 +24,7 @@
         if (form.valid) {
           try {
             await onSubmit(form.data);
-          } catch (e) {
+          } catch {
             toast.push("Erreur lors de la sauvegarde", "error");
           }
         }
@@ -33,8 +32,7 @@
     }
   );
 
-  // Extraction du shape avec cast pour accéder aux propriétés Zod sans erreurs TS
-  const shape = schema.shape as Record<string, any>;
+  const shape = schema.shape as Record<string, z.ZodTypeAny>;
   const fields = Object.keys(shape);
 
   /**
@@ -68,7 +66,7 @@
 
 <form use:enhance class="space-y-6 bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm">
   <div class="grid grid-cols-1 gap-5">
-    {#each fields as field}
+    {#each fields as field (field)}
       {#if field !== 'id' && field !== 'createdAt' && field !== 'updatedAt'}
         <div class="flex flex-col gap-2">
           <label for={field} class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
@@ -86,7 +84,7 @@
                 class="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 appearance-none"
               >
                 <option value="" disabled selected>Sélectionner une option</option>
-                {#each getEnumOptions(field) as option}
+                {#each getEnumOptions(field) as option (option)}
                   <option value={option}>{option}</option>
                 {/each}
               </select>

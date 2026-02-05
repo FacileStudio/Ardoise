@@ -1,6 +1,5 @@
 <script lang="ts">
     import { cva, type VariantProps } from 'class-variance-authority';
-    import { cn } from '@repo/utils';
 
     const avatarClass = cva(
         "rounded-full bg-gradient-to-br flex items-center justify-center font-black text-white overflow-hidden",

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Button from '../atoms/Button.svelte';
   import 'iconify-icon';
   export let title: string;
   export let description: string;

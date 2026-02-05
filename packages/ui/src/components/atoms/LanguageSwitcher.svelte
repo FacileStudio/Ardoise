@@ -53,7 +53,7 @@
       class="absolute z-50 w-full mt-2 bg-white border border-neutral-200 rounded-[24px] shadow-xl shadow-neutral-200/50 overflow-hidden p-1.5"
     >
       <div class="max-h-64 overflow-y-auto custom-scrollbar">
-        {#each locales as lang}
+        {#each locales as lang (lang.code)}
           <button
             onclick={() => handleSelect(lang.code)}
             class="flex items-center justify-between w-full px-4 py-3 rounded-[18px] transition-all

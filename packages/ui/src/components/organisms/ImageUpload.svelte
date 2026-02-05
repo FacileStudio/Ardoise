@@ -6,7 +6,6 @@
 
     export let value: string = "";
     export let label = "Image de couverture";
-    export let folder = "uploads";
 
     export let getPresignedUrl: (filename: string, folder: string) => Promise<string>;
 
@@ -22,7 +21,7 @@
         uploading = true;
 
         try {
-            const presignedUrl = await getPresignedUrl(file.name, folder);
+            const presignedUrl = await getPresignedUrl(file.name, "uploads");
             const finalUrl = await uploadFileSimple(file, presignedUrl);
 
             value = finalUrl;

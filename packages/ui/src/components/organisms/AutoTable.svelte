@@ -3,13 +3,13 @@
     import 'iconify-icon';
 
     export let entityName: string;
-    export let data: any[];
+    export let data: unknown[];
 
     function handleExport() {
         try {
             downloadCSV(data, `export-${entityName}-${new Date().toISOString().split('T')[0]}`);
             toast.push("Export réussi !", "success");
-        } catch (e) {
+        } catch (_e) {
             toast.push("Erreur lors de l'export", "error");
         }
     }

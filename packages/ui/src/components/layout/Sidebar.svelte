@@ -1,6 +1,5 @@
 <script lang="ts">
   import 'iconify-icon';
-  import { fade } from 'svelte/transition';
   export let items: { label: string; icon: string; href: string }[] = [];
   export let activeHref = '/';
 </script>
@@ -20,9 +19,10 @@
   </div>
 
   <nav class="flex-1 space-y-2">
-    {#each items as item}
+    {#each items as item (item.href)}
       <a
         href={item.href}
+        data-sveltekit-reload
         class="group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200
         {activeHref === item.href
           ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-200'
@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <a href="/app/profile" class="absolute inset-0 z-10" aria-label="View Profile"></a>
+      <a href="/app/profile" data-sveltekit-reload class="absolute inset-0 z-10" aria-label="View Profile"></a>
     </div>
   </div>
 </aside>

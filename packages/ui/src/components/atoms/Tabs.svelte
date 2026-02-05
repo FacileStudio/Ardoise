@@ -12,7 +12,7 @@
 </script>
 
 <div class={cn("flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200", className)}>
-    {#each tabs as tab}
+    {#each tabs as tab (tab.value)}
         <button
             on:click={() => activeTab = tab.value}
             class={cn(

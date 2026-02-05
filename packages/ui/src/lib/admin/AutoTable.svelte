@@ -1,436 +1,163 @@
 <script lang="ts">
   import type { EntityConfig, ListResult } from '@repo/admin';
   import { downloadCSV, toast } from '@repo/utils';
+  import Pagination from '../../components/molecules/Pagination.svelte';
+  import { cn } from '@repo/utils';
   import 'iconify-icon';
 
-  export let config: EntityConfig;
-  export let data: ListResult<any>;
-  export let onEdit: (id: string) => void;
-  export let onDelete: (id: string) => void;
-  export let onView: (id: string) => void;
-  export let onPageChange: (page: number) => void;
-  export let onSort: (field: string) => void;
-  export let currentSort: { field: string; order: 'asc' | 'desc' } | undefined;
-  export let permissions: {
-    canCreate: boolean;
-    canRead: boolean;
-    canUpdate: boolean;
-    canDelete: boolean;
-  };
+  let {
+    config,
+    data,
+    onEdit,
+    onDelete,
+    onView,
+    onPageChange,
+    onSort,
+    currentSort,
+    permissions,
+    class: className = '',
+  }: Props = $props();
 
-  function formatValue(value: any, fieldName: string): string {
-    if (value === null || value === undefined) return '-';
+  const getFieldLabel = (fieldName: string) =>
+    config.fields.find((f) => f.name === fieldName)?.label || fieldName;
 
-    const field = config.fields.find(f => f.name === fieldName);
-
-    if (field?.type === 'date') {
+  function formatValue(value: unknown, fieldName: string): string {
+    if (value == null) return '-';
+    const field = config.fields.find((f) => f.name === fieldName);
+    if (field?.type === 'date' && (typeof value === 'string' || typeof value === 'number'))
       return new Date(value).toLocaleDateString();
-    }
-
-    if (field?.type === 'boolean') {
-      return value ? '✓' : '✗';
-    }
-
-    if (typeof value === 'object') {
-      return JSON.stringify(value);
-    }
-
+    if (field?.type === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'object') return 'JSON';
     return String(value);
   }
 
-  function getSortIcon(fieldName: string): string {
-    if (!currentSort || currentSort.field !== fieldName) return 'heroicons:arrows-up-down';
-    return currentSort.order === 'asc' ? 'heroicons:arrow-up' : 'heroicons:arrow-down';
-  }
-
   function handleExport() {
-    try {
-      if (data.data.length === 0) {
-        toast.push("No data to export", "warning");
-        return;
-      }
-
-      const exportData = data.data.map(row => {
-        const exportRow: any = {};
-        config.listFields.forEach(field => {
-          exportRow[field] = formatValue(row[field], field);
-        });
-        return exportRow;
+    const exportData = data.data.map((row) => {
+      const exportRow: Record<string, string> = {};
+      config.listFields.forEach((f) => {
+        exportRow[f] = formatValue(row[f], f);
       });
-
-      downloadCSV(exportData, `export-${config.name}-${new Date().toISOString().split('T')[0]}`);
-      toast.push("Export successful!", "success");
-    } catch (e) {
-      toast.push("Error during export", "error");
-    }
+      return exportRow;
+    });
+    downloadCSV(exportData, `export-${config.name}`);
+    toast.push('Export successful!', 'success');
   }
 </script>
 
-<div class="auto-table">
-  <div class="table-header">
-    <div class="header-left">
-      <iconify-icon icon="heroicons:table-cells" width="24" class="text-indigo-600"></iconify-icon>
-      <h2>{config.displayName} List</h2>
+<div class={cn('flex flex-col gap-4', className)}>
+  <div class="flex items-center justify-between px-2">
+    <div>
+      <h2 class="text-xl font-black text-neutral-900 tracking-tight">{config.displayName}</h2>
+      <p class="text-xs font-medium text-neutral-400">{data.total} total records found</p>
     </div>
-    <div class="header-right">
-      <div class="table-info">
-        <iconify-icon icon="heroicons:document-text" width="18"></iconify-icon>
-        <span>{data.total} {data.total === 1 ? 'item' : 'items'}</span>
-        <span class="divider">•</span>
-        <span>Page {data.page} of {data.totalPages}</span>
-      </div>
-      <button
-        on:click={handleExport}
-        class="export-btn"
-        disabled={data.data.length === 0}
-        title="Export to CSV"
-      >
-        <iconify-icon icon="heroicons:arrow-down-tray" width="18"></iconify-icon>
-        <span>Export CSV</span>
-      </button>
-    </div>
+
+    <button
+      onclick={handleExport}
+      disabled={data.data.length === 0}
+      class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-neutral-600 hover:bg-neutral-100 rounded-xl transition-all disabled:opacity-30"
+    >
+      <iconify-icon icon="solar:download-square-linear" width="20"></iconify-icon>
+      Export CSV
+    </button>
   </div>
 
-  {#if data.data.length === 0}
-    <div class="empty-state">
-      <iconify-icon icon="heroicons:inbox" width="64" class="text-slate-300"></iconify-icon>
-      <p class="text-slate-600 text-lg font-medium mt-4">No {config.displayName.toLowerCase()} found</p>
-      <p class="text-slate-400 text-sm mt-2">Try adjusting your search or filters</p>
-    </div>
-  {:else}
-    <div class="table-container">
-      <table>
+  <div class="overflow-hidden bg-white border border-neutral-100 rounded-3xl shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
         <thead>
-          <tr>
-            {#each config.listFields as field}
-              <th>
+          <tr class="bg-neutral-50/50">
+            {#each config.listFields as fieldName (fieldName)}
+              <th class="p-4">
                 <button
-                  class="sort-button"
-                  on:click={() => onSort(field)}
+                  onclick={() => onSort(fieldName)}
+                  class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-black transition-colors"
                 >
-                  {config.fields.find(f => f.name === field)?.label || field}
-                  <iconify-icon icon={getSortIcon(field)} width="16" class="sort-icon"></iconify-icon>
+                  {getFieldLabel(fieldName)}
+                  {#if currentSort?.field === fieldName}
+                    <iconify-icon
+                      icon={currentSort.order === 'asc'
+                        ? 'solar:arrow-up-linear'
+                        : 'solar:arrow-down-linear'}
+                      class="text-black"
+                    ></iconify-icon>
+                  {:else}
+                    <iconify-icon icon="solar:sort-vertical-linear" class="opacity-30"
+                    ></iconify-icon>
+                  {/if}
                 </button>
               </th>
             {/each}
-            <th class="actions-header">Actions</th>
+            <th
+              class="p-4 text-right text-[10px] font-black uppercase tracking-widest text-neutral-400"
+            >
+              Actions
+            </th>
           </tr>
         </thead>
-        <tbody>
-          {#each data.data as row}
+        <tbody class="divide-y divide-neutral-50">
+          {#if data.data.length === 0}
             <tr>
-              {#each config.listFields as field}
-                <td>{formatValue(row[field], field)}</td>
-              {/each}
-              <td class="actions">
-                <div class="action-buttons">
-                  {#if permissions.canRead}
-                    <button class="btn-view" on:click={() => onView(row.id)} title="View details">
-                      <iconify-icon icon="heroicons:eye" width="18"></iconify-icon>
-                    </button>
-                  {/if}
-                  {#if permissions.canUpdate}
-                    <button class="btn-edit" on:click={() => onEdit(row.id)} title="Edit">
-                      <iconify-icon icon="heroicons:pencil-square" width="18"></iconify-icon>
-                    </button>
-                  {/if}
-                  {#if permissions.canDelete}
-                    <button class="btn-delete" on:click={() => onDelete(row.id)} title="Delete">
-                      <iconify-icon icon="heroicons:trash" width="18"></iconify-icon>
-                    </button>
-                  {/if}
+              <td colspan={config.listFields.length + 1} class="py-20 text-center">
+                <div class="flex flex-col items-center gap-2 text-neutral-300">
+                  <iconify-icon icon="solar:box-minimalistic-linear" width="48"></iconify-icon>
+                  <p class="text-sm font-bold">No results found</p>
                 </div>
               </td>
             </tr>
-          {/each}
+          {:else}
+            {#each data.data as row (row.id)}
+              <tr class="group hover:bg-neutral-50/30 transition-colors">
+                {#each config.listFields as fName (fName)}
+                  <td class="p-4 text-sm font-medium text-neutral-600">
+                    {formatValue(row[fName], fName)}
+                  </td>
+                {/each}
+
+                <td class="p-4 text-right">
+                  <div
+                    class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    {#if permissions.canRead}
+                      <button
+                        onclick={() => onView(String(row.id))}
+                        class="p-2 text-neutral-400 hover:text-black hover:bg-white rounded-lg shadow-sm transition-all"
+                        title="View"
+                      >
+                        <iconify-icon icon="solar:eye-linear" width="18"></iconify-icon>
+                      </button>
+                    {/if}
+                    {#if permissions.canUpdate}
+                      <button
+                        onclick={() => onEdit(String(row.id))}
+                        class="p-2 text-neutral-400 hover:text-blue-600 hover:bg-white rounded-lg shadow-sm transition-all"
+                        title="Edit"
+                      >
+                        <iconify-icon icon="solar:pen-linear" width="18"></iconify-icon>
+                      </button>
+                    {/if}
+                    {#if permissions.canDelete}
+                      <button
+                        onclick={() => onDelete(String(row.id))}
+                        class="p-2 text-neutral-400 hover:text-red-600 hover:bg-white rounded-lg shadow-sm transition-all"
+                        title="Delete"
+                      >
+                        <iconify-icon icon="solar:trash-bin-trash-linear" width="18"></iconify-icon>
+                      </button>
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          {/if}
         </tbody>
       </table>
     </div>
+  </div>
 
-    <div class="pagination">
-      <button
-        class="pagination-btn"
-        disabled={data.page === 1}
-        on:click={() => onPageChange(data.page - 1)}
-      >
-        <iconify-icon icon="heroicons:chevron-left" width="20"></iconify-icon>
-        <span>Previous</span>
-      </button>
-
-      <div class="page-info">
-        <iconify-icon icon="heroicons:document-duplicate" width="18"></iconify-icon>
-        <span>Page <strong>{data.page}</strong> of <strong>{data.totalPages}</strong></span>
-      </div>
-
-      <button
-        class="pagination-btn"
-        disabled={data.page === data.totalPages}
-        on:click={() => onPageChange(data.page + 1)}
-      >
-        <span>Next</span>
-        <iconify-icon icon="heroicons:chevron-right" width="20"></iconify-icon>
-      </button>
-    </div>
-  {/if}
+  <div class="flex items-center justify-between px-2 py-2">
+    <span class="text-[10px] font-black uppercase tracking-tighter text-neutral-400">
+      Page {data.page} of {data.totalPages}
+    </span>
+    <Pagination currentPage={data.page} totalPages={data.totalPages} {onPageChange} />
+  </div>
 </div>
-
-<style>
-  .auto-table {
-    width: 100%;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-  }
-
-  .table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2rem;
-    border-bottom: 2px solid #f3f4f6;
-    background: linear-gradient(to bottom, #fafafa, #ffffff);
-  }
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .table-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
-  }
-
-  .table-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #6b7280;
-    font-size: 0.875rem;
-  }
-
-  .divider {
-    color: #d1d5db;
-    margin: 0 0.25rem;
-  }
-
-  .export-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1rem;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    background: white;
-    color: #6366f1;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .export-btn:hover:not(:disabled) {
-    background: #6366f1;
-    color: white;
-    border-color: #6366f1;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
-  }
-
-  .export-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
-    text-align: center;
-  }
-
-  .table-container {
-    overflow-x: auto;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th {
-    background: #f9fafb;
-    padding: 0;
-    text-align: left;
-    font-weight: 600;
-    color: #374151;
-    border-bottom: 2px solid #e5e7eb;
-  }
-
-  .actions-header {
-    text-align: center;
-  }
-
-  .sort-button {
-    width: 100%;
-    padding: 1rem 1.25rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    color: #374151;
-    transition: background-color 0.2s;
-  }
-
-  .sort-button:hover {
-    background: #f3f4f6;
-  }
-
-  .sort-icon {
-    color: #9ca3af;
-    transition: color 0.2s;
-  }
-
-  .sort-button:hover .sort-icon {
-    color: #6366f1;
-  }
-
-  td {
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #f3f4f6;
-    color: #4b5563;
-    font-size: 0.9375rem;
-  }
-
-  tbody tr {
-    transition: background-color 0.15s;
-  }
-
-  tbody tr:hover {
-    background: #fafafa;
-  }
-
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
-
-  .actions {
-    text-align: center;
-  }
-
-  .action-buttons {
-    display: inline-flex;
-    gap: 0.5rem;
-    justify-content: center;
-  }
-
-  .action-buttons button {
-    padding: 0.5rem;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .btn-view {
-    background: #dbeafe;
-    color: #1e40af;
-  }
-
-  .btn-view:hover {
-    background: #3b82f6;
-    color: white;
-    transform: scale(1.1);
-  }
-
-  .btn-edit {
-    background: #d1fae5;
-    color: #065f46;
-  }
-
-  .btn-edit:hover {
-    background: #10b981;
-    color: white;
-    transform: scale(1.1);
-  }
-
-  .btn-delete {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-
-  .btn-delete:hover {
-    background: #ef4444;
-    color: white;
-    transform: scale(1.1);
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2rem;
-    border-top: 2px solid #f3f4f6;
-    background: #fafafa;
-  }
-
-  .pagination-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    background: white;
-    color: #374151;
-    font-weight: 500;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .pagination-btn:hover:not(:disabled) {
-    background: #f9fafb;
-    border-color: #6366f1;
-    color: #6366f1;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .pagination-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .page-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  .page-info strong {
-    color: #1f2937;
-    font-weight: 600;
-  }
-</style>

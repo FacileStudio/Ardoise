@@ -4,15 +4,13 @@
     let {
         value = $bindable(''),
         placeholder = 'Search...',
-        icon = 'solar:magnifer-linear',
         class: className = '',
         oninput
     }: {
         value?: string;
         placeholder?: string;
-        icon?: string;
         class?: string;
-        oninput?: (event: Event) => void;
+        oninput?: () => void;
     } = $props();
 </script>
 

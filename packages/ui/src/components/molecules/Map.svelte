@@ -11,9 +11,9 @@
   export let markers: Array<{ lat: number; lon: number; label?: string }> = [];
 
   let mapElement: HTMLDivElement;
-  let map: any; // On utilise any ou le type L.Map si tu importes juste le type
-  let L: any;
-  let markerLayers: any[] = [];
+  let map: unknown;
+  let L: unknown;
+  let markerLayers: unknown[] = [];
 
   async function initMap() {
     // Import dynamique : s'exécute seulement côté client

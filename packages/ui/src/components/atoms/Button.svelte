@@ -1,6 +1,5 @@
 <script lang="ts">
     import { cva, type VariantProps } from 'class-variance-authority';
-    import { cn } from '@repo/utils';
     import type { Snippet } from 'svelte';
 
     const buttonClass = cva(
@@ -41,9 +40,9 @@
         type?: "button" | "submit";
         disabled?: boolean;
         class?: string;
-        onclick?: (event: MouseEvent) => void;
+        onclick?: () => void;
         children?: Snippet;
-        [key: string]: any;
+        [key: string]: unknown;
     } = $props();
 </script>
 

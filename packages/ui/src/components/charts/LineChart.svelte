@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { cn } from '@repo/utils';
     import Chart from './Chart.svelte';
     import { scaleLinear, scaleBand, extent, ticks, formatNumber } from './utils';
 
@@ -11,7 +10,7 @@
         color = '#4f46e5',
         class: className = '',
     }: {
-        data?: any[];
+        data?: unknown[];
         x?: string;
         y?: string;
         height?: number;
@@ -62,7 +61,7 @@
 <Chart {data} {height} class={className} bind:width>
     <svg viewBox="0 0 {width} {height}" class="w-full h-full">
         <g transform="translate({padding.left}, {padding.top})">
-            {#each yTicks as tick}
+            {#each yTicks as tick (tick)}
                 <line
                     x1={0}
                     y1={yScale(tick)}
@@ -91,7 +90,7 @@
                 stroke-linejoin="round"
             />
 
-            {#each data as item, i}
+            {#each data as item, i (i)}
                 {@const pointX = xScale.scale(String(item[x])) + xScale.bandwidth / 2}
                 {@const pointY = yScale(Number(item[y]) || 0)}
 

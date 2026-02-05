@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { cn } from '@repo/utils';
     import Chart from './Chart.svelte';
 
     let {
@@ -10,7 +9,7 @@
         colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
         class: className = '',
     }: {
-        data?: any[];
+        data?: unknown[];
         value?: string;
         label?: string;
         height?: number;
@@ -76,7 +75,7 @@
 
 <Chart {data} {height} class={className} bind:width>
     <svg viewBox="0 0 {width} {height}" class="w-full h-full">
-        {#each slices() as slice, i}
+        {#each slices() as slice, i (i)}
             <path
                 d={slice.path}
                 fill={slice.color}
@@ -99,7 +98,7 @@
     </svg>
 
     <div class="flex flex-wrap justify-center gap-3 mt-4">
-        {#each data as item, i}
+        {#each data as item, i (i)}
             <div class="flex items-center gap-2">
                 <div class="w-3 h-3 rounded-sm" style="background-color: {colors[i % colors.length]}"></div>
                 <span class="text-xs text-slate-600">{item[label]}</span>

@@ -1,12 +1,13 @@
 <script lang="ts">
     import { cn } from '@repo/utils';
+    import type { Snippet } from 'svelte';
 
     let {
-        config = {},
         class: className = '',
+        children,
     }: {
-        config?: Record<string, { label: string; color: string; icon?: string }>;
         class?: string;
+        children?: Snippet;
     } = $props();
 </script>
 

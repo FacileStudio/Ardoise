@@ -1,6 +1,5 @@
 <script lang="ts">
     import { cva, type VariantProps } from 'class-variance-authority';
-    import { cn } from '@repo/utils';
 
     const alertClass = cva(
         "p-4 rounded-2xl font-medium flex items-start gap-3 border",

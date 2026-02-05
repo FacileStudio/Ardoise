@@ -1,53 +1,82 @@
 <script lang="ts">
-    import { cn } from '@repo/utils';
-    import Button from '../atoms/Button.svelte';
+  import { cn } from '@repo/utils';
+  import 'iconify-icon';
 
-    export let currentPage = 1;
-    export let totalPages = 1;
-    export let onPageChange: (page: number) => void = () => {};
-    let className = "";
-    export { className as class };
+  let {
+    currentPage = $bindable(1),
+    totalPages = 1,
+    onPageChange,
+    class: className = '',
+  }: {
+    currentPage?: number;
+    totalPages: number;
+    onPageChange?: (page: number) => void;
+    class?: string;
+  } = $props();
 
-    const goToPage = (page: number) => {
-        if (page < 1 || page > totalPages) return;
-        currentPage = page;
-        onPageChange(page);
-    };
+  const getPageRange = () => {
+    const delta = 1;
+    const range: (number | string)[] = [];
 
-    $: pages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-        if (totalPages <= 5) return i + 1;
-        if (currentPage <= 3) return i + 1;
-        if (currentPage >= totalPages - 2) return totalPages - 4 + i;
-        return currentPage - 2 + i;
-    });
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i);
+      } else if (range[range.length - 1] !== '...') {
+        range.push('...');
+      }
+    }
+    return range;
+  };
+
+  const pages = $derived(getPageRange());
+
+  function goToPage(page: number | string) {
+    if (typeof page !== 'number' || page === currentPage || page < 1 || page > totalPages) return;
+    currentPage = page;
+    onPageChange?.(page);
+  }
 </script>
 
-<div class={cn("flex items-center justify-center gap-2", className)}>
-    <Button
-        intent="ghost"
-        size="sm"
-        disabled={currentPage === 1}
-        on:click={() => goToPage(currentPage - 1)}
-    >
-        <iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-    </Button>
+<nav class={cn('flex items-center justify-center gap-1', className)} aria-label="Pagination">
+  <button
+    type="button"
+    disabled={currentPage === 1}
+    onclick={() => goToPage(currentPage - 1)}
+    class="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-all hover:bg-neutral-100 hover:text-black disabled:opacity-30 disabled:hover:bg-transparent"
+  >
+    <iconify-icon icon="solar:alt-arrow-left-linear" width="20"></iconify-icon>
+  </button>
 
+  <div class="flex items-center gap-1">
     {#each pages as page}
-        <Button
-            intent={page === currentPage ? 'primary' : 'secondary'}
-            size="sm"
-            on:click={() => goToPage(page)}
+      {#if page === '...'}
+        <span class="flex h-9 w-9 items-center justify-center text-neutral-400">
+          <iconify-icon icon="solar:menu-dots-bold" width="14"></iconify-icon>
+        </span>
+      {:else}
+        <button
+          type="button"
+          onclick={() => goToPage(page)}
+          aria-current={currentPage === page ? 'page' : undefined}
+          class={cn(
+            'h-9 min-w-[36px] px-2 rounded-xl text-sm font-bold transition-all duration-200',
+            currentPage === page
+              ? 'bg-black text-white shadow-md shadow-black/10 scale-105'
+              : 'text-neutral-500 hover:bg-neutral-100 hover:text-black'
+          )}
         >
-            {page}
-        </Button>
+          {page}
+        </button>
+      {/if}
     {/each}
+  </div>
 
-    <Button
-        intent="ghost"
-        size="sm"
-        disabled={currentPage === totalPages}
-        on:click={() => goToPage(currentPage + 1)}
-    >
-        <iconify-icon icon="solar:arrow-right-bold" width="16"></iconify-icon>
-    </Button>
-</div>
+  <button
+    type="button"
+    disabled={currentPage === totalPages}
+    onclick={() => goToPage(currentPage + 1)}
+    class="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-all hover:bg-neutral-100 hover:text-black disabled:opacity-30 disabled:hover:bg-transparent"
+  >
+    <iconify-icon icon="solar:alt-arrow-right-linear" width="20"></iconify-icon>
+  </button>
+</nav>

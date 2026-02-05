@@ -21,7 +21,7 @@
     title: string;
     description?: string;
     type: 'bar' | 'line' | 'pie' | 'area';
-    data: any[];
+    data: unknown[];
     x?: string;
     y?: string;
     value?: string;
@@ -108,7 +108,7 @@
 
   {#if stats.length > 0}
     <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
-      {#each stats as stat}
+      {#each stats as stat (stat.title)}
         {@const colorClasses = getColorClasses(stat.color)}
         <div class="stat-card {colorClasses.border}">
           <div class="stat-header">
@@ -136,7 +136,7 @@
 
   {#if charts.length > 0}
     <div class="charts-grid">
-      {#each charts as chart}
+      {#each charts as chart (chart.title)}
         <div class="chart-card">
           <div class="chart-header">
             <div>

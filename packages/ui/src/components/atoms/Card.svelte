@@ -1,6 +1,5 @@
 <script lang="ts">
     import { cva, type VariantProps } from 'class-variance-authority';
-    import { cn } from '@repo/utils';
 
     const cardClass = cva(
         "bg-white border transition-all",

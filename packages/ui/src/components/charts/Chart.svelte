@@ -8,9 +8,6 @@
         class: className = '',
         children,
     }: {
-        data?: any[];
-        config?: Record<string, { label: string; color: string; icon?: string }>;
-        padding?: { top: number; right: number; bottom: number; left: number };
         width?: number;
         height?: number;
         class?: string;

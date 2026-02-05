@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { cn } from '@repo/utils';
     import Button from '../atoms/Button.svelte';
     import Modal from './Modal.svelte';
 

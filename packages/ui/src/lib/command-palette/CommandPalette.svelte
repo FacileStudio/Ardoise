@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { scale } from 'svelte/transition';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { commandRegistry, type Command } from './registry';
 	import 'iconify-icon';
 
@@ -35,8 +36,8 @@
 		}
 	});
 
-	function groupByCategory(commands: Command[]): Map<string, Command[]> {
-		const groups = new Map<string, Command[]>();
+	function groupByCategory(commands: Command[]): SvelteMap<string, Command[]> {
+		const groups = new SvelteMap<string, Command[]>();
 
 		commands.forEach(cmd => {
 			const category = cmd.category || 'General';
@@ -143,13 +144,13 @@
 						<p class="mt-4 text-sm font-medium">No commands found</p>
 					</div>
 				{:else}
-					{#each [...groupedCommands.entries()] as [category, commands]}
+					{#each [...groupedCommands.entries()] as [category, commands] (category)}
 						<div class="mb-6 last:mb-0">
 							<h4 class="text-xs font-black uppercase tracking-tighter text-slate-400 mb-2 px-3">
 								{category}
 							</h4>
 							<div class="space-y-1">
-								{#each commands as command, index}
+								{#each commands as command (command.id)}
 									{@const globalIndex = filteredCommands.indexOf(command)}
 									<button
 										onclick={() => executeCommand(command)}
@@ -170,7 +171,7 @@
 											</div>
 											{#if command.shortcut}
 												<div class="flex items-center gap-1">
-													{#each command.shortcut.split('+') as key}
+													{#each command.shortcut.split('+') as key (key)}
 														<kbd class="px-2 py-1 text-xs font-mono bg-slate-100 border border-slate-200 rounded-md text-slate-500">
 															{key}
 														</kbd>
