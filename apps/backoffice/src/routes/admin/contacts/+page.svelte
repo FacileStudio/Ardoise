@@ -3,6 +3,8 @@
     import authStore from '$lib/auth-store';
     import { onMount } from 'svelte';
     import { fade } from 'svelte/transition';
+    import { Spinner, EmptyState, Button, Card } from '@repo/ui';
+    import { toast } from '@repo/utils';
     import 'iconify-icon';
 
     let pageLoading = true;
@@ -18,6 +20,7 @@
             contacts = await trpc.contact.list.query();
         } catch (err: any) {
             error = 'Impossible de récupérer les messages.';
+            toast.push('Impossible de récupérer les messages.', 'error');
         } finally {
             pageLoading = false;
         }
@@ -44,13 +47,8 @@
 
     {#if pageLoading}
         <div class="flex flex-col items-center justify-center py-20" in:fade>
-            <iconify-icon icon="line-md:loading-twotone-loop" width="48" class="text-indigo-600"></iconify-icon>
+            <Spinner size="xl" />
             <p class="mt-4 text-slate-400 font-medium">Chargement des leads...</p>
-        </div>
-    {:else if error}
-        <div class="bg-rose-50 text-rose-600 p-6 rounded-[30px] border border-rose-100 font-bold flex items-center gap-3">
-            <iconify-icon icon="solar:danger-bold" width="24"></iconify-icon>
-            {error}
         </div>
     {:else if contacts.length > 0}
         <div class="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden shadow-slate-200/50">
@@ -113,13 +111,13 @@
                                 <div class="flex justify-end gap-2">
                                     <a
                                         href="mailto:{user.email}"
-                                        class="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center"
+                                        class="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 hover:bg-primary hover:text-white transition-all flex items-center justify-center"
                                         aria-label="Répondre par email à {user.name}"
                                     >
                                         <iconify-icon icon="solar:letter-bold" width="20"></iconify-icon>
                                     </a>
                                     <button
-                                        class="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                                        class="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 hover:bg-danger hover:text-white transition-all flex items-center justify-center"
                                         aria-label="Supprimer le contact {user.name}"
                                     >
                                         <iconify-icon icon="solar:trash-bin-trash-bold" width="20"></iconify-icon>
@@ -132,25 +130,14 @@
             </table>
         </div>
     {:else}
-        <div
-            class="bg-white border-2 border-dashed border-slate-200 rounded-[40px] p-20 flex flex-col items-center justify-center text-center space-y-6"
-            in:fade
+        <EmptyState
+            icon="solar:mailbox-empty-bold-duotone"
+            title="Aucun message pour le moment"
+            description="Les demandes envoyées via votre formulaire de contact apparaîtront ici automatiquement."
         >
-            <div class="w-24 h-24 bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-200">
-                <iconify-icon icon="solar:mailbox-empty-bold-duotone" width="64"></iconify-icon>
-            </div>
-            <div>
-                <h3 class="text-2xl font-black text-slate-800">Aucun message pour le moment</h3>
-                <p class="text-slate-400 max-w-xs mx-auto mt-2 font-medium">
-                    Les demandes envoyées via votre formulaire de contact apparaîtront ici automatiquement.
-                </p>
-            </div>
-            <button
-                on:click={() => window.location.reload()}
-                class="bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-95"
-            >
+            <Button onclick={() => window.location.reload()}>
                 Actualiser la liste
-            </button>
-        </div>
+            </Button>
+        </EmptyState>
     {/if}
 </div>

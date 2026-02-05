@@ -1,6 +1,7 @@
 <script lang="ts">
   import { trpc } from '$lib/trpc';
   import authStore from '$lib/auth-store';
+  import { logger } from '@repo/logger';
 
   let email = '';
   let firstName = '';
@@ -16,7 +17,7 @@
       message = 'Thank you for submitting your information!';
       email = firstName = lastName = '';
     } catch (error: any) {
-      console.error(error);
+      logger.error({ err: error }, 'Failed to submit contact form');
       if (error.shape) {
         message = `Error: ${error.shape.message}`;
       } else {

@@ -1,12 +1,12 @@
 <script lang="ts">
     import authStore from '$lib/auth-store';
     import { page } from '$app/stores';
+    import { Button } from '@repo/ui';
     import 'iconify-icon';
 
     const menuItems = [
-        { name: 'Dashboard', icon: 'solar:widget-bold', href: '/app/profile' },
-        { name: 'Profil', icon: 'solar:users-group-rounded-bold', href: '/app/profile' },
-        { name: 'Messages', icon: 'solar:letter-bold', href: '/admin/chat' },
+        { name: 'Profil', icon: 'solar:user-bold', href: '/app/profile' },
+        { name: 'Messages', icon: 'solar:letter-bold', href: '/app/chat' },
     ];
 </script>
 
@@ -36,21 +36,26 @@
             {/each}
         </nav>
 
-        <div class="p-6 mt-auto border-t border-slate-100">
+        <div class="p-6 mt-auto border-t border-slate-100 space-y-3">
             <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
                 <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black">
                     {$authStore.user?.firstName?.[0] || 'A'}
                 </div>
-                <div class="overflow-hidden">
+                <div class="overflow-hidden flex-1">
                     <p class="text-sm font-black truncate">{$authStore.user?.firstName}</p>
-                    <button
-                        on:click={() => authStore.logout()}
-                        class="text-[10px] uppercase font-black tracking-widest text-rose-500 hover:text-rose-600"
-                    >
-                        Déconnexion
-                    </button>
+                    <p class="text-[10px] text-slate-400 truncate">{$authStore.user?.email}</p>
                 </div>
             </div>
+            <a
+                href="/app/settings"
+                class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl font-bold transition-all
+                {$page.url.pathname === '/app/settings'
+                    ? 'bg-indigo-50 text-indigo-600 shadow-sm'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}"
+            >
+                <iconify-icon icon="solar:settings-bold" width="18"></iconify-icon>
+                Settings
+            </a>
         </div>
     </aside>
 

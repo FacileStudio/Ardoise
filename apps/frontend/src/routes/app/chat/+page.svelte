@@ -39,7 +39,7 @@
             if (activeRoomId)
                 activeRoom = rooms.find(r => r.id === activeRoomId) || null;
         } catch {
-            showError("Erreur de chargement");
+            showError("Loading error");
         }
     }
 
@@ -50,7 +50,7 @@
         await loadRooms();
 
         activeRoom = rooms.find(r => r.id === id);
-        if (!activeRoom) return showError("Salon introuvable");
+        if (!activeRoom) return showError("Room not found");
 
         try {
             const history = await trpc.chat.getHistory.query({ roomId: id });
@@ -75,7 +75,7 @@
 
             scrollToBottom();
         } catch {
-            showError("Erreur de synchro");
+            showError("Sync error");
         }
     }
 

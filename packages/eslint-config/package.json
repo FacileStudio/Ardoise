@@ -1,0 +1,23 @@
+{
+  "name": "@repo/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "node.js",
+    "svelte.js",
+    "react-native.js"
+  ],
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
+    "@react-native/eslint-config": "^0.83.1",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-svelte": "^3.14.0",
+    "svelte-eslint-parser": "^1.4.1"
+  }
+}

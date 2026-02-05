@@ -1,4 +1,4 @@
-import { createUniversalTrpcClient } from '@repo/shared'; // Importe le type ici
+import { createUniversalTrpcClient } from '@repo/trpc-client';
 import type { AuthState } from '@repo/auth-shared';
 import { authStore } from './auth-store';
 import env from './env';

@@ -1,10 +1,11 @@
 <script lang="ts">
   import authStore from '$lib/auth-store';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import { fade, slide, scale } from 'svelte/transition';
+  import { scale } from 'svelte/transition';
   import type { User } from '@repo/types';
   import { trpc } from '$lib/trpc';
+  import { Button, Input, Alert } from '@repo/ui';
+  import 'iconify-icon';
 
   let email = '';
   let password = '';
@@ -56,46 +57,43 @@
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1">
             <label for="firstName" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Prénom</label>
-            <input
+            <Input
               id="firstName"
               type="text"
               bind:value={firstName}
               placeholder="Jean"
               required
               autocomplete="given-name"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
             />
           </div>
           <div class="space-y-1">
             <label for="lastName" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Nom</label>
-            <input
+            <Input
               id="lastName"
               type="text"
               bind:value={lastName}
               placeholder="Dupont"
               required
               autocomplete="family-name"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
             />
           </div>
         </div>
 
         <div class="space-y-1">
           <label for="email" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Email</label>
-          <input
+          <Input
             id="email"
             type="email"
             bind:value={email}
             placeholder="jean@exemple.com"
             required
             autocomplete="email"
-            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
           />
         </div>
 
         <div class="space-y-1">
           <label for="password" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Mot de passe</label>
-          <input
+          <Input
             id="password"
             type="password"
             bind:value={password}
@@ -103,14 +101,13 @@
             required
             minlength="6"
             autocomplete="new-password"
-            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
           />
           <p class="text-[10px] text-slate-400 ml-1 italic">6 caractères minimum</p>
         </div>
 
         <div class="space-y-1">
-          <label for="password" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Mot de passe</label>
-          <input
+          <label for="confirmPassword" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Confirmer mot de passe</label>
+          <Input
             id="confirmPassword"
             type="password"
             bind:value={confirmPassword}
@@ -118,22 +115,18 @@
             required
             minlength="6"
             autocomplete="new-password"
-            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all outline-none"
           />
           <p class="text-[10px] text-slate-400 ml-1 italic">6 caractères minimum</p>
         </div>
 
         {#if error}
-          <div in:slide={{ duration: 200 }} class="p-3 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm font-medium flex items-center gap-2">
-            <iconify-icon icon="solar:danger-triangle-bold" width="18"></iconify-icon>
-            {error}
-          </div>
+          <Alert variant="danger">{error}</Alert>
         {/if}
 
-        <button
+        <Button
           type="submit"
           disabled={loading}
-          class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-slate-100 flex items-center justify-center gap-2 active:scale-[0.98]"
+          class="w-full"
         >
           {#if loading}
             <iconify-icon icon="svg-spinners:18-dots-revolve" width="20"></iconify-icon>
@@ -142,7 +135,7 @@
             <iconify-icon icon="solar:user-plus-bold" width="20"></iconify-icon>
             S'inscrire
           {/if}
-        </button>
+        </Button>
 
         <div class="pt-4 text-center">
           <p class="text-sm text-slate-500 font-medium">

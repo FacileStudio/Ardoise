@@ -11,6 +11,7 @@ const mapToSessionUser = (user: any): SessionUser => ({
   role: user.role,
   isPremium: user.isPremium,
   avatarUrl: user.avatar?.url || null,
+  coverImageUrl: user.coverImage?.url || null,
 });
 
 const userSelection = {
@@ -24,6 +25,9 @@ const userSelection = {
   avatar: {
     select: { url: true },
   },
+  coverImage: {
+    select: { url: true },
+  },
 };
 
 export const authService = {
@@ -34,7 +38,7 @@ export const authService = {
     });
 
     if (!user || !(await auth.verifyPassword(input.password, user.password))) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Identifiants invalides' });
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid credentials' });
     }
 
     const sessionUser = mapToSessionUser(user);
@@ -46,7 +50,7 @@ export const authService = {
   register: async (db: PrismaClient, auth: AuthManager, input: RegisterInput) => {
     const exists = await db.user.findUnique({ where: { email: input.email } });
     if (exists) {
-      throw new TRPCError({ code: 'CONFLICT', message: 'Cet email est déjà utilisé' });
+      throw new TRPCError({ code: 'CONFLICT', message: 'This email is already in use' });
     }
 
     const passwordHash = await auth.hashPassword(input.password);
@@ -61,6 +65,7 @@ export const authService = {
       },
       include: {
         avatar: { select: { url: true } },
+        coverImage: { select: { url: true } },
       },
     });
 

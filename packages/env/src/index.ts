@@ -26,6 +26,9 @@ export const serverEnvSchema = baseSchema.extend({
   MINIO_PUBLIC_URL: z.string().url(),
 
   DISCORD_WEBHOOK_URL: z.string().url().optional(),
+
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+  LOGTAIL_TOKEN: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

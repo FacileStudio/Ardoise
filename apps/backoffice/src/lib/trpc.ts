@@ -1,4 +1,4 @@
-import { createUniversalTrpcClient } from '@repo/shared';
+import { createUniversalTrpcClient } from '@repo/trpc-client';
 import { authStore } from './auth-store';
 import { get } from 'svelte/store';
 import env from '../lib/env';

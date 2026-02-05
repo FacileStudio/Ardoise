@@ -2,26 +2,30 @@
   import { onMount } from 'svelte';
   import { authStore } from '$lib/auth-store';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
+  import { ToastContainer } from '@repo/ui';
+  import { logger } from '@repo/logger';
   import '../app.css';
+
+  let { children } = $props();
 
   onMount(async () => {
     await authStore.init();
-    console.log('Auth store initialized');
+    logger.info('Auth store initialized');
   });
 
-  $: if (!$authStore.loading) {
-    const path = $page.url.pathname;
-    const user = $authStore.user;
+  $effect(() => {
+    if (!$authStore.loading) {
+      const path = page.url.pathname;
+      const user = $authStore.user;
 
-    if (path.startsWith('/admin') && !user) {
-      goto('/');
-    }
+      if (path.startsWith('/admin') && !user)
+        goto('/');
 
-    if ((path === '/' ) && user) {
-      goto('/admin/contacts');
+      if (path === '/' && user)
+        goto('/admin/contacts');
     }
-  }
+  });
 </script>
 
 {#if $authStore.loading}
@@ -29,5 +33,7 @@
     <iconify-icon icon="line-md:loading-twotone-loop" width="30" class="text-indigo-600"></iconify-icon>
   </div>
 {:else}
-  <slot />
+  {@render children()}
 {/if}
+
+<ToastContainer />

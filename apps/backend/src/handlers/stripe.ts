@@ -13,16 +13,15 @@ export const createStripeWebhookHandler = (stripe: StripeService) => {
         return c.json({ error: 'No signature found' }, 400);
       }
 
-      // Hono permet de récupérer le body brut facilement (indispensable pour Stripe)
       const rawBody = await c.req.text();
 
       await stripeService.handleWebhook(prisma, stripe, rawBody, signature);
 
       return c.json({ received: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({
         message: 'Webhook error',
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         type: 'stripe-webhook',
       });
 

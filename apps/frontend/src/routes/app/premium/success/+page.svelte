@@ -39,11 +39,11 @@
       if (result.url) {
         window.location.href = result.url;
       } else {
-        error = 'Erreur lors de l\'accès au portail client.';
+        error = 'Error accessing customer portal.';
         actionLoading = false;
       }
     } catch (err: any) {
-      error = err.message || 'Impossible de gérer l\'abonnement.';
+      error = err.message || 'Unable to manage subscription.';
       actionLoading = false;
     }
   }

@@ -1,5 +1,6 @@
 import { UniversalAuthStore } from '@repo/auth-shared';
 import { browser } from '$app/environment';
+import { logger } from '@repo/logger';
 import { trpc } from './trpc';
 
 const webStorage = {
@@ -16,7 +17,7 @@ export const authStore = new UniversalAuthStore(
       try {
         await trpc.auth.logout.mutate();
       } catch (e) {
-        console.error('Logout failed');
+        logger.error({ err: e }, 'Logout failed');
       }
       window.location.href = '/login';
     }

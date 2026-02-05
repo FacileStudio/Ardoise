@@ -1,4 +1,5 @@
 import { S3Client, type S3Stats } from 'bun';
+import { logger } from '@repo/logger';
 
 export type { S3Stats };
 
@@ -80,7 +81,7 @@ export class StorageService {
         objects.push(object);
       }
     } catch (e) {
-      console.error('Storage list error:', e);
+      logger.error({ err: e }, 'Storage list error');
     }
     return objects;
   }

@@ -11,6 +11,6 @@
     "@repo/crypto": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/env": "workspace:*",
-    "jose": "^5.9.6"
+    "jose": "^6.1.3"
   }
 }

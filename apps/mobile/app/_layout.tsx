@@ -28,8 +28,8 @@ function RootLayoutNav() {
     }}>
       <Stack.Screen name="index" options={{ title: 'Home' }} />
       <Stack.Screen name="login" options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="register" options={{ title: 'Inscription' }} />
-      <Stack.Screen name="profile" options={{ title: 'Mon Profil' }} />
+      <Stack.Screen name="register" options={{ title: 'Register' }} />
+      <Stack.Screen name="profile" options={{ title: 'My Profile' }} />
     </Stack>
   );
 }

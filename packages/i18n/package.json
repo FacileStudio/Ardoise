@@ -1,0 +1,20 @@
+{
+  "name": "@repo/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./svelte": "./src/svelte.ts",
+    "./react": "./src/react.ts"
+  },
+  "dependencies": {
+    "@repo/logger": "workspace:*",
+    "svelte": "^5.49.1"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*"
+  }
+}

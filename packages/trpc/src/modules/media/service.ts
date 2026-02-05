@@ -53,6 +53,11 @@ export const mediaService = {
     userId: string,
     data: { url: string; key: string; size: number }
   ) => {
+    const user = await db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found.`); // Or a more specific tRPC error
+    }
+
     const oldMedia = await db.media.findUnique({ where: { coverUserId: userId } });
     if (oldMedia) await storage.delete(oldMedia.key);
 

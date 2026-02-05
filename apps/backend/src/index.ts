@@ -7,6 +7,12 @@ import { StripeService } from '@repo/stripe';
 import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
 import trpcHandler from './handlers/trpc';
+import { openApiHandler } from './handlers/openapi';
+import {
+  createHealthCheckHandler,
+  createLivenessHandler,
+  createReadinessHandler,
+} from './handlers/health';
 
 const app = new Hono();
 
@@ -30,6 +36,12 @@ app.use('*', corsHandler(env.TRUSTED_ORIGINS));
 app.use('*', loggerMiddleware);
 
 app.post('/webhook', createStripeWebhookHandler(stripe));
+
+app.get('/openapi.json', openApiHandler);
+
+app.get('/health', createHealthCheckHandler({ storage, stripe }));
+app.get('/health/live', createLivenessHandler());
+app.get('/health/ready', createReadinessHandler());
 
 app.all(
   '/trpc/*',

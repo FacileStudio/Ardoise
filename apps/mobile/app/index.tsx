@@ -7,7 +7,8 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function Index() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { session } = useAuth();
+  const token = session?.token;
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');

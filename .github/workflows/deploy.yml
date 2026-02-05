@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: cd packages/database && bun run db:generate
+
+      - name: Build backend
+        run: cd apps/backend && bun run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          MINIO_BUCKET_NAME: ${{ secrets.MINIO_BUCKET_NAME }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          BACKOFFICE_URL: ${{ secrets.BACKOFFICE_URL }}
+          TRUSTED_ORIGINS: ${{ secrets.TRUSTED_ORIGINS }}
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: cd packages/database && bun run db:generate
+
+      - name: Build frontend
+        run: cd apps/frontend && bun run build
+        env:
+          PUBLIC_BACKEND_URL: ${{ secrets.PUBLIC_BACKEND_URL }}
+
+  deploy-backoffice:
+    name: Deploy Backoffice
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: cd packages/database && bun run db:generate
+
+      - name: Build backoffice
+        run: cd apps/backoffice && bun run build
+        env:
+          PUBLIC_BACKEND_URL: ${{ secrets.PUBLIC_BACKEND_URL }}

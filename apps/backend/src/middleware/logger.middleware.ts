@@ -5,7 +5,13 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
   const start = Date.now();
   const { method, url } = c.req;
 
-  logger.info({
+  const requestId = c.get('requestId') || crypto.randomUUID();
+  c.set('requestId', requestId);
+
+  const requestLogger = logger.child({ requestId });
+  c.set('logger', requestLogger);
+
+  requestLogger.info({
     type: "request",
     method,
     url,
@@ -25,10 +31,10 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
   };
 
   if (status >= 500) {
-    logger.error(logData);
+    requestLogger.error(logData);
   } else if (status >= 400) {
-    logger.warn(logData);
+    requestLogger.warn(logData);
   } else {
-    logger.info(logData);
+    requestLogger.info(logData);
   }
 };

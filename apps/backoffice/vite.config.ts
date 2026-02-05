@@ -1,10 +1,15 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [sveltekit()],
+  plugins: [sveltekit(), tailwindcss()],
+  clearScreen: false,
   server: {
-    port: 3002,
+    port: Number(process.env.PORT) || 3002,
+    fs: {
+      allow: ['..']
+    }
   },
   ssr: {
     noExternal: ['@repo/database'],
@@ -13,4 +18,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@prisma/client', '@repo/database'],
   },
+  assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.ttf', '**/*.otf']
 });

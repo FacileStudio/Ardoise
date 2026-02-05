@@ -2,7 +2,13 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authStore } from './auth-store';
 import type { AuthState } from '@repo/auth-shared';
 
-const AuthContext = createContext<AuthState | undefined>(undefined);
+type AuthContextValue = AuthState & {
+  setAuth: typeof authStore.setAuth;
+  logout: typeof authStore.logout;
+  clear: typeof authStore.clear;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(() => {
@@ -22,8 +28,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
   }, []);
 
+  const value: AuthContextValue = {
+    ...state,
+    setAuth: authStore.setAuth.bind(authStore),
+    logout: authStore.logout.bind(authStore),
+    clear: authStore.clear.bind(authStore),
+  };
+
   return (
-    <AuthContext.Provider value={state}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,10 +1,12 @@
 <script lang="ts">
     import authStore from '$lib/auth-store';
     import { page } from '$app/stores';
+    import { Button } from '@repo/ui';
     import 'iconify-icon';
 
     const menuItems = [
         { name: 'Dashboard', icon: 'solar:widget-bold', href: '/admin' },
+        { name: 'Statistics', icon: 'solar:chart-bold', href: '/admin/statistics' },
         { name: 'Membres', icon: 'solar:users-group-rounded-bold', href: '/admin/users' },
         { name: 'Messages', icon: 'solar:letter-bold', href: '/admin/contacts' },
     ];
@@ -36,21 +38,20 @@
             {/each}
         </nav>
 
-        <div class="p-6 mt-auto border-t border-slate-100">
+        <div class="p-6 mt-auto border-t border-slate-100 space-y-3">
             <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
                 <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black">
                     {$authStore.user?.firstName?.[0] || 'A'}
                 </div>
-                <div class="overflow-hidden">
+                <div class="overflow-hidden flex-1">
                     <p class="text-sm font-black truncate">{$authStore.user?.firstName}</p>
-                    <button
-                        on:click={() => authStore.logout()}
-                        class="text-[10px] uppercase font-black tracking-widest text-rose-500 hover:text-rose-600"
-                    >
-                        Déconnexion
-                    </button>
+                    <p class="text-[10px] text-slate-400 truncate">{$authStore.user?.email}</p>
                 </div>
             </div>
+            <Button intent="danger" onclick={() => authStore.logout()} class="w-full">
+                <iconify-icon icon="solar:logout-2-bold" width="18"></iconify-icon>
+                Logout
+            </Button>
         </div>
     </aside>
 

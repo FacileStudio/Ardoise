@@ -8,6 +8,16 @@ model User {
   role           UserRole           @default(USER)
   isPremium      Boolean          @default(false)
 
+  status         UserStatus       @default(ACTIVE)
+  isBanned       Boolean          @default(false)
+  banReason      String?
+  bannedAt       DateTime?
+  bannedBy       String?
+  isSuspended    Boolean          @default(false)
+  suspendedUntil DateTime?
+  suspensionReason String?
+  lastLoginAt    DateTime?
+  lastLoginIp    String?
 
   avatar         Media?           @relation("UserAvatar")
   coverImage     Media?           @relation("UserCover")
@@ -21,12 +31,26 @@ model User {
   subscription   Subscription?
   paymentHistory PaymentHistory[]
 
+  auditLogs      AuditLog[]
+  adminPermissions AdminPermission[]
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+
+  @@index([status])
+  @@index([isBanned])
+  @@index([emailVerified])
 }
 
 enum UserRole {
   USER
   ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  PENDING
 }
 

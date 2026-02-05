@@ -163,7 +163,6 @@ export const stripeService = {
     rawBody: string,
     signature: string
   ) => {
-    // Utilisation de la méthode constructEvent de ta lib technique
     const event = await stripe.constructEvent(rawBody, signature);
 
     switch (event.type) {

@@ -29,7 +29,7 @@ export const chatService = {
         },
       },
       include: {
-        user: { select: { id: true, name: true, avatar: true } },
+        user: { select: { id: true, firstName: true, lastName: true, avatar: true } },
         attachments: true,
       },
     });
@@ -44,7 +44,7 @@ export const chatService = {
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { id: true, name: true, avatar: true } },
+        user: { select: { id: true, firstName: true, lastName: true, avatar: true } },
         attachments: true,
       },
     });
@@ -58,7 +58,7 @@ export const chatService = {
       include: {
         participants: {
           include: {
-            user: { select: { id: true, name: true, avatar: true } },
+            user: { select: { id: true, firstName: true, lastName: true, avatar: true } },
           },
         },
         messages: {
@@ -104,7 +104,7 @@ export const chatService = {
       },
       include: {
         participants: {
-          include: { user: { select: { id: true, name: true, avatar: true } } },
+          include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
         },
       },
     });

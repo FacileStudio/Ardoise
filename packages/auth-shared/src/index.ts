@@ -9,6 +9,7 @@ export interface SessionUser {
   role: UserRole;
   isPremium: boolean;
   avatarUrl?: string | null;
+  coverImageUrl?: string | null;
 }
 
 export interface AuthState {

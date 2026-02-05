@@ -4,11 +4,13 @@
     "outDir": "dist",
     "rootDir": "src",
     "types": ["bun-types"],
+    "lib": ["ESNext", "DOM"],
     "baseUrl": ".",
     "paths": {
       "@/lib": ["./src/lib"],
       "@/lib/*": ["./src/lib/*"]
-    }
+    },
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

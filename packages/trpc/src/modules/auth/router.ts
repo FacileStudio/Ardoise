@@ -1,6 +1,7 @@
 import { router, publicProcedure, protectedProcedure } from '../../trpc';
 import { loginSchema, registerSchema } from '@repo/auth-shared';
 import authService from './service';
+import { z } from 'zod';
 
 export const authRouter = router({
   login: publicProcedure.input(loginSchema).mutation(async ({ ctx, input }) => {
@@ -11,12 +12,11 @@ export const authRouter = router({
     return authService.register(ctx.db, ctx.auth, input);
   }),
 
-  me: protectedProcedure.query(({ ctx }) => {
+  me: protectedProcedure.input(z.object({})).query(({ ctx }) => {
     return ctx.user;
   }),
 
-  logout: protectedProcedure.mutation(async ({ ctx }) => {
-    // await ctx.db.session.deleteMany({ where: { userId: ctx.user.id } });
+  logout: protectedProcedure.input(z.object({})).mutation(async ({}) => {
     return { success: true };
   }),
 });

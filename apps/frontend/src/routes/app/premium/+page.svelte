@@ -3,7 +3,10 @@
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { page } from '$app/stores';
-  import env  from '$lib/env'
+  import env  from '$lib/env';
+  import { Button, Spinner, Card, Alert } from '@repo/ui';
+  import { toast } from '@repo/utils';
+  import 'iconify-icon';
 
   let pageLoading = true;
   let actionLoading = false;
@@ -21,6 +24,7 @@
       subscriptionStatus = await trpc.stripe.getSubscription.query();
     } catch (err: any) {
       error = 'Impossible de charger le statut de l\'abonnement.';
+      toast.push('Impossible de charger le statut de l\'abonnement.', 'error');
     } finally {
       pageLoading = false;
     }
@@ -35,11 +39,13 @@
       if (result.url) {
         window.location.href = result.url;
       } else {
-        error = 'Erreur lors de la création de la session de paiement.';
+        error = 'Error creating payment session.';
+        toast.push('Error creating payment session.', 'error');
         actionLoading = false;
       }
     } catch (err: any) {
-      error = err.message || 'Échec de l\'initialisation Premium.';
+      error = err.message || 'Failed to initialize Premium.';
+      toast.push(err.message || 'Failed to initialize Premium.', 'error');
       actionLoading = false;
     }
   }
@@ -53,11 +59,13 @@
       if (result.url) {
         window.location.href = result.url;
       } else {
-        error = 'Erreur lors de l\'accès au portail client.';
+        error = 'Error accessing customer portal.';
+        toast.push('Error accessing customer portal.', 'error');
         actionLoading = false;
       }
     } catch (err: any) {
-      error = err.message || 'Impossible de gérer l\'abonnement.';
+      error = err.message || 'Unable to manage subscription.';
+      toast.push(err.message || 'Unable to manage subscription.', 'error');
       actionLoading = false;
     }
   }
@@ -71,26 +79,18 @@
     </div>
 
     {#if canceled}
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
-        <iconify-icon icon="solar:danger-triangle-bold" class="text-amber-600" width="24"></iconify-icon>
-        <p class="text-amber-700 text-sm font-medium">Le paiement n'a pas été finalisé.</p>
-      </div>
-    {/if}
-
-    {#if error}
-      <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-        <iconify-icon icon="solar:shield-warning-bold" class="text-red-600" width="24"></iconify-icon>
-        <p class="text-red-600 text-sm font-medium">{error}</p>
-      </div>
+      <Alert variant="warning">
+        Le paiement n'a pas été finalisé.
+      </Alert>
     {/if}
 
     {#if pageLoading}
       <div class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <Spinner size="lg" />
         <p class="mt-2 text-gray-500 text-sm">Vérification de votre statut...</p>
       </div>
     {:else if subscriptionStatus}
-      <div class="bg-white rounded-xl shadow-lg p-8 space-y-6 border border-gray-100">
+      <Card padding="lg" rounded="xl" shadow="lg" class="space-y-6">
 
         {#if subscriptionStatus.isPremium}
           <div class="text-center space-y-2">
@@ -118,10 +118,10 @@
             {/if}
           </div>
 
-          <button
-            on:click={handleManageSubscription}
+          <Button
+            onclick={handleManageSubscription}
             disabled={actionLoading}
-            class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+            class="w-full"
           >
             {#if actionLoading}
               <iconify-icon icon="line-md:loading-loop" width="20"></iconify-icon>
@@ -129,7 +129,7 @@
               <iconify-icon icon="solar:settings-bold" width="20"></iconify-icon>
             {/if}
             Gérer mon abonnement
-          </button>
+          </Button>
 
         {:else}
           <div class="p-4 bg-indigo-50 rounded-lg">
@@ -139,10 +139,10 @@
             </ul>
           </div>
 
-          <button
-            on:click={handleBecomePremium}
+          <Button
+            onclick={handleBecomePremium}
             disabled={actionLoading}
-            class="w-full bg-black text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+            class="w-full"
           >
             {#if actionLoading}
               <iconify-icon icon="line-md:loading-loop" width="24"></iconify-icon>
@@ -150,13 +150,13 @@
               <iconify-icon icon="solar:star-bold" width="20" class="text-yellow-400"></iconify-icon>
               Devenir Premium
             {/if}
-          </button>
+          </Button>
         {/if}
 
         <a href="/" class="block text-center text-gray-500 text-sm hover:text-gray-900 mt-4 flex items-center justify-center gap-1">
           <iconify-icon icon="solar:arrow-left-linear"></iconify-icon> Retour
         </a>
-      </div>
+      </Card>
     {/if}
   </div>
 </main>

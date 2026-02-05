@@ -11,7 +11,7 @@ export class StripeService {
 
   constructor(config: StripeConfig) {
     this.client = new Stripe(config.apiKey, {
-      apiVersion: '2025-02-24.acacia',
+      apiVersion: '2026-01-28.clover',
       typescript: true,
     });
     this.webhookSecret = config.webhookSecret;

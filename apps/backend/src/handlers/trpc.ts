@@ -8,11 +8,12 @@ export const trpcHandler =
     storage,
     stripe,
     env,
-  }: Omit<CreateContextOptions, 'req' | 'resHeaders' | 'info'>) =>
+  }: Omit<CreateContextOptions, 'req' | 'resHeaders' | 'info' | 'logger'>) =>
   (c: Context, next: Next) =>
     trpcServer({
       router: appRouter,
       createContext: async (opts) => {
+        const logger = c.get('logger');
         return await createContext({
           ...opts,
           req: c.req.raw,
@@ -20,6 +21,7 @@ export const trpcHandler =
           storage,
           stripe,
           env,
+          logger,
         });
       },
     })(c, next);

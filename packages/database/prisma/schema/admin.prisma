@@ -1,0 +1,16 @@
+model AdminPermission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entity      String
+  canCreate   Boolean  @default(false)
+  canRead     Boolean  @default(false)
+  canUpdate   Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, entity])
+  @@index([userId])
+  @@index([entity])
+}

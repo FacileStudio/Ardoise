@@ -3,6 +3,7 @@
   import { authStore } from '$lib/auth-store';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import { ToastContainer } from '@repo/ui';
   import '../app.css';
 
   onMount(async () => {
@@ -30,3 +31,4 @@
 {:else}
   <slot />
 {/if}
+<ToastContainer />

@@ -3,6 +3,8 @@
     import authStore from '$lib/auth-store';
     import { trpc } from '$lib/trpc'
     import { isAdmin, loginSchema, type SessionUser } from '@repo/auth-shared';
+    import { Button, Input, Alert, Card, Spinner } from '@repo/ui';
+    import { logger } from '@repo/logger';
     import 'iconify-icon';
 
     let email = '', password = '', error = '', isLoggingIn = false;
@@ -33,7 +35,7 @@
             );
             goto('/admin/contacts');
         } catch (err: any) {
-            console.error('Login error:', err);
+            logger.error({ err }, 'Login error');
             error = err.message || "Une erreur est survenue lors de la connexion";
             isLoggingIn = false;
         }
@@ -42,9 +44,9 @@
 
 <main class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
     {#if $authStore.loading}
-        <iconify-icon icon="line-md:loading-twotone-loop" width="40" class="text-indigo-600"></iconify-icon>
+        <Spinner size="xl" />
     {:else}
-        <div class="max-w-md w-full bg-white p-10 rounded-[40px] shadow-2xl shadow-slate-200/50 border border-slate-100">
+        <Card padding="lg" rounded="xl" shadow="lg" class="max-w-md w-full">
             <div class="text-center mb-8">
                 <div class="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
                     <iconify-icon icon="solar:shield-keyhole-bold" width="32"></iconify-icon>
@@ -54,39 +56,31 @@
             </div>
 
             <form on:submit|preventDefault={handleLogin} class="space-y-4">
-                <div class="space-y-1">
-                    <input
-                        type="email"
-                        bind:value={email}
-                        placeholder="Email"
-                        class="w-full p-4 bg-slate-50 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-500/20 focus:bg-white transition-all"
-                        required
-                    />
-                </div>
-                <div class="space-y-1">
-                    <input
-                        type="password"
-                        bind:value={password}
-                        placeholder="Mot de passe"
-                        class="w-full p-4 bg-slate-50 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-500/20 focus:bg-white transition-all"
-                        required
-                    />
-                </div>
+                <Input
+                    type="email"
+                    bind:value={email}
+                    placeholder="Email"
+                    required
+                />
+                <Input
+                    type="password"
+                    bind:value={password}
+                    placeholder="Mot de passe"
+                    required
+                />
 
                 {#if error}
-                    <div class="bg-rose-50 text-rose-600 p-4 rounded-2xl text-sm font-bold flex items-center gap-2 border border-rose-100">
-                        <iconify-icon icon="solar:danger-bold"></iconify-icon>
-                        {error}
-                    </div>
+                    <Alert variant="danger">{error}</Alert>
                 {/if}
 
-                <button
+                <Button
+                    type="submit"
                     disabled={isLoggingIn}
-                    class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-lg hover:bg-indigo-600 transition-all disabled:opacity-50 shadow-xl shadow-slate-200 active:scale-[0.98]"
+                    class="w-full text-lg"
                 >
                     {isLoggingIn ? 'Vérification...' : 'Connexion'}
-                </button>
+                </Button>
             </form>
-        </div>
+        </Card>
     {/if}
 </main>

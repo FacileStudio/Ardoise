@@ -1,6 +1,7 @@
 import { UniversalAuthStore } from '@repo/auth-shared';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
+import { logger } from '@repo/logger';
 import { trpc } from './trpc';
 
 const mobileStorage = {
@@ -15,14 +16,14 @@ const mobileStorage = {
     try {
       await SecureStore.setItemAsync(key, val);
     } catch (e) {
-      console.error('SecureStore Save Error', e);
+      logger.error({ err: e }, 'SecureStore Save Error');
     }
   },
   removeItem: async (key: string) => {
     try {
       await SecureStore.deleteItemAsync(key);
     } catch (e) {
-      console.error('SecureStore Delete Error', e);
+      logger.error({ err: e }, 'SecureStore Delete Error');
     }
   },
 };
@@ -34,7 +35,7 @@ export const authStore = new UniversalAuthStore(
     try {
       await trpc.auth.logout.mutate();
     } catch (e) {
-      console.error('Mobile Logout Error', e);
+      logger.error({ err: e }, 'Mobile Logout Error');
     }
     setTimeout(() => {
       if (router.canGoBack()) router.dismissAll();
