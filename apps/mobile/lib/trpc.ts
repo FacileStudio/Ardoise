@@ -4,10 +4,10 @@ import { authStore } from './auth-store';
 import env from './env';
 
 const getSnapshot = (): AuthState => {
-  let state: any;
+  let state: AuthState | undefined;
   const unsub = authStore.subscribe((s) => (state = s));
   unsub();
-  return state as AuthState;
+  return state!;
 };
 
 export const trpc = createUniversalTrpcClient({

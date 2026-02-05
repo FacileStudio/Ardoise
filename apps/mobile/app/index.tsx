@@ -25,7 +25,7 @@ export default function Index() {
       setEmail('');
       setFirstName('');
       setLastName('');
-    } catch (error) {
+    } catch {
       setMessage('Error submitting form');
     }
     setLoading(false);

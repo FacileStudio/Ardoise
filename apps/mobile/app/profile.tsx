@@ -7,11 +7,22 @@ import { useAuth } from '@/lib/auth-context';
 import { authStore} from '@/lib/auth-store';
 import { uploadFileSimple } from '@repo/storage-client';
 
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  createdAt: Date;
+  avatar?: { url: string } | null;
+  coverImage?: { url: string } | null;
+}
+
 export default function Profile() {
   const router = useRouter();
   const { session } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [error, setError] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -36,7 +47,7 @@ export default function Profile() {
       ]);
       setUser(profile);
       setIsPremium(subscription.isPremium);
-    } catch (err: any) {
+    } catch {
       setError('Failed to load profile');
     } finally {
       setLoading(false);
@@ -56,7 +67,7 @@ export default function Profile() {
     }
   };
 
-  const uploadImage = async (asset: any, type: 'avatar' | 'cover') => {
+  const uploadImage = async (asset: ImagePicker.ImagePickerAsset, type: 'avatar' | 'cover') => {
     if (type === 'avatar') setUploadingAvatar(true);
     else setUploadingCover(true);
     setError('');
@@ -80,7 +91,7 @@ export default function Profile() {
       }
 
       await loadProfile();
-    } catch (err: any) {
+    } catch {
       setError('Failed to upload image');
     } finally {
       setUploadingAvatar(false);
@@ -107,7 +118,7 @@ export default function Profile() {
                 await trpc.media.removeCover.mutate();
               }
               await loadProfile();
-            } catch (err) {
+            } catch {
               setError('Failed to remove media');
             } finally {
               setUploadingAvatar(false);

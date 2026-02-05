@@ -8,22 +8,22 @@ const mobileStorage = {
   getItem: async (key: string) => {
     try {
       return await SecureStore.getItemAsync(key);
-    } catch (e) {
+    } catch {
       return null;
     }
   },
   setItem: async (key: string, val: string) => {
     try {
       await SecureStore.setItemAsync(key, val);
-    } catch (e) {
-      logger.error({ err: e }, 'SecureStore Save Error');
+    } catch (err) {
+      logger.error({ err }, 'SecureStore Save Error');
     }
   },
   removeItem: async (key: string) => {
     try {
       await SecureStore.deleteItemAsync(key);
-    } catch (e) {
-      logger.error({ err: e }, 'SecureStore Delete Error');
+    } catch (err) {
+      logger.error({ err }, 'SecureStore Delete Error');
     }
   },
 };
@@ -34,8 +34,8 @@ export const authStore = new UniversalAuthStore(
   async () => {
     try {
       await trpc.auth.logout.mutate({});
-    } catch (e) {
-      logger.error({ err: e }, 'Mobile Logout Error');
+    } catch (err) {
+      logger.error({ err }, 'Mobile Logout Error');
     }
     setTimeout(() => {
       if (router.canGoBack()) router.dismissAll();

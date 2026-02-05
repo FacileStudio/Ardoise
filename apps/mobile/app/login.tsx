@@ -19,8 +19,8 @@ export default function Login() {
       const result = await trpc.auth.login.mutate({ email, password });
       authStore.setAuth({ token: result.token }, result.user);
       router.replace('/profile');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed');
     }
     setLoading(false);
   };
