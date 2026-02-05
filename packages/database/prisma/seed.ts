@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcrypt';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import { YAML } from "bun"; // Import Bun.YAML
+import { YAML } from 'bun'; // Import Bun.YAML
 import * as path from 'path'; // Keep path for path manipulation
 
 if (!process.env.DATABASE_URL) {

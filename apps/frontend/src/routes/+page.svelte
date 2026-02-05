@@ -111,7 +111,11 @@
         </button>
 
         {#if message}
-          <p class="text-center text-sm" class:text-green-600={message.includes('Thank you')} class:text-red-600={message.includes('Error')}>
+          <p
+            class="text-center text-sm"
+            class:text-green-600={message.includes('Thank you')}
+            class:text-red-600={message.includes('Error')}
+          >
             {message}
           </p>
         {/if}
@@ -124,25 +128,52 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
           <h3 class="text-xl font-bold mb-4">Monorepo Template</h3>
-          <p class="text-gray-300">A modern full-stack monorepo template with SvelteKit and tRPC.</p>
+          <p class="text-gray-300">
+            A modern full-stack monorepo template with SvelteKit and tRPC.
+          </p>
         </div>
 
         <div>
           <h4 class="text-lg font-semibold mb-4">Quick Links</h4>
           <ul class="space-y-2">
             <li><a href="/" class="text-gray-300 hover:opacity-70 transition">Home</a></li>
-            <li><a href="#contact" class="text-gray-300 hover:opacity-70 transition">Contact</a></li>
+            <li>
+              <a href="#contact" class="text-gray-300 hover:opacity-70 transition">Contact</a>
+            </li>
             <li><a href="/login" class="text-gray-300 hover:opacity-70 transition">Login</a></li>
-            <li><a href="/register" class="text-gray-300 hover:opacity-70 transition">Register</a></li>
+            <li>
+              <a href="/register" class="text-gray-300 hover:opacity-70 transition">Register</a>
+            </li>
           </ul>
         </div>
 
         <div>
           <h4 class="text-lg font-semibold mb-4">Resources</h4>
           <ul class="space-y-2">
-            <li><a href="https://kit.svelte.dev" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:opacity-70 transition">SvelteKit</a></li>
-            <li><a href="https://trpc.io" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:opacity-70 transition">tRPC</a></li>
-            <li><a href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:opacity-70 transition">Tailwind CSS</a></li>
+            <li>
+              <a
+                href="https://kit.svelte.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-gray-300 hover:opacity-70 transition">SvelteKit</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://trpc.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-gray-300 hover:opacity-70 transition">tRPC</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://tailwindcss.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-gray-300 hover:opacity-70 transition">Tailwind CSS</a
+              >
+            </li>
           </ul>
         </div>
       </div>

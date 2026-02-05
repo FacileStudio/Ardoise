@@ -1,5 +1,5 @@
 model Contact {
-    id          String   @id @default(uuid())
+        id          String   @id @default(uuid())
         email String   @unique
         firstName  String
         lastName   String
