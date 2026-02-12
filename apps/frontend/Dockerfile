@@ -12,7 +12,6 @@ ENV PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 RUN bun install --no-frozen-lockfile
 RUN cd apps/frontend && bun run build
-RUN bun pm prune --production
 
 FROM base AS runner
 WORKDIR /app

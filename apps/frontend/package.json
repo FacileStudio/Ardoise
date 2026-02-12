@@ -10,7 +10,6 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check-env": "bun ./src/lib/env.ts",
     "lint": "eslint src --max-warnings 0"
   },
   "dependencies": {

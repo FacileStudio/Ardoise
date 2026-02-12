@@ -10,7 +10,6 @@ ENV VITE_API_URL=$VITE_API_URL
 
 RUN bun install --no-frozen-lockfile
 RUN cd apps/backoffice && bun run build
-RUN bun pm prune --production
 
 FROM base AS runner
 WORKDIR /app
