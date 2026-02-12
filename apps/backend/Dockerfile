@@ -1,8 +1,17 @@
+# Use a specific version for consistency
 FROM oven/bun:1.3.7-alpine AS base
+
+RUN apk add --no-cache typst libstdc++ gcompat
 
 FROM base AS builder
 WORKDIR /app
 
+# Copy dependency files first to leverage Docker cache
+COPY package.json bun.lockb* turbo.json ./
+COPY packages/database/package.json ./packages/database/
+COPY apps/backend/package.json ./apps/backend/
+
+# Now copy the rest
 COPY . .
 
 ARG DATABASE_URL
@@ -28,6 +37,7 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 backend
 
+# Copy built assets
 COPY --from=builder --chown=backend:nodejs /app/apps/backend ./apps/backend
 COPY --from=builder --chown=backend:nodejs /app/packages ./packages
 COPY --from=builder --chown=backend:nodejs /app/node_modules ./node_modules
