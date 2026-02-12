@@ -10,7 +10,7 @@ export const prestation: string = `#set document(
   number-align: right + bottom,
 )
 
-#set text(font: "Satoshi", size: 10pt, lang: "fr")
+#set text(font: ("Inter", "Helvetica", "Arial"), size: 10pt, lang: "fr")
 
 #let fmt(n) = str(calc.round(n, digits: 2)) + "\u{00A0}€"
 
@@ -44,7 +44,7 @@ export const prestation: string = `#set document(
   align(left)[
     #box(height: 24pt, baseline: 20%, image("logo.png", height: 24pt))
     #h(0.3cm)
-    #text(size: 24pt, weight: "bold", font: "Poppins")[#provider_name]
+    #text(size: 24pt, weight: "bold", font: ("Inter", "Helvetica", "Arial"))[#provider_name]
     #v(0.5cm)
     #text(size: 9pt, fill: rgb("#666666"))[
       #provider_address \
@@ -55,7 +55,7 @@ export const prestation: string = `#set document(
     ]
   ],
   align(right)[
-    #text(size: 20pt, weight: "bold", font: "Poppins")[FACTURE]
+    #text(size: 20pt, weight: "bold", font: ("Inter", "Helvetica", "Arial"))[FACTURE]
     #v(0.3cm)
     #table(
       columns: (auto, auto),
@@ -72,9 +72,9 @@ export const prestation: string = `#set document(
 #v(1.5cm)
 
 #rect(width: 100%, fill: rgb("#f8f9fa"), stroke: none, radius: 4pt, inset: 1cm)[
-  #text(size: 9pt, weight: "bold", fill: rgb("#666666"), font: "Poppins")[FACTURER À]
+  #text(size: 9pt, weight: "bold", fill: rgb("#666666"), font: ("Inter", "Helvetica", "Arial"))[FACTURER À]
   #v(0.3cm)
-  #text(size: 11pt, weight: "bold", font: "Poppins")[#client_name]
+  #text(size: 11pt, weight: "bold", font: ("Inter", "Helvetica", "Arial"))[#client_name]
   #v(0.2cm)
   #client_address \
   #client_city \

@@ -49,9 +49,19 @@ export const DocumentDataSchema = z.object({
   iban: z.string().optional(),
   bic: z.string().optional(),
 
-  items: z.array(DocumentItemSchema).optional().default([]),
+  items: z.array(DocumentItemSchema).default([]),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
+}).refine((data) => {
+  // For contrat_maintenance, items are optional
+  if (data.type === 'contrat_maintenance') {
+    return true;
+  }
+  // For other types, require at least one item
+  return data.items && data.items.length > 0;
+}, {
+  message: "Au moins un article est requis pour ce type de document",
+  path: ['items'],
 });
 
 export type DocumentData = z.infer<typeof DocumentDataSchema>;
