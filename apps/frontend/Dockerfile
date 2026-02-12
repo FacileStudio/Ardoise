@@ -12,6 +12,7 @@ ENV PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 RUN bun install --no-frozen-lockfile
 RUN cd apps/frontend && bun run build
+RUN bun pm prune --production
 
 FROM base AS runner
 WORKDIR /app
@@ -29,6 +30,7 @@ RUN adduser --system --uid 1001 frontend
 
 COPY --from=builder --chown=frontend:nodejs /app/apps/frontend/build ./build
 COPY --from=builder --chown=frontend:nodejs /app/apps/frontend/package.json ./package.json
+COPY --from=builder --chown=frontend:nodejs /app/node_modules ./node_modules
 
 USER frontend
 
