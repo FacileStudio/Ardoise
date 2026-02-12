@@ -258,11 +258,28 @@
 		try {
 			generating = true;
 			const result = await trpc.document.preview.mutate({
-				...formData,
+				type: formData.type,
+				invoice_number: formData.invoice_number,
+				invoice_date: formData.invoice_date,
+				due_date: formData.due_date,
+				quote_number: formData.quote_number,
+				quote_date: formData.quote_date,
+				validity_date: formData.validity_date,
+				maintenance_period: formData.maintenance_period,
+				contract_reference: formData.contract_reference,
+				contract_date: formData.contract_date,
 				clientId: selectedClientId,
 				providerId: selectedProviderId || undefined,
+				items: formData.items,
 				tva_rate: Number(formData.tva_rate),
 				railway_estimate: Number(formData.railway_estimate || 0),
+				project_name: formData.project_name,
+				valid_until: formData.valid_until,
+				providers: formData.providers,
+				features: formData.features,
+				global_invoice_ref: formData.global_invoice_ref,
+				project_step: formData.project_step,
+				payment_providers: formData.payment_providers,
 			});
 			previewPdf = result.pdf;
 			showPreview = true;
@@ -285,11 +302,28 @@
 		try {
 			generating = true;
 			const result = await trpc.document.create.mutate({
-				...formData,
+				type: formData.type,
+				invoice_number: formData.invoice_number,
+				invoice_date: formData.invoice_date,
+				due_date: formData.due_date,
+				quote_number: formData.quote_number,
+				quote_date: formData.quote_date,
+				validity_date: formData.validity_date,
+				maintenance_period: formData.maintenance_period,
+				contract_reference: formData.contract_reference,
+				contract_date: formData.contract_date,
 				clientId: selectedClientId,
 				providerId: selectedProviderId || undefined,
+				items: formData.items,
 				tva_rate: Number(formData.tva_rate),
 				railway_estimate: Number(formData.railway_estimate || 0),
+				project_name: formData.project_name,
+				valid_until: formData.valid_until,
+				providers: formData.providers,
+				features: formData.features,
+				global_invoice_ref: formData.global_invoice_ref,
+				project_step: formData.project_step,
+				payment_providers: formData.payment_providers,
 			});
 
 			const pdfBlob = base64ToBlob(result.pdf, 'application/pdf');
