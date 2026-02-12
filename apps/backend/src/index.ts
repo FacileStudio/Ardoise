@@ -18,7 +18,7 @@ import {
 import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
 
-// Version: 1.1.4 - Force rebuild: Fixed validation logic for documents (only prestation/maintenance require items)
+// Version: 1.1.5 - Fixed validation logic for documents
 const app = new Hono();
 
 app.onError((err, c) => {
