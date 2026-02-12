@@ -18,7 +18,7 @@ import {
 import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
 
-// Version: 1.2.1 - Simplified document schema (fetch all data from IDs including bank info)
+const VERSION = '1.2.1';
 const app = new Hono();
 
 app.onError((err, c) => {
@@ -67,6 +67,7 @@ app.post('/webhook', createStripeWebhookHandler(stripe, storage, smtp, env));
 
 app.get('/openapi.json', openApiHandler);
 
+app.get('/version', (c) => c.json({ version: VERSION }));
 app.get('/health', createHealthCheckHandler({ storage, stripe }));
 app.get('/health/live', createLivenessHandler());
 app.get('/health/ready', createReadinessHandler());

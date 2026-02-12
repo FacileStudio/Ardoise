@@ -55,31 +55,15 @@
 		contract_reference: 'CTR-001',
 		contract_date: new Date().toISOString().split('T')[0],
 		maintenance_period: '1 mois',
-		client_name: '',
-		client_address: '',
-		client_city: '',
-		client_country: 'France',
-		client_siret: '',
-		provider_name: '',
-		provider_legal: '',
-		provider_address: '',
-		provider_city: '',
-		provider_siret: '',
-		provider_email: '',
-		provider_phone: '',
-		bank_name: '',
-		iban: '',
-		bic: '',
+		clientId: '',
+		providerId: '',
 		items: [],
 		tva_rate: 20,
 		railway_estimate: 0,
-		providerId: '',
-		// For back_contractuel
 		project_name: '',
 		valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
 		providers: [],
 		features: [],
-		// For appel_de_fonds
 		global_invoice_ref: 'ADF-001',
 		project_step: 'Acompte 30%',
 		payment_providers: [],
@@ -98,41 +82,17 @@
 
 	$effect(() => {
 		if (selectedClientId) {
-			const client = clients.find((c) => c.id === selectedClientId);
-			if (client) {
-				formData.client_name = client.companyName;
-				formData.client_siret = client.siret || '';
-				formData.client_address = client.billingAddress || '';
-				formData.client_city = client.billingCity || '';
-				formData.client_country = client.billingCountry || 'France';
-			}
+			formData.clientId = selectedClientId;
 		}
 	});
 
 	$effect(() => {
 		if (selectedProviderId) {
+			formData.providerId = selectedProviderId;
 			const provider = providers.find((p) => p.id === selectedProviderId);
 			if (provider) {
-				formData.providerId = provider.id;
-				formData.provider_name = provider.name;
-				formData.provider_legal = provider.legalName || '';
-				formData.provider_siret = provider.siret || '';
-				formData.provider_address = provider.address || '';
-				formData.provider_city = provider.city || '';
-				formData.provider_email = provider.email || '';
-				formData.provider_phone = provider.phone || '';
-				formData.bank_name = provider.bankName || '';
-				formData.iban = provider.iban || '';
-				formData.bic = provider.bic || '';
 				formData.tva_rate = provider.tvaRate;
 			}
-		} else if (formData.type === 'back_contractuel' || formData.type === 'appel_de_fonds') {
-			formData.provider_name = 'Collectif Web';
-			formData.provider_address = '';
-			formData.provider_city = '';
-			formData.provider_siret = '';
-			formData.provider_email = 'contact@collectifweb.com';
-			formData.provider_phone = '';
 		}
 	});
 
