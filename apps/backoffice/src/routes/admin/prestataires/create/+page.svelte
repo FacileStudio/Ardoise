@@ -264,22 +264,6 @@
 				</div>
 			</div>
 
-			<!-- Logo URL (optional) -->
-			<div>
-				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
-					<iconify-icon icon="solar:camera-bold" width="24" class="text-[#FEC129]"></iconify-icon>
-					Logo (optionnel)
-				</h2>
-				<div class="bg-slate-50 rounded-xl p-6">
-					<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-						<iconify-icon icon="solar:link-bold" width="16" class="text-[#FEC129]"
-						></iconify-icon>
-						URL du logo
-					</label>
-					<Input bind:value={formData.logoUrl} placeholder="https://example.com/logo.png" />
-				</div>
-			</div>
-
 			<!-- Actions -->
 			<div class="flex gap-4 pt-4">
 				<Button
