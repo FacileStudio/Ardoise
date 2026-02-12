@@ -224,11 +224,21 @@ Each app validates its environment on startup via `check-env` script using Zod.
 - `STRIPE_SECRET_KEY`: Stripe API key (must start with `sk_`)
 - `STRIPE_WEBHOOK_SECRET`: Stripe webhook secret (must start with `whsec_`)
 - `PUBLIC_STRIPE_PUBLISHABLE_KEY`: Stripe publishable key (must start with `pk_`)
-- `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_BUCKET_NAME`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
+- `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_BUCKET_NAME`, `MINIO_PUBLIC_URL`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- `COMPANY_NAME`: Company name for documents (e.g., `Facile Studio`)
+- `COMPANY_CONTACT_EMAIL`: Contact email for documents (e.g., `contact@facile.studio`)
 - `FRONTEND_URL`: Frontend URL for CORS (e.g., `http://localhost:5173`)
 - `TRUSTED_ORIGINS`: Comma-separated allowed origins (e.g., `http://localhost:5173,http://localhost:3001,http://localhost:3002`)
 - `PORT`: Backend server port (default: 3001)
+
+**Optional backend variables:**
+- `DOCUSEAL_API_URL`: DocuSeal instance URL (e.g., `https://docuseal.example.com/api`)
+- `DOCUSEAL_API_KEY`: DocuSeal API key for document signing
+- `LOGO_PATH`: Path to company logo for PDFs
+- `DISCORD_WEBHOOK_URL`: Discord webhook for notifications
+- `LOG_LEVEL`: Logging level (debug, info, warn, error)
+- `LOGTAIL_TOKEN`: Logtail token for remote logging
 
 **Required frontend variables:**
 - `PORT`: Frontend server port (default: 5173)

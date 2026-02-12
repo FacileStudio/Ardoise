@@ -35,12 +35,11 @@ export const serverEnvSchema = baseSchema.extend({
 
   LOGO_PATH: z.string().optional(),
 
+  DOCUSEAL_API_URL: z.string().url().optional(),
+  DOCUSEAL_API_KEY: z.string().min(1).optional(),
+
   COMPANY_NAME: z.string().min(1),
-  COMPANY_ADDRESS: z.string().min(1),
-  COMPANY_CITY: z.string().min(1),
-  COMPANY_SIRET: z.string().min(1),
-  COMPANY_EMAIL: z.string().email(),
-  COMPANY_PHONE: z.string().min(1),
+  COMPANY_CONTACT_EMAIL: z.string().email(),
 
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
   LOGTAIL_TOKEN: z.string().optional(),

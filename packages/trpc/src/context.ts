@@ -6,12 +6,14 @@ import { StorageService } from '@repo/storage';
 import { StripeService } from '@repo/stripe';
 import { SMTPClient } from '@repo/smtp';
 import type { Logger } from '@repo/logger';
+import { DocuSealService } from './modules/docuseal/service';
 
 export interface CreateContextOptions extends FetchCreateContextFnOptions {
   authManager: AuthManager;
   storage: StorageService;
   stripe: StripeService;
   smtp?: SMTPClient;
+  docuseal: DocuSealService;
   env: ServerEnv;
   logger: Logger;
 }
@@ -22,6 +24,7 @@ export const createContext = async ({
   storage,
   stripe,
   smtp,
+  docuseal,
   env,
   logger,
 }: CreateContextOptions) => {
@@ -40,6 +43,7 @@ export const createContext = async ({
     storage,
     stripe,
     smtp,
+    docuseal,
     env,
     ipAddress,
     userAgent,

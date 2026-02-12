@@ -5,6 +5,7 @@ import { AuthManager } from '@repo/auth';
 import { StorageService } from '@repo/storage';
 import { StripeService } from '@repo/stripe';
 import { SMTPClient } from '@repo/smtp';
+import { DocuSealService } from '@repo/trpc/modules/docuseal/service';
 import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
 import trpcHandler from './handlers/trpc';
@@ -41,6 +42,8 @@ const smtp = new SMTPClient({
   from: env.SMTP_FROM,
 });
 
+const docuseal = new DocuSealService(env.DOCUSEAL_API_URL, env.DOCUSEAL_API_KEY);
+
 app.use('*', corsHandler(env.TRUSTED_ORIGINS));
 app.use('*', loggerMiddleware);
 
@@ -59,6 +62,7 @@ app.all(
     storage,
     stripe,
     smtp,
+    docuseal,
     env,
   })
 );

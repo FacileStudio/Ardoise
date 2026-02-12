@@ -183,6 +183,17 @@
         "zod-prisma-types": "^3.3.11",
       },
     },
+    "packages/docuseal": {
+      "name": "@repo/docuseal",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "^3.24.1",
+      },
+      "devDependencies": {
+        "@repo/tsconfig": "workspace:*",
+        "typescript": "^5.7.3",
+      },
+    },
     "packages/env": {
       "name": "@repo/env",
       "version": "0.0.1",
@@ -673,6 +684,8 @@
     "@repo/crypto": ["@repo/crypto@workspace:packages/crypto"],
 
     "@repo/database": ["@repo/database@workspace:packages/database"],
+
+    "@repo/docuseal": ["@repo/docuseal@workspace:packages/docuseal"],
 
     "@repo/env": ["@repo/env@workspace:packages/env"],
 

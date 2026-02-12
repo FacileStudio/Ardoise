@@ -8,6 +8,7 @@ import { paymentRouter } from './modules/payment/router';
 import { settingsRouter } from './modules/settings/router';
 import { documentRouter } from './modules/document/router';
 import { providerRouter } from './modules/provider/router';
+import { docusealRouter } from './modules/docuseal/router';
 import { createOpenApiDocument } from './openapi';
 
 export const appRouter = router({
@@ -20,6 +21,7 @@ export const appRouter = router({
   settings: settingsRouter,
   document: documentRouter,
   provider: providerRouter,
+  docuseal: docusealRouter,
 });
 export const openApiDocument = createOpenApiDocument(appRouter);
 

@@ -8,6 +8,7 @@ export const trpcHandler =
     storage,
     stripe,
     smtp,
+    docuseal,
     env,
   }: Omit<CreateContextOptions, 'req' | 'resHeaders' | 'info' | 'logger'>) =>
   (c: Context, next: Next) =>
@@ -22,6 +23,7 @@ export const trpcHandler =
           storage,
           stripe,
           smtp,
+          docuseal,
           env,
           logger,
         });
