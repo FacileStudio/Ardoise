@@ -2,10 +2,6 @@
 builder = "dockerfile"
 dockerfilePath = "apps/backoffice/Dockerfile"
 
-[build.env]
-TURBO_TOKEN = "$TURBO_TOKEN"
-TURBO_TEAM = "$TURBO_TEAM"
-
 [deploy]
 healthcheckPath = "/"
 healthcheckTimeout = 100
