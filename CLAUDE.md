@@ -244,7 +244,11 @@ Each app validates its environment on startup via `check-env` script using Zod.
 - `PORT`: Frontend server port (default: 5173)
 - `VITE_API_URL`: Backend API URL (e.g., `http://localhost:3001`)
 - `PUBLIC_STRIPE_PUBLISHABLE_KEY`: Stripe publishable key (must start with `pk_`)
-- `PUBLIC_STRIPE_PRICE_ID`: Stripe price ID for payments
+- `NODE_ENV`: Environment (development/production)
+
+**Required backoffice variables:**
+- `PORT`: Backoffice server port (default: 3002)
+- `VITE_API_URL`: Backend API URL (e.g., `http://localhost:3001`)
 - `NODE_ENV`: Environment (development/production)
 
 See `apps/backend/.env.example` and `apps/frontend/.env` for complete reference.

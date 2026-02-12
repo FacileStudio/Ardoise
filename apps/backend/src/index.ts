@@ -19,6 +19,17 @@ import {
 
 const app = new Hono();
 
+app.onError((err, c) => {
+  console.error('Unhandled error:', err);
+  return c.json(
+    {
+      error: 'Internal server error',
+      message: env.NODE_ENV === 'development' ? err.message : undefined,
+    },
+    500
+  );
+});
+
 const authManager = new AuthManager({
   encryptionSecret: env.ENCRYPTION_SECRET,
 });
