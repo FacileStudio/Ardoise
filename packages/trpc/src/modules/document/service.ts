@@ -88,16 +88,12 @@ export const DocumentDataSchema = z.object({
   project_step: z.string().optional(),
   payment_providers: z.array(PaymentProviderSchema).optional().default([]),
 }).refine((data) => {
-  // For contrat_maintenance, items are optional
-  if (data.type === 'contrat_maintenance') {
-    return true;
+  // For prestation and maintenance, require at least one item
+  if (data.type === 'prestation' || data.type === 'maintenance') {
+    return data.items && data.items.length > 0;
   }
-  // For back_contractuel and appel_de_fonds, items are optional (but required for back_contractuel in our UI validation)
-  if (data.type === 'back_contractuel' || data.type === 'appel_de_fonds') {
-    return true;
-  }
-  // For other types (prestation, maintenance, contrat_prestation), require at least one item
-  return data.items && data.items.length > 0;
+  // For all other types (contrat_prestation, contrat_maintenance, back_contractuel, appel_de_fonds), items are optional
+  return true;
 }, {
   message: "Au moins un article est requis pour ce type de document",
   path: ['items'],
