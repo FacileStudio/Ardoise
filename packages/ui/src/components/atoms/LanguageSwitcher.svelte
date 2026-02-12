@@ -1,22 +1,19 @@
 <script lang="ts">
   import { locale, setLocale } from '@repo/i18n/svelte';
+  import type { Locale } from '@repo/i18n';
   import 'iconify-icon';
   import { fade, scale } from 'svelte/transition';
 
-  // Define languages with native names (Endonyms)
   const locales = [
-    { code: 'en', label: 'English', native: 'English', flag: 'twemoji:flag-united-states' },
-    { code: 'fr', label: 'French', native: 'Français', flag: 'twemoji:flag-france' },
-    { code: 'de', label: 'German', native: 'Deutsch', flag: 'twemoji:flag-germany' },
-    { code: 'es', label: 'Spanish', native: 'Español', flag: 'twemoji:flag-spain' },
+    { code: 'en' as Locale, label: 'English', native: 'English', flag: 'twemoji:flag-united-states' },
+    { code: 'fr' as Locale, label: 'French', native: 'Français', flag: 'twemoji:flag-france' },
   ] as const;
 
   let isOpen = $state(false);
 
-  // Find the currently active locale object
   let currentLocale = $derived(locales.find((l) => l.code === $locale) || locales[0]);
 
-  function handleSelect(code: string) {
+  function handleSelect(code: Locale) {
     setLocale(code);
     isOpen = false;
   }

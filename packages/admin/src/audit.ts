@@ -11,9 +11,9 @@ export class AuditService {
         entity: entry.entity,
         entityId: entry.entityId,
         action: entry.action,
-        changes: entry.changes || null,
-        ipAddress: entry.ipAddress || null,
-        userAgent: entry.userAgent || null,
+        ...(entry.changes && { changes: entry.changes }),
+        ...(entry.ipAddress && { ipAddress: entry.ipAddress }),
+        ...(entry.userAgent && { userAgent: entry.userAgent }),
       },
     });
   }

@@ -1,0 +1,23 @@
+model Settings {
+  id String @id @default("global")
+
+  companyName String?
+  companyLegal String?
+  companyAddress String?
+  companyCity String?
+  companyCountry String @default("France")
+  companySiret String?
+  companyEmail String?
+  companyPhone String?
+
+  bankName String?
+  iban String?
+  bic String?
+
+  logoUrl String?
+
+  tvaRate Decimal @default(20) @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

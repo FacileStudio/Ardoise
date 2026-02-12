@@ -11,5 +11,11 @@ export default defineConfig({
       allow: ['..', '../../packages']
     }
   },
-  assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.ttf', '**/*.otf']
+  assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.ttf', '**/*.otf'],
+  optimizeDeps: {
+    exclude: ['@repo/database', 'pg', '@prisma/client']
+  },
+  ssr: {
+    noExternal: ['@repo/ui', '@repo/trpc-client', '@repo/storage-client']
+  }
 });

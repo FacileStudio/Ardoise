@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { EntityConfig, FieldConfig } from '@repo/admin';
+  import type { EntityConfig } from '@repo/admin';
   import { cn } from '@repo/utils';
   import Toggle from '../../components/atoms/Toggle.svelte';
   import 'iconify-icon';
@@ -13,20 +13,16 @@
     class: className = '',
   }: {
     config: EntityConfig;
-    data?: Record<string, any>;
-    onSubmit: (data: Record<string, any>) => void;
+    data?: Record<string, unknown>;
+    onSubmit: (_data: Record<string, unknown>) => void;
     onCancel: () => void;
     mode?: 'create' | 'edit';
     class?: string;
   } = $props();
 
-  let formData = $state<Record<string, any>>({ ...data });
+  let formData = $derived.by(() => ({ ...data }));
   let errors = $state<Record<string, string>>({});
   let isSubmitting = $state(false);
-
-  $effect(() => {
-    formData = { ...data };
-  });
 
   function handleSubmit(e: Event) {
     e.preventDefault();
@@ -80,7 +76,7 @@
         <div class="relative">
           {#if field.type === 'boolean'}
             <div class="flex items-center h-11 px-1">
-              <Toggle bind:checked={formData[field.name]} size="md" />
+              <Toggle bind:checked={formData[field.name] as boolean} size="md" />
               <span class="ml-3 text-sm font-medium text-neutral-600">Enable {field.label}</span>
             </div>
           {:else if field.type === 'select'}
@@ -91,7 +87,7 @@
               class="w-full h-11 px-4 bg-neutral-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black transition-all appearance-none"
             >
               <option value="">Select {field.label}...</option>
-              {#each field.options || [] as opt}
+              {#each field.options || [] as opt (opt.value)}
                 <option value={opt.value}>{opt.label}</option>
               {/each}
             </select>

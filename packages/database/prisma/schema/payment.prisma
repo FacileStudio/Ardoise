@@ -1,0 +1,44 @@
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentFrequency {
+  ONE_TIME
+  MONTHLY
+  YEARLY
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  clientId String
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  amount Decimal @db.Decimal(10, 2)
+  stripeFee Decimal @db.Decimal(10, 2) @default(0)
+  totalWithFees Decimal @db.Decimal(10, 2)
+  description String
+  status PaymentStatus @default(PENDING)
+  frequency PaymentFrequency @default(ONE_TIME)
+
+  dueDate DateTime
+  paidAt DateTime?
+
+  stripePaymentIntentId String? @unique
+  stripeSubscriptionId String?
+
+  attachedFiles String[]
+
+  receiptUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([stripePaymentIntentId])
+}

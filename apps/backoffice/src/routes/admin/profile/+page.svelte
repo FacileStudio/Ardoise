@@ -58,7 +58,7 @@ import 'iconify-icon';
             <div class="space-y-1">
               <div class="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">Rôle</div>
               <div class="flex">
-                <span class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-tight flex items-center gap-2 border border-indigo-100">
+                <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wide flex items-center gap-2">
                   <iconify-icon icon="solar:medal-star-bold"></iconify-icon>
                   {$authStore.user.role}
                 </span>

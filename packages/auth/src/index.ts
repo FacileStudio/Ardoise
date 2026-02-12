@@ -33,7 +33,6 @@ export class AuthManager {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
-      isPremium: user.isPremium,
       avatarUrl: user.avatarUrl,
       coverImageUrl: user.coverImageUrl,
     })
@@ -58,12 +57,10 @@ export class AuthManager {
         firstName: payload.firstName as string,
         lastName: payload.lastName as string,
         role: payload.role as any,
-        isPremium: payload.isPremium as boolean,
         avatarUrl: payload.avatarUrl as string | null | undefined,
         coverImageUrl: payload.coverImageUrl as string | null | undefined,
       };
     } catch (error) {
-      // Erreur de signature, expiration, etc.
       return null;
     }
   }

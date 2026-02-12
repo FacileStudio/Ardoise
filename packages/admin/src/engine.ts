@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@repo/database';
+import type { PrismaClient, InputJsonValue } from '@repo/database';
 import { PermissionService } from './permissions';
 import { AuditService } from './audit';
 import type {
@@ -8,7 +8,11 @@ import type {
   ListResult,
 } from './types';
 
-export class AdminEngine<TModel = any, TCreateInput = any, TUpdateInput = any> {
+export class AdminEngine<
+  TModel extends Record<string, unknown> = Record<string, unknown>,
+  TCreateInput extends Record<string, unknown> = Record<string, unknown>,
+  TUpdateInput extends Record<string, unknown> = Record<string, unknown>
+> {
   private permissionService: PermissionService;
   private auditService: AuditService;
 
@@ -103,7 +107,7 @@ export class AdminEngine<TModel = any, TCreateInput = any, TUpdateInput = any> {
       entity: this.config.name,
       entityId: record.id,
       action: 'CREATE',
-      changes: validatedData,
+      changes: validatedData as InputJsonValue,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });
@@ -140,8 +144,8 @@ export class AdminEngine<TModel = any, TCreateInput = any, TUpdateInput = any> {
       entityId: id,
       action: 'UPDATE',
       changes: {
-        before,
-        after: validatedData,
+        before: before as InputJsonValue,
+        after: validatedData as InputJsonValue,
       },
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
@@ -169,7 +173,7 @@ export class AdminEngine<TModel = any, TCreateInput = any, TUpdateInput = any> {
       entity: this.config.name,
       entityId: id,
       action: 'DELETE',
-      changes: before,
+      changes: before as InputJsonValue,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });

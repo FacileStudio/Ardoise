@@ -7,6 +7,7 @@ COPY package.json bun.lock ./
 COPY apps/backoffice/package.json ./apps/backoffice/
 COPY packages/admin/package.json ./packages/admin/
 COPY packages/auth-shared/package.json ./packages/auth-shared/
+COPY packages/database/package.json ./packages/database/
 COPY packages/env/package.json ./packages/env/
 COPY packages/i18n/package.json ./packages/i18n/
 COPY packages/logger/package.json ./packages/logger/
@@ -24,27 +25,25 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG PUBLIC_BACKEND_URL
-ENV PUBLIC_BACKEND_URL=$PUBLIC_BACKEND_URL
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
-RUN bun run build --filter=@repo/backoffice
+RUN cd apps/backoffice && bun run build
 
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=3002
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 backoffice
 
-COPY --from=builder --chown=backoffice:nodejs /app/apps/backoffice/build ./apps/backoffice/build
-COPY --from=builder --chown=backoffice:nodejs /app/apps/backoffice/package.json ./apps/backoffice/
-COPY --from=builder --chown=backoffice:nodejs /app/packages ./packages
-COPY --from=builder --chown=backoffice:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=backoffice:nodejs /app/package.json ./
+COPY --from=builder --chown=backoffice:nodejs /app/apps/backoffice/build ./build
+COPY --from=builder --chown=backoffice:nodejs /app/apps/backoffice/package.json ./package.json
 
 USER backoffice
 
-EXPOSE 3000
+EXPOSE 3002
 
-CMD ["bun", "run", "apps/backoffice/build"]
+CMD ["node", "build"]

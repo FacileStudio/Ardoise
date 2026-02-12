@@ -3,10 +3,12 @@ export type {
   User,
   Session,
   Verification,
-  Contact,
   Media,
   Prisma,
   PrismaClient,
+  Client,
+  Payment,
+  Settings,
 } from '@repo/database';
 
 export enum UserRole {

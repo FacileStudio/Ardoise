@@ -8,6 +8,14 @@ module.exports = [
       parserOptions: {
         project: './tsconfig.json',
       },
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        localStorage: 'readonly',
+        alert: 'readonly',
+        confirm: 'readonly',
+        history: 'readonly',
+      },
     },
   },
 ];

@@ -18,6 +18,7 @@ export { default as AutoForm } from './components/organisms/AutoForm.svelte';
 export { default as AutoTable } from './components/organisms/AutoTable.svelte';
 export { default as BottomDrawer } from './components/organisms/BottomDrawer.svelte';
 export { default as ConfirmDialog } from './components/organisms/ConfirmDialog.svelte';
+export { default as Drawer } from './components/organisms/Drawer.svelte';
 export { default as EmptyState } from './components/organisms/EmptyState.svelte';
 export { default as ImageUpload } from './components/organisms/ImageUpload.svelte';
 export { default as Modal } from './components/organisms/Modal.svelte';

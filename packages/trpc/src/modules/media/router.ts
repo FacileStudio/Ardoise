@@ -2,15 +2,23 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../../trpc';
 import mediaService from './service';
 
+const uploadUrlSchema = z.object({
+  fileName: z.string(),
+  fileType: z.string()
+});
+
 const mediaSchema = z.object({
   url: z.string().url(),
   key: z.string(),
   size: z.number(),
 });
 
+type UploadUrlInput = z.infer<typeof uploadUrlSchema>;
+type MediaInput = z.infer<typeof mediaSchema>;
+
 export const mediaRouter = router({
   getUploadUrl: protectedProcedure
-    .input(z.object({ fileName: z.string(), fileType: z.string() }))
+    .input(uploadUrlSchema)
     .mutation(async ({ ctx, input }) => {
       return mediaService.generateUploadUrl(ctx.storage, ctx.user.id, input);
     }),

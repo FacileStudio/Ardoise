@@ -1,13 +1,14 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import 'iconify-icon';
 
   $: status = $page.status;
   $: message = $page.error?.message || 'Something went wrong';
 
   function goHome() {
-    goto('/');
+    goto(resolve('/'));
   }
 
   function goBack() {

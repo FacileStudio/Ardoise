@@ -1,0 +1,27 @@
+model Provider {
+  id String @id @default(cuid())
+
+  name String
+  legalName String?
+  address String?
+  city String?
+  country String @default("France")
+  siret String?
+  email String?
+  phone String?
+
+  bankName String?
+  iban String?
+  bic String?
+
+  logoUrl String?
+
+  tvaRate Decimal @default(20) @db.Decimal(5, 2)
+
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}

@@ -1,0 +1,47 @@
+model Document {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type             String
+  name             String
+  invoiceNumber    String?
+  quoteNumber      String?
+  contractRef      String?
+
+  clientName       String
+  clientSiret      String?
+  clientAddress    String?
+  clientCity       String?
+  clientCountry    String?
+
+  providerId       String?
+  provider         Provider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  providerName     String
+  providerLegal    String?
+  providerSiret    String?
+  providerAddress  String?
+  providerCity     String?
+  providerEmail    String?
+  providerPhone    String?
+
+  items            Json
+  subtotal         Decimal  @db.Decimal(10, 2)
+  tva              Decimal  @db.Decimal(10, 2)
+  total            Decimal  @db.Decimal(10, 2)
+  tvaRate          Int      @default(20)
+
+  railwayEstimate  Decimal? @db.Decimal(10, 2)
+
+  pdfUrl           String?
+  fileSize         Int?
+
+  createdBy        String
+  createdByUser    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([createdBy])
+  @@index([type])
+  @@index([createdAt])
+  @@index([providerId])
+}

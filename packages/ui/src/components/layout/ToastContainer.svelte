@@ -32,7 +32,7 @@
             </div>
 
             <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-black uppercase tracking-tight leading-tight italic line-clamp-2">
+                <p class="text-[11px] font-black uppercase tracking-tight leading-tight line-clamp-2">
                     {t.message}
                 </p>
             </div>

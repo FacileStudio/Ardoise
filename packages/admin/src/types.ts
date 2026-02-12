@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { InputJsonValue } from '@repo/database';
 
 export type EntityOperation = 'create' | 'read' | 'update' | 'delete';
 
@@ -9,7 +10,7 @@ export interface AdminPermissions {
   canDelete: boolean;
 }
 
-export interface EntityConfig<TModel = any, TCreateInput = any, TUpdateInput = any> {
+export interface EntityConfig<TModel = Record<string, unknown>, TCreateInput = Record<string, unknown>, TUpdateInput = Record<string, unknown>> {
   name: string;
   displayName: string;
   schema: {
@@ -47,7 +48,7 @@ export interface AuditLogEntry {
   entity: string;
   entityId: string;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
-  changes?: any;
+  changes?: InputJsonValue;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -58,7 +59,7 @@ export interface ListOptions {
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
 }
 
 export interface ListResult<T> {

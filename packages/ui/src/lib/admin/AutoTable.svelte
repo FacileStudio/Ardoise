@@ -5,6 +5,19 @@
   import { cn } from '@repo/utils';
   import 'iconify-icon';
 
+  interface Props {
+    config: EntityConfig;
+    data: ListResult<Record<string, unknown>>;
+    onEdit: (_id: string) => void;
+    onDelete: (_id: string) => void;
+    onView: (_id: string) => void;
+    onPageChange: (_page: number) => void;
+    onSort: (_field: string) => void;
+    currentSort?: { field: string; order: 'asc' | 'desc' };
+    permissions: { canRead: boolean; canUpdate: boolean; canDelete: boolean };
+    class?: string;
+  }
+
   let {
     config,
     data,
@@ -32,7 +45,7 @@
   }
 
   function handleExport() {
-    const exportData = data.data.map((row) => {
+    const exportData = data.data.map((row: Record<string, unknown>) => {
       const exportRow: Record<string, string> = {};
       config.listFields.forEach((f) => {
         exportRow[f] = formatValue(row[f], f);

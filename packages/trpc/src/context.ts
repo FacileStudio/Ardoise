@@ -4,12 +4,14 @@ import { type AuthManager } from '@repo/auth';
 import { type ServerEnv } from '@repo/env';
 import { StorageService } from '@repo/storage';
 import { StripeService } from '@repo/stripe';
+import { SMTPClient } from '@repo/smtp';
 import type { Logger } from '@repo/logger';
 
 export interface CreateContextOptions extends FetchCreateContextFnOptions {
   authManager: AuthManager;
   storage: StorageService;
   stripe: StripeService;
+  smtp?: SMTPClient;
   env: ServerEnv;
   logger: Logger;
 }
@@ -19,6 +21,7 @@ export const createContext = async ({
   authManager,
   storage,
   stripe,
+  smtp,
   env,
   logger,
 }: CreateContextOptions) => {
@@ -36,6 +39,7 @@ export const createContext = async ({
     auth: authManager,
     storage,
     stripe,
+    smtp,
     env,
     ipAddress,
     userAgent,

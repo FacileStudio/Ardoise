@@ -9,7 +9,6 @@ const mapToSessionUser = (user: any): SessionUser => ({
   firstName: user.firstName,
   lastName: user.lastName,
   role: user.role,
-  isPremium: user.isPremium,
   avatarUrl: user.avatar?.url || null,
   coverImageUrl: user.coverImage?.url || null,
 });
@@ -21,7 +20,6 @@ const userSelection = {
   lastName: true,
   password: true,
   role: true,
-  isPremium: true,
   avatar: {
     select: { url: true },
   },

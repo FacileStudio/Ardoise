@@ -22,12 +22,12 @@
     let tooltipX = $state(0);
     let tooltipY = $state(0);
 
-    const total = $derived(data.reduce((sum, item) => sum + (Number(item[value]) || 0), 0));
+    const total = $derived(data.reduce((sum: number, item) => sum + (Number((item as Record<string, unknown>)[value]) || 0), 0));
 
     const slices = $derived(() => {
         let currentAngle = -Math.PI / 2;
         return data.map((item, i) => {
-            const itemValue = Number(item[value]) || 0;
+            const itemValue = Number((item as Record<string, unknown>)[value]) || 0;
             const percentage = itemValue / total;
             const angle = percentage * 2 * Math.PI;
             const startAngle = currentAngle;
@@ -73,7 +73,7 @@
     }
 </script>
 
-<Chart {data} {height} class={className} bind:width>
+<Chart {height} class={className} bind:width>
     <svg viewBox="0 0 {width} {height}" class="w-full h-full">
         {#each slices() as slice, i (i)}
             <path
@@ -81,7 +81,7 @@
                 fill={slice.color}
                 class="cursor-pointer transition-opacity hover:opacity-80"
                 role="img"
-                aria-label="{data[i][label]}: {data[i][value]} ({slice.percentage}%)"
+                aria-label="{(data[i] as Record<string, unknown>)[label]}: {(data[i] as Record<string, unknown>)[value]} ({slice.percentage}%)"
                 onmousemove={(e) => handleMouseMove(e, i)}
                 onmouseleave={handleMouseLeave}
             />
@@ -101,13 +101,13 @@
         {#each data as item, i (i)}
             <div class="flex items-center gap-2">
                 <div class="w-3 h-3 rounded-sm" style="background-color: {colors[i % colors.length]}"></div>
-                <span class="text-xs text-slate-600">{item[label]}</span>
+                <span class="text-xs text-slate-600">{(item as Record<string, unknown>)[label]}</span>
             </div>
         {/each}
     </div>
 
     {#if hoveredIndex !== null}
-        {@const item = data[hoveredIndex]}
+        {@const item = data[hoveredIndex] as Record<string, unknown>}
         <div
             class="fixed z-50 px-3 py-2 text-xs bg-slate-900 text-white rounded-lg shadow-xl pointer-events-none"
             style="left: {tooltipX + 10}px; top: {tooltipY - 10}px;"

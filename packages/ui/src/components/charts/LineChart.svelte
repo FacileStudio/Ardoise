@@ -25,8 +25,8 @@
     let tooltipX = $state(0);
     let tooltipY = $state(0);
 
-    const xDomain = $derived(data.map(d => String(d[x])));
-    const yExtent = $derived(extent(data.map(d => Number(d[y]) || 0)));
+    const xDomain = $derived(data.map(d => String((d as Record<string, unknown>)[x])));
+    const yExtent = $derived(extent(data.map(d => Number((d as Record<string, unknown>)[y]) || 0)));
     const yDomain = $derived<[number, number]>([yExtent[0] * 0.9, yExtent[1] * 1.1]);
 
     const chartWidth = $derived(width - padding.left - padding.right);
@@ -40,8 +40,8 @@
     const pathData = $derived(() => {
         if (data.length === 0) return '';
         const points = data.map((item, i) => {
-            const px = xScale.scale(String(item[x])) + xScale.bandwidth / 2;
-            const py = yScale(Number(item[y]) || 0);
+            const px = xScale.scale(String((item as Record<string, unknown>)[x])) + xScale.bandwidth / 2;
+            const py = yScale(Number((item as Record<string, unknown>)[y]) || 0);
             return `${i === 0 ? 'M' : 'L'} ${px} ${py}`;
         });
         return points.join(' ');
@@ -58,7 +58,7 @@
     }
 </script>
 
-<Chart {data} {height} class={className} bind:width>
+<Chart {height} class={className} bind:width>
     <svg viewBox="0 0 {width} {height}" class="w-full h-full">
         <g transform="translate({padding.left}, {padding.top})">
             {#each yTicks as tick (tick)}
@@ -91,8 +91,8 @@
             />
 
             {#each data as item, i (i)}
-                {@const pointX = xScale.scale(String(item[x])) + xScale.bandwidth / 2}
-                {@const pointY = yScale(Number(item[y]) || 0)}
+                {@const pointX = xScale.scale(String((item as Record<string, unknown>)[x])) + xScale.bandwidth / 2}
+                {@const pointY = yScale(Number((item as Record<string, unknown>)[y]) || 0)}
 
                 <circle
                     cx={pointX}
@@ -101,7 +101,7 @@
                     fill={color}
                     class="cursor-pointer transition-all"
                     role="img"
-                    aria-label="{String(item[x])}: {item[y]}"
+                    aria-label="{String((item as Record<string, unknown>)[x])}: {(item as Record<string, unknown>)[y]}"
                     onmousemove={(e) => handleMouseMove(e, i)}
                     onmouseleave={handleMouseLeave}
                 />
@@ -112,14 +112,14 @@
                     text-anchor="middle"
                     class="text-[10px] fill-slate-600"
                 >
-                    {String(item[x])}
+                    {String((item as Record<string, unknown>)[x])}
                 </text>
             {/each}
         </g>
     </svg>
 
     {#if hoveredIndex !== null}
-        {@const item = data[hoveredIndex]}
+        {@const item = data[hoveredIndex] as Record<string, unknown>}
         <div
             class="fixed z-50 px-3 py-2 text-xs bg-slate-900 text-white rounded-lg shadow-xl pointer-events-none"
             style="left: {tooltipX + 10}px; top: {tooltipY - 10}px;"

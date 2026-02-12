@@ -5,6 +5,7 @@ const meta = {
   title: 'Atoms/Button',
   component: Button,
   tags: ['autodocs'],
+  // @ts-expect-error - Storybook argTypes don't fully support Svelte 5 components yet
   argTypes: {
     intent: {
       control: 'select',

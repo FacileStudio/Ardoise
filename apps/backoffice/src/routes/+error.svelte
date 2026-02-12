@@ -1,12 +1,13 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import 'iconify-icon';
 
   $: status = $page.status;
   $: message = $page.error?.message || 'Unauthorized Action';
 
-  const goDashboard = () => goto('/admin/contacts');
+  const goDashboard = () => goto(resolve('/admin/contacts'));
   const goBack = () => window.history.back();
 </script>
 
@@ -28,7 +29,7 @@
         </div>
 
         <h1
-          class="text-8xl md:text-[10rem] font-black italic uppercase tracking-tighter leading-none mb-4"
+          class="text-8xl md:text-[10rem] font-black uppercase tracking-tighter leading-none mb-4"
         >
           {status}.
         </h1>
@@ -83,6 +84,6 @@
   >
     <span>Status: {status}</span>
     <span class="w-1 h-1 bg-neutral-200 rounded-full"></span>
-    <span>Backoffice Panel 2.0</span>
+    <span>Charles Panel 2.0</span>
   </div>
 </div>

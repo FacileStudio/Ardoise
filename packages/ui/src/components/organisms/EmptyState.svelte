@@ -9,7 +9,7 @@
   <div class="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-slate-400 mb-4">
     <iconify-icon {icon} width="32"></iconify-icon>
   </div>
-  <h3 class="font-black uppercase tracking-tighter text-slate-900 italic text-lg">{title}</h3>
-  <p class="text-xs font-bold text-slate-400 uppercase italic max-w-[200px] mb-6">{description}</p>
+  <h3 class="font-black uppercase tracking-tighter text-slate-900 text-lg">{title}</h3>
+  <p class="text-xs font-bold text-slate-400 uppercase max-w-[200px] mb-6">{description}</p>
   <slot name="action" />
 </div>

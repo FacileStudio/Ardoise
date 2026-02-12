@@ -3,7 +3,7 @@
     import type { Snippet } from 'svelte';
 
     const buttonClass = cva(
-        "inline-flex items-center justify-center gap-2 transition-all font-black uppercase tracking-tight active:scale-95 disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-2 transition-all font-black uppercase tracking-tight active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
         {
             variants: {
                 intent: {

@@ -36,27 +36,9 @@ export class AdminService {
             { value: 'ADMIN', label: 'Admin' },
           ],
         },
-        { name: 'isPremium', label: 'Premium', type: 'boolean' },
         { name: 'emailVerified', label: 'Email Verified', type: 'boolean' },
       ],
       listFields: ['email', 'firstName', 'lastName', 'role', 'createdAt'],
-      searchFields: ['email', 'firstName', 'lastName'],
-      defaultSort: { field: 'createdAt', order: 'desc' },
-    });
-
-    this.registerEntity({
-      name: 'contact',
-      displayName: 'Contact',
-      schema: {
-        create: UserCreateInputSchema,
-        update: UserUpdateInputSchema,
-      },
-      fields: [
-        { name: 'email', label: 'Email', type: 'email', required: true },
-        { name: 'firstName', label: 'First Name', type: 'string', required: true },
-        { name: 'lastName', label: 'Last Name', type: 'string', required: true },
-      ],
-      listFields: ['email', 'firstName', 'lastName', 'createdAt'],
       searchFields: ['email', 'firstName', 'lastName'],
       defaultSort: { field: 'createdAt', order: 'desc' },
     });
@@ -76,26 +58,6 @@ export class AdminService {
       ],
       listFields: ['url', 'mimeType', 'size', 'createdAt'],
       searchFields: ['key', 'mimeType'],
-      defaultSort: { field: 'createdAt', order: 'desc' },
-    });
-
-    this.registerEntity({
-      name: 'subscription',
-      displayName: 'Subscription',
-      schema: {
-        create: UserCreateInputSchema,
-        update: UserUpdateInputSchema,
-      },
-      fields: [
-        { name: 'stripeCustomerId', label: 'Stripe Customer ID', type: 'string' },
-        { name: 'stripeSubscriptionId', label: 'Stripe Subscription ID', type: 'string' },
-        { name: 'status', label: 'Status', type: 'string' },
-        { name: 'planId', label: 'Plan ID', type: 'string' },
-        { name: 'currentPeriodEnd', label: 'Current Period End', type: 'date' },
-        { name: 'cancelAtPeriodEnd', label: 'Cancel at Period End', type: 'boolean' },
-      ],
-      listFields: ['stripeCustomerId', 'status', 'planId', 'currentPeriodEnd'],
-      searchFields: ['stripeCustomerId', 'stripeSubscriptionId'],
       defaultSort: { field: 'createdAt', order: 'desc' },
     });
   }

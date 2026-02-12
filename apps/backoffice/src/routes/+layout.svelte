@@ -2,9 +2,11 @@
   import { onMount } from 'svelte';
   import { authStore } from '$lib/auth-store';
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { ToastContainer } from '@repo/ui';
   import { logger } from '@repo/logger';
+  import { setLocale } from '@repo/i18n/svelte';
   import '../app.css';
 
   let { children } = $props();
@@ -12,6 +14,7 @@
   onMount(async () => {
     await authStore.init();
     logger.info('Auth store initialized');
+    setLocale('fr');
   });
 
   $effect(() => {
@@ -20,10 +23,10 @@
       const user = $authStore.user;
 
       if (path.startsWith('/admin') && !user)
-        goto('/');
+        goto(resolve('/'));
 
       if (path === '/' && user)
-        goto('/admin/contacts');
+        goto(resolve('/admin/contacts'));
     }
   });
 </script>

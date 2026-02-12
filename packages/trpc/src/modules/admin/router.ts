@@ -11,8 +11,11 @@ import {
   adminSetPermissionsSchema,
   adminGetAllAuditLogsSchema,
 } from './types';
+import { settingsRouter } from '../settings/router';
 
 export const adminRouter = router({
+  settings: settingsRouter,
+
   getEntities: adminProcedure.query(async ({ ctx }) => {
     const service = new AdminService(ctx.db);
     return service.getAvailableEntities();

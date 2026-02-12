@@ -6,17 +6,13 @@
     export let data: unknown[];
 
     function handleExport() {
-        try {
-            downloadCSV(data, `export-${entityName}-${new Date().toISOString().split('T')[0]}`);
-            toast.push("Export réussi !", "success");
-        } catch (_e) {
-            toast.push("Erreur lors de l'export", "error");
-        }
+        downloadCSV(data, `export-${entityName}-${new Date().toISOString().split('T')[0]}`);
+        toast.push("Export réussi !", "success");
     }
 </script>
 
 <div class="flex justify-between items-center mb-6">
-    <h2 class="text-xl font-black italic uppercase tracking-tighter">Gestion {entityName}</h2>
+    <h2 class="text-xl font-black uppercase tracking-tighter">Gestion {entityName}</h2>
 
     <button
         on:click={handleExport}

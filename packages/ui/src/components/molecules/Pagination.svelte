@@ -10,7 +10,7 @@
   }: {
     currentPage?: number;
     totalPages: number;
-    onPageChange?: (page: number) => void;
+    onPageChange?: (_page: number) => void;
     class?: string;
   } = $props();
 
@@ -40,6 +40,7 @@
 <nav class={cn('flex items-center justify-center gap-1', className)} aria-label="Pagination">
   <button
     type="button"
+    aria-label="Previous page"
     disabled={currentPage === 1}
     onclick={() => goToPage(currentPage - 1)}
     class="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-all hover:bg-neutral-100 hover:text-black disabled:opacity-30 disabled:hover:bg-transparent"
@@ -48,24 +49,24 @@
   </button>
 
   <div class="flex items-center gap-1">
-    {#each pages as page}
-      {#if page === '...'}
+    {#each pages as pageNum, idx (idx)}
+      {#if pageNum === '...'}
         <span class="flex h-9 w-9 items-center justify-center text-neutral-400">
           <iconify-icon icon="solar:menu-dots-bold" width="14"></iconify-icon>
         </span>
       {:else}
         <button
           type="button"
-          onclick={() => goToPage(page)}
-          aria-current={currentPage === page ? 'page' : undefined}
+          onclick={() => goToPage(pageNum)}
+          aria-current={currentPage === pageNum ? 'page' : undefined}
           class={cn(
             'h-9 min-w-[36px] px-2 rounded-xl text-sm font-bold transition-all duration-200',
-            currentPage === page
+            currentPage === pageNum
               ? 'bg-black text-white shadow-md shadow-black/10 scale-105'
               : 'text-neutral-500 hover:bg-neutral-100 hover:text-black'
           )}
         >
-          {page}
+          {pageNum}
         </button>
       {/if}
     {/each}
@@ -73,6 +74,7 @@
 
   <button
     type="button"
+    aria-label="Next page"
     disabled={currentPage === totalPages}
     onclick={() => goToPage(currentPage + 1)}
     class="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-all hover:bg-neutral-100 hover:text-black disabled:opacity-30 disabled:hover:bg-transparent"

@@ -3,10 +3,11 @@
     import { isAdmin } from '@repo/auth-shared';
     import { Badge } from '@repo/ui';
     import UserMenu from './UserMenu.svelte';
+    import type { User } from '$lib/types';
     import 'iconify-icon';
 
-    export let user: any;
-    export let onTogglePremium: (id: string, current: boolean) => void;
+
+    export let user: User;
     export let onDelete: (id: string, name: string) => void;
     export let onChangeRole: (id: string, role: string) => void;
     export let onViewDetails: (id: string) => void;
@@ -14,8 +15,6 @@
     function getStatusColor(status: string) {
         switch (status) {
             case 'ACTIVE': return 'emerald';
-            case 'BANNED': return 'rose';
-            case 'SUSPENDED': return 'amber';
             case 'PENDING': return 'slate';
             default: return 'slate';
         }
@@ -24,7 +23,7 @@
 
 <div
     in:fly={{ y: 20, duration: 400 }}
-    class="bg-white rounded-[35px] border border-slate-100 p-6 shadow-sm hover:shadow-xl transition-all group relative border-b-4 {user.isPremium ? 'border-b-indigo-500' : user.isBanned ? 'border-b-rose-500' : user.isSuspended ? 'border-b-amber-500' : 'border-b-transparent'}"
+    class="bg-white rounded-[35px] border border-slate-100 p-6 shadow-sm hover:shadow-xl transition-all group relative"
 >
     <div class="flex items-center gap-4 mb-4">
         <div class="relative flex-shrink-0">
@@ -51,17 +50,6 @@
                 </Badge>
             </div>
             <p class="text-xs text-slate-400 truncate font-bold">{user.email}</p>
-            <div class="flex gap-1 mt-1">
-                {#if user.emailVerified}
-                    <iconify-icon icon="solar:verified-check-bold" class="text-emerald-500" width="14"></iconify-icon>
-                {/if}
-                {#if user.isBanned}
-                    <iconify-icon icon="solar:shield-warning-bold" class="text-rose-500" width="14"></iconify-icon>
-                {/if}
-                {#if user.isSuspended}
-                    <iconify-icon icon="solar:clock-circle-bold" class="text-amber-500" width="14"></iconify-icon>
-                {/if}
-            </div>
         </div>
     </div>
 
@@ -74,14 +62,8 @@
             <span class="font-black text-slate-700 text-sm group-hover/btn:text-indigo-700">View</span>
         </button>
 
-        <div class="flex-1 bg-slate-50 px-4 py-3 rounded-2xl flex items-center justify-center gap-2">
-             <iconify-icon icon="solar:chat-line-bold" class="text-slate-300"></iconify-icon>
-             <span class="font-black text-slate-700 text-sm">{user.messages?.length || 0}</span>
-        </div>
-
         <UserMenu
             {user}
-            onTogglePremium={() => onTogglePremium(user.id, user.isPremium)}
             onDelete={() => onDelete(user.id, user.name)}
             onChangeRole={(role) => onChangeRole(user.id, role)}
         />

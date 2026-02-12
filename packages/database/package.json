@@ -4,8 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./zod": "./src/zod/index.ts"
+    ".": {
+      "browser": "./src/browser.ts",
+      "default": "./src/index.ts"
+    },
+    "./zod": {
+      "types": "./src/zod/index.ts",
+      "default": "./src/zod/index.ts"
+    }
   },
   "scripts": {
     "db:generate": "rm -rf src/zod && prisma generate",

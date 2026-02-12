@@ -22,7 +22,7 @@
 
     <div class="p-8 pt-4">
       {#if title}
-        <h3 class="font-black italic uppercase tracking-tighter text-2xl mb-6 text-slate-900">{title}</h3>
+        <h3 class="font-black uppercase tracking-tighter text-2xl mb-6 text-slate-900">{title}</h3>
       {/if}
       <slot />
     </div>

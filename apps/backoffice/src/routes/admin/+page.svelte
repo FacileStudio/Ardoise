@@ -1,8 +1,10 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { trpc } from '$lib/trpc';
   import { onMount } from 'svelte';
   import { logger } from '@repo/logger';
+  import { i18n } from '@repo/i18n/svelte';
 
   let entities: string[] = [];
   let loading = true;
@@ -18,27 +20,27 @@
   });
 
   function navigateToEntity(entity: string) {
-    goto(`/admin/${entity}`);
+    goto(resolve(`/admin/${entity}`));
   }
 </script>
 
 <div class="admin-home">
   <div class="page-header">
-    <h1>Admin Dashboard</h1>
-    <p>Select an entity to manage</p>
+    <h1>{$i18n.t('backoffice.dashboard.title')}</h1>
+    <p>{$i18n.t('backoffice.dashboard.subtitle')}</p>
   </div>
 
   {#if loading}
-    <div class="loading">Loading entities...</div>
+    <div class="loading">{$i18n.t('backoffice.dashboard.loadingEntities')}</div>
   {:else}
     <div class="entity-grid">
-      {#each entities as entity}
+      {#each entities as entity (entity)}
         <button class="entity-card" on:click={() => navigateToEntity(entity)}>
           <div class="entity-icon">
             <iconify-icon icon="mdi:database" width="32"></iconify-icon>
           </div>
           <h3>{entity.charAt(0).toUpperCase() + entity.slice(1)}</h3>
-          <p>Manage {entity} records</p>
+          <p>Gérer les enregistrements {entity}</p>
         </button>
       {/each}
     </div>

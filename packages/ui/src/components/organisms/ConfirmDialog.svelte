@@ -10,8 +10,6 @@
     export let variant: 'danger' | 'primary' = 'primary';
     export let onConfirm: () => void = () => {};
     export let onCancel: () => void = () => {};
-    let className = "";
-    export { className as class };
 
     const handleConfirm = () => {
         onConfirm();
@@ -24,7 +22,7 @@
     };
 </script>
 
-<Modal bind:isOpen class={className}>
+<Modal bind:open={isOpen}>
     <div class="text-center space-y-6">
         <div class="w-16 h-16 rounded-2xl bg-{variant === 'danger' ? 'rose' : 'indigo'}-50 flex items-center justify-center mx-auto">
             <iconify-icon
@@ -40,10 +38,10 @@
         </div>
 
         <div class="flex gap-3">
-            <Button intent="secondary" class="flex-1" on:click={handleCancel}>
+            <Button intent="secondary" class="flex-1" onclick={handleCancel}>
                 {cancelText}
             </Button>
-            <Button intent={variant} class="flex-1" on:click={handleConfirm}>
+            <Button intent={variant} class="flex-1" onclick={handleConfirm}>
                 {confirmText}
             </Button>
         </div>

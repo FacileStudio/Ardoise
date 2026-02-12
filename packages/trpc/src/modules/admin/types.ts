@@ -6,7 +6,7 @@ export const adminListOptionsSchema = z.object({
   search: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
-  filters: z.record(z.any()).optional(),
+  filters: z.record(z.unknown()).optional(),
 });
 
 export const adminGetSchema = z.object({
@@ -16,13 +16,13 @@ export const adminGetSchema = z.object({
 
 export const adminCreateSchema = z.object({
   entity: z.string(),
-  data: z.any(),
+  data: z.record(z.unknown()),
 });
 
 export const adminUpdateSchema = z.object({
   entity: z.string(),
   id: z.string(),
-  data: z.any(),
+  data: z.record(z.unknown()),
 });
 
 export const adminDeleteSchema = z.object({
@@ -47,7 +47,7 @@ export const adminGetAuditLogsSchema = z.object({
 export const adminSetPermissionsSchema = z.object({
   userId: z.string(),
   entity: z.string(),
-  permissions: z.object({
+  permissions: z.strictObject({
     canCreate: z.boolean(),
     canRead: z.boolean(),
     canUpdate: z.boolean(),

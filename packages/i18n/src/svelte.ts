@@ -72,4 +72,13 @@ function createI18nStore() {
   };
 }
 
-export const { locale, t, setLocale, translate } = createI18nStore();
+const i18nStore = createI18nStore();
+
+// Create a derived store that can be used as $i18n
+export const i18n = derived(i18nStore.t, ($t) => ({
+  t: $t,
+  setLocale: i18nStore.setLocale,
+  translate: i18nStore.translate,
+}));
+
+export const { locale, t, setLocale, translate } = i18nStore;

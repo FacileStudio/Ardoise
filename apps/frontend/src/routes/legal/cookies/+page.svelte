@@ -1,9 +1,13 @@
+<script lang="ts">
+  import { resolve } from '$app/paths';
+</script>
+
 <div class="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white">
   <nav
     class="fixed top-0 w-full flex items-center justify-between px-6 py-4 z-[100] bg-white/80 backdrop-blur-md border-b border-gray-100"
   >
-    <a href="/" class="text-xl font-black uppercase tracking-tighter">Monorepo.</a>
-    <a href="/" class="text-sm font-bold hover:opacity-50 transition flex items-center gap-2">
+    <a href={resolve('/')} class="text-xl font-black tracking-tighter">Charles.</a>
+    <a href={resolve('/')} class="text-sm font-bold hover:opacity-50 transition flex items-center gap-2">
       <iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon> Back Home
     </a>
   </nav>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import authStore from '$lib/auth-store';
     import { trpc } from '$lib/trpc'
     import { isAdmin, loginSchema, type SessionUser } from '@repo/auth-shared';
@@ -33,10 +34,10 @@
                 { token },
                 user as SessionUser
             );
-            goto('/admin/contacts');
-        } catch (err: any) {
+            goto(resolve('/admin/contacts'));
+        } catch (err) {
             logger.error({ err }, 'Login error');
-            error = err.message || "Une erreur est survenue lors de la connexion";
+            error = err instanceof Error ? err.message : "Une erreur est survenue lors de la connexion";
             isLoggingIn = false;
         }
     }
@@ -51,7 +52,7 @@
                 <div class="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
                     <iconify-icon icon="solar:shield-keyhole-bold" width="32"></iconify-icon>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Backoffice</h1>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Charles</h1>
                 <p class="text-slate-400 font-medium">Connectez-vous pour gérer le site</p>
             </div>
 

@@ -7,6 +7,7 @@ export const trpcHandler =
     authManager,
     storage,
     stripe,
+    smtp,
     env,
   }: Omit<CreateContextOptions, 'req' | 'resHeaders' | 'info' | 'logger'>) =>
   (c: Context, next: Next) =>
@@ -20,6 +21,7 @@ export const trpcHandler =
           authManager,
           storage,
           stripe,
+          smtp,
           env,
           logger,
         });

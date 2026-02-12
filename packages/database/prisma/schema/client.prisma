@@ -1,0 +1,21 @@
+model Client {
+  id String @id @default(cuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName String
+  billingAddress String
+  billingCity String
+  billingCountry String @default("France")
+  siret String?
+
+  stripeCustomerId String? @unique
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+}

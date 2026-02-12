@@ -1,10 +1,18 @@
 import { Context } from 'hono';
-import { stripeService } from '@repo/trpc';
 import { StripeService } from '@repo/stripe';
+import { StorageService } from '@repo/storage';
+import { SMTPClient } from '@repo/smtp';
+import { paymentService } from '@repo/trpc';
 import { prisma } from '@repo/database';
 import { logger } from '../lib/logger';
+import type { ServerEnv } from '@repo/env';
 
-export const createStripeWebhookHandler = (stripe: StripeService) => {
+export const createStripeWebhookHandler = (
+  stripe: StripeService,
+  storage: StorageService,
+  smtp: SMTPClient,
+  env: ServerEnv
+) => {
   return async (c: Context) => {
     try {
       const signature = c.req.header('stripe-signature');
@@ -15,7 +23,9 @@ export const createStripeWebhookHandler = (stripe: StripeService) => {
 
       const rawBody = await c.req.text();
 
-      await stripeService.handleWebhook(prisma, stripe, rawBody, signature);
+      const event = await stripe.constructEvent(rawBody, signature);
+
+      await paymentService.handleWebhook(prisma, storage, smtp, env, event);
 
       return c.json({ received: true });
     } catch (error: unknown) {

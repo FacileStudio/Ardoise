@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     port: Number(process.env.PORT) || 3002,
     fs: {
-      allow: ['..']
+      allow: ['..', '../../packages']
     }
   },
   ssr: {

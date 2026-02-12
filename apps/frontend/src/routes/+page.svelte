@@ -1,61 +1,34 @@
 <script lang="ts">
-  import { trpc } from '$lib/trpc';
+  import { resolve } from '$app/paths';
   import authStore from '$lib/auth-store';
-  import { logger } from '@repo/logger';
-  import { Map } from '@repo/ui';
   import 'iconify-icon';
-
-  let email = '',
-    firstName = '',
-    lastName = '',
-    loading = false,
-    message = '';
-
-  const scrollTo = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  async function handleSubmit() {
-    loading = true;
-    try {
-      await trpc.contact.create.mutate({ email, firstName, lastName });
-      message = 'Thank you for submitting your information!';
-      email = firstName = lastName = '';
-    } catch (error: any) {
-      logger.error({ err: error }, 'Failed to submit contact form');
-      message = 'Error submitting form. Please try again.';
-    }
-    loading = false;
-  }
 </script>
 
-<div class="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white">
+<div class="min-h-screen bg-[#FAF7F5] text-[#291334] font-sans selection:bg-[#FEC129] selection:text-[#291334]">
   <nav
-    class="fixed top-0 w-full flex items-center justify-between px-8 py-6 z-[100] bg-white/80 backdrop-blur-md border-b border-neutral-100"
+    class="fixed top-0 w-full flex items-center justify-between px-8 py-6 z-[100] bg-[#FAF7F5]/80 backdrop-blur-md border-b border-[#291334]/10"
   >
-    <div class="text-xl font-black uppercase tracking-tighter">Monorepo.</div>
+    <div class="flex items-center gap-4">
+      <img src="/logo.svg" alt="Charles" class="h-14" />
+      <span class="text-4xl font-black tracking-tighter text-[#291334]">Charles</span>
+    </div>
 
     <div class="flex items-center gap-6">
       {#if !$authStore.session}
         <a
-          href="/login"
-          class="text-xs font-black uppercase tracking-widest hover:opacity-50 transition">Login</a
+          href={resolve('/login')}
+          class="flex items-center gap-3 text-sm font-black uppercase tracking-widest text-[#291334] px-8 py-4 hover:opacity-60 transition active:scale-95"
         >
-        <a
-          href="/register"
-          class="group flex items-center gap-2 text-xs font-black uppercase tracking-widest bg-black text-white px-6 py-3 rounded-full hover:scale-105 transition active:scale-95"
-        >
-          <iconify-icon icon="solar:user-plus-bold" width="16"></iconify-icon>
-          Register
+          <iconify-icon icon="solar:login-2-bold-duotone" width="24"></iconify-icon>
+          Connexion
         </a>
       {:else}
         <a
-          href="/app/profile"
-          class="flex items-center gap-2 font-black text-xs uppercase tracking-widest bg-black text-white px-6 py-3 rounded-full hover:scale-105 transition"
+          href={resolve('/app')}
+          class="flex items-center gap-3 font-black text-sm tracking-widest text-[#291334] px-8 py-4 hover:opacity-60 transition active:scale-95"
         >
-          <iconify-icon icon="solar:user-bold" width="16"></iconify-icon>
-          Dashboard
+          <iconify-icon icon="solar:wallet-bold" width="24"></iconify-icon>
+          {$authStore.user?.role === 'ADMIN' ? 'Administration' : 'Mes factures'}
         </a>
       {/if}
     </div>
@@ -63,186 +36,120 @@
 
   <section class="relative pt-48 pb-24 px-6 flex flex-col items-center text-center">
     <span
-      class="inline-block px-4 py-1.5 mb-8 text-[10px] font-black uppercase tracking-[0.2em] bg-neutral-100 rounded-full"
-      >V2.0 — Production Ready</span
+      class="inline-block px-4 py-1.5 mb-8 text-[10px] font-black uppercase tracking-[0.2em] bg-[#FEC129]/20 text-[#291334] rounded-full"
+      >Portail client</span
     >
     <h1
-      class="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.85] mb-10 text-balance"
+      class="text-6xl md:text-9xl font-black tracking-tighter leading-[0.85] mb-10 text-balance"
     >
-      Build <br /> <span class="text-neutral-300">Fast.</span> Scale <br /> Better.
+      <span class="text-[#FEC129]">Charles.</span>
     </h1>
-    <p class="max-w-xl text-lg md:text-xl text-neutral-500 font-medium leading-relaxed mb-12">
-      The ultimate SvelteKit + tRPC monorepo boilerplate. Designed for developers who don't want to
-      waste time on configuration.
+    <p class="max-w-xl text-lg md:text-xl text-[#291334]/70 font-medium leading-relaxed mb-12">
+      Plateforme de facturation et de paiement.
+      Accédez à vos factures, effectuez vos paiements en ligne.
     </p>
 
     <div class="flex flex-col md:flex-row gap-4">
-      <a
-        href="/register"
-        class="group px-10 py-5 bg-black text-white font-black uppercase tracking-widest rounded-2xl hover:scale-105 transition active:scale-95 flex items-center justify-center gap-3 shadow-2xl shadow-black/10"
-      >
-        <iconify-icon icon="solar:bolt-bold" width="22"></iconify-icon>
-        Get Started
-      </a>
-      <button
-        on:click={() => scrollTo('features')}
-        class="group px-10 py-5 bg-white text-black border border-neutral-200 font-black uppercase tracking-widest rounded-2xl hover:bg-neutral-50 hover:border-black transition flex items-center justify-center gap-3"
-      >
-        <iconify-icon icon="solar:star-bold" width="22"></iconify-icon>
-        Features
-      </button>
-    </div>
-  </section>
-
-  <section id="features" class="py-32 bg-neutral-50 px-6 scroll-mt-24">
-    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-      {#each [{ icon: 'solar:rocket-bold', title: 'Turbocharged', desc: 'Pre-configured Bun, Turborepo and tRPC for maximum performance.' }, { icon: 'solar:shield-keyhole-bold', title: 'Type Safety', desc: 'End-to-end type safety with Prisma and TypeScript architecture.' }, { icon: 'solar:box-bold', title: 'Shared UI', desc: 'Modular Svelte components shared across all your workspace apps.' }] as feature}
-        <div
-          class="p-10 bg-white rounded-[40px] border border-neutral-200/50 shadow-sm hover:shadow-xl transition-all group"
+      {#if !$authStore.session}
+        <a
+          href={resolve('/login')}
+          class="group px-10 py-5 bg-[#291334] text-[#FAF7F5] font-black uppercase tracking-widest rounded-2xl hover:scale-105 transition active:scale-95 flex items-center justify-center gap-3 shadow-2xl shadow-[#291334]/10"
         >
-          <div
-            class="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform"
-          >
-            <iconify-icon icon={feature.icon} width="28"></iconify-icon>
-          </div>
-          <h3 class="text-xl font-black mb-4 uppercase tracking-tight">{feature.title}</h3>
-          <p class="text-neutral-500 leading-relaxed font-medium">{feature.desc}</p>
-        </div>
-      {/each}
+          <iconify-icon icon="solar:login-3-bold" width="22"></iconify-icon>
+          Connexion
+        </a>
+      {:else}
+        <a
+          href={resolve($authStore.user?.role === 'ADMIN' ? '/admin' : '/app')}
+          class="group px-10 py-5 bg-[#291334] text-[#FAF7F5] font-black uppercase tracking-widest rounded-2xl hover:scale-105 transition active:scale-95 flex items-center justify-center gap-3 shadow-2xl shadow-[#291334]/10"
+        >
+          <iconify-icon icon="solar:bolt-bold" width="22"></iconify-icon>
+          {$authStore.user?.role === 'ADMIN' ? 'Accéder à l\'admin' : 'Mes factures'}
+        </a>
+      {/if}
     </div>
   </section>
 
-  <section class="py-32 px-6 max-w-7xl mx-auto">
-    <div class="flex flex-col md:flex-row items-end justify-between mb-16 gap-6">
-      <div class="max-w-2xl">
-        <h2 class="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6">
-          Global Reach.
-        </h2>
-        <p class="text-neutral-500 text-xl font-medium">
-          Your data, served everywhere, instantly. Powered by our distributed edge network.
-        </p>
+  <section id="features" class="py-32 bg-[#291334] px-6 scroll-mt-24">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-16 text-center text-[#FAF7F5]">
+        Fonctionnalités
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {#each [
+          {
+            icon: 'solar:wallet-bold',
+            title: 'Vos factures',
+            desc: 'Consultez toutes vos factures en un seul endroit. Accès rapide et sécurisé.'
+          },
+          {
+            icon: 'solar:card-bold',
+            title: 'Paiement en ligne',
+            desc: 'Payez vos factures en ligne avec Stripe. Rapide, simple et sécurisé.'
+          },
+          {
+            icon: 'solar:chart-bold',
+            title: 'Suivi en temps réel',
+            desc: 'Suivez l\'état de vos paiements : en attente, payées, expirées.'
+          }
+        ] as feature (feature.title)}
+          <div
+            class="p-10 bg-[#FAF7F5] rounded-[40px] border border-[#FEC129]/20 shadow-sm hover:shadow-xl hover:border-[#FEC129] transition-all group"
+          >
+            <div
+              class="w-14 h-14 bg-[#FEC129] text-[#291334] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform"
+            >
+              <iconify-icon icon={feature.icon} width="28"></iconify-icon>
+            </div>
+            <h3 class="text-xl font-black mb-4 uppercase tracking-tight text-[#291334]">{feature.title}</h3>
+            <p class="text-[#291334]/70 leading-relaxed font-medium">{feature.desc}</p>
+          </div>
+        {/each}
       </div>
     </div>
-    <div class="rounded-[48px] overflow-hidden border-8 border-white shadow-2xl bg-neutral-100">
-      <Map lat={48.8566} lon={2.3522} zoom={4} height="650px" />
-    </div>
   </section>
 
-  <section
-    id="contact"
-    class="py-24 px-6 bg-black text-white rounded-[48px] mx-4 mb-4 scroll-mt-12"
-  >
-    <div class="max-w-5xl mx-auto flex flex-col md:flex-row gap-20 items-center">
-      <div class="flex-1 text-center md:text-left">
-        <h2 class="text-6xl md:text-8xl font-black uppercase tracking-tighter mb-8 text-balance">
-          Let's <br /> Talk.
-        </h2>
-        <p class="text-neutral-400 text-xl font-medium">
-          Ready to skip the boilerplate? Join the beta and start building today.
-        </p>
-      </div>
-
-      <form on:submit|preventDefault={handleSubmit} class="w-full md:w-[450px] space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <input
-            bind:value={firstName}
-            placeholder="First Name"
-            required
-            class="w-full px-8 py-5 bg-white/10 border border-white/10 rounded-2xl focus:border-white outline-none transition placeholder:text-neutral-500 font-bold"
-          />
-          <input
-            bind:value={lastName}
-            placeholder="Last Name"
-            required
-            class="w-full px-8 py-5 bg-white/10 border border-white/10 rounded-2xl focus:border-white outline-none transition placeholder:text-neutral-500 font-bold"
-          />
-        </div>
-        <input
-          type="email"
-          bind:value={email}
-          placeholder="Email Address"
-          required
-          class="w-full px-8 py-5 bg-white/10 border border-white/10 rounded-2xl focus:border-white outline-none transition placeholder:text-neutral-500 font-bold"
-        />
-        <button
-          disabled={loading}
-          class="w-full bg-white text-black py-6 rounded-2xl font-black uppercase tracking-widest hover:bg-neutral-200 transition disabled:opacity-50 flex items-center justify-center gap-3"
-        >
-          {#if loading}
-            <iconify-icon icon="svg-spinners:18-dots-revolve" width="24"></iconify-icon>
-            Processing...
-          {:else}
-            <iconify-icon icon="solar:letter-bold" width="22"></iconify-icon>
-            Join the club
-          {/if}
-        </button>
-        {#if message}
-          <div
-            class="mt-4 text-center text-sm font-black uppercase tracking-widest {message.includes(
-              'Error'
-            )
-              ? 'text-red-400'
-              : 'text-green-400'}"
-          >
-            {message}
-          </div>
-        {/if}
-      </form>
-    </div>
-  </section>
-
-  <footer class="bg-white pt-24 pb-12 px-10">
+  <footer class="bg-[#FAF7F5] pt-24 pb-12 px-10">
     <div
-      class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start border-t border-neutral-100 pt-16 gap-16"
+      class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start border-t border-[#291334]/10 pt-16 gap-16"
     >
       <div class="max-w-xs">
-        <div class="text-2xl font-black uppercase tracking-tighter mb-6">Monorepo.</div>
-        <p class="text-sm text-neutral-400 font-bold leading-relaxed">
-          Making full-stack development as fast as it should be. Built for scale.
+        <div class="text-2xl font-black tracking-tighter mb-6 text-[#291334]">Charles</div>
+        <p class="text-sm text-[#291334]/60 font-bold leading-relaxed">
+          Plateforme de facturation et de paiement.
         </p>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-16 md:gap-32">
+      <div class="grid grid-cols-2 gap-16 md:gap-32">
         <div class="flex flex-col gap-5">
-          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-300"
-            >Product</span
+          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-[#291334]/40"
+            >Légal</span
           >
-          <button
-            on:click={() => scrollTo('features')}
-            class="text-left text-xs font-black uppercase hover:opacity-50 transition"
-            >Features</button
+          <a href={resolve('/legal/privacy')} class="text-xs font-black uppercase hover:opacity-50 transition text-[#291334]"
+            >Confidentialité</a
           >
-          <a href="/pricing" class="text-xs font-black uppercase hover:opacity-50 transition"
-            >Pricing</a
+          <a href={resolve('/legal/terms')} class="text-xs font-black uppercase hover:opacity-50 transition text-[#291334]"
+            >Conditions</a
+          >
+          <a href={resolve('/legal/cookies')} class="text-xs font-black uppercase hover:opacity-50 transition text-[#291334]"
+            >Cookies</a
           >
         </div>
         <div class="flex flex-col gap-5">
-          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-300"
-            >Legal</span
-          >
-          <a href="/legal/privacy" class="text-xs font-black uppercase hover:opacity-50 transition"
-            >Privacy</a
-          >
-          <a href="/legal/terms" class="text-xs font-black uppercase hover:opacity-50 transition"
-            >Terms</a
-          >
-        </div>
-        <div class="flex flex-col gap-5">
-          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-300"
-            >Social</span
+          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-[#291334]/40"
+            >Contact</span
           >
           <a
-            href="https://github.com"
-            target="_blank"
-            class="text-xs font-black uppercase hover:opacity-50 transition">GitHub</a
+            href="mailto:contact@charles.app"
+            class="text-xs font-black uppercase hover:opacity-50 transition text-[#291334]">Email</a
           >
         </div>
       </div>
     </div>
     <div
-      class="mt-24 text-center text-[10px] font-black uppercase tracking-[0.4em] text-neutral-300"
+      class="mt-24 text-center text-[10px] font-black uppercase tracking-[0.4em] text-[#291334]/40"
     >
-      &copy; {new Date().getFullYear()} Monorepo Core.
+      &copy; {new Date().getFullYear()} Charles. Tous droits réservés.
     </div>
   </footer>
 </div>

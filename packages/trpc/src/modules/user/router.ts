@@ -11,10 +11,7 @@ export const userRouter = router({
     .input(
       z
         .object({
-          status: z.enum(['all', 'active', 'suspended', 'banned', 'pending']).optional(),
           role: z.enum(['all', 'admin', 'user']).optional(),
-          emailVerified: z.boolean().optional(),
-          isPremium: z.boolean().optional(),
         })
         .optional()
     )
@@ -34,7 +31,6 @@ export const userRouter = router({
     .input(
       z.object({
         id: z.string(),
-        isPremium: z.boolean().optional(),
         role: z.enum(['USER', 'ADMIN']).optional(),
       })
     )
@@ -43,42 +39,6 @@ export const userRouter = router({
       return userService.updateUser(ctx.db, id, data);
     }),
 
-  ban: adminProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        reason: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return userService.banUser(ctx.db, input.id, input.reason, ctx.user.id);
-    }),
-
-  unban: adminProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    return userService.unbanUser(ctx.db, input.id);
-  }),
-
-  suspend: adminProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        reason: z.string(),
-        until: z.date(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return userService.suspendUser(ctx.db, input.id, input.reason, input.until);
-    }),
-
-  unsuspend: adminProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    return userService.unsuspendUser(ctx.db, input.id);
-  }),
-
-  verifyEmail: adminProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      return userService.verifyEmail(ctx.db, input.id);
-    }),
 
   delete: adminProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
     return userService.deleteUser(ctx.db, input.id);

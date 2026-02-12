@@ -5,6 +5,7 @@ const meta = {
   title: 'Atoms/Badge',
   component: Badge,
   tags: ['autodocs'],
+  // @ts-expect-error - Storybook argTypes don't fully support Svelte 5 components yet
   argTypes: {
     variant: {
       control: 'select',

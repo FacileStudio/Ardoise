@@ -1,4 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="20" fill="#059669"/>
-  <text x="50" y="70" font-size="60" font-weight="bold" fill="white" text-anchor="middle" font-family="system-ui, sans-serif">A</text>
+<svg width="1500" height="1390" viewBox="0 0 1500 1390" fill="none" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="754.777" cy="703.5" rx="492" ry="457.5" fill="#AC978D"/>
+<ellipse cx="338.5" cy="341.475" rx="177" ry="83" transform="rotate(10 338.5 341.475)" fill="#AC978D"/>
+<ellipse cx="177" cy="83" rx="177" ry="83" transform="matrix(-0.984808 0.173648 0.173648 0.984808 1321.4 229)" fill="#AC978D"/>
+<ellipse cx="550.277" cy="649" rx="299.5" ry="316" fill="#C9B19C"/>
+<ellipse cx="958.277" cy="653" rx="299.5" ry="316" fill="#C9B19C"/>
+<circle cx="550.777" cy="651" r="250" fill="#D9D9D9"/>
+<circle cx="958.777" cy="651" r="250" fill="#D9D9D9"/>
+<path d="M657.908 855.732C645.098 843.081 649.457 821.446 666.166 814.742L747.496 782.114C753.418 779.738 760.024 779.716 765.961 782.053L845.837 813.495C862.53 820.066 867.074 841.56 854.469 854.324L774.283 935.522C764.581 945.346 748.753 945.445 738.928 935.743L657.908 855.732Z" fill="#F8C105"/>
+<circle cx="551.777" cy="651" r="75" fill="#444454"/>
+<circle cx="959.777" cy="651" r="75" fill="#444454"/>
 </svg>

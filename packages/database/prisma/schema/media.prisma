@@ -11,8 +11,5 @@ model Media {
         coverUser     User?   @relation("UserCover", fields: [coverUserId], references: [id])
         coverUserId   String? @unique
 
-        messageId    String?
-        message      Message? @relation("MessageAttachments", fields: [messageId], references: [id])
-
         createdAt DateTime @default(now())
 }

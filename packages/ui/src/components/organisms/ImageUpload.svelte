@@ -7,7 +7,7 @@
     export let value: string = "";
     export let label = "Image de couverture";
 
-    export let getPresignedUrl: (filename: string, folder: string) => Promise<string>;
+    export let getPresignedUrl: (_filename: string, _folder: string) => Promise<string>;
 
     let uploading = false;
     let previewUrl = value;
@@ -53,7 +53,7 @@
         {:else}
             <div class="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
                 <iconify-icon icon="solar:cloud-upload-bold-duotone" width="40"></iconify-icon>
-                <p class="text-[10px] font-black uppercase italic">Cliquez pour uploader</p>
+                <p class="text-[10px] font-black uppercase">Cliquez pour uploader</p>
             </div>
         {/if}
 

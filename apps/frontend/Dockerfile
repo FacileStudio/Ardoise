@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/auth-shared/package.json ./packages/auth-shared/
+COPY packages/database/package.json ./packages/database/
 COPY packages/env/package.json ./packages/env/
 COPY packages/i18n/package.json ./packages/i18n/
 COPY packages/logger/package.json ./packages/logger/
@@ -24,27 +25,27 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG PUBLIC_BACKEND_URL
-ENV PUBLIC_BACKEND_URL=$PUBLIC_BACKEND_URL
+ARG VITE_API_URL
+ARG PUBLIC_STRIPE_PUBLISHABLE_KEY
+ENV VITE_API_URL=$VITE_API_URL
+ENV PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY
 
-RUN bun run build --filter=@repo/frontend
+RUN cd apps/frontend && bun run build
 
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=3000
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 frontend
 
-COPY --from=builder --chown=frontend:nodejs /app/apps/frontend/build ./apps/frontend/build
-COPY --from=builder --chown=frontend:nodejs /app/apps/frontend/package.json ./apps/frontend/
-COPY --from=builder --chown=frontend:nodejs /app/packages ./packages
-COPY --from=builder --chown=frontend:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=frontend:nodejs /app/package.json ./
+COPY --from=builder --chown=frontend:nodejs /app/apps/frontend/build ./build
+COPY --from=builder --chown=frontend:nodejs /app/apps/frontend/package.json ./package.json
 
 USER frontend
 
 EXPOSE 3000
 
-CMD ["bun", "run", "apps/frontend/build"]
+CMD ["node", "build"]

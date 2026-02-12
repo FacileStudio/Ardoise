@@ -7,7 +7,6 @@ export interface SessionUser {
   firstName: string;
   lastName: string;
   role: UserRole;
-  isPremium: boolean;
   avatarUrl?: string | null;
   coverImageUrl?: string | null;
 }

@@ -5,8 +5,7 @@ model User {
   lastName      String
   password      String
   emailVerified  Boolean          @default(false)
-  role           UserRole           @default(USER)
-  isPremium      Boolean          @default(false)
+  role           UserRole           @default(CLIENT)
 
   status         UserStatus       @default(ACTIVE)
   isBanned       Boolean          @default(false)
@@ -22,17 +21,14 @@ model User {
   avatar         Media?           @relation("UserAvatar")
   coverImage     Media?           @relation("UserCover")
 
-  messages      Message[]
-  rooms         RoomParticipant[]
-
   sessions       Session[]
   accounts       Account[]
 
-  subscription   Subscription?
-  paymentHistory PaymentHistory[]
-
   auditLogs      AuditLog[]
   adminPermissions AdminPermission[]
+
+  client         Client?
+  documents      Document[]
 
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -43,8 +39,8 @@ model User {
 }
 
 enum UserRole {
-  USER
   ADMIN
+  CLIENT
 }
 
 enum UserStatus {
