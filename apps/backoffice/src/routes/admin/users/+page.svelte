@@ -89,9 +89,18 @@
 </script>
 
 <div class="p-8 max-w-[1400px] mx-auto space-y-6">
-	<header>
-		<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.users.title')}</h1>
-		<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.users.subtitle')}</p>
+	<header class="flex items-center justify-between mb-6">
+		<div>
+			<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.users.title')}</h1>
+			<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.users.subtitle')}</p>
+		</div>
+		<button
+			onclick={() => goto('/admin/users/create')}
+			class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
+		>
+			<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+			Nouvel utilisateur
+		</button>
 	</header>
 
 	{#if stats}

@@ -7,6 +7,20 @@ export const userRouter = router({
     return userService.getProfile(ctx.db, ctx.user.id);
   }),
 
+  create: adminProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        role: z.enum(['USER', 'ADMIN']),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return userService.createUser(ctx.db, ctx.auth, input);
+    }),
+
   list: adminProcedure
     .input(
       z
@@ -37,6 +51,22 @@ export const userRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return userService.updateUser(ctx.db, id, data);
+    }),
+
+  adminUpdate: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        email: z.string().email().optional(),
+        firstName: z.string().min(1).optional(),
+        lastName: z.string().min(1).optional(),
+        role: z.enum(['USER', 'ADMIN']).optional(),
+        password: z.string().min(8).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+      return userService.adminUpdateUser(ctx.db, ctx.auth, id, data);
     }),
 
 

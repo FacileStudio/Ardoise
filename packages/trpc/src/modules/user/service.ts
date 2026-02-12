@@ -3,6 +3,41 @@ import { type PrismaClient } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
 
 export const userService = {
+  createUser: async (
+    db: PrismaClient,
+    auth: AuthManager,
+    data: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      role: 'USER' | 'ADMIN';
+    }
+  ) => {
+    const existingUser = await db.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'User with this email already exists',
+      });
+    }
+
+    const hashedPassword = await auth.hashPassword(data.password);
+
+    return await db.user.create({
+      data: {
+        email: data.email,
+        password: hashedPassword,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+      },
+    });
+  },
+
   getProfile: async (db: PrismaClient, userId: string) => {
     const user = await db.user.findUnique({
       where: { id: userId },
@@ -105,6 +140,55 @@ export const userService = {
       return await db.user.update({
         where: { id: userId },
         data,
+      });
+    } catch (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to update user',
+      });
+    }
+  },
+
+  adminUpdateUser: async (
+    db: PrismaClient,
+    auth: AuthManager,
+    userId: string,
+    data: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      role?: 'USER' | 'ADMIN';
+      password?: string;
+    }
+  ) => {
+    const updateData: any = {};
+
+    if (data.email) {
+      const existingUser = await db.user.findUnique({
+        where: { email: data.email },
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'User with this email already exists',
+        });
+      }
+      updateData.email = data.email;
+    }
+
+    if (data.firstName) updateData.firstName = data.firstName;
+    if (data.lastName) updateData.lastName = data.lastName;
+    if (data.role) updateData.role = data.role;
+
+    if (data.password) {
+      updateData.password = await auth.hashPassword(data.password);
+    }
+
+    try {
+      return await db.user.update({
+        where: { id: userId },
+        data: updateData,
       });
     } catch (error) {
       throw new TRPCError({

@@ -15,8 +15,6 @@
         { label: $i18n.t('nav.statistics'), icon: 'solar:chart-bold', href: '/admin/statistics' },
         { label: $i18n.t('nav.users'), icon: 'solar:user-bold', href: '/admin/users' },
     ];
-
-    const dashboardItem = { label: $i18n.t('nav.dashboard'), icon: 'solar:home-bold', href: '/admin' };
 </script>
 
 <div class="flex min-h-screen bg-[#FAF7F5] font-sans text-slate-900">
@@ -55,24 +53,6 @@
         </nav>
 
         <div class="mt-auto pt-6 border-t border-[#291334]/10 space-y-3">
-            <a
-                href={resolve(dashboardItem.href)}
-                class="group relative flex items-center gap-4 px-6 py-3.5 rounded-full transition-all duration-200
-                {$page.url.pathname === dashboardItem.href
-                    ? 'bg-[#291334] text-white shadow-lg shadow-[#291334]/20'
-                    : 'text-[#291334]/70 hover:bg-[#291334]/5 hover:text-[#291334]'}"
-            >
-                <iconify-icon
-                    icon={dashboardItem.icon}
-                    width="22"
-                    class="transition-all group-hover:scale-110 {$page.url.pathname === dashboardItem.href ? 'text-[#FEC129]' : ''}"
-                ></iconify-icon>
-
-                <span class="font-bold tracking-tight text-[13px]">
-                    {dashboardItem.label}
-                </span>
-            </a>
-
             <div class="relative p-4 bg-white/50 rounded-[20px] border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:bg-white/80">
                 <div class="flex items-center gap-3">
                     <div class="w-11 h-11 rounded-xl bg-[#291334] flex items-center justify-center text-white font-black flex-shrink-0">

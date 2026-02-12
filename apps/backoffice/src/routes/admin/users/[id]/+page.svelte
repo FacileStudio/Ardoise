@@ -3,14 +3,25 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Spinner, Badge, Card } from '@repo/ui';
+	import { Spinner, Button } from '@repo/ui';
+	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
 
 	let userId = $derived($page.params.id);
 	let pageLoading = $state(true);
+	let submitting = $state(false);
 	let user: any = $state(null);
+
+	let formData = $state({
+		email: '',
+		firstName: '',
+		lastName: '',
+		role: 'USER' as 'USER' | 'ADMIN',
+		password: '',
+		confirmPassword: '',
+	});
 
 	onMount(async () => {
 		await fetchUser();
@@ -20,10 +31,63 @@
 		pageLoading = true;
 		try {
 			user = await trpc.user.getById.query({ id: userId });
+			formData.email = user.email;
+			formData.firstName = user.firstName;
+			formData.lastName = user.lastName;
+			formData.role = user.role;
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch user');
+			toast.push('Erreur lors du chargement de l\'utilisateur', 'error');
 		} finally {
 			pageLoading = false;
+		}
+	}
+
+	function validateForm(): string | null {
+		if (!formData.email.trim()) return 'L\'email est requis';
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Email invalide';
+		if (!formData.firstName.trim()) return 'Le prénom est requis';
+		if (!formData.lastName.trim()) return 'Le nom est requis';
+
+		if (formData.password || formData.confirmPassword) {
+			if (formData.password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
+			if (formData.password !== formData.confirmPassword) return 'Les mots de passe ne correspondent pas';
+		}
+
+		return null;
+	}
+
+	async function handleUpdate() {
+		const validationError = validateForm();
+		if (validationError) {
+			toast.push(validationError, 'error');
+			return;
+		}
+
+		try {
+			submitting = true;
+			const updateData: any = {
+				id: userId,
+				email: formData.email,
+				firstName: formData.firstName,
+				lastName: formData.lastName,
+				role: formData.role,
+			};
+
+			if (formData.password) {
+				updateData.password = formData.password;
+			}
+
+			await trpc.user.adminUpdate.mutate(updateData);
+
+			toast.push('Utilisateur modifié avec succès!', 'success');
+			goto('/admin/users');
+		} catch (err: any) {
+			logger.error({ err }, 'Failed to update user');
+			const message = err.message || 'Erreur lors de la modification';
+			toast.push(message, 'error');
+		} finally {
+			submitting = false;
 		}
 	}
 
@@ -33,354 +97,202 @@
 			day: '2-digit',
 			month: 'long',
 			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit',
 		}).format(new Date(date));
-	}
-
-	function formatDateShort(date: Date | string | null) {
-		if (!date) return '-';
-		return new Intl.DateTimeFormat('fr-FR', {
-			day: '2-digit',
-			month: 'short',
-			year: 'numeric',
-		}).format(new Date(date));
-	}
-
-	function formatCurrency(amount: number | string) {
-		const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-		return new Intl.NumberFormat('fr-FR', {
-			style: 'currency',
-			currency: 'EUR',
-		}).format(num);
-	}
-
-	function getStatusColor(status: string) {
-		switch (status) {
-			case 'ACTIVE': return 'emerald';
-			case 'PENDING': return 'amber';
-			case 'SUSPENDED': return 'rose';
-			case 'BANNED': return 'rose';
-			default: return 'slate';
-		}
-	}
-
-	function getRoleColor(role: string) {
-		switch (role) {
-			case 'ADMIN': return 'rose';
-			case 'CLIENT': return 'indigo';
-			default: return 'slate';
-		}
-	}
-
-	function getPaymentStatusColor(status: string) {
-		switch (status) {
-			case 'PAID': return 'emerald';
-			case 'PENDING': return 'amber';
-			case 'EXPIRED': return 'rose';
-			case 'CANCELLED': return 'slate';
-			default: return 'slate';
-		}
 	}
 </script>
 
-<div class="p-8 max-w-[1400px] mx-auto space-y-6">
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
 	{#if pageLoading}
 		<div class="py-20 flex justify-center">
-			<Spinner size="xl" />
+			<Spinner size={40} />
 		</div>
 	{:else if user}
-		<header class="flex items-center justify-between">
-			<div class="flex items-center gap-4">
+		<div class="max-w-[1200px] mx-auto">
+			<!-- Header -->
+			<div class="mb-8">
 				<button
 					onclick={() => goto('/admin/users')}
-					class="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-					title="Back to users"
+					class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors mb-4"
 				>
-					<iconify-icon icon="solar:arrow-left-bold" width="24"></iconify-icon>
+					<iconify-icon icon="solar:arrow-left-bold" width="20"></iconify-icon>
+					<span class="font-bold">Retour aux utilisateurs</span>
 				</button>
-				<div class="flex items-center gap-3">
-					{#if user.avatar?.url}
-						<img src={user.avatar.url} alt={user.firstName} class="w-16 h-16 rounded-xl object-cover" />
-					{:else}
-						<div class="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-2xl">
-							{user.firstName[0]}
-						</div>
-					{/if}
-					<div>
-						<h1 class="text-3xl font-black text-slate-900 tracking-tighter">
-							{user.firstName} {user.lastName}
-						</h1>
-						<p class="text-slate-500 text-sm mt-1">{user.email}</p>
-					</div>
-				</div>
+				<h1 class="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+					<iconify-icon icon="solar:user-bold" width="40" class="text-[#291334]"></iconify-icon>
+					Modifier l'utilisateur
+				</h1>
+				<p class="text-slate-500 mt-2">
+					Modifiez les informations de {user.firstName} {user.lastName}
+				</p>
 			</div>
 
-			<div class="flex items-center gap-3">
-				<Badge variant={getRoleColor(user.role)}>
-					{user.role}
-				</Badge>
-				<Badge variant={getStatusColor(user.status)}>
-					{user.status}
-				</Badge>
-				{#if user.emailVerified}
-					<Badge variant="emerald">
-						<iconify-icon icon="solar:check-circle-bold" width="14"></iconify-icon>
-						Verified
-					</Badge>
-				{/if}
-			</div>
-		</header>
-
-		<div class="grid grid-cols-3 gap-6">
-			<div class="col-span-2 space-y-6">
-				<Card padding="lg" rounded="lg" shadow="md">
-					<div class="space-y-6">
-						<div class="flex items-center gap-3 pb-4 border-b border-slate-100">
-							<div class="w-12 h-12 rounded-2xl bg-[#291334]/10 flex items-center justify-center text-[#291334]">
-								<iconify-icon icon="solar:user-bold" width="24"></iconify-icon>
-							</div>
-							<div>
-								<h2 class="text-xl font-black text-[#291334]">User Information</h2>
-								<p class="text-sm text-slate-500">Account details</p>
-							</div>
+			<!-- Main Form -->
+			<div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-8">
+				<!-- Account Info -->
+				<div>
+					<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+						<iconify-icon icon="solar:user-id-bold" width="24" class="text-[#FEC129]"></iconify-icon>
+						Informations du compte
+					</h2>
+					<div class="bg-slate-50 rounded-xl p-6 space-y-4">
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Email *
+							</label>
+							<input
+								type="email"
+								bind:value={formData.email}
+								class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+								placeholder="user@example.com"
+							/>
 						</div>
 
 						<div class="grid grid-cols-2 gap-4">
 							<div>
-								<div class="text-xs font-black uppercase text-slate-400 mb-2">First Name</div>
-								<div class="font-bold text-slate-900">{user.firstName}</div>
+								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+									<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+									Prénom *
+								</label>
+								<input
+									type="text"
+									bind:value={formData.firstName}
+									class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+									placeholder="John"
+								/>
 							</div>
 
 							<div>
-								<div class="text-xs font-black uppercase text-slate-400 mb-2">Last Name</div>
-								<div class="font-bold text-slate-900">{user.lastName}</div>
+								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+									<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+									Nom *
+								</label>
+								<input
+									type="text"
+									bind:value={formData.lastName}
+									class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+									placeholder="Doe"
+								/>
 							</div>
+						</div>
 
-							<div class="col-span-2">
-								<div class="text-xs font-black uppercase text-slate-400 mb-2">Email</div>
-								<div class="font-bold text-slate-900">{user.email}</div>
-							</div>
-
-							<div>
-								<div class="text-xs font-black uppercase text-slate-400 mb-2">Role</div>
-								<Badge variant={getRoleColor(user.role)}>{user.role}</Badge>
-							</div>
-
-							<div>
-								<div class="text-xs font-black uppercase text-slate-400 mb-2">Status</div>
-								<Badge variant={getStatusColor(user.status)}>{user.status}</Badge>
+						<div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+							<div class="flex items-start gap-3">
+								<iconify-icon icon="solar:calendar-bold" width="20" class="text-blue-600 mt-0.5"></iconify-icon>
+								<div class="flex-1 text-sm text-blue-800">
+									<span class="font-bold">Créé le:</span> {formatDate(user.createdAt)}
+								</div>
 							</div>
 						</div>
 					</div>
-				</Card>
+				</div>
 
-				{#if user.client}
-					<Card padding="lg" rounded="lg" shadow="md">
-						<div class="space-y-6">
-							<div class="flex items-center gap-3 pb-4 border-b border-slate-100">
-								<div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-									<iconify-icon icon="solar:buildings-2-bold" width="24"></iconify-icon>
-								</div>
-								<div>
-									<h2 class="text-xl font-black text-[#291334]">Client Profile</h2>
-									<p class="text-sm text-slate-500">Company information</p>
-								</div>
-							</div>
-
-							<div class="space-y-4">
-								<div>
-									<div class="text-xs font-black uppercase text-slate-400 mb-2">Company Name</div>
-									<button
-										onclick={() => goto(`/admin/clients/${user.client.id}`)}
-										class="text-lg font-bold text-[#291334] hover:underline"
-									>
-										{user.client.companyName}
-									</button>
-								</div>
-
-								{#if user.client.siret}
-									<div>
-										<div class="text-xs font-black uppercase text-slate-400 mb-2">SIRET</div>
-										<div class="font-mono text-sm text-slate-700">{user.client.siret}</div>
-									</div>
-								{/if}
-
-								<div>
-									<div class="text-xs font-black uppercase text-slate-400 mb-2">Billing Address</div>
-									<div class="text-sm text-slate-600">
-										<div>{user.client.billingAddress}</div>
-										<div>{user.client.billingCity}</div>
-										<div>{user.client.billingCountry}</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</Card>
-				{/if}
-
-				{#if user.client?.payments && user.client.payments.length > 0}
-					<Card padding="lg" rounded="lg" shadow="md">
-						<div class="space-y-4">
-							<div class="flex items-center gap-3 pb-4 border-b border-slate-100">
-								<div class="w-12 h-12 rounded-2xl bg-[#FEC129]/10 flex items-center justify-center text-[#FEC129]">
-									<iconify-icon icon="solar:wallet-bold" width="24"></iconify-icon>
-								</div>
-								<div>
-									<h2 class="text-xl font-black text-[#291334]">Payments</h2>
-									<p class="text-sm text-slate-500">{user.client.payments.length} {user.client.payments.length > 1 ? 'payments' : 'payment'}</p>
-								</div>
-							</div>
-
-							<div class="space-y-3">
-								{#each user.client.payments as payment (payment.id)}
-									<div class="flex items-center gap-4 p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border border-slate-200 hover:border-[#FEC129] transition-all cursor-pointer" onclick={() => goto(`/admin/payments/${payment.id}`)}>
-										<div class="p-3 bg-white rounded-xl shadow-sm">
-											<iconify-icon
-												icon={payment.status === 'PAID' ? 'solar:check-circle-bold' : payment.status === 'PENDING' ? 'solar:clock-circle-bold' : 'solar:close-circle-bold'}
-												width="24"
-												class={payment.status === 'PAID' ? 'text-emerald-600' : payment.status === 'PENDING' ? 'text-amber-600' : 'text-rose-600'}
-											></iconify-icon>
-										</div>
-										<div class="flex-1">
-											<div class="flex items-center justify-between mb-1">
-												<span class="text-lg font-black text-slate-900">{formatCurrency(payment.totalWithFees)}</span>
-												<Badge variant={getPaymentStatusColor(payment.status)}>{payment.status}</Badge>
-											</div>
-											<div class="text-sm text-slate-600 mb-1">{payment.description}</div>
-											<div class="text-xs text-slate-500">
-												Due: {formatDateShort(payment.dueDate)}
-												{#if payment.paidAt}
-													• Paid: {formatDateShort(payment.paidAt)}
-												{/if}
-											</div>
-										</div>
-										<div class="p-2 text-[#291334]">
-											<iconify-icon icon="solar:eye-bold" width="18"></iconify-icon>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					</Card>
-				{/if}
-
-				{#if user.sessions && user.sessions.length > 0}
-					<Card padding="lg" rounded="lg" shadow="md">
-						<div class="space-y-4">
-							<div class="flex items-center gap-3 pb-4 border-b border-slate-100">
-								<div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-									<iconify-icon icon="solar:history-bold" width="24"></iconify-icon>
-								</div>
-								<div>
-									<h2 class="text-xl font-black text-[#291334]">Recent Sessions</h2>
-									<p class="text-sm text-slate-500">{user.sessions.length} sessions</p>
-								</div>
-							</div>
-
-							<div class="space-y-2">
-								{#each user.sessions as session (session.id)}
-									<div class="p-3 bg-slate-50 rounded-lg">
-										<div class="flex items-center justify-between">
-											<div class="text-sm text-slate-700">{formatDate(session.createdAt)}</div>
-											{#if session.expiresAt && new Date(session.expiresAt) > new Date()}
-												<Badge variant="emerald">Active</Badge>
-											{:else}
-												<Badge variant="slate">Expired</Badge>
-											{/if}
-										</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					</Card>
-				{/if}
-			</div>
-
-			<div class="space-y-6">
-				<Card padding="lg" rounded="lg" shadow="md">
-					<div class="space-y-4">
-						<div class="flex items-center gap-3 pb-4 border-b border-slate-100">
-							<div class="w-12 h-12 rounded-2xl bg-[#291334]/10 flex items-center justify-center text-[#291334]">
-								<iconify-icon icon="solar:calendar-bold" width="24"></iconify-icon>
-							</div>
-							<div>
-								<h2 class="text-xl font-black text-[#291334]">Dates</h2>
+				<!-- Password Reset -->
+				<div>
+					<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+						<iconify-icon icon="solar:lock-password-bold" width="24" class="text-[#FEC129]"></iconify-icon>
+						Réinitialiser le mot de passe
+					</h2>
+					<div class="bg-slate-50 rounded-xl p-6 space-y-4">
+						<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+							<div class="flex items-start gap-3">
+								<iconify-icon icon="solar:info-circle-bold" class="text-amber-600 mt-0.5" width="20"></iconify-icon>
+								<p class="text-sm text-amber-800">
+									Laissez ces champs vides si vous ne souhaitez pas modifier le mot de passe.
+								</p>
 							</div>
 						</div>
 
-						<div class="space-y-3">
-							<div>
-								<div class="text-xs font-black uppercase text-slate-400 mb-1">Created</div>
-								<div class="text-sm text-slate-700">{formatDate(user.createdAt)}</div>
-							</div>
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:lock-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Nouveau mot de passe
+							</label>
+							<input
+								type="password"
+								bind:value={formData.password}
+								class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+								placeholder="Minimum 8 caractères"
+							/>
+						</div>
 
-							<div>
-								<div class="text-xs font-black uppercase text-slate-400 mb-1">Last Updated</div>
-								<div class="text-sm text-slate-700">{formatDate(user.updatedAt)}</div>
-							</div>
-
-							{#if user.lastLoginAt}
-								<div>
-									<div class="text-xs font-black uppercase text-slate-400 mb-1">Last Login</div>
-									<div class="text-sm text-slate-700">{formatDate(user.lastLoginAt)}</div>
-								</div>
-							{/if}
-
-							{#if user.emailVerifiedAt}
-								<div>
-									<div class="text-xs font-black uppercase text-slate-400 mb-1">Email Verified</div>
-									<div class="text-sm text-slate-700">{formatDate(user.emailVerifiedAt)}</div>
-								</div>
-							{/if}
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:lock-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Confirmer le nouveau mot de passe
+							</label>
+							<input
+								type="password"
+								bind:value={formData.confirmPassword}
+								class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+								placeholder="Confirmez le mot de passe"
+							/>
 						</div>
 					</div>
-				</Card>
+				</div>
 
-				{#if user.auditLogs && user.auditLogs.length > 0}
-					<Card padding="lg" rounded="lg" shadow="md">
-						<div class="space-y-4">
-							<div class="flex items-center gap-3 pb-4 border-b border-slate-100">
-								<div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
-									<iconify-icon icon="solar:document-text-bold" width="24"></iconify-icon>
+				<!-- Role -->
+				<div>
+					<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+						<iconify-icon icon="solar:shield-user-bold" width="24" class="text-[#FEC129]"></iconify-icon>
+						Rôle
+					</h2>
+					<div class="bg-slate-50 rounded-xl p-6">
+						<div class="grid grid-cols-2 gap-3">
+							<button
+								type="button"
+								onclick={() => (formData.role = 'USER')}
+								class="px-4 py-3 rounded-xl font-bold text-sm transition-all {formData.role === 'USER'
+									? 'bg-[#291334] text-white'
+									: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+							>
+								<div class="flex items-center justify-center gap-2">
+									<iconify-icon icon="solar:user-bold" width="20"></iconify-icon>
+									Utilisateur
 								</div>
-								<div>
-									<h2 class="text-xl font-black text-[#291334]">Recent Activity</h2>
-									<p class="text-sm text-slate-500">{user.auditLogs.length} events</p>
+							</button>
+							<button
+								type="button"
+								onclick={() => (formData.role = 'ADMIN')}
+								class="px-4 py-3 rounded-xl font-bold text-sm transition-all {formData.role === 'ADMIN'
+									? 'bg-[#291334] text-white'
+									: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+							>
+								<div class="flex items-center justify-center gap-2">
+									<iconify-icon icon="solar:crown-bold" width="20"></iconify-icon>
+									Administrateur
 								</div>
-							</div>
-
-							<div class="space-y-2 max-h-96 overflow-y-auto">
-								{#each user.auditLogs as log (log.id)}
-									<div class="p-3 bg-slate-50 rounded-lg">
-										<div class="flex items-start justify-between gap-2">
-											<div class="flex-1">
-												<div class="text-sm font-bold text-slate-900">{log.action}</div>
-												{#if log.details}
-													<div class="text-xs text-slate-600 mt-1">{log.details}</div>
-												{/if}
-											</div>
-											<div class="text-xs text-slate-500 whitespace-nowrap">{formatDateShort(log.createdAt)}</div>
-										</div>
-									</div>
-								{/each}
-							</div>
+							</button>
 						</div>
-					</Card>
-				{/if}
+					</div>
+				</div>
+
+				<!-- Actions -->
+				<div class="flex gap-4 pt-4">
+					<Button
+						onclick={() => goto('/admin/users')}
+						intent="secondary"
+						class="flex-1"
+						disabled={submitting}
+					>
+						<iconify-icon icon="solar:close-circle-bold" width="20"></iconify-icon>
+						<span>Annuler</span>
+					</Button>
+					<button
+						onclick={handleUpdate}
+						disabled={submitting}
+						class="flex-1 px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{#if submitting}
+							<iconify-icon icon="line-md:loading-twotone-loop" width="20"></iconify-icon>
+							<span>Modification en cours...</span>
+						{:else}
+							<iconify-icon icon="solar:check-circle-bold" width="20"></iconify-icon>
+							<span>Enregistrer les modifications</span>
+						{/if}
+					</button>
+				</div>
 			</div>
-		</div>
-	{:else}
-		<div class="text-center py-20">
-			<iconify-icon icon="solar:user-bold" width="64" class="text-slate-300"></iconify-icon>
-			<h2 class="text-2xl font-black text-slate-900 mt-4">User not found</h2>
-			<p class="text-slate-500 mt-2">This user does not exist or has been deleted.</p>
-			<button
-				onclick={() => goto('/admin/users')}
-				class="mt-6 px-6 py-3 bg-[#291334] text-white rounded-xl font-bold hover:shadow-lg transition-all"
-			>
-				Back to users
-			</button>
 		</div>
 	{/if}
 </div>
