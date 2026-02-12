@@ -8,7 +8,7 @@ ENV TURBO_TEAM=$TURBO_TEAM
 FROM base AS deps
 WORKDIR /app
 
-COPY package.json bun.lock ./
+COPY package.json ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/admin/package.json ./packages/admin/
 COPY packages/auth/package.json ./packages/auth/
