@@ -18,7 +18,7 @@ import {
 import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
 
-// Version: 1.1.0 - Added user management endpoints (create, adminUpdate)
+// Version: 1.1.1 - Fixed validation for documents without items (contrat_maintenance)
 const app = new Hono();
 
 app.onError((err, c) => {
