@@ -79,7 +79,7 @@ app.all(
   })
 );
 
-app.get('/', (c) => c.json({ message: 'Maxi Boilerplate API' }));
+app.get('/', (c) => c.json({ message: 'Charles API' }));
 
 const port = Number(env.PORT);
 

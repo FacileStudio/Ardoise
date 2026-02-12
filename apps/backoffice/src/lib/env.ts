@@ -1,5 +1,6 @@
 import { publicEnvSchema } from '@repo/env';
 import { browser, building } from '$app/environment';
+import { ZodError } from 'zod';
 
 const isBrowser = browser;
 const isBuilding = building;
@@ -13,11 +14,33 @@ function getEnv() {
   }
 
   return {
-    API_URL: process.env.VITE_API_URL || '',
+    API_URL: process.env.VITE_API_URL || import.meta.env.VITE_API_URL || '',
     NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
   };
 }
 
-export const env = publicEnvSchema.parse(getEnv());
+let env: ReturnType<typeof publicEnvSchema.parse>;
 
+try {
+  env = publicEnvSchema.parse(getEnv());
+} catch (error) {
+  console.error('❌ Backoffice environment validation failed:');
+
+  if (error instanceof ZodError) {
+    console.error('\nMissing or invalid environment variables:');
+    error.errors.forEach(err => {
+      console.error(`  - ${err.path.join('.')}: ${err.message}`);
+    });
+  } else if (error instanceof Error) {
+    console.error(error.message);
+  }
+
+  console.error('\nRequired environment variables:');
+  console.error('  - VITE_API_URL: Backend API URL');
+  console.error('\nThis must be set as a build argument in Railway.\n');
+
+  throw error;
+}
+
+export { env };
 export default env;
