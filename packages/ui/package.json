@@ -9,7 +9,7 @@
     "src"
   ],
   "scripts": {
-    "lint": "eslint .",
+    "lint": "NODE_OPTIONS='--max-old-space-size=4096' eslint .",
     "typecheck": "svelte-check",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
