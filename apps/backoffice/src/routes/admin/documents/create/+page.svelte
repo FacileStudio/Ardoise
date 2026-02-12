@@ -57,6 +57,18 @@
 		maintenance_period: '1 mois',
 		clientId: '',
 		providerId: '',
+		client_name: '',
+		client_address: '',
+		client_city: '',
+		client_country: '',
+		client_siret: '',
+		provider_name: '',
+		provider_legal: '',
+		provider_address: '',
+		provider_city: '',
+		provider_siret: '',
+		provider_email: '',
+		provider_phone: '',
 		items: [],
 		tva_rate: 20,
 		railway_estimate: 0,
@@ -83,6 +95,14 @@
 	$effect(() => {
 		if (selectedClientId) {
 			formData.clientId = selectedClientId;
+			const client = clients.find((c) => c.id === selectedClientId);
+			if (client) {
+				formData.client_name = client.companyName;
+				formData.client_address = client.billingAddress || '';
+				formData.client_city = client.billingCity || '';
+				formData.client_country = client.billingCountry || '';
+				formData.client_siret = client.siret || '';
+			}
 		}
 	});
 
@@ -92,6 +112,13 @@
 			const provider = providers.find((p) => p.id === selectedProviderId);
 			if (provider) {
 				formData.tva_rate = provider.tvaRate;
+				formData.provider_name = provider.name;
+				formData.provider_legal = provider.legalName || '';
+				formData.provider_address = provider.address || '';
+				formData.provider_city = provider.city || '';
+				formData.provider_siret = provider.siret || '';
+				formData.provider_email = provider.email || '';
+				formData.provider_phone = provider.phone || '';
 			}
 		}
 	});
