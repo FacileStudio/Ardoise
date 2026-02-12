@@ -31,3 +31,4 @@ export { createContext, type Context, type CreateContextOptions } from './contex
 export { publicProcedure, protectedProcedure, adminProcedure } from './trpc';
 export { globalCacheFactory } from './cache';
 export { paymentService } from './modules/payment/service';
+export { DocuSealService } from './modules/docuseal/service';

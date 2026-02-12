@@ -5,7 +5,7 @@ import { AuthManager } from '@repo/auth';
 import { StorageService } from '@repo/storage';
 import { StripeService } from '@repo/stripe';
 import { SMTPClient } from '@repo/smtp';
-import { DocuSealService } from '@repo/trpc/modules/docuseal/service';
+import { DocuSealService } from '@repo/trpc';
 import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
 import trpcHandler from './handlers/trpc';
