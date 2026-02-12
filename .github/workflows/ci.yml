@@ -6,6 +6,35 @@ on:
   pull_request:
     branches: [main, dev]
 
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+  PORT: 3001
+  ENCRYPTION_SECRET: test-secret-key-min-32-chars-long-for-ci
+  STRIPE_SECRET_KEY: sk_test_fake_key_for_ci_only_needs_valid_format
+  STRIPE_WEBHOOK_SECRET: whsec_fake_webhook_secret_for_ci_testing_only
+  PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_fake_publishable_key_for_ci
+  MINIO_ENDPOINT: http://localhost:9000
+  MINIO_ROOT_USER: minioadmin
+  MINIO_ROOT_PASSWORD: minioadmin
+  MINIO_BUCKET_NAME: test-bucket
+  MINIO_PUBLIC_URL: http://localhost:9000
+  SMTP_HOST: smtp.example.com
+  SMTP_PORT: 587
+  SMTP_USER: test@example.com
+  SMTP_PASS: fake-password-for-ci
+  SMTP_FROM: noreply@example.com
+  COMPANY_NAME: Test Company
+  COMPANY_ADDRESS: 123 Test Street
+  COMPANY_CITY: 75001 Paris, France
+  COMPANY_SIRET: 123 456 789 00010
+  COMPANY_EMAIL: contact@example.com
+  COMPANY_PHONE: +33 1 23 45 67 89
+  FRONTEND_URL: http://localhost:3000
+  TRUSTED_ORIGINS: http://localhost:3000,http://localhost:3002
+  VITE_API_URL: http://localhost:3001/trpc
+  API_URL: http://localhost:3001/trpc
+
 jobs:
   lint:
     name: Lint
@@ -67,16 +96,3 @@ jobs:
 
       - name: Build ${{ matrix.app }}
         run: cd apps/${{ matrix.app }} && bun run build
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
-          ENCRYPTION_SECRET: test-secret-key-min-32-chars-long
-          STRIPE_SECRET_KEY: sk_test_fake_key_for_ci_only
-          STRIPE_WEBHOOK_SECRET: whsec_fake_webhook_secret_for_ci
-          MINIO_ENDPOINT: http://localhost:9000
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_BUCKET_NAME: test-bucket
-          FRONTEND_URL: http://localhost:3000
-          BACKOFFICE_URL: http://localhost:3002
-          TRUSTED_ORIGINS: http://localhost:3000,http://localhost:3002
-          PUBLIC_BACKEND_URL: http://localhost:3001
