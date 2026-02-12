@@ -73,7 +73,7 @@ export const DocumentDataSchema = z.object({
   iban: z.string().optional(),
   bic: z.string().optional(),
 
-  items: z.array(DocumentItemSchema).default([]),
+  items: z.array(DocumentItemSchema).optional().default([]),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
 
@@ -92,11 +92,11 @@ export const DocumentDataSchema = z.object({
   if (data.type === 'contrat_maintenance') {
     return true;
   }
-  // For back_contractuel and appel_de_fonds, items are optional
+  // For back_contractuel and appel_de_fonds, items are optional (but required for back_contractuel in our UI validation)
   if (data.type === 'back_contractuel' || data.type === 'appel_de_fonds') {
     return true;
   }
-  // For other types, require at least one item
+  // For other types (prestation, maintenance, contrat_prestation), require at least one item
   return data.items && data.items.length > 0;
 }, {
   message: "Au moins un article est requis pour ce type de document",
