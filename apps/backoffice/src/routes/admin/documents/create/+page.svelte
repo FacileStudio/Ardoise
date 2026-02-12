@@ -257,30 +257,93 @@
 
 		try {
 			generating = true;
-			const result = await trpc.document.preview.mutate({
-				type: formData.type,
-				invoice_number: formData.invoice_number,
-				invoice_date: formData.invoice_date,
-				due_date: formData.due_date,
-				quote_number: formData.quote_number,
-				quote_date: formData.quote_date,
-				validity_date: formData.validity_date,
-				maintenance_period: formData.maintenance_period,
-				contract_reference: formData.contract_reference,
-				contract_date: formData.contract_date,
-				clientId: selectedClientId,
-				providerId: selectedProviderId || undefined,
-				items: formData.items,
-				tva_rate: Number(formData.tva_rate),
-				railway_estimate: Number(formData.railway_estimate || 0),
-				project_name: formData.project_name,
-				valid_until: formData.valid_until,
-				providers: formData.providers,
-				features: formData.features,
-				global_invoice_ref: formData.global_invoice_ref,
-				project_step: formData.project_step,
-				payment_providers: formData.payment_providers,
-			});
+			let result;
+
+			switch (formData.type) {
+				case 'prestation':
+					result = await trpc.document.previewPrestation.mutate({
+						invoice_number: formData.invoice_number,
+						invoice_date: formData.invoice_date,
+						due_date: formData.due_date,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items,
+						tva_rate: Number(formData.tva_rate),
+						railway_estimate: Number(formData.railway_estimate || 0),
+					});
+					break;
+
+				case 'maintenance':
+					result = await trpc.document.previewMaintenance.mutate({
+						quote_number: formData.quote_number,
+						quote_date: formData.quote_date,
+						validity_date: formData.validity_date,
+						maintenance_period: formData.maintenance_period,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items,
+						tva_rate: Number(formData.tva_rate),
+						railway_estimate: Number(formData.railway_estimate || 0),
+					});
+					break;
+
+				case 'contrat_prestation':
+					result = await trpc.document.previewContratPrestation.mutate({
+						contract_reference: formData.contract_reference,
+						contract_date: formData.contract_date,
+						quote_number: formData.quote_number,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items.length > 0 ? formData.items : undefined,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				case 'contrat_maintenance':
+					result = await trpc.document.previewContratMaintenance.mutate({
+						contract_reference: formData.contract_reference,
+						contract_date: formData.contract_date,
+						maintenance_period: formData.maintenance_period,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items.length > 0 ? formData.items : undefined,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				case 'back_contractuel':
+					result = await trpc.document.previewBackContractuel.mutate({
+						contract_reference: formData.contract_reference,
+						contract_date: formData.contract_date,
+						project_name: formData.project_name,
+						valid_until: formData.valid_until,
+						clientId: selectedClientId,
+						providerId: selectedProviderId || undefined,
+						providers: formData.providers,
+						features: formData.features,
+						items: formData.items,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				case 'appel_de_fonds':
+					result = await trpc.document.previewAppelDeFonds.mutate({
+						global_invoice_ref: formData.global_invoice_ref,
+						invoice_date: formData.invoice_date,
+						due_date: formData.due_date,
+						project_step: formData.project_step,
+						project_name: formData.project_name,
+						clientId: selectedClientId,
+						providerId: selectedProviderId || undefined,
+						payment_providers: formData.payment_providers,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				default:
+					throw new Error(`Type de document non supporté: ${formData.type}`);
+			}
+
 			previewPdf = result.pdf;
 			showPreview = true;
 		} catch (err: any) {
@@ -301,30 +364,92 @@
 
 		try {
 			generating = true;
-			const result = await trpc.document.create.mutate({
-				type: formData.type,
-				invoice_number: formData.invoice_number,
-				invoice_date: formData.invoice_date,
-				due_date: formData.due_date,
-				quote_number: formData.quote_number,
-				quote_date: formData.quote_date,
-				validity_date: formData.validity_date,
-				maintenance_period: formData.maintenance_period,
-				contract_reference: formData.contract_reference,
-				contract_date: formData.contract_date,
-				clientId: selectedClientId,
-				providerId: selectedProviderId || undefined,
-				items: formData.items,
-				tva_rate: Number(formData.tva_rate),
-				railway_estimate: Number(formData.railway_estimate || 0),
-				project_name: formData.project_name,
-				valid_until: formData.valid_until,
-				providers: formData.providers,
-				features: formData.features,
-				global_invoice_ref: formData.global_invoice_ref,
-				project_step: formData.project_step,
-				payment_providers: formData.payment_providers,
-			});
+			let result;
+
+			switch (formData.type) {
+				case 'prestation':
+					result = await trpc.document.createPrestation.mutate({
+						invoice_number: formData.invoice_number,
+						invoice_date: formData.invoice_date,
+						due_date: formData.due_date,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items,
+						tva_rate: Number(formData.tva_rate),
+						railway_estimate: Number(formData.railway_estimate || 0),
+					});
+					break;
+
+				case 'maintenance':
+					result = await trpc.document.createMaintenance.mutate({
+						quote_number: formData.quote_number,
+						quote_date: formData.quote_date,
+						validity_date: formData.validity_date,
+						maintenance_period: formData.maintenance_period,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items,
+						tva_rate: Number(formData.tva_rate),
+						railway_estimate: Number(formData.railway_estimate || 0),
+					});
+					break;
+
+				case 'contrat_prestation':
+					result = await trpc.document.createContratPrestation.mutate({
+						contract_reference: formData.contract_reference,
+						contract_date: formData.contract_date,
+						quote_number: formData.quote_number,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items.length > 0 ? formData.items : undefined,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				case 'contrat_maintenance':
+					result = await trpc.document.createContratMaintenance.mutate({
+						contract_reference: formData.contract_reference,
+						contract_date: formData.contract_date,
+						maintenance_period: formData.maintenance_period,
+						clientId: selectedClientId,
+						providerId: selectedProviderId,
+						items: formData.items.length > 0 ? formData.items : undefined,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				case 'back_contractuel':
+					result = await trpc.document.createBackContractuel.mutate({
+						contract_reference: formData.contract_reference,
+						contract_date: formData.contract_date,
+						project_name: formData.project_name,
+						valid_until: formData.valid_until,
+						clientId: selectedClientId,
+						providerId: selectedProviderId || undefined,
+						providers: formData.providers,
+						features: formData.features,
+						items: formData.items,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				case 'appel_de_fonds':
+					result = await trpc.document.createAppelDeFonds.mutate({
+						global_invoice_ref: formData.global_invoice_ref,
+						invoice_date: formData.invoice_date,
+						due_date: formData.due_date,
+						project_step: formData.project_step,
+						project_name: formData.project_name,
+						clientId: selectedClientId,
+						providerId: selectedProviderId || undefined,
+						payment_providers: formData.payment_providers,
+						tva_rate: Number(formData.tva_rate),
+					});
+					break;
+
+				default:
+					throw new Error(`Type de document non supporté: ${formData.type}`);
+			}
 
 			const pdfBlob = base64ToBlob(result.pdf, 'application/pdf');
 			const url = URL.createObjectURL(pdfBlob);

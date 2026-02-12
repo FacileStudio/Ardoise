@@ -360,6 +360,8 @@ export const documentRouter = router({
           invoice_number: document.invoiceNumber || '',
           quote_number: document.quoteNumber || '',
           contract_reference: document.contractRef || '',
+          clientId: '',
+          providerId: document.providerId || undefined,
           client_name: document.clientName,
           client_siret: document.clientSiret || '',
           client_address: document.clientAddress || '',
@@ -372,9 +374,15 @@ export const documentRouter = router({
           provider_city: document.providerCity || '',
           provider_email: document.providerEmail || '',
           provider_phone: document.providerPhone || '',
+          bank_name: '',
+          iban: '',
+          bic: '',
           items: document.items as any[],
           tva_rate: document.tvaRate,
           railway_estimate: Number(document.railwayEstimate || 0),
+          providers: [],
+          features: [],
+          payment_providers: [],
         };
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
@@ -434,6 +442,9 @@ export const documentRouter = router({
           items: input.items,
           tva_rate: input.tva_rate,
           railway_estimate: input.railway_estimate,
+          providers: [],
+          features: [],
+          payment_providers: [],
         };
 
         const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
@@ -495,6 +506,9 @@ export const documentRouter = router({
           items: input.items,
           tva_rate: input.tva_rate,
           railway_estimate: input.railway_estimate,
+          providers: [],
+          features: [],
+          payment_providers: [],
         };
 
         const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
@@ -594,6 +608,9 @@ export const documentRouter = router({
           items: input.items,
           tva_rate: input.tva_rate,
           railway_estimate: input.railway_estimate,
+          providers: [],
+          features: [],
+          payment_providers: [],
         };
 
         const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
@@ -655,6 +672,9 @@ export const documentRouter = router({
           bic: provider.bic || '',
           items: input.items,
           tva_rate: input.tva_rate,
+          providers: [],
+          features: [],
+          payment_providers: [],
           railway_estimate: input.railway_estimate,
         };
 
@@ -920,6 +940,10 @@ export const documentRouter = router({
           providerId: input.providerId,
           payment_providers: input.payment_providers,
           tva_rate: input.tva_rate,
+          items: [],
+          railway_estimate: 0,
+          providers: [],
+          features: [],
           client_name: client.companyName,
           client_address: client.billingAddress || '',
           client_city: client.billingCity || '',
@@ -981,6 +1005,10 @@ export const documentRouter = router({
           due_date: input.due_date,
           project_step: input.project_step,
           project_name: input.project_name,
+          items: [],
+          railway_estimate: 0,
+          providers: [],
+          features: [],
           clientId: input.clientId,
           providerId: input.providerId,
           payment_providers: input.payment_providers,
@@ -1049,6 +1077,328 @@ export const documentRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: error.message || 'Failed to create document',
+        });
+      }
+    }),
+
+  previewContratPrestation: adminProcedure
+    .input(ContratPrestationInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const client = await ctx.db.client.findUnique({
+          where: { id: input.clientId },
+        });
+        if (!client) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+        }
+
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+
+        const documentData = {
+          type: 'contrat_prestation' as const,
+          contract_reference: input.contract_reference,
+          contract_date: input.contract_date,
+          quote_number: input.quote_number,
+          clientId: input.clientId,
+          providerId: input.providerId,
+          items: input.items || [],
+          tva_rate: input.tva_rate,
+          railway_estimate: 0,
+          providers: [],
+          features: [],
+          payment_providers: [],
+          client_name: client.companyName,
+          client_address: client.billingAddress || '',
+          client_city: client.billingCity || '',
+          client_country: client.billingCountry || '',
+          client_siret: client.siret || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
+        };
+
+        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        return {
+          pdf: pdfBuffer.toString('base64'),
+          fileName: `contrat_prestation_${input.contract_reference}.pdf`,
+          typstContent: generateTypstContent(documentData),
+        };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message || 'Failed to preview contract',
+        });
+      }
+    }),
+
+  createContratPrestation: adminProcedure
+    .input(ContratPrestationInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const client = await ctx.db.client.findUnique({
+          where: { id: input.clientId },
+        });
+        if (!client) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+        }
+
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+
+        const documentData = {
+          type: 'contrat_prestation' as const,
+          contract_reference: input.contract_reference,
+          contract_date: input.contract_date,
+          quote_number: input.quote_number,
+          clientId: input.clientId,
+          providerId: input.providerId,
+          items: input.items || [],
+          tva_rate: input.tva_rate,
+          railway_estimate: 0,
+          providers: [],
+          features: [],
+          payment_providers: [],
+          client_name: client.companyName,
+          client_address: client.billingAddress || '',
+          client_city: client.billingCity || '',
+          client_country: client.billingCountry || '',
+          client_siret: client.siret || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
+        };
+
+        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const fileName = `contrat_prestation_${input.contract_reference}.pdf`;
+
+        const subtotal = (input.items || []).reduce(
+          (sum: number, item: any) => sum + item.quantity * item.price,
+          0
+        );
+        const tva = subtotal * (input.tva_rate / 100);
+        const total = subtotal + tva;
+
+        const document = await ctx.db.document.create({
+          data: {
+            type: 'contrat_prestation',
+            name: fileName,
+            contractRef: input.contract_reference,
+            clientName: documentData.client_name,
+            clientSiret: documentData.client_siret,
+            clientAddress: documentData.client_address,
+            clientCity: documentData.client_city,
+            clientCountry: documentData.client_country,
+            providerId: input.providerId,
+            providerName: documentData.provider_name,
+            providerLegal: documentData.provider_legal,
+            providerSiret: documentData.provider_siret,
+            providerAddress: documentData.provider_address,
+            providerCity: documentData.provider_city,
+            providerEmail: documentData.provider_email,
+            providerPhone: documentData.provider_phone,
+            items: input.items || [],
+            subtotal,
+            tva,
+            total,
+            tvaRate: input.tva_rate,
+            fileSize: pdfBuffer.length,
+            createdBy: ctx.user!.id,
+          },
+        });
+
+        return {
+          document,
+          pdf: pdfBuffer.toString('base64'),
+          fileName,
+        };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message || 'Failed to create contract',
+        });
+      }
+    }),
+
+  previewContratMaintenance: adminProcedure
+    .input(ContratMaintenanceInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const client = await ctx.db.client.findUnique({
+          where: { id: input.clientId },
+        });
+        if (!client) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+        }
+
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+
+        const documentData = {
+          type: 'contrat_maintenance' as const,
+          contract_reference: input.contract_reference,
+          contract_date: input.contract_date,
+          maintenance_period: input.maintenance_period,
+          clientId: input.clientId,
+          providerId: input.providerId,
+          items: input.items || [],
+          tva_rate: input.tva_rate,
+          railway_estimate: 0,
+          providers: [],
+          features: [],
+          payment_providers: [],
+          client_name: client.companyName,
+          client_address: client.billingAddress || '',
+          client_city: client.billingCity || '',
+          client_country: client.billingCountry || '',
+          client_siret: client.siret || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
+        };
+
+        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        return {
+          pdf: pdfBuffer.toString('base64'),
+          fileName: `contrat_maintenance_${input.contract_reference}.pdf`,
+          typstContent: generateTypstContent(documentData),
+        };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message || 'Failed to preview contract',
+        });
+      }
+    }),
+
+  createContratMaintenance: adminProcedure
+    .input(ContratMaintenanceInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const client = await ctx.db.client.findUnique({
+          where: { id: input.clientId },
+        });
+        if (!client) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+        }
+
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+
+        const documentData = {
+          type: 'contrat_maintenance' as const,
+          contract_reference: input.contract_reference,
+          contract_date: input.contract_date,
+          maintenance_period: input.maintenance_period,
+          clientId: input.clientId,
+          providerId: input.providerId,
+          items: input.items || [],
+          tva_rate: input.tva_rate,
+          railway_estimate: 0,
+          providers: [],
+          features: [],
+          payment_providers: [],
+          client_name: client.companyName,
+          client_address: client.billingAddress || '',
+          client_city: client.billingCity || '',
+          client_country: client.billingCountry || '',
+          client_siret: client.siret || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
+        };
+
+        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const fileName = `contrat_maintenance_${input.contract_reference}.pdf`;
+
+        const subtotal = (input.items || []).reduce(
+          (sum: number, item: any) => sum + item.quantity * item.price,
+          0
+        );
+        const tva = subtotal * (input.tva_rate / 100);
+        const total = subtotal + tva;
+
+        const document = await ctx.db.document.create({
+          data: {
+            type: 'contrat_maintenance',
+            name: fileName,
+            contractRef: input.contract_reference,
+            clientName: documentData.client_name,
+            clientSiret: documentData.client_siret,
+            clientAddress: documentData.client_address,
+            clientCity: documentData.client_city,
+            clientCountry: documentData.client_country,
+            providerId: input.providerId,
+            providerName: documentData.provider_name,
+            providerLegal: documentData.provider_legal,
+            providerSiret: documentData.provider_siret,
+            providerAddress: documentData.provider_address,
+            providerCity: documentData.provider_city,
+            providerEmail: documentData.provider_email,
+            providerPhone: documentData.provider_phone,
+            items: input.items || [],
+            subtotal,
+            tva,
+            total,
+            tvaRate: input.tva_rate,
+            fileSize: pdfBuffer.length,
+            createdBy: ctx.user!.id,
+          },
+        });
+
+        return {
+          document,
+          pdf: pdfBuffer.toString('base64'),
+          fileName,
+        };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message || 'Failed to create contract',
         });
       }
     }),
