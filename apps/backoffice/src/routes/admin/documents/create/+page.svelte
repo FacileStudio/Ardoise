@@ -8,7 +8,7 @@
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
 
-	type DocType = 'prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance';
+	type DocType = 'prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
 
 	interface Client {
 		id: string;
@@ -74,6 +74,15 @@
 		tva_rate: 20,
 		railway_estimate: 0,
 		providerId: '',
+		// For back_contractuel
+		project_name: '',
+		valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+		providers: [],
+		features: [],
+		// For appel_de_fonds
+		global_invoice_ref: 'ADF-001',
+		project_step: 'Acompte 30%',
+		payment_providers: [],
 	});
 
 	let newItem = $state({ description: '', quantity: 1, unit: 'jour', price: 0 });

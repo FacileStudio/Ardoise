@@ -230,6 +230,8 @@ export const documentRouter = router({
       { value: 'maintenance', label: 'Devis Maintenance' },
       { value: 'contrat_prestation', label: 'Contrat Prestation' },
       { value: 'contrat_maintenance', label: 'Contrat Maintenance' },
+      { value: 'back_contractuel', label: 'Back Contractuel (Co-traitance)' },
+      { value: 'appel_de_fonds', label: 'Appel de Fonds Global' },
     ];
   }),
 
