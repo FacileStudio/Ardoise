@@ -10,6 +10,7 @@ COPY packages/auth/package.json ./packages/auth/
 COPY packages/auth-shared/package.json ./packages/auth-shared/
 COPY packages/crypto/package.json ./packages/crypto/
 COPY packages/database/package.json ./packages/database/
+COPY packages/docuseal/package.json ./packages/docuseal/
 COPY packages/env/package.json ./packages/env/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/i18n/package.json ./packages/i18n/
