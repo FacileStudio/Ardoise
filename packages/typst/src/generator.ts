@@ -118,7 +118,10 @@ export class TypstGenerator {
         throw new Error(`Logo file not found at ${logoSource}`);
       }
 
-      execSync(`typst compile "${typstPath}" "${pdfPath}"`, {
+      const fontsDir = join(__dirname, '..', 'fonts');
+      const fontPathArg = existsSync(fontsDir) ? `--font-path "${fontsDir}"` : '';
+
+      execSync(`typst compile ${fontPathArg} "${typstPath}" "${pdfPath}"`, {
         stdio: 'inherit',
       });
 

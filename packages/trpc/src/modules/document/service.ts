@@ -4,10 +4,12 @@ import {
   maintenance,
   contrat_prestation,
   contrat_maintenance,
+  back_contractuel,
+  appel_de_fonds,
 } from '@repo/typst';
 import { z } from 'zod';
 
-export const DocTypeSchema = z.enum(['prestation', 'maintenance', 'contrat_prestation', 'contrat_maintenance']);
+export const DocTypeSchema = z.enum(['prestation', 'maintenance', 'contrat_prestation', 'contrat_maintenance', 'back_contractuel', 'appel_de_fonds']);
 export type DocType = z.infer<typeof DocTypeSchema>;
 
 export const DocumentItemSchema = z.object({
@@ -15,6 +17,28 @@ export const DocumentItemSchema = z.object({
   quantity: z.number().positive(),
   unit: z.string(),
   price: z.number().nonnegative(),
+});
+
+export const ProviderSchema = z.object({
+  name: z.string(),
+  role: z.string(),
+  address: z.string(),
+  city: z.string(),
+  siret: z.string(),
+  email: z.string().email(),
+  amount: z.number().nonnegative(),
+});
+
+export const FeatureSchema = z.object({
+  title: z.string(),
+  desc: z.string(),
+});
+
+export const PaymentProviderSchema = z.object({
+  name: z.string(),
+  iban: z.string(),
+  bic: z.string(),
+  amount_to_pay: z.number().nonnegative(),
 });
 
 export const DocumentDataSchema = z.object({
@@ -52,9 +76,24 @@ export const DocumentDataSchema = z.object({
   items: z.array(DocumentItemSchema).default([]),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
+
+  // For back_contractuel
+  project_name: z.string().optional(),
+  valid_until: z.string().optional(),
+  providers: z.array(ProviderSchema).optional().default([]),
+  features: z.array(FeatureSchema).optional().default([]),
+
+  // For appel_de_fonds
+  global_invoice_ref: z.string().optional(),
+  project_step: z.string().optional(),
+  payment_providers: z.array(PaymentProviderSchema).optional().default([]),
 }).refine((data) => {
   // For contrat_maintenance, items are optional
   if (data.type === 'contrat_maintenance') {
+    return true;
+  }
+  // For back_contractuel and appel_de_fonds, items are optional
+  if (data.type === 'back_contractuel' || data.type === 'appel_de_fonds') {
     return true;
   }
   // For other types, require at least one item
@@ -71,6 +110,8 @@ const TEMPLATES: Record<DocType, string> = {
   maintenance,
   contrat_prestation,
   contrat_maintenance,
+  back_contractuel,
+  appel_de_fonds,
 };
 
 export function formatItems(items: Array<{ description: string; quantity: number; unit: string; price: number }>): string {
@@ -80,6 +121,29 @@ export function formatItems(items: Array<{ description: string; quantity: number
     const safeQty = parseFloat(String(item.quantity)) || 1;
     return `(description: "${item.description}", quantity: ${safeQty}, unit: "${item.unit || 'u'}", price: ${safePrice})`;
   }).join(', ') + ',';
+}
+
+export function formatProviders(providers: Array<{ name: string; role: string; address: string; city: string; siret: string; email: string; amount: number }>): string {
+  if (!providers || providers.length === 0) return '';
+  return providers.map((p) => {
+    const safeAmount = parseFloat(String(p.amount)) || 0;
+    return `(name: "${p.name}", role: "${p.role}", address: "${p.address}", city: "${p.city}", siret: "${p.siret}", email: "${p.email}", amount: ${safeAmount})`;
+  }).join(', ');
+}
+
+export function formatFeatures(features: Array<{ title: string; desc: string }>): string {
+  if (!features || features.length === 0) return '';
+  return features.map((f) => {
+    return `(title: "${f.title}", desc: "${f.desc}")`;
+  }).join(', ');
+}
+
+export function formatPaymentProviders(providers: Array<{ name: string; iban: string; bic: string; amount_to_pay: number }>): string {
+  if (!providers || providers.length === 0) return '';
+  return providers.map((p) => {
+    const safeAmount = parseFloat(String(p.amount_to_pay)) || 0;
+    return `(name: "${p.name}", iban: "${p.iban}", bic: "${p.bic}", amount_to_pay: ${safeAmount})`;
+  }).join(', ');
 }
 
 export function injectVariables(content: string, variables: Record<string, any>): string {
@@ -141,6 +205,17 @@ export async function generateDocument(
     items: formatItems(validated.items),
     tva_rate: validated.tva_rate,
     railway_estimate: validated.railway_estimate,
+
+    // For back_contractuel
+    project_name: validated.project_name || '',
+    valid_until: validated.valid_until || '',
+    providers: formatProviders(validated.providers || []),
+    features: formatFeatures(validated.features || []),
+
+    // For appel_de_fonds
+    global_invoice_ref: validated.global_invoice_ref || '',
+    project_step: validated.project_step || '',
+    payment_providers: formatPaymentProviders(validated.payment_providers || []),
   };
 
   const typstContent = injectVariables(template, templateData);
@@ -206,6 +281,17 @@ export function generateTypstContent(data: DocumentData): string {
     items: formatItems(validated.items),
     tva_rate: validated.tva_rate,
     railway_estimate: validated.railway_estimate,
+
+    // For back_contractuel
+    project_name: validated.project_name || '',
+    valid_until: validated.valid_until || '',
+    providers: formatProviders(validated.providers || []),
+    features: formatFeatures(validated.features || []),
+
+    // For appel_de_fonds
+    global_invoice_ref: validated.global_invoice_ref || '',
+    project_step: validated.project_step || '',
+    payment_providers: formatPaymentProviders(validated.payment_providers || []),
   };
 
   return injectVariables(template, templateData);

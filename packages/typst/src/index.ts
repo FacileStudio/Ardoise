@@ -1,10 +1,10 @@
 import { TypstGenerator } from './generator';
 import { receipt } from './templates/receipt';
 import type { ReceiptData, ReceiptItem } from './generator';
-import { prestation, maintenance, contrat_prestation, contrat_maintenance } from './templates';
+import { prestation, maintenance, contrat_prestation, contrat_maintenance, back_contractuel, appel_de_fonds } from './templates';
 
 export { TypstGenerator, type ReceiptData, type ReceiptItem };
-export { prestation, maintenance, contrat_prestation, contrat_maintenance };
+export { prestation, maintenance, contrat_prestation, contrat_maintenance, back_contractuel, appel_de_fonds };
 
 export function generateReceipt(data: ReceiptData, logoPath?: string): Buffer {
   const generator = new TypstGenerator(receipt, logoPath);

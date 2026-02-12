@@ -1,12 +1,20 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
-	import { Spinner, Button, Input } from '@repo/ui';
+	import { Spinner, Button, Input, ImageUpload } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
 
 	let submitting = $state(false);
+
+	async function getPresignedUrl(filename: string, folder: string) {
+		const result = await trpc.media.getUploadUrl.mutate({
+			fileName: `${folder}/${filename}`,
+			fileType: 'image/*'
+		});
+		return result.uploadUrl;
+	}
 
 	let formData = $state({
 		name: '',
@@ -95,7 +103,7 @@
 							></iconify-icon>
 							Raison sociale
 						</label>
-						<Input bind:value={formData.legalName} placeholder="Nom du prestataire SAS" />
+						<Input bind:value={formData.legalName} placeholder="ex: Facile Studio SAS" />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
@@ -125,6 +133,25 @@
 							/>
 						</div>
 					</div>
+				</div>
+			</div>
+
+			<!-- Logo -->
+			<div>
+				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+					<iconify-icon icon="solar:gallery-bold" width="24" class="text-[#FEC129]"></iconify-icon>
+					Logo
+				</h2>
+				<div class="bg-slate-50 rounded-xl p-6">
+					<ImageUpload
+						bind:value={formData.logoUrl}
+						label="Logo du prestataire"
+						{getPresignedUrl}
+					/>
+					<p class="text-xs text-slate-500 mt-3 ml-2">
+						<iconify-icon icon="solar:info-circle-bold" width="14" class="inline"></iconify-icon>
+						Format recommandé: PNG ou SVG avec fond transparent, 512x512px minimum
+					</p>
 				</div>
 			</div>
 
