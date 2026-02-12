@@ -73,7 +73,6 @@
           placeholder="Adresse email"
           class={inputClass}
           required
-          autofocus
         />
         <input
           type="password"
