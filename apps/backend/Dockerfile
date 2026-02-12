@@ -5,6 +5,9 @@ WORKDIR /app
 
 COPY . .
 
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 RUN bun install --no-frozen-lockfile
 RUN cd packages/database && bun run db:generate
 
