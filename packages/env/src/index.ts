@@ -41,6 +41,11 @@ export const serverEnvSchema = baseSchema.extend({
   COMPANY_NAME: z.string().min(1),
   COMPANY_CONTACT_EMAIL: z.string().email(),
 
+  ADMIN_EMAIL: z.string().email(),
+  ADMIN_PASSWORD: z.string().min(8),
+  ADMIN_FIRST_NAME: z.string().min(1),
+  ADMIN_LAST_NAME: z.string().min(1),
+
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
   LOGTAIL_TOKEN: z.string().optional(),
 });

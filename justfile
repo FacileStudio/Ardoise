@@ -11,7 +11,8 @@ init:
     @echo "✅ Project initialized!"
     @echo "📝 Next: Run 'just create-admin' to create admin user, then 'just dev'"
 
-# Create admin user (yann@facile.studio / testcaca123)
+# Create admin user (yann@facile.studio / testcaca123) for local dev
+# Note: Backend automatically creates admin on startup from env vars
 create-admin:
     DATABASE_URL="postgresql://fangafunk@localhost:5432/charles" bun run scripts/create-admin.ts
 

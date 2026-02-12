@@ -35,7 +35,7 @@ The project includes a `justfile` for common tasks:
 
 ```bash
 just init              # Complete setup: install, generate, createdb, push schema
-just create-admin      # Create admin account (yann@facile.studio / testcaca123)
+just create-admin      # Create admin account (yann@facile.studio / testcaca123) for local dev
 just dev               # Run all apps (backend + frontend + backoffice)
 just backend           # Run backend only (port 3001)
 just frontend          # Run frontend only (port 5173)
@@ -228,6 +228,10 @@ Each app validates its environment on startup via `check-env` script using Zod.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
 - `COMPANY_NAME`: Company name for documents (e.g., `Facile Studio`)
 - `COMPANY_CONTACT_EMAIL`: Contact email for documents (e.g., `contact@facile.studio`)
+- `ADMIN_EMAIL`: Default admin email (e.g., `admin@facile.studio`)
+- `ADMIN_PASSWORD`: Default admin password (minimum 8 characters)
+- `ADMIN_FIRST_NAME`: Default admin first name
+- `ADMIN_LAST_NAME`: Default admin last name
 - `FRONTEND_URL`: Frontend URL for CORS (e.g., `http://localhost:5173`)
 - `TRUSTED_ORIGINS`: Comma-separated allowed origins (e.g., `http://localhost:5173,http://localhost:3001,http://localhost:3002`)
 - `PORT`: Backend server port (default: 3001)
@@ -278,11 +282,30 @@ All schemas are automatically merged by Prisma.
 - Use `bun run db:migrate:deploy` to apply migrations
 
 **Creating admin account:**
+
+The backend automatically creates an admin user on first startup if none exists. Admin credentials are configured via environment variables:
+
+**Required environment variables:**
+- `ADMIN_EMAIL`: Admin email address
+- `ADMIN_PASSWORD`: Admin password (minimum 8 characters)
+- `ADMIN_FIRST_NAME`: Admin first name
+- `ADMIN_LAST_NAME`: Admin last name
+
+**Local development:**
 ```bash
-just create-admin  # Creates yann@facile.studio / testcaca123
+# Already configured in apps/backend/.env
+just dev  # Admin is created automatically on first startup
 ```
 
-The admin creation script (`scripts/create-admin.ts`) uses `AuthManager.hashPassword()` to ensure password compatibility with the backend authentication system.
+**Production/Railway:**
+Set the admin environment variables in Railway dashboard, and the admin will be created automatically when the backend starts.
+
+**Behavior:**
+- ✅ Creates admin user if no admin exists (runs on every startup)
+- ⚠️  Skips if an admin already exists (safe to run repeatedly)
+- ⚡ Upgrades existing non-admin user to admin if email matches
+
+The bootstrap logic uses `AuthManager.hashPassword()` to ensure password compatibility with the backend authentication system.
 
 ### Authentication Flow
 

@@ -15,6 +15,7 @@ import {
   createLivenessHandler,
   createReadinessHandler,
 } from './handlers/health';
+import { bootstrapAdmin } from './lib/bootstrap';
 
 
 const app = new Hono();
@@ -33,6 +34,8 @@ app.onError((err, c) => {
 const authManager = new AuthManager({
   encryptionSecret: env.ENCRYPTION_SECRET,
 });
+
+await bootstrapAdmin(env, authManager);
 
 const storage = new StorageService({
   endpoint: env.MINIO_ENDPOINT,
