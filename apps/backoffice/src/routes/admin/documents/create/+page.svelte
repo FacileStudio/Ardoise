@@ -232,6 +232,8 @@
 			generating = true;
 			const result = await trpc.document.preview.mutate({
 				...formData,
+				clientId: selectedClientId,
+				providerId: selectedProviderId || undefined,
 				tva_rate: Number(formData.tva_rate),
 				railway_estimate: Number(formData.railway_estimate || 0),
 			});
@@ -257,6 +259,8 @@
 			generating = true;
 			const result = await trpc.document.create.mutate({
 				...formData,
+				clientId: selectedClientId,
+				providerId: selectedProviderId || undefined,
 				tva_rate: Number(formData.tva_rate),
 				railway_estimate: Number(formData.railway_estimate || 0),
 			});

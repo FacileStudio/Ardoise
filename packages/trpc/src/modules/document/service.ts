@@ -54,7 +54,7 @@ export const DocumentDataSchema = z.object({
   contract_date: z.string().optional(),
 
   clientId: z.string(),
-  providerId: z.string(),
+  providerId: z.string().optional(),
 
   items: z.array(DocumentItemSchema).default([]),
   tva_rate: z.number().nonnegative().default(20),
@@ -80,6 +80,15 @@ export const DocumentDataSchema = z.object({
 }, {
   message: "Au moins un article est requis pour ce type de document",
   path: ['items'],
+}).refine((data) => {
+  // ProviderId is required for all types except back_contractuel and appel_de_fonds
+  if (data.type !== 'back_contractuel' && data.type !== 'appel_de_fonds') {
+    return !!data.providerId;
+  }
+  return true;
+}, {
+  message: "Le prestataire est requis pour ce type de document",
+  path: ['providerId'],
 });
 
 export type DocumentData = z.infer<typeof DocumentDataSchema>;

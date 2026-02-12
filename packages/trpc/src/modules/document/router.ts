@@ -93,11 +93,17 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        let provider = null;
+        let logoUrl: string | undefined;
+
+        if (input.providerId) {
+          provider = await ctx.db.provider.findUnique({
+            where: { id: input.providerId },
+          });
+          if (!provider) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+          }
+          logoUrl = provider.logoUrl || undefined;
         }
 
         const documentData = {
@@ -107,19 +113,17 @@ export const documentRouter = router({
           client_city: client.billingCity || '',
           client_country: client.billingCountry || '',
           client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
+          provider_name: provider?.name || '',
+          provider_legal: provider?.legalName || '',
+          provider_address: provider?.address || '',
+          provider_city: provider?.city || '',
+          provider_siret: provider?.siret || '',
+          provider_email: provider?.email || '',
+          provider_phone: provider?.phone || '',
+          bank_name: provider?.bankName || '',
+          iban: provider?.iban || '',
+          bic: provider?.bic || '',
         };
-
-        const logoUrl = provider.logoUrl || undefined;
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
 
@@ -145,7 +149,7 @@ export const documentRouter = router({
             clientAddress: documentData.client_address,
             clientCity: documentData.client_city,
             clientCountry: documentData.client_country,
-            providerId: input.providerId,
+            providerId: input.providerId || null,
             providerName: documentData.provider_name,
             providerLegal: documentData.provider_legal,
             providerSiret: documentData.provider_siret,
@@ -206,11 +210,17 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        let provider = null;
+        let logoUrl: string | undefined;
+
+        if (input.providerId) {
+          provider = await ctx.db.provider.findUnique({
+            where: { id: input.providerId },
+          });
+          if (!provider) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+          }
+          logoUrl = provider.logoUrl || undefined;
         }
 
         const documentData = {
@@ -220,19 +230,17 @@ export const documentRouter = router({
           client_city: client.billingCity || '',
           client_country: client.billingCountry || '',
           client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
+          provider_name: provider?.name || '',
+          provider_legal: provider?.legalName || '',
+          provider_address: provider?.address || '',
+          provider_city: provider?.city || '',
+          provider_siret: provider?.siret || '',
+          provider_email: provider?.email || '',
+          provider_phone: provider?.phone || '',
+          bank_name: provider?.bankName || '',
+          iban: provider?.iban || '',
+          bic: provider?.bic || '',
         };
-
-        const logoUrl = provider.logoUrl || undefined;
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
         return {
@@ -258,11 +266,17 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        let provider = null;
+        let logoUrl: string | undefined;
+
+        if (input.providerId) {
+          provider = await ctx.db.provider.findUnique({
+            where: { id: input.providerId },
+          });
+          if (!provider) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+          }
+          logoUrl = provider.logoUrl || undefined;
         }
 
         const documentData = {
@@ -272,19 +286,17 @@ export const documentRouter = router({
           client_city: client.billingCity || '',
           client_country: client.billingCountry || '',
           client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
+          provider_name: provider?.name || '',
+          provider_legal: provider?.legalName || '',
+          provider_address: provider?.address || '',
+          provider_city: provider?.city || '',
+          provider_siret: provider?.siret || '',
+          provider_email: provider?.email || '',
+          provider_phone: provider?.phone || '',
+          bank_name: provider?.bankName || '',
+          iban: provider?.iban || '',
+          bic: provider?.bic || '',
         };
-
-        const logoUrl = provider.logoUrl || undefined;
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
 
