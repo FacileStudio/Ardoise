@@ -18,7 +18,7 @@ import {
 import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
 
-// Version: 1.1.5 - Fixed validation logic for documents
+// Version: 1.2.0 - Simplified document schema (fetch client/provider from IDs only)
 const app = new Hono();
 
 app.onError((err, c) => {

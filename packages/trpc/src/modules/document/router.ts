@@ -86,16 +86,39 @@ export const documentRouter = router({
     .input(DocumentDataSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        let logoUrl: string | undefined;
-        if (input.providerId) {
-          const provider = await ctx.db.provider.findUnique({
-            where: { id: input.providerId },
-            select: { logoUrl: true },
-          });
-          logoUrl = provider?.logoUrl || undefined;
+        const client = await ctx.db.client.findUnique({
+          where: { id: input.clientId },
+        });
+        if (!client) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        const pdfBuffer = await generateDocument(input, logoUrl);
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+
+        const documentData = {
+          ...input,
+          client_name: client.companyName,
+          client_address: client.billingAddress || '',
+          client_city: client.billingCity || '',
+          client_country: client.billingCountry || '',
+          client_siret: client.siret || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+        };
+
+        const logoUrl = provider.logoUrl || undefined;
+
+        const pdfBuffer = await generateDocument(documentData, logoUrl);
 
         const fileName = `${input.type}_${input.invoice_number || input.quote_number || input.contract_reference || 'document'}.pdf`;
 
@@ -114,19 +137,19 @@ export const documentRouter = router({
             invoiceNumber: input.invoice_number,
             quoteNumber: input.quote_number,
             contractRef: input.contract_reference,
-            clientName: input.client_name,
-            clientSiret: input.client_siret,
-            clientAddress: input.client_address,
-            clientCity: input.client_city,
-            clientCountry: input.client_country,
+            clientName: documentData.client_name,
+            clientSiret: documentData.client_siret,
+            clientAddress: documentData.client_address,
+            clientCity: documentData.client_city,
+            clientCountry: documentData.client_country,
             providerId: input.providerId,
-            providerName: input.provider_name,
-            providerLegal: input.provider_legal,
-            providerSiret: input.provider_siret,
-            providerAddress: input.provider_address,
-            providerCity: input.provider_city,
-            providerEmail: input.provider_email,
-            providerPhone: input.provider_phone,
+            providerName: documentData.provider_name,
+            providerLegal: documentData.provider_legal,
+            providerSiret: documentData.provider_siret,
+            providerAddress: documentData.provider_address,
+            providerCity: documentData.provider_city,
+            providerEmail: documentData.provider_email,
+            providerPhone: documentData.provider_phone,
             items: input.items,
             subtotal,
             tva,
@@ -173,19 +196,42 @@ export const documentRouter = router({
     .input(DocumentDataSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        let logoUrl: string | undefined;
-        if (input.providerId) {
-          const provider = await ctx.db.provider.findUnique({
-            where: { id: input.providerId },
-            select: { logoUrl: true },
-          });
-          logoUrl = provider?.logoUrl || undefined;
+        const client = await ctx.db.client.findUnique({
+          where: { id: input.clientId },
+        });
+        if (!client) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        const pdfBuffer = await generateDocument(input, logoUrl);
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+
+        const documentData = {
+          ...input,
+          client_name: client.companyName,
+          client_address: client.billingAddress || '',
+          client_city: client.billingCity || '',
+          client_country: client.billingCountry || '',
+          client_siret: client.siret || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+        };
+
+        const logoUrl = provider.logoUrl || undefined;
+
+        const pdfBuffer = await generateDocument(documentData, logoUrl);
         return {
           pdf: pdfBuffer.toString('base64'),
-          typstContent: generateTypstContent(input)
+          typstContent: generateTypstContent(documentData)
         };
       } catch (error: any) {
         throw new TRPCError({
@@ -199,16 +245,39 @@ export const documentRouter = router({
     .input(DocumentDataSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        let logoUrl: string | undefined;
-        if (input.providerId) {
-          const provider = await ctx.db.provider.findUnique({
-            where: { id: input.providerId },
-            select: { logoUrl: true },
-          });
-          logoUrl = provider?.logoUrl || undefined;
+        const client = await ctx.db.client.findUnique({
+          where: { id: input.clientId },
+        });
+        if (!client) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        const pdfBuffer = await generateDocument(input, logoUrl);
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+        }
+
+        const documentData = {
+          ...input,
+          client_name: client.companyName,
+          client_address: client.billingAddress || '',
+          client_city: client.billingCity || '',
+          client_country: client.billingCountry || '',
+          client_siret: client.siret || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+        };
+
+        const logoUrl = provider.logoUrl || undefined;
+
+        const pdfBuffer = await generateDocument(documentData, logoUrl);
 
         const fileName = `${input.type}_${input.invoice_number || input.quote_number || input.contract_reference || 'document'}.pdf`;
 

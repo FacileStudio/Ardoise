@@ -53,21 +53,8 @@ export const DocumentDataSchema = z.object({
   contract_reference: z.string().optional(),
   contract_date: z.string().optional(),
 
-  client_name: z.string(),
-  client_address: z.string(),
-  client_city: z.string(),
-  client_country: z.string(),
-  client_siret: z.string().optional().default(''),
-
-  providerId: z.string().optional(),
-
-  provider_name: z.string(),
-  provider_legal: z.string().optional(),
-  provider_address: z.string(),
-  provider_city: z.string(),
-  provider_siret: z.string(),
-  provider_email: z.string().email(),
-  provider_phone: z.string(),
+  clientId: z.string(),
+  providerId: z.string(),
 
   bank_name: z.string().optional(),
   iban: z.string().optional(),
