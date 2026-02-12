@@ -25,7 +25,8 @@
 
   <nav class="flex-1 space-y-2">
     {#each items as item (item.href)}
-      <!-- eslint-disable svelte/no-navigation-without-resolve -->
+      <!-- svelte-ignore a11y-missing-attribute -->
+      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
       <a
         href={resolvePath(item.href)}
         data-sveltekit-reload
@@ -34,7 +35,6 @@
           ? 'bg-[#291334] text-white shadow-lg shadow-[#291334]/20'
           : 'text-[#291334]/70 hover:bg-[#291334]/5 hover:text-[#291334]'}"
       >
-      <!-- eslint-enable svelte/no-navigation-without-resolve -->
         <iconify-icon
           icon={item.icon}
           width="22"
@@ -75,9 +75,8 @@
         </div>
       </div>
 
-      <!-- eslint-disable svelte/no-navigation-without-resolve -->
+      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
       <a href={resolvePath('/app/profile')} data-sveltekit-reload class="absolute inset-0 z-10" aria-label="View Profile"></a>
-      <!-- eslint-enable svelte/no-navigation-without-resolve -->
     </div>
   </div>
 </aside>
