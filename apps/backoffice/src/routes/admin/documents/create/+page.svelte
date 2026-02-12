@@ -87,8 +87,10 @@
 
 	let newItem = $state({ description: '', quantity: 1, unit: 'jour', price: 0 });
 	let newProvider = $state({ name: '', role: '', address: '', city: '', siret: '', email: '', amount: 0 });
+	let selectedProviderForCotraitance = $state('');
 	let newFeature = $state({ title: '', desc: '' });
 	let newPaymentProvider = $state({ name: '', iban: '', bic: '', amount_to_pay: 0 });
+	let selectedProviderForPayment = $state('');
 
 	onMount(async () => {
 		await Promise.all([loadDocumentTypes(), loadClients(), loadProviders()]);
@@ -131,6 +133,33 @@
 			formData.provider_siret = '';
 			formData.provider_email = 'contact@collectifweb.com';
 			formData.provider_phone = '';
+		}
+	});
+
+	$effect(() => {
+		if (selectedProviderForCotraitance) {
+			const provider = providers.find((p) => p.id === selectedProviderForCotraitance);
+			if (provider) {
+				newProvider.name = provider.name;
+				newProvider.role = '';
+				newProvider.address = provider.address || '';
+				newProvider.city = provider.city || '';
+				newProvider.siret = provider.siret || '';
+				newProvider.email = provider.email || '';
+				newProvider.amount = 0;
+			}
+		}
+	});
+
+	$effect(() => {
+		if (selectedProviderForPayment) {
+			const provider = providers.find((p) => p.id === selectedProviderForPayment);
+			if (provider) {
+				newPaymentProvider.name = provider.name;
+				newPaymentProvider.iban = provider.iban || '';
+				newPaymentProvider.bic = provider.bic || '';
+				newPaymentProvider.amount_to_pay = 0;
+			}
 		}
 	});
 
@@ -311,6 +340,7 @@
 		}
 		formData.providers = [...formData.providers, { ...newProvider }];
 		newProvider = { name: '', role: '', address: '', city: '', siret: '', email: '', amount: 0 };
+		selectedProviderForCotraitance = '';
 	}
 
 	function removeProvider(index: number) {
@@ -337,6 +367,7 @@
 		}
 		formData.payment_providers = [...formData.payment_providers, { ...newPaymentProvider }];
 		newPaymentProvider = { name: '', iban: '', bic: '', amount_to_pay: 0 };
+		selectedProviderForPayment = '';
 	}
 
 	function removePaymentProvider(index: number) {
@@ -632,33 +663,51 @@
 							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
 							Ajouter un prestataire
 						</h3>
+
+						<!-- Select Provider -->
+						<div>
+							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Sélectionner un prestataire
+							</label>
+							<select
+								bind:value={selectedProviderForCotraitance}
+								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
+							>
+								<option value="">-- Choisir depuis la liste --</option>
+								{#each providers as provider (provider.id)}
+									<option value={provider.id}>{provider.name}</option>
+								{/each}
+							</select>
+						</div>
+
 						<div class="grid grid-cols-2 gap-4">
 							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Nom</label>
-								<Input bind:value={newProvider.name} placeholder="Ex: Saravenpi SASU" />
+								<Input bind:value={newProvider.name} placeholder="Ex: Saravenpi SASU" readonly={!!selectedProviderForCotraitance} />
 							</div>
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Rôle</label>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Rôle *</label>
 								<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
 							</div>
 							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Adresse</label>
-								<Input bind:value={newProvider.address} placeholder="Ex: 123 rue de la Paix" />
+								<Input bind:value={newProvider.address} placeholder="Ex: 123 rue de la Paix" readonly={!!selectedProviderForCotraitance} />
 							</div>
 							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Ville</label>
-								<Input bind:value={newProvider.city} placeholder="Ex: Paris" />
+								<Input bind:value={newProvider.city} placeholder="Ex: Paris" readonly={!!selectedProviderForCotraitance} />
 							</div>
 							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">SIRET</label>
-								<Input bind:value={newProvider.siret} placeholder="Ex: 123 456 789 00001" />
+								<Input bind:value={newProvider.siret} placeholder="Ex: 123 456 789 00001" readonly={!!selectedProviderForCotraitance} />
 							</div>
 							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Email</label>
-								<Input type="email" bind:value={newProvider.email} placeholder="Ex: contact@example.com" />
+								<Input type="email" bind:value={newProvider.email} placeholder="Ex: contact@example.com" readonly={!!selectedProviderForCotraitance} />
 							</div>
 							<div class="col-span-2">
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant HT (€)</label>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant HT (€) *</label>
 								<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
 							</div>
 						</div>
@@ -893,21 +942,39 @@
 							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
 							Ajouter un prestataire
 						</h3>
+
+						<!-- Select Provider -->
+						<div>
+							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Sélectionner un prestataire
+							</label>
+							<select
+								bind:value={selectedProviderForPayment}
+								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
+							>
+								<option value="">-- Choisir depuis la liste --</option>
+								{#each providers as provider (provider.id)}
+									<option value={provider.id}>{provider.name}</option>
+								{/each}
+							</select>
+						</div>
+
 						<div class="grid grid-cols-2 gap-4">
 							<div class="col-span-2">
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Nom du bénéficiaire</label>
-								<Input bind:value={newPaymentProvider.name} placeholder="Ex: Saravenpi SASU" />
+								<Input bind:value={newPaymentProvider.name} placeholder="Ex: Saravenpi SASU" readonly={!!selectedProviderForPayment} />
 							</div>
 							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">IBAN</label>
-								<Input bind:value={newPaymentProvider.iban} placeholder="Ex: FR76 1234 5678 9012 3456 7890 123" />
+								<Input bind:value={newPaymentProvider.iban} placeholder="Ex: FR76 1234 5678 9012 3456 7890 123" readonly={!!selectedProviderForPayment} />
 							</div>
 							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">BIC</label>
-								<Input bind:value={newPaymentProvider.bic} placeholder="Ex: BNPAFRPP" />
+								<Input bind:value={newPaymentProvider.bic} placeholder="Ex: BNPAFRPP" readonly={!!selectedProviderForPayment} />
 							</div>
 							<div class="col-span-2">
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT)</label>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT) *</label>
 								<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
 							</div>
 						</div>
