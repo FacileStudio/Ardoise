@@ -56,6 +56,27 @@ export const DocumentDataSchema = z.object({
   clientId: z.string(),
   providerId: z.string().optional(),
 
+  // Client data (populated by backend after fetching from DB)
+  client_name: z.string().optional(),
+  client_address: z.string().optional(),
+  client_city: z.string().optional(),
+  client_country: z.string().optional(),
+  client_siret: z.string().optional(),
+
+  // Provider data (populated by backend after fetching from DB)
+  provider_name: z.string().optional(),
+  provider_legal: z.string().optional(),
+  provider_address: z.string().optional(),
+  provider_city: z.string().optional(),
+  provider_siret: z.string().optional(),
+  provider_email: z.string().optional(),
+  provider_phone: z.string().optional(),
+
+  // Bank data (populated by backend after fetching from DB)
+  bank_name: z.string().optional(),
+  iban: z.string().optional(),
+  bic: z.string().optional(),
+
   items: z.array(DocumentItemSchema).default([]),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
