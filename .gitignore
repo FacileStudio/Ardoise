@@ -43,3 +43,4 @@ coverage
 *.swo
 *~
 .cache
+.env.turbo
