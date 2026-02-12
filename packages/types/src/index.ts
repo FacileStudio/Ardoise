@@ -1,5 +1,4 @@
 export type {
-  Subscription,
   User,
   Session,
   Verification,
@@ -9,6 +8,8 @@ export type {
   Client,
   Payment,
   Settings,
+  Document,
+  Provider,
 } from '@repo/database';
 
 export enum UserRole {
