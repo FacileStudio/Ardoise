@@ -83,7 +83,7 @@ app.all(
   })
 );
 
-app.get('/', (c) => c.json({ message: 'Charles API', version: '1.0.0' }));
+app.get('/', (c) => c.json({ message: 'Charles API', version: '1.0.1' }));
 
 const port = Number(env.PORT);
 

@@ -8,6 +8,7 @@
 	import 'iconify-icon';
 
 	let submitting = $state(false);
+	let errors = $state<Record<string, string>>({});
 
 	let formData = $state({
 		email: '',
@@ -18,40 +19,71 @@
 		role: 'USER' as 'USER' | 'ADMIN',
 	});
 
-	function validateForm(): string | null {
-		if (!formData.email.trim()) return 'L\'email est requis';
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Email invalide';
-		if (!formData.password) return 'Le mot de passe est requis';
-		if (formData.password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
-		if (formData.password !== formData.confirmPassword) return 'Les mots de passe ne correspondent pas';
-		if (!formData.firstName.trim()) return 'Le prénom est requis';
-		if (!formData.lastName.trim()) return 'Le nom est requis';
-		return null;
+	function validateForm(): boolean {
+		errors = {};
+
+		if (!formData.email.trim()) {
+			errors.email = 'L\'email est requis';
+		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+			errors.email = 'Format d\'email invalide (ex: user@example.com)';
+		}
+
+		if (!formData.firstName.trim()) {
+			errors.firstName = 'Le prénom est requis';
+		}
+
+		if (!formData.lastName.trim()) {
+			errors.lastName = 'Le nom est requis';
+		}
+
+		if (!formData.password) {
+			errors.password = 'Le mot de passe est requis';
+		} else if (formData.password.length < 8) {
+			errors.password = 'Le mot de passe doit contenir au moins 8 caractères';
+		}
+
+		if (!formData.confirmPassword) {
+			errors.confirmPassword = 'Veuillez confirmer le mot de passe';
+		} else if (formData.password !== formData.confirmPassword) {
+			errors.confirmPassword = 'Les mots de passe ne correspondent pas';
+		}
+
+		return Object.keys(errors).length === 0;
 	}
 
 	async function handleCreate() {
-		const validationError = validateForm();
-		if (validationError) {
-			toast.push(validationError, 'error');
+		if (!validateForm()) {
+			toast.push('Veuillez corriger les erreurs dans le formulaire', 'error');
 			return;
 		}
 
 		try {
 			submitting = true;
 			await trpc.user.create.mutate({
-				email: formData.email,
+				email: formData.email.trim(),
 				password: formData.password,
-				firstName: formData.firstName,
-				lastName: formData.lastName,
+				firstName: formData.firstName.trim(),
+				lastName: formData.lastName.trim(),
 				role: formData.role,
 			});
 
-			toast.push('Utilisateur créé avec succès!', 'success');
+			toast.push('✅ Utilisateur créé avec succès!', 'success');
 			goto('/admin/users');
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create user');
-			const message = err.message || 'Erreur lors de la création';
-			toast.push(message, 'error');
+
+			let message = 'Erreur lors de la création de l\'utilisateur';
+
+			if (err.message?.includes('already exists') || err.message?.includes('CONFLICT')) {
+				message = 'Un utilisateur avec cet email existe déjà';
+				errors.email = message;
+			} else if (err.message?.includes('NOT_FOUND')) {
+				message = 'Endpoint non trouvé - le backend doit être redéployé';
+			} else if (err.message) {
+				message = err.message;
+			}
+
+			toast.push(`❌ ${message}`, 'error');
 		} finally {
 			submitting = false;
 		}
@@ -93,9 +125,15 @@
 						<input
 							type="email"
 							bind:value={formData.email}
-							class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+							class="w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all {errors.email ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-200 focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20'}"
 							placeholder="user@example.com"
 						/>
+						{#if errors.email}
+							<p class="text-red-600 text-sm mt-1 font-medium flex items-center gap-1">
+								<iconify-icon icon="solar:danger-circle-bold" width="16"></iconify-icon>
+								{errors.email}
+							</p>
+						{/if}
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
@@ -107,9 +145,15 @@
 							<input
 								type="text"
 								bind:value={formData.firstName}
-								class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+								class="w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all {errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-200 focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20'}"
 								placeholder="John"
 							/>
+							{#if errors.firstName}
+								<p class="text-red-600 text-sm mt-1 font-medium flex items-center gap-1">
+									<iconify-icon icon="solar:danger-circle-bold" width="16"></iconify-icon>
+									{errors.firstName}
+								</p>
+							{/if}
 						</div>
 
 						<div>
@@ -120,9 +164,15 @@
 							<input
 								type="text"
 								bind:value={formData.lastName}
-								class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+								class="w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all {errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-200 focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20'}"
 								placeholder="Doe"
 							/>
+							{#if errors.lastName}
+								<p class="text-red-600 text-sm mt-1 font-medium flex items-center gap-1">
+									<iconify-icon icon="solar:danger-circle-bold" width="16"></iconify-icon>
+									{errors.lastName}
+								</p>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -143,9 +193,15 @@
 						<input
 							type="password"
 							bind:value={formData.password}
-							class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+							class="w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all {errors.password ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-200 focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20'}"
 							placeholder="Minimum 8 caractères"
 						/>
+						{#if errors.password}
+							<p class="text-red-600 text-sm mt-1 font-medium flex items-center gap-1">
+								<iconify-icon icon="solar:danger-circle-bold" width="16"></iconify-icon>
+								{errors.password}
+							</p>
+						{/if}
 					</div>
 
 					<div>
@@ -156,9 +212,15 @@
 						<input
 							type="password"
 							bind:value={formData.confirmPassword}
-							class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+							class="w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all {errors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-200 focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20'}"
 							placeholder="Confirmez le mot de passe"
 						/>
+						{#if errors.confirmPassword}
+							<p class="text-red-600 text-sm mt-1 font-medium flex items-center gap-1">
+								<iconify-icon icon="solar:danger-circle-bold" width="16"></iconify-icon>
+								{errors.confirmPassword}
+							</p>
+						{/if}
 					</div>
 				</div>
 			</div>
