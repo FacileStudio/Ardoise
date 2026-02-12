@@ -56,10 +56,6 @@ export const DocumentDataSchema = z.object({
   clientId: z.string(),
   providerId: z.string(),
 
-  bank_name: z.string().optional(),
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-
   items: z.array(DocumentItemSchema).default([]),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),

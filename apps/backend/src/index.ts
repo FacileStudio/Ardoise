@@ -18,7 +18,7 @@ import {
 import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
 
-// Version: 1.2.0 - Simplified document schema (fetch client/provider from IDs only)
+// Version: 1.2.1 - Simplified document schema (fetch all data from IDs including bank info)
 const app = new Hono();
 
 app.onError((err, c) => {

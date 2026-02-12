@@ -114,6 +114,9 @@ export const documentRouter = router({
           provider_siret: provider.siret || '',
           provider_email: provider.email || '',
           provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
         };
 
         const logoUrl = provider.logoUrl || undefined;
@@ -224,6 +227,9 @@ export const documentRouter = router({
           provider_siret: provider.siret || '',
           provider_email: provider.email || '',
           provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
         };
 
         const logoUrl = provider.logoUrl || undefined;
@@ -273,6 +279,9 @@ export const documentRouter = router({
           provider_siret: provider.siret || '',
           provider_email: provider.email || '',
           provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
         };
 
         const logoUrl = provider.logoUrl || undefined;
