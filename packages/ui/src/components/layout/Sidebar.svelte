@@ -1,3 +1,4 @@
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <script lang="ts">
   import 'iconify-icon';
   export let items: { label: string; icon: string; href: string }[] = [];
@@ -25,8 +26,6 @@
 
   <nav class="flex-1 space-y-2">
     {#each items as item (item.href)}
-      <!-- svelte-ignore a11y-missing-attribute -->
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
       <a
         href={resolvePath(item.href)}
         data-sveltekit-reload
@@ -75,7 +74,6 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
       <a href={resolvePath('/app/profile')} data-sveltekit-reload class="absolute inset-0 z-10" aria-label="View Profile"></a>
     </div>
   </div>
