@@ -56,7 +56,8 @@ export async function bootstrapAdmin(
     console.log('🎯 Role:', admin.role);
   } catch (error: any) {
     if (error?.code === 'P2021' || error?.meta?.driverAdapterError === 'TableDoesNotExist') {
-      console.log('⏭️  Skipping admin bootstrap: Database tables not created yet (run migrations first)');
+      console.log('⏭️  Skipping admin bootstrap: Database tables not created yet');
+      console.log('📝 This is expected on first deployment - migrations will create tables first');
       return;
     }
     console.error('❌ Failed to bootstrap admin user:', error);
