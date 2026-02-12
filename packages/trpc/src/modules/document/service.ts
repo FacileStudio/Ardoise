@@ -114,6 +114,59 @@ export const DocumentDataSchema = z.object({
 
 export type DocumentData = z.infer<typeof DocumentDataSchema>;
 
+export const ContratPrestationInputSchema = z.object({
+  contract_reference: z.string().min(1, "La référence du contrat est requise"),
+  contract_date: z.string().min(1, "La date du contrat est requise"),
+  quote_number: z.string().optional(),
+  clientId: z.string().min(1, "Le client est requis"),
+  providerId: z.string().min(1, "Le prestataire est requis"),
+  items: z.array(DocumentItemSchema).default([]),
+  tva_rate: z.number().nonnegative().default(20),
+});
+
+export type ContratPrestationInput = z.infer<typeof ContratPrestationInputSchema>;
+
+export const ContratMaintenanceInputSchema = z.object({
+  contract_reference: z.string().min(1, "La référence du contrat est requise"),
+  contract_date: z.string().min(1, "La date du contrat est requise"),
+  maintenance_period: z.string().min(1, "La période de maintenance est requise"),
+  clientId: z.string().min(1, "Le client est requis"),
+  providerId: z.string().min(1, "Le prestataire est requis"),
+  items: z.array(DocumentItemSchema).default([]),
+  tva_rate: z.number().nonnegative().default(20),
+});
+
+export type ContratMaintenanceInput = z.infer<typeof ContratMaintenanceInputSchema>;
+
+export const BackContractuelInputSchema = z.object({
+  contract_reference: z.string().min(1, "La référence du contrat est requise"),
+  contract_date: z.string().min(1, "La date du contrat est requise"),
+  project_name: z.string().min(1, "Le nom du projet est requis"),
+  valid_until: z.string().min(1, "La date de validité est requise"),
+  clientId: z.string().min(1, "Le client est requis"),
+  providerId: z.string().optional(),
+  providers: z.array(ProviderSchema).min(1, "Au moins un sous-traitant est requis"),
+  features: z.array(FeatureSchema).default([]),
+  items: z.array(DocumentItemSchema).default([]),
+  tva_rate: z.number().nonnegative().default(20),
+});
+
+export type BackContractuelInput = z.infer<typeof BackContractuelInputSchema>;
+
+export const AppelDeFondsInputSchema = z.object({
+  global_invoice_ref: z.string().min(1, "La référence de la facture globale est requise"),
+  invoice_date: z.string().min(1, "La date de facture est requise"),
+  due_date: z.string().min(1, "La date d'échéance est requise"),
+  project_step: z.string().min(1, "L'étape du projet est requise"),
+  project_name: z.string().min(1, "Le nom du projet est requis"),
+  clientId: z.string().min(1, "Le client est requis"),
+  providerId: z.string().optional(),
+  payment_providers: z.array(PaymentProviderSchema).min(1, "Au moins un prestataire de paiement est requis"),
+  tva_rate: z.number().nonnegative().default(20),
+});
+
+export type AppelDeFondsInput = z.infer<typeof AppelDeFondsInputSchema>;
+
 const TEMPLATES: Record<DocType, string> = {
   prestation,
   maintenance,

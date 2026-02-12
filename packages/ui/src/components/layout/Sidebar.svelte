@@ -12,13 +12,13 @@
   class="w-72 h-screen sticky top-0 bg-[#FAF7F5] border-r border-[#291334]/10 p-8 flex flex-col"
 >
   <div class="mb-12 px-2">
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
       {#if showLogo}
         <div class="w-11 h-11 min-w-[2.75rem] min-h-[2.75rem] max-w-[2.75rem] max-h-[2.75rem] flex-shrink-0 overflow-hidden">
           <img src={logoPath} alt="Charles Logo" class="w-full h-full object-contain" />
         </div>
       {/if}
-      <h1 class="text-2xl font-black tracking-tight leading-none text-[#291334]">
+      <h1 class="text-3xl font-black tracking-tight leading-none text-[#291334]">
         Charles
       </h1>
     </div>
