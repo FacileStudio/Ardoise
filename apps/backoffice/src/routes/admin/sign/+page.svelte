@@ -2,7 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Spinner, SearchInput, Badge, EmptyState, Button } from '@repo/ui';
+	import { Spinner, SearchInput, Badge, EmptyState } from '@repo/ui';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
@@ -63,7 +63,10 @@
 	}
 
 	async function fetchSubmissions() {
-		if (!isConfigured) return;
+		if (!isConfigured) {
+			pageLoading = false;
+			return;
+		}
 
 		pageLoading = true;
 		try {
@@ -159,14 +162,14 @@
 					Gérez les demandes de signature de documents
 				</p>
 			</div>
-			<Button
-				intent="primary"
+			<button
 				onclick={() => goto('/admin/sign/create')}
 				disabled={!isConfigured}
+				class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 			>
-				<iconify-icon icon="solar:add-circle-bold" width="20"></iconify-icon>
+				<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
 				Nouvelle signature
-			</Button>
+			</button>
 		</div>
 
 		{#if !isConfigured}
@@ -227,7 +230,7 @@
 						<p class="text-3xl font-black text-red-600">{stats.expired}</p>
 					</div>
 					<div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-						<iconify-icon icon="solar:close-circle-bold" width="24" class="text-red-600"></iconify-icon>
+						<iconify-icon icon="solar:hourglass-bold-duotone" width="24" class="text-red-600"></iconify-icon>
 					</div>
 				</div>
 			</div>

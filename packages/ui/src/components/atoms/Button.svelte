@@ -9,7 +9,7 @@
                 intent: {
                     primary: "bg-slate-900 text-white hover:bg-indigo-600 shadow-lg shadow-slate-200",
                     secondary: "bg-white border-2 border-slate-100 text-slate-600 hover:border-indigo-100 hover:text-indigo-600",
-                    danger: "bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-200",
+                    danger: "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-200",
                     ghost: "bg-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-900"
                 },
                 size: {

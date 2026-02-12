@@ -34,7 +34,7 @@
       }
 
       authStore.setAuth({ token }, user as SessionUser);
-      await goto(resolve('/admin/contacts'));
+      await goto(resolve('/admin'));
     } catch (err) {
       logger.error({ err }, 'Login error');
       error = err instanceof Error ? err.message : 'Échec de l\'authentification.';

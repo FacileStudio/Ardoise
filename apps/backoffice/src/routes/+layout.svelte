@@ -26,7 +26,7 @@
         goto(resolve('/'));
 
       if (path === '/' && user)
-        goto(resolve('/admin/contacts'));
+        goto(resolve('/admin'));
     }
   });
 </script>
