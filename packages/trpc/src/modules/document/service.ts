@@ -9,6 +9,8 @@ import {
 } from '@repo/typst';
 import { z } from 'zod';
 
+// Force rebuild - validation fix for contrat_maintenance
+
 export const DocTypeSchema = z.enum(['prestation', 'maintenance', 'contrat_prestation', 'contrat_maintenance', 'back_contractuel', 'appel_de_fonds']);
 export type DocType = z.infer<typeof DocTypeSchema>;
 
