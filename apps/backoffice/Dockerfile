@@ -22,6 +22,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3002
 
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 backoffice
 
