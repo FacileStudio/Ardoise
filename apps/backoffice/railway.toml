@@ -7,7 +7,6 @@ TURBO_TOKEN = "$TURBO_TOKEN"
 TURBO_TEAM = "$TURBO_TEAM"
 
 [deploy]
-startCommand = "bun run apps/backoffice/build"
 healthcheckPath = "/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
