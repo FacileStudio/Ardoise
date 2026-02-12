@@ -16,6 +16,7 @@ import {
   createReadinessHandler,
 } from './handlers/health';
 
+
 const app = new Hono();
 
 const authManager = new AuthManager({
