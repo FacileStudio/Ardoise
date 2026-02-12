@@ -86,6 +86,9 @@
 	});
 
 	let newItem = $state({ description: '', quantity: 1, unit: 'jour', price: 0 });
+	let newProvider = $state({ name: '', role: '', address: '', city: '', siret: '', email: '', amount: 0 });
+	let newFeature = $state({ title: '', desc: '' });
+	let newPaymentProvider = $state({ name: '', iban: '', bic: '', amount_to_pay: 0 });
 
 	onMount(async () => {
 		await Promise.all([loadDocumentTypes(), loadClients(), loadProviders()]);
@@ -121,6 +124,13 @@
 				formData.bic = provider.bic || '';
 				formData.tva_rate = provider.tvaRate;
 			}
+		} else if (formData.type === 'back_contractuel' || formData.type === 'appel_de_fonds') {
+			formData.provider_name = 'Collectif Web';
+			formData.provider_address = '';
+			formData.provider_city = '';
+			formData.provider_siret = '';
+			formData.provider_email = 'contact@collectifweb.com';
+			formData.provider_phone = '';
 		}
 	});
 
@@ -157,6 +167,41 @@
 	function validateForm(): string | null {
 		if (!selectedClientId) {
 			return 'Veuillez sélectionner un client';
+		}
+
+		if (formData.type === 'back_contractuel') {
+			if (!formData.project_name) {
+				return 'Veuillez saisir un nom de projet';
+			}
+			if (!formData.contract_reference) {
+				return 'Veuillez saisir une référence de contrat';
+			}
+			if (!formData.providers || formData.providers.length === 0) {
+				return 'Veuillez ajouter au moins un prestataire pour la co-traitance';
+			}
+			if (!formData.features || formData.features.length === 0) {
+				return 'Veuillez ajouter au moins une feature au périmètre de mission';
+			}
+			if (!formData.items || formData.items.length === 0) {
+				return 'Veuillez ajouter au moins un item de facturation';
+			}
+			return null;
+		}
+
+		if (formData.type === 'appel_de_fonds') {
+			if (!formData.global_invoice_ref) {
+				return 'Veuillez saisir une référence globale';
+			}
+			if (!formData.project_step) {
+				return 'Veuillez saisir l\'étape du projet (ex: Acompte 30%)';
+			}
+			if (!formData.project_name) {
+				return 'Veuillez saisir un nom de projet';
+			}
+			if (!formData.payment_providers || formData.payment_providers.length === 0) {
+				return 'Veuillez ajouter au moins un prestataire à payer';
+			}
+			return null;
 		}
 
 		if (!selectedProviderId) {
@@ -257,6 +302,45 @@
 
 	function removeItem(index: number) {
 		formData.items = formData.items.filter((_: any, i: number) => i !== index);
+	}
+
+	function addProvider() {
+		if (!newProvider.name || !newProvider.role || !newProvider.siret || !newProvider.email || newProvider.amount <= 0) {
+			toast.push('Veuillez remplir tous les champs du prestataire', 'error');
+			return;
+		}
+		formData.providers = [...formData.providers, { ...newProvider }];
+		newProvider = { name: '', role: '', address: '', city: '', siret: '', email: '', amount: 0 };
+	}
+
+	function removeProvider(index: number) {
+		formData.providers = formData.providers.filter((_: any, i: number) => i !== index);
+	}
+
+	function addFeature() {
+		if (!newFeature.title || !newFeature.desc) {
+			toast.push('Veuillez remplir tous les champs de la feature', 'error');
+			return;
+		}
+		formData.features = [...formData.features, { ...newFeature }];
+		newFeature = { title: '', desc: '' };
+	}
+
+	function removeFeature(index: number) {
+		formData.features = formData.features.filter((_: any, i: number) => i !== index);
+	}
+
+	function addPaymentProvider() {
+		if (!newPaymentProvider.name || !newPaymentProvider.iban || !newPaymentProvider.bic || newPaymentProvider.amount_to_pay <= 0) {
+			toast.push('Veuillez remplir tous les champs du prestataire de paiement', 'error');
+			return;
+		}
+		formData.payment_providers = [...formData.payment_providers, { ...newPaymentProvider }];
+		newPaymentProvider = { name: '', iban: '', bic: '', amount_to_pay: 0 };
+	}
+
+	function removePaymentProvider(index: number) {
+		formData.payment_providers = formData.payment_providers.filter((_: any, i: number) => i !== index);
 	}
 
 	function base64ToBlob(base64: string, contentType: string): Blob {
@@ -379,6 +463,39 @@
 							</label>
 							<Input type="date" bind:value={formData.validity_date} />
 						</div>
+					{:else if formData.type === 'back_contractuel'}
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
+								></iconify-icon>
+								Référence Contrat
+							</label>
+							<Input bind:value={formData.contract_reference} />
+						</div>
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
+								></iconify-icon>
+								Date Contrat
+							</label>
+							<Input type="date" bind:value={formData.contract_date} />
+						</div>
+					{:else if formData.type === 'appel_de_fonds'}
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
+								></iconify-icon>
+								Date Facture
+							</label>
+							<Input type="date" bind:value={formData.invoice_date} />
+						</div>
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:alarm-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Date Échéance
+							</label>
+							<Input type="date" bind:value={formData.due_date} />
+						</div>
 					{:else}
 						<div>
 							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
@@ -434,42 +551,413 @@
 				{/if}
 			</div>
 
-			<div class="border-t border-slate-200"></div>
+			{#if formData.type !== 'back_contractuel' && formData.type !== 'appel_de_fonds'}
+				<div class="border-t border-slate-200"></div>
 
-			<!-- Provider Section -->
-			<div class="space-y-4">
-				<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-					<iconify-icon icon="solar:buildings-2-bold" width="24" class="text-[#291334]"
-					></iconify-icon>
-					Prestataire
-				</h2>
-				<select
-					bind:value={selectedProviderId}
-					class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] font-bold transition-all text-lg"
-				>
-					<option value="">-- Sélectionner un prestataire --</option>
-					{#each providers as provider (provider.id)}
-						<option value={provider.id}>{provider.name}</option>
-					{/each}
-				</select>
-				{#if selectedProviderId}
-					<div
-						transition:fly={{ y: -10, duration: 200 }}
-						class="p-4 bg-purple-50 border-2 border-purple-200 rounded-xl flex items-center gap-3"
-					>
-						<iconify-icon icon="solar:check-circle-bold" width="24" class="text-purple-600"
+				<!-- Provider Section -->
+				<div class="space-y-4">
+					<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+						<iconify-icon icon="solar:buildings-2-bold" width="24" class="text-[#291334]"
 						></iconify-icon>
-						<div>
-							<div class="font-black text-purple-900">{formData.provider_name}</div>
-							<div class="text-sm text-purple-700">
-								TVA: {formData.tva_rate}% • {formData.provider_email}
+						Prestataire
+					</h2>
+					<select
+						bind:value={selectedProviderId}
+						class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] font-bold transition-all text-lg"
+					>
+						<option value="">-- Sélectionner un prestataire --</option>
+						{#each providers as provider (provider.id)}
+							<option value={provider.id}>{provider.name}</option>
+						{/each}
+					</select>
+					{#if selectedProviderId}
+						<div
+							transition:fly={{ y: -10, duration: 200 }}
+							class="p-4 bg-purple-50 border-2 border-purple-200 rounded-xl flex items-center gap-3"
+						>
+							<iconify-icon icon="solar:check-circle-bold" width="24" class="text-purple-600"
+							></iconify-icon>
+							<div>
+								<div class="font-black text-purple-900">{formData.provider_name}</div>
+								<div class="text-sm text-purple-700">
+									TVA: {formData.tva_rate}% • {formData.provider_email}
+								</div>
 							</div>
 						</div>
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
+			{/if}
 
-			{#if formData.type === 'prestation' || formData.type === 'maintenance'}
+			{#if formData.type === 'back_contractuel'}
+				<div class="border-t border-slate-200"></div>
+
+				<!-- Back Contractuel Specific Fields -->
+				<div class="space-y-6">
+					<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+						<iconify-icon icon="solar:case-round-bold" width="24" class="text-[#291334]"></iconify-icon>
+						Informations du projet
+					</h2>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Nom du projet
+							</label>
+							<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
+						</div>
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Date de validité
+							</label>
+							<Input type="date" bind:value={formData.valid_until} />
+						</div>
+					</div>
+				</div>
+
+				<div class="border-t border-slate-200"></div>
+
+				<!-- Prestataires Co-traitance -->
+				<div class="space-y-6">
+					<div class="flex justify-between items-center">
+						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+							<iconify-icon icon="solar:users-group-two-rounded-bold" width="24" class="text-[#291334]"></iconify-icon>
+							Prestataires (Co-traitance)
+						</h2>
+					</div>
+
+					<!-- Add Provider Form -->
+					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
+						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
+							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
+							Ajouter un prestataire
+						</h3>
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Nom</label>
+								<Input bind:value={newProvider.name} placeholder="Ex: Saravenpi SASU" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Rôle</label>
+								<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Adresse</label>
+								<Input bind:value={newProvider.address} placeholder="Ex: 123 rue de la Paix" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Ville</label>
+								<Input bind:value={newProvider.city} placeholder="Ex: Paris" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">SIRET</label>
+								<Input bind:value={newProvider.siret} placeholder="Ex: 123 456 789 00001" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Email</label>
+								<Input type="email" bind:value={newProvider.email} placeholder="Ex: contact@example.com" />
+							</div>
+							<div class="col-span-2">
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant HT (€)</label>
+								<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
+							</div>
+						</div>
+						<Button intent="primary" onclick={addProvider} class="w-full">
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							Ajouter ce prestataire
+						</Button>
+					</div>
+
+					<!-- Providers List -->
+					{#if formData.providers.length === 0}
+						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+							<iconify-icon icon="solar:users-group-two-rounded-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
+							<p class="text-sm text-slate-500 font-bold">Aucun prestataire ajouté</p>
+						</div>
+					{:else}
+						<div class="space-y-3">
+							{#each formData.providers as provider, i}
+								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
+									<div class="flex-1 min-w-0">
+										<div class="font-black text-base text-slate-900 mb-2">{provider.name} - {provider.role}</div>
+										<div class="text-sm text-slate-500 space-y-1">
+											<div>{provider.address}, {provider.city}</div>
+											<div>SIRET: {provider.siret} • {provider.email}</div>
+											<div class="font-black text-[#291334]">Montant: {formatCurrency(provider.amount)} HT</div>
+										</div>
+									</div>
+									<button
+										onclick={() => removeProvider(i)}
+										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
+										aria-label="Supprimer le prestataire"
+									>
+										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+
+				<div class="border-t border-slate-200"></div>
+
+				<!-- Features (Périmètre de mission) -->
+				<div class="space-y-6">
+					<div class="flex justify-between items-center">
+						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+							<iconify-icon icon="solar:checklist-bold" width="24" class="text-[#291334]"></iconify-icon>
+							Périmètre de la mission (Features)
+						</h2>
+					</div>
+
+					<!-- Add Feature Form -->
+					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
+						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
+							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
+							Ajouter une feature
+						</h3>
+						<div class="space-y-4">
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Titre</label>
+								<Input bind:value={newFeature.title} placeholder="Ex: Design UI/UX" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</label>
+								<textarea
+									bind:value={newFeature.desc}
+									rows="3"
+									placeholder="Ex: Création d'une identité visuelle moderne et responsive..."
+									class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-medium resize-none"
+								></textarea>
+							</div>
+						</div>
+						<Button intent="primary" onclick={addFeature} class="w-full">
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							Ajouter cette feature
+						</Button>
+					</div>
+
+					<!-- Features List -->
+					{#if formData.features.length === 0}
+						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+							<iconify-icon icon="solar:checklist-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
+							<p class="text-sm text-slate-500 font-bold">Aucune feature ajoutée</p>
+						</div>
+					{:else}
+						<div class="space-y-3">
+							{#each formData.features as feature, i}
+								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
+									<div class="flex-1 min-w-0">
+										<div class="font-black text-base text-slate-900 mb-2">{feature.title}</div>
+										<div class="text-sm text-slate-600">{feature.desc}</div>
+									</div>
+									<button
+										onclick={() => removeFeature(i)}
+										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
+										aria-label="Supprimer la feature"
+									>
+										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+
+				<div class="border-t border-slate-200"></div>
+
+				<!-- Items Section for back_contractuel -->
+				<div class="space-y-6">
+					<div class="flex justify-between items-center">
+						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+							<iconify-icon icon="solar:list-bold" width="24" class="text-[#291334]"></iconify-icon>
+							Items de facturation (Prestations)
+						</h2>
+					</div>
+
+					<!-- Add Item Form -->
+					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
+						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
+							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
+							Ajouter un item
+						</h3>
+						<div class="space-y-4">
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</label>
+								<textarea
+									placeholder="Ex: Développement d'un site web vitrine responsive..."
+									bind:value={newItem.description}
+									rows="3"
+									class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-medium resize-none"
+								></textarea>
+							</div>
+							<div class="grid grid-cols-3 gap-4">
+								<div>
+									<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Quantité</label>
+									<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
+								</div>
+								<div>
+									<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Unité</label>
+									<Input placeholder="jour" bind:value={newItem.unit} />
+								</div>
+								<div>
+									<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Prix HT (€)</label>
+									<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
+								</div>
+							</div>
+						</div>
+						<Button intent="primary" onclick={addItem} class="w-full">
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							Ajouter cet item
+						</Button>
+					</div>
+
+					<!-- Items List -->
+					{#if formData.items.length === 0}
+						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+							<iconify-icon icon="solar:document-add-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
+							<p class="text-sm text-slate-500 font-bold">Aucun item ajouté</p>
+						</div>
+					{:else}
+						<div class="space-y-3">
+							{#each formData.items as item, i}
+								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
+									<div class="flex-1 min-w-0">
+										<div class="font-black text-base text-slate-900 mb-2">{item.description}</div>
+										<div class="flex items-center gap-4 text-sm text-slate-500">
+											<span>{item.quantity} {item.unit}</span>
+											<span>{formatCurrency(item.price)} / {item.unit}</span>
+											<span class="font-black text-[#291334]">{formatCurrency(item.quantity * item.price)} HT</span>
+										</div>
+									</div>
+									<button
+										onclick={() => removeItem(i)}
+										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
+										aria-label="Supprimer l'item"
+									>
+										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{:else if formData.type === 'appel_de_fonds'}
+				<div class="border-t border-slate-200"></div>
+
+				<!-- Appel de Fonds Specific Fields -->
+				<div class="space-y-6">
+					<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+						<iconify-icon icon="solar:bill-list-bold" width="24" class="text-[#291334]"></iconify-icon>
+						Informations de l'appel de fonds
+					</h2>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Référence globale
+							</label>
+							<Input bind:value={formData.global_invoice_ref} placeholder="Ex: ADF-001" />
+						</div>
+						<div>
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Étape du projet
+							</label>
+							<Input bind:value={formData.project_step} placeholder="Ex: Acompte 30%" />
+						</div>
+						<div class="col-span-2">
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Nom du projet
+							</label>
+							<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
+						</div>
+					</div>
+				</div>
+
+				<div class="border-t border-slate-200"></div>
+
+				<!-- Payment Providers (Appel de Fonds) -->
+				<div class="space-y-6">
+					<div class="flex justify-between items-center">
+						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+							<iconify-icon icon="solar:card-bold" width="24" class="text-[#291334]"></iconify-icon>
+							Prestataires à payer (IBAN/BIC)
+						</h2>
+					</div>
+
+					<!-- Add Payment Provider Form -->
+					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
+						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
+							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
+							Ajouter un prestataire
+						</h3>
+						<div class="grid grid-cols-2 gap-4">
+							<div class="col-span-2">
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Nom du bénéficiaire</label>
+								<Input bind:value={newPaymentProvider.name} placeholder="Ex: Saravenpi SASU" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">IBAN</label>
+								<Input bind:value={newPaymentProvider.iban} placeholder="Ex: FR76 1234 5678 9012 3456 7890 123" />
+							</div>
+							<div>
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">BIC</label>
+								<Input bind:value={newPaymentProvider.bic} placeholder="Ex: BNPAFRPP" />
+							</div>
+							<div class="col-span-2">
+								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT)</label>
+								<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
+							</div>
+						</div>
+						<Button intent="primary" onclick={addPaymentProvider} class="w-full">
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							Ajouter ce prestataire
+						</Button>
+					</div>
+
+					<!-- Payment Providers List -->
+					{#if formData.payment_providers.length === 0}
+						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+							<iconify-icon icon="solar:card-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
+							<p class="text-sm text-slate-500 font-bold">Aucun prestataire ajouté</p>
+						</div>
+					{:else}
+						<div class="space-y-3">
+							{#each formData.payment_providers as provider, i}
+								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
+									<div class="flex-1 min-w-0">
+										<div class="font-black text-base text-slate-900 mb-2">{provider.name}</div>
+										<div class="text-sm text-slate-500 space-y-1 font-mono text-xs">
+											<div>IBAN: {provider.iban}</div>
+											<div>BIC: {provider.bic}</div>
+										</div>
+										<div class="font-black text-[#291334] mt-2">Montant: {formatCurrency(provider.amount_to_pay)} HT</div>
+									</div>
+									<button
+										onclick={() => removePaymentProvider(i)}
+										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
+										aria-label="Supprimer le prestataire"
+									>
+										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+									</button>
+								</div>
+							{/each}
+						</div>
+
+						<!-- Total Section -->
+						<div class="p-6 bg-slate-50 rounded-xl">
+							<div class="flex justify-between items-center">
+								<div class="text-sm font-black text-slate-700">TOTAL DE L'APPEL DE FONDS HT</div>
+								<div class="text-2xl font-black text-[#291334]">
+									{formatCurrency(formData.payment_providers.reduce((sum: number, p: any) => sum + p.amount_to_pay, 0))}
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{:else if formData.type === 'prestation' || formData.type === 'maintenance'}
 				<div class="border-t border-slate-200"></div>
 
 				<!-- Items Section -->

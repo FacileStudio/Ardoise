@@ -55,8 +55,9 @@ export async function bootstrapAdmin(
     logger.info('📧 Email:', admin.email);
     logger.info('👤 Name:', `${admin.firstName} ${admin.lastName}`);
     logger.info('🎯 Role:', admin.role);
-  } catch (error: any) {
-    if (error?.code === 'P2021' || error?.meta?.driverAdapterError === 'TableDoesNotExist') {
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string; meta?: { driverAdapterError?: string } };
+    if (prismaError?.code === 'P2021' || prismaError?.meta?.driverAdapterError === 'TableDoesNotExist') {
       logger.info('⏭️  Skipping admin bootstrap: Database tables not created yet');
       logger.info('📝 This is expected on first deployment - migrations will create tables first');
       return;
