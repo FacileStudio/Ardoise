@@ -16,12 +16,13 @@ import {
   createReadinessHandler,
 } from './handlers/health';
 import { bootstrapAdmin } from './lib/bootstrap';
+import { logger } from './lib/logger';
 
 
 const app = new Hono();
 
 app.onError((err, c) => {
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error:', err);
   return c.json(
     {
       error: 'Internal server error',

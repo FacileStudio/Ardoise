@@ -60,3 +60,14 @@ config-minio:
 # Start Dev DB
 db:
     ./scripts/start-db-dev.sh
+
+# Reset Railway database (requires RAILWAY_DATABASE_URL env var)
+reset-railway:
+    @echo "⚠️  WARNING: This will delete ALL data in Railway database!"
+    @echo "Make sure RAILWAY_DATABASE_URL is set correctly."
+    @read -p "Continue? (yes/no): " confirm; \
+    if [ "$$confirm" = "yes" ]; then \
+        cd packages/database && DATABASE_URL="$$RAILWAY_DATABASE_URL" bun run prisma migrate reset --force; \
+    else \
+        echo "Aborted."; \
+    fi

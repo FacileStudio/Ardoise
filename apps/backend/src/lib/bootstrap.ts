@@ -1,6 +1,7 @@
 import { prisma } from '@repo/database';
 import { AuthManager } from '@repo/auth';
 import type { ServerEnv } from '@repo/env';
+import { logger } from './logger';
 
 export async function bootstrapAdmin(
   env: ServerEnv,
@@ -12,7 +13,7 @@ export async function bootstrapAdmin(
     });
 
     if (existingAdmin) {
-      console.log('✅ Admin user already exists:', existingAdmin.email);
+      logger.info('✅ Admin user already exists:', existingAdmin.email);
       return;
     }
 
@@ -21,7 +22,7 @@ export async function bootstrapAdmin(
     });
 
     if (existingUser) {
-      console.log('⚡ Upgrading existing user to ADMIN:', env.ADMIN_EMAIL);
+      logger.info('⚡ Upgrading existing user to ADMIN:', env.ADMIN_EMAIL);
       const passwordHash = await authManager.hashPassword(env.ADMIN_PASSWORD);
       await prisma.user.update({
         where: { email: env.ADMIN_EMAIL },
@@ -32,7 +33,7 @@ export async function bootstrapAdmin(
           status: 'ACTIVE',
         },
       });
-      console.log('✅ User upgraded to ADMIN successfully!');
+      logger.info('✅ User upgraded to ADMIN successfully!');
       return;
     }
 
@@ -50,17 +51,17 @@ export async function bootstrapAdmin(
       },
     });
 
-    console.log('✅ Admin user created successfully!');
-    console.log('📧 Email:', admin.email);
-    console.log('👤 Name:', `${admin.firstName} ${admin.lastName}`);
-    console.log('🎯 Role:', admin.role);
+    logger.info('✅ Admin user created successfully!');
+    logger.info('📧 Email:', admin.email);
+    logger.info('👤 Name:', `${admin.firstName} ${admin.lastName}`);
+    logger.info('🎯 Role:', admin.role);
   } catch (error: any) {
     if (error?.code === 'P2021' || error?.meta?.driverAdapterError === 'TableDoesNotExist') {
-      console.log('⏭️  Skipping admin bootstrap: Database tables not created yet');
-      console.log('📝 This is expected on first deployment - migrations will create tables first');
+      logger.info('⏭️  Skipping admin bootstrap: Database tables not created yet');
+      logger.info('📝 This is expected on first deployment - migrations will create tables first');
       return;
     }
-    console.error('❌ Failed to bootstrap admin user:', error);
+    logger.error('❌ Failed to bootstrap admin user:', error);
     throw error;
   }
 }
