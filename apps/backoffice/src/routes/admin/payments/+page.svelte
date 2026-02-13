@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { Spinner, SearchInput, Badge, EmptyState, Button } from '@repo/ui';
 	import { downloadCSV } from '@repo/utils';
@@ -205,12 +206,20 @@
 	}
 </script>
 
-<div class="p-8 max-w-[1600px] mx-auto space-y-6">
-	<header class="flex items-center justify-between">
-		<div>
-			<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.payments.title')}</h1>
-			<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.payments.subtitle')}</p>
-		</div>
+{#if pageLoading}
+	<div class="flex flex-col items-center justify-center h-screen space-y-6">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+			Chargement...
+		</p>
+	</div>
+{:else}
+	<div class="p-8 max-w-[1600px] mx-auto space-y-6">
+		<header class="flex items-center justify-between" in:fade>
+			<div>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.payments.title')}</h1>
+				<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.payments.subtitle')}</p>
+			</div>
 		<div class="flex gap-3">
 			{#if payments.length > 0}
 				<Button onclick={handleExportCSV} class="rounded-full">
@@ -229,7 +238,7 @@
 	</header>
 
 	<div class="grid grid-cols-4 gap-4">
-		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 100 }}>
 			<div class="flex items-center justify-between mb-2">
 				<div class="text-xs font-bold text-amber-600 uppercase tracking-tight">
 					{$i18n.t('backoffice.payments.pendingAmount')}
@@ -244,7 +253,7 @@
 			<div class="text-xs text-slate-500 mt-1">{$i18n.t('backoffice.payments.pendingInvoices', { count: stats.countPending })}</div>
 		</div>
 
-		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 200 }}>
 			<div class="flex items-center justify-between mb-2">
 				<div class="text-xs font-bold text-emerald-600 uppercase tracking-tight">
 					{$i18n.t('backoffice.payments.paidThisMonth')}
@@ -261,7 +270,7 @@
 			<div class="text-xs text-slate-500 mt-1">{$i18n.t('backoffice.payments.currentMonthRevenue')}</div>
 		</div>
 
-		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 300 }}>
 			<div class="flex items-center justify-between mb-2">
 				<div class="text-xs font-bold text-slate-600 uppercase tracking-tight">
 					{$i18n.t('backoffice.payments.pendingCount')}
@@ -276,7 +285,7 @@
 			<div class="text-xs text-slate-500 mt-1">{$i18n.t('backoffice.payments.awaitingPayment')}</div>
 		</div>
 
-		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+		<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 400 }}>
 			<div class="flex items-center justify-between mb-2">
 				<div class="text-xs font-bold text-rose-600 uppercase tracking-tight">{$i18n.t('backoffice.payments.expired')}</div>
 				<iconify-icon
@@ -290,7 +299,7 @@
 		</div>
 	</div>
 
-	<div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+	<div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm" in:fly={{ y: 20, delay: 500 }}>
 		<div class="flex gap-3 items-center">
 			<div class="flex-1">
 				<SearchInput bind:value={searchQuery} placeholder={$i18n.t('backoffice.payments.searchPlaceholder')} />
@@ -309,15 +318,8 @@
 		</div>
 	</div>
 
-	{#if pageLoading}
-		<div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
-			<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-			<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-				Chargement...
-			</p>
-		</div>
-	{:else if filteredPayments.length > 0}
-		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+	{#if filteredPayments.length > 0}
+		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm" in:fade>
 			<div class="overflow-x-auto">
 				<table class="w-full">
 					<thead class="bg-[#FAF7F5] border-b border-slate-100">

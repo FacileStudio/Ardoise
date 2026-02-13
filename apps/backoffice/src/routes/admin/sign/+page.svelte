@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { Spinner, SearchInput, Badge, EmptyState } from '@repo/ui';
 	import { logger } from '@repo/logger';
@@ -155,7 +156,7 @@
 
 <div class="p-12">
 	<div class="mb-10">
-		<div class="flex items-center justify-between mb-8">
+		<div class="flex items-center justify-between mb-8" in:fade>
 			<div>
 				<h1 class="text-4xl font-black text-[#291334] mb-2 tracking-tight">Signature de documents</h1>
 				<p class="text-[#291334]/60 text-sm font-bold">
@@ -187,7 +188,7 @@
 		{/if}
 
 		<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg">
+			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg" in:fly={{ y: 20, delay: 100 }}>
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="text-[#291334]/60 text-sm font-bold mb-1">Total</p>
@@ -199,7 +200,7 @@
 				</div>
 			</div>
 
-			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg">
+			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg" in:fly={{ y: 20, delay: 200 }}>
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="text-[#291334]/60 text-sm font-bold mb-1">En attente</p>
@@ -211,7 +212,7 @@
 				</div>
 			</div>
 
-			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg">
+			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg" in:fly={{ y: 20, delay: 300 }}>
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="text-[#291334]/60 text-sm font-bold mb-1">Signés</p>
@@ -223,7 +224,7 @@
 				</div>
 			</div>
 
-			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg">
+			<div class="bg-white p-6 rounded-2xl border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:shadow-lg" in:fly={{ y: 20, delay: 400 }}>
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="text-[#291334]/60 text-sm font-bold mb-1">Expirés</p>
@@ -236,7 +237,7 @@
 			</div>
 		</div>
 
-		<div class="bg-white rounded-2xl border border-[#291334]/10 overflow-hidden">
+		<div class="bg-white rounded-2xl border border-[#291334]/10 overflow-hidden" in:fade>
 			<div class="p-6 border-b border-[#291334]/10">
 				<div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
 					<div class="flex-1 w-full sm:max-w-md">

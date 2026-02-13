@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import {
 		Spinner,
@@ -316,72 +317,73 @@
 	}
 </script>
 
-<div class="p-8 max-w-[1400px] mx-auto space-y-6">
-	<header class="flex justify-between items-start">
-		<div>
-			<h1 class="text-3xl font-black text-[#291334] tracking-tighter">{$i18n.t('backoffice.clients.title')}</h1>
-			<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.clients.subtitle')}</p>
-		</div>
-		<div class="flex gap-3">
-			{#if clients.length > 0}
-				<Button onclick={handleExportCSV} class="rounded-full">
-					<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
-					<span>Exporter CSV</span>
-				</Button>
-			{/if}
-			<button
-				onclick={openCreateModal}
-				class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
-			>
-				<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-				{$i18n.t('backoffice.clients.newClient')}
-			</button>
-		</div>
-	</header>
-
-	<div class="grid grid-cols-3 gap-4">
-		<div class="bg-white rounded-2xl p-4 border border-slate-100">
-			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-bold text-slate-400 uppercase">{$i18n.t('backoffice.clients.totalClients')}</div>
-				<iconify-icon icon="solar:buildings-2-bold" class="text-slate-400" width="20"></iconify-icon>
-			</div>
-			<div class="text-2xl font-black text-slate-900">{total}</div>
-		</div>
-		<div class="bg-white rounded-2xl p-4 border border-slate-100">
-			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-bold text-emerald-600 uppercase">{$i18n.t('backoffice.clients.activeClients')}</div>
-				<iconify-icon icon="solar:verified-check-bold" class="text-emerald-600" width="20"></iconify-icon>
-			</div>
-			<div class="text-2xl font-black text-emerald-600">
-				{clients.filter(c => c.user?.status === 'ACTIVE').length}
-			</div>
-		</div>
-		<div class="bg-white rounded-2xl p-4 border border-slate-100">
-			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-bold text-[#FEC129] uppercase">{$i18n.t('backoffice.clients.thisPage')}</div>
-				<iconify-icon icon="solar:document-bold" class="text-[#FEC129]" width="20"></iconify-icon>
-			</div>
-			<div class="text-2xl font-black text-[#FEC129]">{clients.length}</div>
-		</div>
+{#if pageLoading}
+	<div class="flex flex-col items-center justify-center h-screen space-y-6">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+			Chargement...
+		</p>
 	</div>
+{:else}
+	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
+		<header class="flex justify-between items-start" in:fade>
+			<div>
+				<h1 class="text-3xl font-black text-[#291334] tracking-tighter">{$i18n.t('backoffice.clients.title')}</h1>
+				<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.clients.subtitle')}</p>
+			</div>
+			<div class="flex gap-3">
+				{#if clients.length > 0}
+					<Button onclick={handleExportCSV} class="rounded-full">
+						<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
+						<span>Exporter CSV</span>
+					</Button>
+				{/if}
+				<button
+					onclick={openCreateModal}
+					class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
+				>
+					<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+					{$i18n.t('backoffice.clients.newClient')}
+				</button>
+			</div>
+		</header>
 
-	<div class="bg-white rounded-2xl border border-slate-100 p-4">
-		<SearchInput
-			value={searchQuery}
-			oninput={(e: any) => handleSearchInput(e.target.value)}
-			placeholder={$i18n.t('backoffice.clients.searchPlaceholder')}
-		/>
-	</div>
-
-	{#if pageLoading}
-		<div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
-			<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-			<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-				Chargement...
-			</p>
+		<div class="grid grid-cols-3 gap-4">
+			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 100 }}>
+				<div class="flex items-center justify-between mb-2">
+					<div class="text-xs font-bold text-slate-400 uppercase">{$i18n.t('backoffice.clients.totalClients')}</div>
+					<iconify-icon icon="solar:buildings-2-bold" class="text-slate-400" width="20"></iconify-icon>
+				</div>
+				<div class="text-2xl font-black text-slate-900">{total}</div>
+			</div>
+			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 200 }}>
+				<div class="flex items-center justify-between mb-2">
+					<div class="text-xs font-bold text-emerald-600 uppercase">{$i18n.t('backoffice.clients.activeClients')}</div>
+					<iconify-icon icon="solar:verified-check-bold" class="text-emerald-600" width="20"></iconify-icon>
+				</div>
+				<div class="text-2xl font-black text-emerald-600">
+					{clients.filter(c => c.user?.status === 'ACTIVE').length}
+				</div>
+			</div>
+			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 300 }}>
+				<div class="flex items-center justify-between mb-2">
+					<div class="text-xs font-bold text-[#FEC129] uppercase">{$i18n.t('backoffice.clients.thisPage')}</div>
+					<iconify-icon icon="solar:document-bold" class="text-[#FEC129]" width="20"></iconify-icon>
+				</div>
+				<div class="text-2xl font-black text-[#FEC129]">{clients.length}</div>
+			</div>
 		</div>
-	{:else if clients.length > 0}
-		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+
+		<div class="bg-white rounded-2xl border border-slate-100 p-4" in:fly={{ y: 20, delay: 400 }}>
+			<SearchInput
+				value={searchQuery}
+				oninput={(e: any) => handleSearchInput(e.target.value)}
+				placeholder={$i18n.t('backoffice.clients.searchPlaceholder')}
+			/>
+		</div>
+
+		{#if clients.length > 0}
+		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
 			<div class="overflow-x-auto">
 				<table class="w-full">
 					<thead class="bg-[#FAF7F5] border-b border-slate-100">
@@ -486,13 +488,14 @@
 				: $i18n.t('backoffice.clients.showing', { count: clients.length, total })}
 		</div>
 	{:else}
-		<EmptyState
-			icon="solar:buildings-2-bold"
-			title={$i18n.t('backoffice.clients.noClientsFound')}
-			description={searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}
-		/>
-	{/if}
-</div>
+			<EmptyState
+				icon="solar:buildings-2-bold"
+				title={$i18n.t('backoffice.clients.noClientsFound')}
+				description={searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}
+			/>
+		{/if}
+	</div>
+{/if}
 
 <Drawer bind:open={showCreateModal} title={$i18n.t('backoffice.clients.createClient.title')}>
 	<form onsubmit={(e) => { e.preventDefault(); handleCreateClient(); }} class="space-y-4">

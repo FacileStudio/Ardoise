@@ -2,7 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import { Spinner, Button, Input, Drawer } from '@repo/ui';
 	import { toast, downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -193,7 +193,7 @@
 </script>
 
 <div class="p-8 max-w-[1400px] mx-auto">
-	<div class="flex justify-between items-center mb-6">
+	<div class="flex justify-between items-center mb-6" in:fade>
 		<div>
 			<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
 				<iconify-icon icon="solar:buildings-2-bold" width="32" class="text-[#291334]"
@@ -260,7 +260,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
 			<table class="w-full">
 				<thead class="bg-slate-50 border-b border-slate-100">
 					<tr>

@@ -14,11 +14,11 @@
   <div class="mb-12 px-2">
     <div class="flex items-center gap-2">
       {#if showLogo}
-        <div class="w-11 h-11 min-w-[2.75rem] min-h-[2.75rem] max-w-[2.75rem] max-h-[2.75rem] flex-shrink-0 overflow-hidden">
+        <div class="w-12 h-12 min-w-[2.75rem] min-h-[2.75rem] max-w-[2.75rem] max-h-[2.75rem] flex-shrink-0 overflow-hidden">
           <img src={logoPath} alt="Charles Logo" class="w-full h-full object-contain" />
         </div>
       {/if}
-      <h1 class="text-3xl font-black tracking-tight leading-none text-[#291334]">
+      <h1 class="text-4xl font-black tracking-tight leading-none text-[#291334]">
         Charles
       </h1>
     </div>

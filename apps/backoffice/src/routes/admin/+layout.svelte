@@ -10,7 +10,7 @@
         { label: $i18n.t('nav.clients'), icon: 'solar:users-group-rounded-bold', href: '/admin/clients' },
         { label: $i18n.t('nav.payments'), icon: 'solar:wallet-bold', href: '/admin/payments' },
         { label: $i18n.t('nav.documents'), icon: 'solar:document-text-bold', href: '/admin/documents' },
-        { label: 'Signature', icon: 'solar:pen-new-square-bold-duotone', href: '/admin/sign' },
+        // { label: 'Signature', icon: 'solar:pen-new-square-bold-duotone', href: '/admin/sign' },
         { label: 'Prestataires', icon: 'solar:buildings-2-bold', href: '/admin/prestataires' },
         { label: $i18n.t('nav.statistics'), icon: 'solar:chart-bold', href: '/admin/statistics' },
         { label: $i18n.t('nav.users'), icon: 'solar:user-bold', href: '/admin/users' },

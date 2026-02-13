@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { Spinner, SearchInput, Badge, EmptyState } from '@repo/ui';
 	import { logger } from '@repo/logger';
@@ -89,7 +90,7 @@
 </script>
 
 <div class="p-8 max-w-[1400px] mx-auto space-y-6">
-	<header class="flex items-center justify-between mb-6">
+	<header class="flex items-center justify-between mb-6" in:fade>
 		<div>
 			<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.users.title')}</h1>
 			<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.users.subtitle')}</p>
@@ -105,14 +106,14 @@
 
 	{#if stats}
 		<div class="grid grid-cols-2 gap-4">
-			<div class="bg-white rounded-2xl p-4 border border-slate-100">
+			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 100 }}>
 				<div class="flex items-center justify-between mb-2">
 					<div class="text-xs font-bold text-slate-400 uppercase">{$i18n.t('backoffice.users.total')}</div>
 					<iconify-icon icon="solar:users-group-two-rounded-bold" class="text-slate-400" width="20"></iconify-icon>
 				</div>
 				<div class="text-2xl font-black text-slate-900">{stats.totalUsers}</div>
 			</div>
-			<div class="bg-white rounded-2xl p-4 border border-slate-100">
+			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 200 }}>
 				<div class="flex items-center justify-between mb-2">
 					<div class="text-xs font-bold text-rose-600 uppercase">{$i18n.t('backoffice.users.admin')}</div>
 					<iconify-icon icon="solar:crown-bold" class="text-rose-600" width="20"></iconify-icon>
@@ -122,7 +123,7 @@
 		</div>
 	{/if}
 
-	<div class="bg-white rounded-2xl border border-slate-100 p-4">
+	<div class="bg-white rounded-2xl border border-slate-100 p-4" in:fly={{ y: 20, delay: 300 }}>
 		<div class="flex gap-3 items-center">
 			<div class="flex-1">
 				<SearchInput bind:value={searchQuery} placeholder={$i18n.t('backoffice.users.searchPlaceholder')} />
@@ -146,7 +147,7 @@
 			</p>
 		</div>
 	{:else if filteredUsers.length > 0}
-		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
 			<div class="overflow-x-auto">
 				<table class="w-full">
 					<thead class="bg-slate-50 border-b border-slate-100">
