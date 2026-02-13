@@ -67,7 +67,8 @@
   {:else if user && client}
     <div class="max-w-5xl mx-auto space-y-8">
       <div in:fade>
-        <h1 class="text-4xl font-black text-[#291334] tracking-tight mb-2">
+        <h1 class="text-4xl font-black text-[#291334] tracking-tight mb-2 flex items-center gap-3">
+          <iconify-icon icon="solar:user-id-bold" width="40" class="text-[#291334]"></iconify-icon>
           Informations client
         </h1>
         <p class="text-[#291334]/60 font-bold">

@@ -4,6 +4,7 @@
   import { Badge, Card, Button, Spinner } from '@repo/ui';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { fade, fly } from 'svelte/transition';
   import 'iconify-icon';
 
   let payments: any[] = [];
@@ -63,11 +64,12 @@
 
 <div class="min-h-screen bg-[#FAF7F5] p-8">
   <div class="max-w-7xl mx-auto">
-    <div class="mb-8">
-      <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tighter text-[#291334] mb-2">
+    <div class="mb-8" in:fade>
+      <h1 class="text-4xl font-black tracking-tight text-[#291334] mb-2 flex items-center gap-3">
+        <iconify-icon icon="solar:document-text-bold" width="40" class="text-[#291334]"></iconify-icon>
         Mes factures
       </h1>
-      <p class="text-[#291334]/60 text-lg">
+      <p class="text-[#291334]/60 font-bold">
         Consultez et payez vos factures en toute simplicité
       </p>
     </div>
@@ -87,30 +89,30 @@
         </div>
       </div>
     {:else if payments.length === 0}
-      <div class="text-center py-16">
+      <div class="text-center py-16" in:fade>
         <div class="flex flex-col items-center gap-4">
           <div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
-            <iconify-icon icon="solar:wallet-bold" width="40"></iconify-icon>
+            <iconify-icon icon="solar:document-text-bold" width="40"></iconify-icon>
           </div>
           <h3 class="text-2xl font-black text-[#291334]">Aucune facture</h3>
-          <p class="text-[#291334]/60 max-w-md">
+          <p class="text-[#291334]/60 max-w-md font-bold">
             Vous n'avez aucune facture pour le moment. Elles apparaîtront ici dès qu'elles seront créées.
           </p>
         </div>
       </div>
     {:else}
       {#if pendingPayments.length > 0}
-        <div class="mb-12">
+        <div class="mb-12" in:fly={{ y: 20, delay: 100 }}>
           <div class="flex items-center gap-3 mb-6">
             <iconify-icon icon="solar:clock-circle-bold" width="28" class="text-[#FEC129]"></iconify-icon>
-            <h2 class="text-2xl font-black uppercase tracking-tight text-[#291334]">
+            <h2 class="text-2xl font-black tracking-tight text-[#291334]">
               Factures à payer
             </h2>
             <Badge variant="amber">{pendingPayments.length}</Badge>
           </div>
           <div class="grid grid-cols-1 gap-6">
             {#each pendingPayments as payment}
-              <Card class="border-2 border-[#FEC129]/30 hover:border-[#FEC129] transition-all group">
+              <Card class="border-2 border-[#FEC129]/30 hover:border-[#FEC129] transition-all group" in:fly={{ y: 20, delay: 200 }}>
                 <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
@@ -148,17 +150,17 @@
       {/if}
 
       {#if paidPayments.length > 0}
-        <div class="mb-12">
+        <div class="mb-12" in:fly={{ y: 20, delay: 300 }}>
           <div class="flex items-center gap-3 mb-6">
             <iconify-icon icon="solar:check-circle-bold" width="28" class="text-green-500"></iconify-icon>
-            <h2 class="text-2xl font-black uppercase tracking-tight text-[#291334]">
+            <h2 class="text-2xl font-black tracking-tight text-[#291334]">
               Factures payées
             </h2>
             <Badge variant="emerald">{paidPayments.length}</Badge>
           </div>
           <div class="grid grid-cols-1 gap-4">
             {#each paidPayments as payment}
-              <Card class="border border-[#291334]/10 hover:border-[#291334]/30 transition-all">
+              <Card class="border border-[#291334]/10 hover:border-[#291334]/30 transition-all" in:fly={{ y: 20, delay: 400 }}>
                 <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
@@ -194,16 +196,16 @@
       {/if}
 
       {#if otherPayments.length > 0}
-        <div>
+        <div in:fly={{ y: 20, delay: 500 }}>
           <div class="flex items-center gap-3 mb-6">
             <iconify-icon icon="solar:archive-bold" width="28" class="text-[#291334]/40"></iconify-icon>
-            <h2 class="text-2xl font-black uppercase tracking-tight text-[#291334]">
+            <h2 class="text-2xl font-black tracking-tight text-[#291334]">
               Autres factures
             </h2>
           </div>
           <div class="grid grid-cols-1 gap-4">
             {#each otherPayments as payment}
-              <Card class="border border-[#291334]/10">
+              <Card class="border border-[#291334]/10" in:fly={{ y: 20, delay: 600 }}>
                 <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
