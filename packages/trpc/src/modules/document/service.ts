@@ -129,7 +129,10 @@ export const ContratPrestationInputSchema = z.object({
   quote_number: z.string().optional(),
   clientId: z.string().min(1, "Le client est requis"),
   providerId: z.string().min(1, "Le prestataire est requis"),
-  items: z.array(DocumentItemSchema).optional(),
+  items: z.preprocess(
+    (val) => val === undefined || (Array.isArray(val) && val.length === 0) ? undefined : val,
+    z.array(DocumentItemSchema).optional()
+  ),
   tva_rate: z.number().nonnegative().default(20),
 });
 
@@ -141,7 +144,10 @@ export const ContratMaintenanceInputSchema = z.object({
   maintenance_period: z.string().min(1, "La période de maintenance est requise"),
   clientId: z.string().min(1, "Le client est requis"),
   providerId: z.string().min(1, "Le prestataire est requis"),
-  items: z.array(DocumentItemSchema).optional(),
+  items: z.preprocess(
+    (val) => val === undefined || (Array.isArray(val) && val.length === 0) ? undefined : val,
+    z.array(DocumentItemSchema).optional()
+  ),
   tva_rate: z.number().nonnegative().default(20),
 });
 
