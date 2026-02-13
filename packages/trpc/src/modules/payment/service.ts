@@ -110,7 +110,6 @@ export const paymentService = {
 
     let stripePaymentIntentId: string | undefined;
     let stripeSubscriptionId: string | undefined;
-    let checkoutUrl: string | undefined;
 
     try {
       if (data.frequency === 'ONE_TIME') {
@@ -124,9 +123,6 @@ export const paymentService = {
           automatic_payment_methods: { enabled: true },
         });
         stripePaymentIntentId = paymentIntent.id;
-        checkoutUrl = paymentIntent.client_secret
-          ? `${env.FRONTEND_URL}/payment/${paymentIntent.id}`
-          : undefined;
       } else {
         let customerId = client.stripeCustomerId;
 
@@ -176,11 +172,6 @@ export const paymentService = {
         });
 
         stripeSubscriptionId = subscription.id;
-        const invoice = subscription.latest_invoice as any;
-        const paymentIntent = invoice?.payment_intent;
-        checkoutUrl = paymentIntent?.client_secret
-          ? `${env.FRONTEND_URL}/payment/${subscription.id}`
-          : undefined;
       }
     } catch (error) {
       throw new TRPCError({
@@ -214,7 +205,7 @@ export const paymentService = {
       const emailTemplates = new EmailTemplates(smtpClient);
       await emailTemplates.sendPaymentNotification({
         clientEmail: client.user.email,
-        paymentLink: checkoutUrl || `${env.FRONTEND_URL}/payments/${payment.id}`,
+        paymentLink: `${env.FRONTEND_URL}/app/payment/${payment.id}`,
         amount: Number(payment.totalWithFees),
         dueDate: payment.dueDate,
         clientName: `${client.user.firstName} ${client.user.lastName}`,
