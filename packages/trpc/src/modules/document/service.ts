@@ -71,7 +71,7 @@ export type DocumentData = {
   bank_name?: string;
   iban?: string;
   bic?: string;
-  items: Array<{description: string; quantity: number; unit: string; price: number}>;
+  items?: Array<{description: string; quantity: number; unit: string; price: number}>;
   tva_rate: number;
   railway_estimate?: number;
   project_name?: string;
@@ -423,7 +423,7 @@ export async function generateDocument(
     iban: validated.iban || '',
     bic: validated.bic || '',
 
-    items: formatItems(validated.items),
+    items: formatItems(validated.items || []),
     tva_rate: validated.tva_rate,
     railway_estimate: validated.railway_estimate,
 
@@ -457,7 +457,7 @@ export async function generateDocument(
     providerSiret: templateData.provider_siret,
     providerEmail: templateData.provider_email,
     providerPhone: templateData.provider_phone,
-    items: validated.items,
+    items: validated.items || [],
     tvaRate: templateData.tva_rate,
   });
 }
@@ -499,7 +499,7 @@ export function generateTypstContent(data: DocumentData): string {
     iban: data.iban || '',
     bic: data.bic || '',
 
-    items: formatItems(data.items),
+    items: formatItems(data.items || []),
     tva_rate: data.tva_rate,
     railway_estimate: data.railway_estimate,
 

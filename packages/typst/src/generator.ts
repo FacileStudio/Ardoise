@@ -31,7 +31,7 @@ export const ReceiptDataSchema = z.object({
   providerSiret: z.string(),
   providerEmail: z.string().email(),
   providerPhone: z.string(),
-  items: z.array(ReceiptItemSchema).min(1),
+  items: z.array(ReceiptItemSchema).optional().default([]),
   tvaRate: z.number().nonnegative().default(20),
 });
 
@@ -70,6 +70,9 @@ export class TypstGenerator {
   }
 
   private formatItems(items: ReceiptItem[]): string {
+    if (!items || items.length === 0) {
+      return '';
+    }
     const formattedItems = items.map(
       (item) =>
         `(description: "${item.description}", quantity: ${item.quantity}, unit: "${item.unit}", price: ${item.price})`

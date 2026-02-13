@@ -642,7 +642,7 @@ export const documentRouter = router({
         const pdfBuffer = await generateDocument(documentData, logoUrl);
         const fileName = `back_contractuel_${input.contract_reference}.pdf`;
 
-        const subtotal = input.items.reduce(
+        const subtotal = (input.items || []).reduce(
           (sum: number, item: any) => sum + item.quantity * item.price,
           0
         );
@@ -667,7 +667,7 @@ export const documentRouter = router({
             providerCity: documentData.provider_city,
             providerEmail: documentData.provider_email,
             providerPhone: documentData.provider_phone,
-            items: input.items,
+            items: input.items || [],
             subtotal,
             tva,
             total,
@@ -979,12 +979,9 @@ export const documentRouter = router({
         const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
         const fileName = `contrat_prestation_${input.contract_reference}.pdf`;
 
-        const subtotal = (input.items || []).reduce(
-          (sum: number, item: any) => sum + item.quantity * item.price,
-          0
-        );
-        const tva = subtotal * (input.tva_rate / 100);
-        const total = subtotal + tva;
+        const subtotal = 0;
+        const tva = 0;
+        const total = 0;
 
         const document = await ctx.db.document.create({
           data: {
@@ -1140,12 +1137,9 @@ export const documentRouter = router({
         const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
         const fileName = `contrat_maintenance_${input.contract_reference}.pdf`;
 
-        const subtotal = (input.items || []).reduce(
-          (sum: number, item: any) => sum + item.quantity * item.price,
-          0
-        );
-        const tva = subtotal * (input.tva_rate / 100);
-        const total = subtotal + tva;
+        const subtotal = 0;
+        const tva = 0;
+        const total = 0;
 
         const document = await ctx.db.document.create({
           data: {
