@@ -396,6 +396,10 @@ export async function generateDocument(
     contract_reference: validated.contract_reference || '',
     contract_date: validated.contract_date || '',
 
+    // Generic number and date fields used by templates
+    number: validated.contract_reference || validated.invoice_number || validated.quote_number || '',
+    date: validated.contract_date || validated.invoice_date || validated.quote_date || '',
+
     client_name: validated.client_name,
     client_address: validated.client_address,
     client_city: validated.client_city,
@@ -471,6 +475,10 @@ export function generateTypstContent(data: DocumentData): string {
     maintenance_period: data.maintenance_period || '',
     contract_reference: data.contract_reference || '',
     contract_date: data.contract_date || '',
+
+    // Generic number and date fields used by templates
+    number: data.contract_reference || data.invoice_number || data.quote_number || '',
+    date: data.contract_date || data.invoice_date || data.quote_date || '',
 
     client_name: data.client_name,
     client_address: data.client_address,
