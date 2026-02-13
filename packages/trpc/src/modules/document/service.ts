@@ -95,31 +95,70 @@ export const DocumentDataSchema = z.object({
 
 export type DocumentData = z.infer<typeof DocumentDataSchema>;
 
-// Type-specific schemas (no items requirement for contracts)
-// REBUILD_TRIGGER: 2026-02-13-v2
-const ContratMaintenanceDataSchema = DocumentDataSchema.extend({
+// Type-specific data schemas for validation in generateDocument()
+// Using passthrough() to avoid extending the base schema's default behavior
+const ContratMaintenanceDataSchema = z.object({
   type: z.literal('contrat_maintenance'),
+  contract_reference: z.string(),
+  contract_date: z.string(),
+  maintenance_period: z.string(),
+  clientId: z.string(),
+  providerId: z.string(),
+  client_name: z.string().optional(),
+  client_address: z.string().optional(),
+  client_city: z.string().optional(),
+  client_country: z.string().optional(),
+  client_siret: z.string().optional(),
+  provider_name: z.string().optional(),
+  provider_legal: z.string().optional(),
+  provider_address: z.string().optional(),
+  provider_city: z.string().optional(),
+  provider_siret: z.string().optional(),
+  provider_email: z.string().optional(),
+  provider_phone: z.string().optional(),
+  bank_name: z.string().optional(),
+  iban: z.string().optional(),
+  bic: z.string().optional(),
   items: z.array(DocumentItemSchema).optional().default([]),
-});
+  tva_rate: z.number().nonnegative().default(20),
+  railway_estimate: z.number().optional().default(0),
+}).passthrough();
 
-const ContratPrestationDataSchema = DocumentDataSchema.extend({
+const ContratPrestationDataSchema = z.object({
   type: z.literal('contrat_prestation'),
+  contract_reference: z.string(),
+  contract_date: z.string(),
+  quote_number: z.string().optional(),
+  clientId: z.string(),
+  providerId: z.string(),
+  client_name: z.string().optional(),
+  client_address: z.string().optional(),
+  client_city: z.string().optional(),
+  client_country: z.string().optional(),
+  client_siret: z.string().optional(),
+  provider_name: z.string().optional(),
+  provider_legal: z.string().optional(),
+  provider_address: z.string().optional(),
+  provider_city: z.string().optional(),
+  provider_siret: z.string().optional(),
+  provider_email: z.string().optional(),
+  provider_phone: z.string().optional(),
+  bank_name: z.string().optional(),
+  iban: z.string().optional(),
+  bic: z.string().optional(),
   items: z.array(DocumentItemSchema).optional().default([]),
-});
+  tva_rate: z.number().nonnegative().default(20),
+}).passthrough();
 
-const PrestationDataSchema = DocumentDataSchema.extend({
-  type: z.literal('prestation'),
-}).refine((data) => data.items && data.items.length > 0, {
-  message: "Au moins un article est requis pour une facture",
-  path: ['items'],
-});
+const PrestationDataSchema = DocumentDataSchema.refine(
+  (data) => data.type === 'prestation' && data.items && data.items.length > 0,
+  { message: "Au moins un article est requis pour une facture", path: ['items'] }
+);
 
-const MaintenanceDataSchema = DocumentDataSchema.extend({
-  type: z.literal('maintenance'),
-}).refine((data) => data.items && data.items.length > 0, {
-  message: "Au moins un article est requis pour un devis",
-  path: ['items'],
-});
+const MaintenanceDataSchema = DocumentDataSchema.refine(
+  (data) => data.type === 'maintenance' && data.items && data.items.length > 0,
+  { message: "Au moins un article est requis pour un devis", path: ['items'] }
+);
 
 export const ContratPrestationInputSchema = z.object({
   contract_reference: z.string().min(1, "La référence du contrat est requise"),
