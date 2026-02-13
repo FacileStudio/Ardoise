@@ -33,6 +33,7 @@
 	let totalPages = $state(1);
 	let currentPage = $state(1);
 	let searchQuery = $state('');
+	let logoUrls: Map<string, string> = $state(new Map());
 
 	let showCreateDrawer = $state(false);
 	let showEditDrawer = $state(false);
@@ -72,6 +73,8 @@
 			});
 			providers = result.providers as Provider[];
 			totalPages = result.totalPages;
+
+			await loadLogos();
 		} catch (err) {
 			logger.error({ err }, 'Failed to load providers');
 			toast.push('Erreur lors du chargement des prestataires', 'error');
@@ -82,6 +85,25 @@
 				loading = false;
 			}
 		}
+	}
+
+	async function loadLogos() {
+		const newLogoUrls = new Map();
+
+		for (const provider of providers) {
+			if (provider.logoUrl && provider.logoUrl.includes('storageapi.dev')) {
+				try {
+					const result = await trpc.media.getDownloadUrl.query({ url: provider.logoUrl });
+					newLogoUrls.set(provider.id, result.url);
+				} catch (err) {
+					logger.error({ err, providerId: provider.id }, 'Failed to load logo');
+				}
+			} else if (provider.logoUrl) {
+				newLogoUrls.set(provider.id, provider.logoUrl);
+			}
+		}
+
+		logoUrls = newLogoUrls;
 	}
 
 	function handleSearch(e: Event) {
@@ -257,6 +279,10 @@
 						<tr>
 							<th
 								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Logo</th
+							>
+							<th
+								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
 								>Nom</th
 							>
 							<th
@@ -295,6 +321,29 @@
 									}
 								}}
 							>
+								<td class="px-6 py-4">
+									{#if logoUrls.get(provider.id)}
+										<div class="w-12 h-12 rounded-lg bg-white border border-slate-200 overflow-hidden flex items-center justify-center p-1">
+											<img
+												src={logoUrls.get(provider.id)}
+												alt={provider.name}
+												class="w-full h-full object-contain"
+												onerror={(e) => {
+													const img = e.target as HTMLImageElement;
+													img.style.display = 'none';
+													const parent = img.parentElement;
+													if (parent) {
+														parent.innerHTML = '<iconify-icon icon="solar:buildings-2-bold" width="24" class="text-slate-300"></iconify-icon>';
+													}
+												}}
+											/>
+										</div>
+									{:else}
+										<div class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
+											<iconify-icon icon="solar:buildings-2-bold" width="24" class="text-slate-300"></iconify-icon>
+										</div>
+									{/if}
+								</td>
 								<td class="px-6 py-4">
 									<div>
 										<span class="font-bold text-slate-900">{provider.name}</span>
