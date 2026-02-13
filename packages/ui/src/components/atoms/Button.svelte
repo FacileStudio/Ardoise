@@ -3,7 +3,7 @@
     import type { Snippet } from 'svelte';
 
     const buttonClass = cva(
-        "inline-flex items-center justify-center gap-2 transition-all font-black uppercase tracking-tight active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
+        "inline-flex items-center justify-center gap-2 transition-all font-black uppercase tracking-tight active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer rounded-full",
         {
             variants: {
                 intent: {
@@ -13,9 +13,9 @@
                     ghost: "bg-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-900"
                 },
                 size: {
-                    sm: "px-4 py-2 text-[10px] rounded-xl",
-                    md: "px-6 py-3 text-xs rounded-2xl",
-                    lg: "px-8 py-4 text-sm rounded-[24px]"
+                    sm: "px-4 py-2 text-[10px]",
+                    md: "px-6 py-3 text-xs",
+                    lg: "px-8 py-4 text-sm"
                 }
             },
             defaultVariants: {
