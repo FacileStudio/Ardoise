@@ -248,6 +248,9 @@ Each app validates its environment on startup via `check-env` script using Zod.
 - `PORT`: Frontend server port (default: 5173)
 - `VITE_API_URL`: Backend API URL (e.g., `http://localhost:3001`)
 - `PUBLIC_STRIPE_PUBLISHABLE_KEY`: Stripe publishable key (must start with `pk_`)
+  - **IMPORTANT**: This variable MUST be available at build time for SvelteKit
+  - In Railway: Set in Variables tab, then trigger a rebuild
+  - In Docker: Pass as `--build-arg PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...`
 - `NODE_ENV`: Environment (development/production)
 
 **Required backoffice variables:**
@@ -571,7 +574,44 @@ Defined in `turbo.json`:
 
 This ensures Prisma client is generated before builds/dev runs.
 
+## Deployment
+
+### Railway Deployment
+
+**Frontend deployment requirements:**
+
+1. **Environment Variables** - Set these in Railway's Variables tab:
+   - `VITE_API_URL` - Your backend API URL
+   - `PUBLIC_STRIPE_PUBLISHABLE_KEY` - Your Stripe publishable key (pk_test_ or pk_live_)
+   - `NODE_ENV=production`
+
+2. **Important**: `PUBLIC_STRIPE_PUBLISHABLE_KEY` must be available at **build time**:
+   - Railway automatically passes environment variables to the build
+   - If you add/change this variable, trigger a new deployment
+   - Check build logs to verify the variable is present during build
+
+3. **Verify deployment**:
+   - Check build logs for `PUBLIC_STRIPE_PUBLISHABLE_KEY` references
+   - Open browser console on your site
+   - If you see "STRIPE_PUBLISHABLE_KEY not configured", the variable wasn't available at build time
+   - Solution: Redeploy the service from Railway dashboard
+
+**Backend deployment requirements:**
+
+All backend environment variables (see "Environment Variables" section above) must be set in Railway's Variables tab. The backend uses runtime environment variables, so no rebuild is needed when changing them.
+
 ## Common Issues & Troubleshooting
+
+### "STRIPE_PUBLISHABLE_KEY not configured" in Production
+
+**Cause**: The `PUBLIC_STRIPE_PUBLISHABLE_KEY` environment variable wasn't available during the SvelteKit build process.
+
+**Fix**:
+1. Go to Railway → Frontend service → Variables tab
+2. Verify `PUBLIC_STRIPE_PUBLISHABLE_KEY` is set with a valid Stripe key (pk_test_ or pk_live_)
+3. Go to Settings → Deploy → Click "Redeploy"
+4. Monitor build logs to confirm the variable is present during build
+5. Once deployed, refresh your payment page and check browser console
 
 ### "Buffer is not defined" in Browser
 
