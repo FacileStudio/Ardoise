@@ -77,54 +77,48 @@ export const DocumentDataSchema = z.object({
   iban: z.string().optional(),
   bic: z.string().optional(),
 
-  items: z.preprocess(
-    (val) => val === undefined || (Array.isArray(val) && val.length === 0) ? undefined : val,
-    z.array(DocumentItemSchema).optional()
-  ),
+  items: z.array(DocumentItemSchema).default([]),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
 
   // For back_contractuel
   project_name: z.string().optional(),
   valid_until: z.string().optional(),
-  providers: z.array(ProviderSchema).optional(),
-  features: z.array(FeatureSchema).optional(),
+  providers: z.array(ProviderSchema).default([]),
+  features: z.array(FeatureSchema).default([]),
 
   // For appel_de_fonds
   global_invoice_ref: z.string().optional(),
   project_step: z.string().optional(),
-  payment_providers: z.array(PaymentProviderSchema).optional(),
-}).refine((data) => {
-  // For prestation and maintenance, require at least one item
-  if (data.type === 'prestation' || data.type === 'maintenance') {
-    return data.items && data.items.length > 0;
-  }
-  // For all other types, items are optional (can be undefined or empty array)
-  return true;
-}, {
-  message: "Au moins un article est requis pour ce type de document",
-  path: ['items'],
-}).transform((data) => {
-  // Ensure arrays are never undefined
-  return {
-    ...data,
-    items: data.items || [],
-    providers: data.providers || [],
-    features: data.features || [],
-    payment_providers: data.payment_providers || [],
-  };
-}).refine((data) => {
-  // ProviderId is required for all types except back_contractuel and appel_de_fonds
-  if (data.type !== 'back_contractuel' && data.type !== 'appel_de_fonds') {
-    return !!data.providerId;
-  }
-  return true;
-}, {
-  message: "Le prestataire est requis pour ce type de document",
-  path: ['providerId'],
+  payment_providers: z.array(PaymentProviderSchema).default([]),
 });
 
 export type DocumentData = z.infer<typeof DocumentDataSchema>;
+
+// Type-specific schemas (no items requirement for contracts)
+const ContratMaintenanceDataSchema = DocumentDataSchema.extend({
+  type: z.literal('contrat_maintenance'),
+  items: z.array(DocumentItemSchema).optional().default([]),
+});
+
+const ContratPrestationDataSchema = DocumentDataSchema.extend({
+  type: z.literal('contrat_prestation'),
+  items: z.array(DocumentItemSchema).optional().default([]),
+});
+
+const PrestationDataSchema = DocumentDataSchema.extend({
+  type: z.literal('prestation'),
+}).refine((data) => data.items && data.items.length > 0, {
+  message: "Au moins un article est requis pour une facture",
+  path: ['items'],
+});
+
+const MaintenanceDataSchema = DocumentDataSchema.extend({
+  type: z.literal('maintenance'),
+}).refine((data) => data.items && data.items.length > 0, {
+  message: "Au moins un article est requis pour un devis",
+  path: ['items'],
+});
 
 export const ContratPrestationInputSchema = z.object({
   contract_reference: z.string().min(1, "La référence du contrat est requise"),
@@ -132,10 +126,7 @@ export const ContratPrestationInputSchema = z.object({
   quote_number: z.string().optional(),
   clientId: z.string().min(1, "Le client est requis"),
   providerId: z.string().min(1, "Le prestataire est requis"),
-  items: z.preprocess(
-    (val) => val === undefined || (Array.isArray(val) && val.length === 0) ? undefined : val,
-    z.array(DocumentItemSchema).optional()
-  ),
+  items: z.array(DocumentItemSchema).optional(),
   tva_rate: z.number().nonnegative().default(20),
 });
 
@@ -147,10 +138,7 @@ export const ContratMaintenanceInputSchema = z.object({
   maintenance_period: z.string().min(1, "La période de maintenance est requise"),
   clientId: z.string().min(1, "Le client est requis"),
   providerId: z.string().min(1, "Le prestataire est requis"),
-  items: z.preprocess(
-    (val) => val === undefined || (Array.isArray(val) && val.length === 0) ? undefined : val,
-    z.array(DocumentItemSchema).optional()
-  ),
+  items: z.array(DocumentItemSchema).optional(),
   tva_rate: z.number().nonnegative().default(20),
 });
 
@@ -246,7 +234,25 @@ export async function generateDocument(
   data: DocumentData,
   logoPath?: string
 ): Promise<Buffer> {
-  const validated = DocumentDataSchema.parse(data);
+  // Use type-specific schema based on document type
+  let validated: DocumentData;
+  switch (data.type) {
+    case 'contrat_maintenance':
+      validated = ContratMaintenanceDataSchema.parse(data);
+      break;
+    case 'contrat_prestation':
+      validated = ContratPrestationDataSchema.parse(data);
+      break;
+    case 'prestation':
+      validated = PrestationDataSchema.parse(data);
+      break;
+    case 'maintenance':
+      validated = MaintenanceDataSchema.parse(data);
+      break;
+    default:
+      validated = DocumentDataSchema.parse(data);
+  }
+
   const template = TEMPLATES[validated.type];
 
   if (!template) {
