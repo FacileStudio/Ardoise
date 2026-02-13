@@ -14,6 +14,9 @@ export const CreateClientSchema = z.object({
 
 export const UpdateClientSchema = z.object({
   id: z.string(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  email: z.string().email().optional(),
   companyName: z.string().min(1).optional(),
   billingAddress: z.string().min(1).optional(),
   billingCity: z.string().min(1).optional(),

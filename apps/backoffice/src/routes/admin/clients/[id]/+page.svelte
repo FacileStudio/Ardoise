@@ -15,6 +15,9 @@
 	let client: any = $state(null);
 
 	let formData = $state({
+		firstName: '',
+		lastName: '',
+		email: '',
 		companyName: '',
 		billingAddress: '',
 		billingCity: '',
@@ -31,6 +34,9 @@
 		try {
 			client = await trpc.client.getById.query({ id: clientId });
 			// Populate form data
+			formData.firstName = client.user.firstName;
+			formData.lastName = client.user.lastName;
+			formData.email = client.user.email;
 			formData.companyName = client.companyName;
 			formData.billingAddress = client.billingAddress || '';
 			formData.billingCity = client.billingCity || '';
@@ -45,6 +51,9 @@
 	}
 
 	function validateForm(): string | null {
+		if (!formData.firstName.trim()) return 'Le prénom est requis';
+		if (!formData.lastName.trim()) return 'Le nom est requis';
+		if (!formData.email.trim()) return 'L\'email est requis';
 		if (!formData.companyName.trim()) return 'Le nom de l\'entreprise est requis';
 		return null;
 	}
@@ -214,37 +223,47 @@
 						</div>
 					</div>
 
-					<!-- User Information (Read-only) -->
-					<Card padding="lg" rounded="lg" shadow="md">
-						<div class="space-y-6">
-							<div class="flex items-center gap-3 pb-4 border-b border-slate-100">
-								<div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-									<iconify-icon icon="solar:user-bold" width="24"></iconify-icon>
-								</div>
-								<div>
-									<h2 class="text-xl font-black text-[#291334]">Contact principal</h2>
-									<p class="text-sm text-slate-500">Informations de contact (lecture seule)</p>
-								</div>
-							</div>
-
+					<!-- User Information (Editable) -->
+					<div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-6">
+						<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+							<iconify-icon icon="solar:user-bold" width="24" class="text-[#FEC129]"></iconify-icon>
+							Informations utilisateur
+						</h2>
+						<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 							<div class="grid grid-cols-2 gap-4">
 								<div>
-									<div class="text-xs font-black uppercase text-slate-400 mb-2">Prénom</div>
-									<div class="font-bold text-slate-900">{client.user.firstName}</div>
+									<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+										<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
+										></iconify-icon>
+										Prénom *
+									</label>
+									<Input bind:value={formData.firstName} placeholder="Jean" />
 								</div>
 
 								<div>
-									<div class="text-xs font-black uppercase text-slate-400 mb-2">Nom</div>
-									<div class="font-bold text-slate-900">{client.user.lastName}</div>
-								</div>
-
-								<div class="col-span-2">
-									<div class="text-xs font-black uppercase text-slate-400 mb-2">Email</div>
-									<div class="font-bold text-slate-900">{client.user.email}</div>
+									<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+										<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
+										></iconify-icon>
+										Nom *
+									</label>
+									<Input bind:value={formData.lastName} placeholder="Dupont" />
 								</div>
 							</div>
+
+							<div>
+								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+									<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"
+									></iconify-icon>
+									Email *
+								</label>
+								<Input
+									bind:value={formData.email}
+									type="email"
+									placeholder="jean.dupont@entreprise.fr"
+								/>
+							</div>
 						</div>
-					</Card>
+					</div>
 
 					<!-- Payments -->
 					{#if client.payments && client.payments.length > 0}

@@ -143,6 +143,9 @@ export const clientService = {
   updateClient: async (db: PrismaClient, id: string, data: Omit<UpdateClientInput, 'id'>) => {
     const existingClient = await db.client.findUnique({
       where: { id },
+      include: {
+        user: true,
+      },
     });
 
     if (!existingClient) {
@@ -152,15 +155,44 @@ export const clientService = {
       });
     }
 
+    const userUpdateData: any = {};
+    if (data.firstName !== undefined) userUpdateData.firstName = data.firstName;
+    if (data.lastName !== undefined) userUpdateData.lastName = data.lastName;
+    if (data.email !== undefined) {
+      const emailExists = await db.user.findFirst({
+        where: {
+          email: data.email,
+          id: { not: existingClient.userId },
+        },
+      });
+
+      if (emailExists) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Email already exists',
+        });
+      }
+
+      userUpdateData.email = data.email;
+    }
+
+    if (Object.keys(userUpdateData).length > 0) {
+      await db.user.update({
+        where: { id: existingClient.userId },
+        data: userUpdateData,
+      });
+    }
+
+    const clientUpdateData: any = {};
+    if (data.companyName !== undefined) clientUpdateData.companyName = data.companyName;
+    if (data.billingAddress !== undefined) clientUpdateData.billingAddress = data.billingAddress;
+    if (data.billingCity !== undefined) clientUpdateData.billingCity = data.billingCity;
+    if (data.billingCountry !== undefined) clientUpdateData.billingCountry = data.billingCountry;
+    if (data.siret !== undefined) clientUpdateData.siret = data.siret;
+
     const client = await db.client.update({
       where: { id },
-      data: {
-        companyName: data.companyName,
-        billingAddress: data.billingAddress,
-        billingCity: data.billingCity,
-        billingCountry: data.billingCountry,
-        siret: data.siret,
-      },
+      data: clientUpdateData,
       include: {
         user: {
           select: {
