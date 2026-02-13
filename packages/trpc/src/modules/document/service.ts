@@ -77,7 +77,10 @@ export const DocumentDataSchema = z.object({
   iban: z.string().optional(),
   bic: z.string().optional(),
 
-  items: z.array(DocumentItemSchema).optional(),
+  items: z.preprocess(
+    (val) => val === undefined || (Array.isArray(val) && val.length === 0) ? undefined : val,
+    z.array(DocumentItemSchema).optional()
+  ),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
 
