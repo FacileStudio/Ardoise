@@ -14,7 +14,7 @@
 
 	async function getPresignedUrl(filename: string, folder: string) {
 		const result = await trpc.media.getUploadUrl.mutate({
-			fileName: `${folder}/${filename}`,
+			fileName: filename,
 			fileType: 'image/*'
 		});
 		return result.uploadUrl;

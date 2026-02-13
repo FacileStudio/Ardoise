@@ -28,8 +28,13 @@ export const mediaRouter = router({
     .query(async ({ ctx, input }) => {
       const urlPath = new URL(input.url).pathname;
       const pathParts = urlPath.split('/').filter(Boolean);
-      const bucketIndex = pathParts.findIndex(p => p.includes('organized-chest'));
-      const filePath = pathParts.slice(bucketIndex + 1).join('/');
+      const uploadsIndex = pathParts.indexOf('uploads');
+
+      if (uploadsIndex === -1) {
+        throw new Error('Invalid file URL: uploads folder not found');
+      }
+
+      const filePath = pathParts.slice(uploadsIndex).join('/');
 
       return {
         url: ctx.storage.getPresignedUrl(filePath, 3600),
