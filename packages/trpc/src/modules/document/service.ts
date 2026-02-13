@@ -20,12 +20,8 @@ export const DocumentItemSchema = z.object({
 });
 
 export const ProviderSchema = z.object({
-  name: z.string(),
+  id: z.string(),
   role: z.string(),
-  address: z.string(),
-  city: z.string(),
-  siret: z.string(),
-  email: z.string().email(),
   amount: z.number().nonnegative(),
 });
 
@@ -35,9 +31,7 @@ export const FeatureSchema = z.object({
 });
 
 export const PaymentProviderSchema = z.object({
-  name: z.string(),
-  iban: z.string(),
-  bic: z.string(),
+  id: z.string(),
   amount_to_pay: z.number().nonnegative(),
 });
 
@@ -279,11 +273,10 @@ export const BackContractuelInputSchema = z.object({
   project_name: z.string().min(1, "Le nom du projet est requis"),
   valid_until: z.string().min(1, "La date de validité est requise"),
   clientId: z.string().min(1, "Le client est requis"),
-  providerId: z.string().optional(),
+  providerId: z.string().min(1, "Le prestataire est requis"),
   providers: z.array(ProviderSchema).min(1, "Au moins un sous-traitant est requis"),
   features: z.array(FeatureSchema).optional(),
   items: z.array(DocumentItemSchema).optional(),
-  tva_rate: z.number().nonnegative().default(20),
 });
 
 export type BackContractuelInput = z.infer<typeof BackContractuelInputSchema>;
@@ -295,9 +288,9 @@ export const AppelDeFondsInputSchema = z.object({
   project_step: z.string().min(1, "L'étape du projet est requise"),
   project_name: z.string().min(1, "Le nom du projet est requis"),
   clientId: z.string().min(1, "Le client est requis"),
-  providerId: z.string().optional(),
+  providerId: z.string().min(1, "Le prestataire est requis"),
   payment_providers: z.array(PaymentProviderSchema).min(1, "Au moins un prestataire de paiement est requis"),
-  tva_rate: z.number().nonnegative().default(20),
+  items: z.array(DocumentItemSchema).optional().default([]),
 });
 
 export type AppelDeFondsInput = z.infer<typeof AppelDeFondsInputSchema>;

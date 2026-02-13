@@ -527,18 +527,40 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        let provider = null;
-        let logoUrl: string | undefined;
-
-        if (input.providerId) {
-          provider = await ctx.db.provider.findUnique({
-            where: { id: input.providerId },
-          });
-          if (!provider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-          }
-          logoUrl = provider.logoUrl || undefined;
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
+
+        const subProviderIds = input.providers.map(p => p.id);
+        const subProviders = await ctx.db.provider.findMany({
+          where: { id: { in: subProviderIds } },
+        });
+
+        if (subProviders.length !== subProviderIds.length) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more sub-providers not found' });
+        }
+
+        const providersWithDetails = input.providers.map(inputProvider => {
+          const dbProvider = subProviders.find(p => p.id === inputProvider.id);
+          if (!dbProvider) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: `Provider ${inputProvider.id} not found` });
+          }
+          return {
+            name: dbProvider.name,
+            role: inputProvider.role,
+            address: dbProvider.address || '',
+            city: dbProvider.city || '',
+            siret: dbProvider.siret || '',
+            email: dbProvider.email || '',
+            amount: inputProvider.amount,
+          };
+        });
+
+        const tvaRate = provider.tvaRate || 20;
+        const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -548,10 +570,10 @@ export const documentRouter = router({
           valid_until: input.valid_until,
           clientId: input.clientId,
           providerId: input.providerId,
-          providers: input.providers,
+          providers: providersWithDetails,
           features: input.features,
           items: input.items,
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: 0,
           payment_providers: [],
           client_name: client.companyName,
@@ -559,16 +581,16 @@ export const documentRouter = router({
           client_city: client.billingCity || '',
           client_country: client.billingCountry || '',
           client_siret: client.siret || '',
-          provider_name: provider?.name || '',
-          provider_legal: provider?.legalName || '',
-          provider_address: provider?.address || '',
-          provider_city: provider?.city || '',
-          provider_siret: provider?.siret || '',
-          provider_email: provider?.email || '',
-          provider_phone: provider?.phone || '',
-          bank_name: provider?.bankName || '',
-          iban: provider?.iban || '',
-          bic: provider?.bic || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
@@ -595,18 +617,40 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        let provider = null;
-        let logoUrl: string | undefined;
-
-        if (input.providerId) {
-          provider = await ctx.db.provider.findUnique({
-            where: { id: input.providerId },
-          });
-          if (!provider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-          }
-          logoUrl = provider.logoUrl || undefined;
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
+
+        const subProviderIds = input.providers.map(p => p.id);
+        const subProviders = await ctx.db.provider.findMany({
+          where: { id: { in: subProviderIds } },
+        });
+
+        if (subProviders.length !== subProviderIds.length) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more sub-providers not found' });
+        }
+
+        const providersWithDetails = input.providers.map(inputProvider => {
+          const dbProvider = subProviders.find(p => p.id === inputProvider.id);
+          if (!dbProvider) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: `Provider ${inputProvider.id} not found` });
+          }
+          return {
+            name: dbProvider.name,
+            role: inputProvider.role,
+            address: dbProvider.address || '',
+            city: dbProvider.city || '',
+            siret: dbProvider.siret || '',
+            email: dbProvider.email || '',
+            amount: inputProvider.amount,
+          };
+        });
+
+        const tvaRate = provider.tvaRate || 20;
+        const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -616,10 +660,10 @@ export const documentRouter = router({
           valid_until: input.valid_until,
           clientId: input.clientId,
           providerId: input.providerId,
-          providers: input.providers,
+          providers: providersWithDetails,
           features: input.features,
           items: input.items,
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: 0,
           payment_providers: [],
           client_name: client.companyName,
@@ -627,16 +671,16 @@ export const documentRouter = router({
           client_city: client.billingCity || '',
           client_country: client.billingCountry || '',
           client_siret: client.siret || '',
-          provider_name: provider?.name || '',
-          provider_legal: provider?.legalName || '',
-          provider_address: provider?.address || '',
-          provider_city: provider?.city || '',
-          provider_siret: provider?.siret || '',
-          provider_email: provider?.email || '',
-          provider_phone: provider?.phone || '',
-          bank_name: provider?.bankName || '',
-          iban: provider?.iban || '',
-          bic: provider?.bic || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
@@ -646,7 +690,7 @@ export const documentRouter = router({
           (sum: number, item: any) => sum + item.quantity * item.price,
           0
         );
-        const tva = subtotal * (input.tva_rate / 100);
+        const tva = subtotal * (tvaRate / 100);
         const total = subtotal + tva;
 
         const document = await ctx.db.document.create({
@@ -671,7 +715,7 @@ export const documentRouter = router({
             subtotal,
             tva,
             total,
-            tvaRate: input.tva_rate,
+            tvaRate: tvaRate,
             fileSize: pdfBuffer.length,
             createdBy: ctx.user!.id,
           },
@@ -701,18 +745,37 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        let provider = null;
-        let logoUrl: string | undefined;
-
-        if (input.providerId) {
-          provider = await ctx.db.provider.findUnique({
-            where: { id: input.providerId },
-          });
-          if (!provider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-          }
-          logoUrl = provider.logoUrl || undefined;
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
+
+        const paymentProviderIds = input.payment_providers.map(p => p.id);
+        const paymentProviders = await ctx.db.provider.findMany({
+          where: { id: { in: paymentProviderIds } },
+        });
+
+        if (paymentProviders.length !== paymentProviderIds.length) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more payment providers not found' });
+        }
+
+        const paymentProvidersWithDetails = input.payment_providers.map(inputProvider => {
+          const dbProvider = paymentProviders.find(p => p.id === inputProvider.id);
+          if (!dbProvider) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: `Payment provider ${inputProvider.id} not found` });
+          }
+          return {
+            name: dbProvider.name,
+            iban: dbProvider.iban || '',
+            bic: dbProvider.bic || '',
+            amount_to_pay: inputProvider.amount_to_pay,
+          };
+        });
+
+        const tvaRate = provider.tvaRate || 20;
+        const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -723,9 +786,9 @@ export const documentRouter = router({
           project_name: input.project_name,
           clientId: input.clientId,
           providerId: input.providerId,
-          payment_providers: input.payment_providers,
-          tva_rate: input.tva_rate,
-          items: [],
+          payment_providers: paymentProvidersWithDetails,
+          tva_rate: tvaRate,
+          items: input.items || [],
           railway_estimate: 0,
           providers: [],
           features: [],
@@ -734,16 +797,16 @@ export const documentRouter = router({
           client_city: client.billingCity || '',
           client_country: client.billingCountry || '',
           client_siret: client.siret || '',
-          provider_name: provider?.name || '',
-          provider_legal: provider?.legalName || '',
-          provider_address: provider?.address || '',
-          provider_city: provider?.city || '',
-          provider_siret: provider?.siret || '',
-          provider_email: provider?.email || '',
-          provider_phone: provider?.phone || '',
-          bank_name: provider?.bankName || '',
-          iban: provider?.iban || '',
-          bic: provider?.bic || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
@@ -770,18 +833,37 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
         }
 
-        let provider = null;
-        let logoUrl: string | undefined;
-
-        if (input.providerId) {
-          provider = await ctx.db.provider.findUnique({
-            where: { id: input.providerId },
-          });
-          if (!provider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-          }
-          logoUrl = provider.logoUrl || undefined;
+        const provider = await ctx.db.provider.findUnique({
+          where: { id: input.providerId },
+        });
+        if (!provider) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
+
+        const paymentProviderIds = input.payment_providers.map(p => p.id);
+        const paymentProviders = await ctx.db.provider.findMany({
+          where: { id: { in: paymentProviderIds } },
+        });
+
+        if (paymentProviders.length !== paymentProviderIds.length) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more payment providers not found' });
+        }
+
+        const paymentProvidersWithDetails = input.payment_providers.map(inputProvider => {
+          const dbProvider = paymentProviders.find(p => p.id === inputProvider.id);
+          if (!dbProvider) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: `Payment provider ${inputProvider.id} not found` });
+          }
+          return {
+            name: dbProvider.name,
+            iban: dbProvider.iban || '',
+            bic: dbProvider.bic || '',
+            amount_to_pay: inputProvider.amount_to_pay,
+          };
+        });
+
+        const tvaRate = provider.tvaRate || 20;
+        const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -790,29 +872,29 @@ export const documentRouter = router({
           due_date: input.due_date,
           project_step: input.project_step,
           project_name: input.project_name,
-          items: [],
+          items: input.items || [],
           railway_estimate: 0,
           providers: [],
           features: [],
           clientId: input.clientId,
           providerId: input.providerId,
-          payment_providers: input.payment_providers,
-          tva_rate: input.tva_rate,
+          payment_providers: paymentProvidersWithDetails,
+          tva_rate: tvaRate,
           client_name: client.companyName,
           client_address: client.billingAddress || '',
           client_city: client.billingCity || '',
           client_country: client.billingCountry || '',
           client_siret: client.siret || '',
-          provider_name: provider?.name || '',
-          provider_legal: provider?.legalName || '',
-          provider_address: provider?.address || '',
-          provider_city: provider?.city || '',
-          provider_siret: provider?.siret || '',
-          provider_email: provider?.email || '',
-          provider_phone: provider?.phone || '',
-          bank_name: provider?.bankName || '',
-          iban: provider?.iban || '',
-          bic: provider?.bic || '',
+          provider_name: provider.name,
+          provider_legal: provider.legalName || '',
+          provider_address: provider.address || '',
+          provider_city: provider.city || '',
+          provider_siret: provider.siret || '',
+          provider_email: provider.email || '',
+          provider_phone: provider.phone || '',
+          bank_name: provider.bankName || '',
+          iban: provider.iban || '',
+          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocument(documentData, logoUrl);
@@ -822,7 +904,7 @@ export const documentRouter = router({
           (sum: number, provider: any) => sum + provider.amount_to_pay,
           0
         );
-        const tva = subtotal * (input.tva_rate / 100);
+        const tva = subtotal * (tvaRate / 100);
         const total = subtotal + tva;
 
         const document = await ctx.db.document.create({
@@ -835,7 +917,7 @@ export const documentRouter = router({
             clientAddress: documentData.client_address,
             clientCity: documentData.client_city,
             clientCountry: documentData.client_country,
-            providerId: input.providerId || null,
+            providerId: input.providerId,
             providerName: documentData.provider_name,
             providerLegal: documentData.provider_legal,
             providerSiret: documentData.provider_siret,
@@ -843,11 +925,11 @@ export const documentRouter = router({
             providerCity: documentData.provider_city,
             providerEmail: documentData.provider_email,
             providerPhone: documentData.provider_phone,
-            items: [],
+            items: input.items || [],
             subtotal,
             tva,
             total,
-            tvaRate: input.tva_rate,
+            tvaRate: tvaRate,
             fileSize: pdfBuffer.length,
             createdBy: ctx.user!.id,
           },
