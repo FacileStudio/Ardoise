@@ -77,30 +77,39 @@ export const DocumentDataSchema = z.object({
   iban: z.string().optional(),
   bic: z.string().optional(),
 
-  items: z.array(DocumentItemSchema).default([]),
+  items: z.array(DocumentItemSchema).optional(),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
 
   // For back_contractuel
   project_name: z.string().optional(),
   valid_until: z.string().optional(),
-  providers: z.array(ProviderSchema).optional().default([]),
-  features: z.array(FeatureSchema).optional().default([]),
+  providers: z.array(ProviderSchema).optional(),
+  features: z.array(FeatureSchema).optional(),
 
   // For appel_de_fonds
   global_invoice_ref: z.string().optional(),
   project_step: z.string().optional(),
-  payment_providers: z.array(PaymentProviderSchema).optional().default([]),
+  payment_providers: z.array(PaymentProviderSchema).optional(),
 }).refine((data) => {
   // For prestation and maintenance, require at least one item
   if (data.type === 'prestation' || data.type === 'maintenance') {
     return data.items && data.items.length > 0;
   }
-  // For all other types (contrat_prestation, contrat_maintenance, back_contractuel, appel_de_fonds), items are optional
+  // For all other types, items are optional (can be undefined or empty array)
   return true;
 }, {
   message: "Au moins un article est requis pour ce type de document",
   path: ['items'],
+}).transform((data) => {
+  // Ensure arrays are never undefined
+  return {
+    ...data,
+    items: data.items || [],
+    providers: data.providers || [],
+    features: data.features || [],
+    payment_providers: data.payment_providers || [],
+  };
 }).refine((data) => {
   // ProviderId is required for all types except back_contractuel and appel_de_fonds
   if (data.type !== 'back_contractuel' && data.type !== 'appel_de_fonds') {
@@ -120,7 +129,7 @@ export const ContratPrestationInputSchema = z.object({
   quote_number: z.string().optional(),
   clientId: z.string().min(1, "Le client est requis"),
   providerId: z.string().min(1, "Le prestataire est requis"),
-  items: z.array(DocumentItemSchema).optional().default([]),
+  items: z.array(DocumentItemSchema).optional(),
   tva_rate: z.number().nonnegative().default(20),
 });
 
@@ -132,11 +141,9 @@ export const ContratMaintenanceInputSchema = z.object({
   maintenance_period: z.string().min(1, "La période de maintenance est requise"),
   clientId: z.string().min(1, "Le client est requis"),
   providerId: z.string().min(1, "Le prestataire est requis"),
-  items: z.array(DocumentItemSchema).optional().default([]),
+  items: z.array(DocumentItemSchema).optional(),
   tva_rate: z.number().nonnegative().default(20),
 });
-
-console.log('[ContratMaintenanceInputSchema] Items field is optional and defaults to empty array');
 
 export type ContratMaintenanceInput = z.infer<typeof ContratMaintenanceInputSchema>;
 
@@ -148,8 +155,8 @@ export const BackContractuelInputSchema = z.object({
   clientId: z.string().min(1, "Le client est requis"),
   providerId: z.string().optional(),
   providers: z.array(ProviderSchema).min(1, "Au moins un sous-traitant est requis"),
-  features: z.array(FeatureSchema).default([]),
-  items: z.array(DocumentItemSchema).default([]),
+  features: z.array(FeatureSchema).optional(),
+  items: z.array(DocumentItemSchema).optional(),
   tva_rate: z.number().nonnegative().default(20),
 });
 
@@ -230,7 +237,6 @@ export async function generateDocument(
   data: DocumentData,
   logoPath?: string
 ): Promise<Buffer> {
-  console.log(`[generateDocument] Validating document type: ${data.type}, items count: ${data.items?.length || 0}`);
   const validated = DocumentDataSchema.parse(data);
   const template = TEMPLATES[validated.type];
 
