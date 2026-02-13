@@ -137,7 +137,7 @@
                     <Button
                       variant="primary"
                       class="bg-[#291334] hover:bg-[#291334]/90 text-[#FAF7F5] whitespace-nowrap"
-                      on:click={() => handlePayNow(payment.id)}
+                      onclick={() => handlePayNow(payment.id)}
                     >
                       <iconify-icon icon="solar:card-bold" width="20"></iconify-icon>
                       Payer maintenant
@@ -185,7 +185,7 @@
                     <Button
                       variant="outline"
                       size="sm"
-                      on:click={() => window.open(payment.receiptUrl, '_blank')}
+                      onclick={() => window.open(payment.receiptUrl, '_blank')}
                     >
                       <iconify-icon icon="solar:download-bold" width="18"></iconify-icon>
                       Télécharger le reçu
