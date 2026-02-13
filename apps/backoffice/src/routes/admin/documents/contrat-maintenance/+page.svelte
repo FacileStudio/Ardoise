@@ -1,27 +1,16 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
-
-	interface Client {
-		id: string;
-		companyName: string;
-	}
-
-	interface Provider {
-		id: string;
-		name: string;
-		tvaRate: number;
-	}
+	import ClientSelect from '$lib/components/ClientSelect.svelte';
+	import ProviderSelect from '$lib/components/ProviderSelect.svelte';
+	import PdfPreviewModal from '$lib/components/PdfPreviewModal.svelte';
 
 	let generating = $state(false);
 	let showPreview = $state(false);
 	let previewPdf = $state('');
-	let clients: Client[] = $state([]);
-	let providers: Provider[] = $state([]);
 
 	let formData = $state({
 		contract_reference: 'CTR-001',
@@ -32,38 +21,11 @@
 		tva_rate: 20,
 	});
 
-	onMount(async () => {
-		await Promise.all([loadClients(), loadProviders()]);
-	});
-
-	async function loadClients() {
-		try {
-			const result = await trpc.client.list.query({ limit: 100, offset: 0 });
-			clients = result.data;
-		} catch (error: any) {
-			logger.error('Failed to load clients', error);
-			toast.error('Failed to load clients');
+	function handleProviderChange(_value: string, provider?: any) {
+		if (provider) {
+			formData.tva_rate = provider.tvaRate;
 		}
 	}
-
-	async function loadProviders() {
-		try {
-			const result = await trpc.admin.providers.list.query({ limit: 100, offset: 0 });
-			providers = result.data;
-		} catch (error: any) {
-			logger.error('Failed to load providers', error);
-			toast.error('Failed to load providers');
-		}
-	}
-
-	$effect(() => {
-		if (formData.providerId) {
-			const provider = providers.find((p) => p.id === formData.providerId);
-			if (provider) {
-				formData.tva_rate = provider.tvaRate;
-			}
-		}
-	});
 
 	async function handlePreview() {
 		if (!formData.clientId || !formData.providerId) {
@@ -151,31 +113,8 @@
 		</div>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<div>
-				<label class="block text-sm font-medium mb-2">Client *</label>
-				<select
-					bind:value={formData.clientId}
-					class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-				>
-					<option value="">Sélectionner un client</option>
-					{#each clients as client}
-						<option value={client.id}>{client.companyName}</option>
-					{/each}
-				</select>
-			</div>
-
-			<div>
-				<label class="block text-sm font-medium mb-2">Prestataire *</label>
-				<select
-					bind:value={formData.providerId}
-					class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-				>
-					<option value="">Sélectionner un prestataire</option>
-					{#each providers as provider}
-						<option value={provider.id}>{provider.name}</option>
-					{/each}
-				</select>
-			</div>
+			<ClientSelect bind:value={formData.clientId} />
+			<ProviderSelect bind:value={formData.providerId} onchange={handleProviderChange} />
 		</div>
 
 		<div class="flex gap-4 pt-4">
@@ -191,23 +130,10 @@
 		</div>
 	</div>
 
-	{#if showPreview && previewPdf}
-		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div class="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
-				<div class="flex justify-between items-center p-4 border-b">
-					<h2 class="text-xl font-bold">Aperçu du contrat</h2>
-					<button onclick={() => (showPreview = false)} class="text-gray-500 hover:text-gray-700">
-						<iconify-icon icon="mdi:close" width="24"></iconify-icon>
-					</button>
-				</div>
-				<div class="flex-1 overflow-auto p-4">
-					<iframe
-						src="data:application/pdf;base64,{previewPdf}"
-						class="w-full h-full"
-						title="PDF Preview"
-					></iframe>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<PdfPreviewModal
+		bind:show={showPreview}
+		pdfBase64={previewPdf}
+		title="Aperçu du contrat de maintenance"
+		onclose={() => (showPreview = false)}
+	/>
 </div>
