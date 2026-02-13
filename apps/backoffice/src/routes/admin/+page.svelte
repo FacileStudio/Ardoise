@@ -31,7 +31,10 @@
   </div>
 
   {#if loading}
-    <div class="loading">{$i18n.t('backoffice.dashboard.loadingEntities')}</div>
+    <div class="flex flex-col items-center justify-center py-20">
+      <iconify-icon icon="line-md:loading-twotone-loop" width="48" class="text-indigo-500 mb-4"></iconify-icon>
+      <p class="text-slate-400 font-bold">{$i18n.t('backoffice.dashboard.loadingEntities')}</p>
+    </div>
   {:else}
     <div class="entity-grid">
       {#each entities as entity (entity)}

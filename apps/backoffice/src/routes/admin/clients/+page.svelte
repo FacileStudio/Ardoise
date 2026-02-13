@@ -374,8 +374,9 @@
 	</div>
 
 	{#if pageLoading}
-		<div class="py-20 flex justify-center">
-			<Spinner size="xl" />
+		<div class="py-20 flex flex-col items-center justify-center">
+			<iconify-icon icon="line-md:loading-twotone-loop" width="48" class="text-indigo-500 mb-4"></iconify-icon>
+			<p class="text-slate-400 font-bold">Chargement des clients...</p>
 		</div>
 	{:else if clients.length > 0}
 		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">

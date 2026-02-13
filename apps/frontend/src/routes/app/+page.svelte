@@ -73,8 +73,9 @@
     </div>
 
     {#if loading}
-      <div class="flex items-center justify-center py-20">
-        <Spinner size="lg" />
+      <div class="flex flex-col items-center justify-center py-20">
+        <iconify-icon icon="line-md:loading-twotone-loop" width="48" class="text-[#291334] mb-4"></iconify-icon>
+        <p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">Chargement...</p>
       </div>
     {:else if error}
       <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-800">

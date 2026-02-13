@@ -285,8 +285,9 @@
 			</div>
 
 			{#if pageLoading}
-				<div class="flex items-center justify-center py-20">
-					<Spinner size={40} />
+				<div class="flex flex-col items-center justify-center py-20">
+					<iconify-icon icon="line-md:loading-twotone-loop" width="48" class="text-indigo-500 mb-4"></iconify-icon>
+					<p class="text-slate-400 font-bold">Chargement des signatures...</p>
 				</div>
 			{:else if filteredSubmissions.length === 0}
 				<EmptyState
