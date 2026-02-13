@@ -24,20 +24,19 @@
   }
 </script>
 
-<div class="admin-home">
-  <div class="page-header">
-    <h1>{$i18n.t('backoffice.dashboard.title')}</h1>
-    <p>{$i18n.t('backoffice.dashboard.subtitle')}</p>
+{#if loading}
+  <div class="flex flex-col items-center justify-center h-screen space-y-6">
+    <iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+    <p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+      Chargement...
+    </p>
   </div>
-
-  {#if loading}
-    <div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
-      <iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-      <p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-        Chargement...
-      </p>
+{:else}
+  <div class="admin-home">
+    <div class="page-header">
+      <h1>{$i18n.t('backoffice.dashboard.title')}</h1>
+      <p>{$i18n.t('backoffice.dashboard.subtitle')}</p>
     </div>
-  {:else}
     <div class="entity-grid">
       {#each entities as entity (entity)}
         <button class="entity-card" on:click={() => navigateToEntity(entity)}>
@@ -49,8 +48,8 @@
         </button>
       {/each}
     </div>
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
   .admin-home {

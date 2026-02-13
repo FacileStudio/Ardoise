@@ -459,15 +459,16 @@
 			</div>
 		</div>
 
-		<div class="text-sm text-slate-500 text-center">
-			{$i18n.t('backoffice.payments.showing', { count: filteredPayments.length, total: total })}
-		</div>
-	{:else}
-		<EmptyState
-			icon="solar:document-bold"
-			title={$i18n.t('backoffice.payments.noPaymentsFound')}
-			description={$i18n.t('backoffice.payments.tryAdjustingFilters')}
-		/>
-	{/if}
-</div>
+			<div class="text-sm text-slate-500 text-center">
+				{$i18n.t('backoffice.payments.showing', { count: filteredPayments.length, total: total })}
+			</div>
+		{:else}
+			<EmptyState
+				icon="solar:document-bold"
+				title={$i18n.t('backoffice.payments.noPaymentsFound')}
+				description={$i18n.t('backoffice.payments.tryAdjustingFilters')}
+			/>
+		{/if}
+	</div>
+{/if}
 

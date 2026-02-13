@@ -129,27 +129,29 @@
 	}
 </script>
 
-<div class="p-8 max-w-[1600px] mx-auto space-y-6">
-	<header class="flex justify-between items-start">
-		<div>
-			<h1 class="text-3xl font-black text-[#291334] tracking-tighter">Statistiques financières</h1>
-			<p class="text-slate-500 text-sm mt-1">
-				Analyse détaillée des paiements et revenus
-			</p>
-		</div>
-		{#if payments.length > 0}
-			<Button onclick={handleExportCSV} class="rounded-full">
-				<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
-				<span>Exporter CSV</span>
-			</Button>
-		{/if}
-	</header>
-
-	{#if loading}
-		<div class="flex items-center justify-center py-20">
-			<Spinner size="xl" />
-		</div>
-	{:else}
+{#if loading}
+	<div class="flex flex-col items-center justify-center h-screen space-y-6">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+			Chargement...
+		</p>
+	</div>
+{:else}
+	<div class="p-8 max-w-[1600px] mx-auto space-y-6">
+		<header class="flex justify-between items-start">
+			<div>
+				<h1 class="text-3xl font-black text-[#291334] tracking-tighter">Statistiques financières</h1>
+				<p class="text-slate-500 text-sm mt-1">
+					Analyse détaillée des paiements et revenus
+				</p>
+			</div>
+			{#if payments.length > 0}
+				<Button onclick={handleExportCSV} class="rounded-full">
+					<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
+					<span>Exporter CSV</span>
+				</Button>
+			{/if}
+		</header>
 		<div class="grid grid-cols-4 gap-4">
 			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
 				<div class="flex items-center justify-between mb-2">
@@ -299,5 +301,5 @@
 				{/if}
 			</div>
 		</div>
-	{/if}
-</div>
+	</div>
+{/if}

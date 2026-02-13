@@ -89,64 +89,65 @@
 	}));
 </script>
 
-<div class="p-8 max-w-[1400px] mx-auto space-y-6">
-	<header class="flex items-center justify-between mb-6" in:fade>
-		<div>
-			<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.users.title')}</h1>
-			<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.users.subtitle')}</p>
-		</div>
-		<button
-			onclick={() => goto('/admin/users/create')}
-			class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
-		>
-			<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-			Nouvel utilisateur
-		</button>
-	</header>
-
-	{#if stats}
-		<div class="grid grid-cols-2 gap-4">
-			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 100 }}>
-				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-slate-400 uppercase">{$i18n.t('backoffice.users.total')}</div>
-					<iconify-icon icon="solar:users-group-two-rounded-bold" class="text-slate-400" width="20"></iconify-icon>
-				</div>
-				<div class="text-2xl font-black text-slate-900">{stats.totalUsers}</div>
-			</div>
-			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 200 }}>
-				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-rose-600 uppercase">{$i18n.t('backoffice.users.admin')}</div>
-					<iconify-icon icon="solar:crown-bold" class="text-rose-600" width="20"></iconify-icon>
-				</div>
-				<div class="text-2xl font-black text-rose-600">{stats.adminUsers}</div>
-			</div>
-		</div>
-	{/if}
-
-	<div class="bg-white rounded-2xl border border-slate-100 p-4" in:fly={{ y: 20, delay: 300 }}>
-		<div class="flex gap-3 items-center">
-			<div class="flex-1">
-				<SearchInput bind:value={searchQuery} placeholder={$i18n.t('backoffice.users.searchPlaceholder')} />
-			</div>
-			<select
-				bind:value={filters.role}
-				class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm focus:border-indigo-300"
-			>
-				<option value="all">{$i18n.t('backoffice.users.allRoles')}</option>
-				<option value="admin">{$i18n.t('backoffice.users.admin')}</option>
-				<option value="user">{$i18n.t('backoffice.users.user')}</option>
-			</select>
-		</div>
+{#if pageLoading}
+	<div class="flex flex-col items-center justify-center h-screen space-y-6">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+			Chargement...
+		</p>
 	</div>
+{:else}
+	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
+		<header class="flex items-center justify-between mb-6" in:fade>
+			<div>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.users.title')}</h1>
+				<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.users.subtitle')}</p>
+			</div>
+			<button
+				onclick={() => goto('/admin/users/create')}
+				class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
+			>
+				<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+				Nouvel utilisateur
+			</button>
+		</header>
 
-	{#if pageLoading}
-		<div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
-			<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-			<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-				Chargement...
-			</p>
+		{#if stats}
+			<div class="grid grid-cols-2 gap-4">
+				<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 100 }}>
+					<div class="flex items-center justify-between mb-2">
+						<div class="text-xs font-bold text-slate-400 uppercase">{$i18n.t('backoffice.users.total')}</div>
+						<iconify-icon icon="solar:users-group-two-rounded-bold" class="text-slate-400" width="20"></iconify-icon>
+					</div>
+					<div class="text-2xl font-black text-slate-900">{stats.totalUsers}</div>
+				</div>
+				<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 200 }}>
+					<div class="flex items-center justify-between mb-2">
+						<div class="text-xs font-bold text-rose-600 uppercase">{$i18n.t('backoffice.users.admin')}</div>
+						<iconify-icon icon="solar:crown-bold" class="text-rose-600" width="20"></iconify-icon>
+					</div>
+					<div class="text-2xl font-black text-rose-600">{stats.adminUsers}</div>
+				</div>
+			</div>
+		{/if}
+
+		<div class="bg-white rounded-2xl border border-slate-100 p-4" in:fly={{ y: 20, delay: 300 }}>
+			<div class="flex gap-3 items-center">
+				<div class="flex-1">
+					<SearchInput bind:value={searchQuery} placeholder={$i18n.t('backoffice.users.searchPlaceholder')} />
+				</div>
+				<select
+					bind:value={filters.role}
+					class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm focus:border-indigo-300"
+				>
+					<option value="all">{$i18n.t('backoffice.users.allRoles')}</option>
+					<option value="admin">{$i18n.t('backoffice.users.admin')}</option>
+					<option value="user">{$i18n.t('backoffice.users.user')}</option>
+				</select>
+			</div>
 		</div>
-	{:else if filteredUsers.length > 0}
+
+		{#if filteredUsers.length > 0}
 		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
 			<div class="overflow-x-auto">
 				<table class="w-full">
@@ -223,15 +224,16 @@
 			</div>
 		</div>
 
-		<div class="text-sm text-slate-500 text-center">
-			{$i18n.t('backoffice.users.showing', { count: filteredUsers.length, total: users.length })}
-		</div>
-	{:else}
-		<EmptyState
-			icon="solar:users-group-two-rounded-bold"
-			title={$i18n.t('backoffice.users.noUsersFound')}
-			description={$i18n.t('backoffice.users.tryAdjustingFilters')}
-		/>
-	{/if}
-</div>
+			<div class="text-sm text-slate-500 text-center">
+				{$i18n.t('backoffice.users.showing', { count: filteredUsers.length, total: users.length })}
+			</div>
+		{:else}
+			<EmptyState
+				icon="solar:users-group-two-rounded-bold"
+				title={$i18n.t('backoffice.users.noUsersFound')}
+				description={$i18n.t('backoffice.users.tryAdjustingFilters')}
+			/>
+		{/if}
+	</div>
+{/if}
 
