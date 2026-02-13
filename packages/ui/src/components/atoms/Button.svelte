@@ -40,7 +40,7 @@
         type?: "button" | "submit";
         disabled?: boolean;
         class?: string;
-        onclick?: () => void;
+        onclick?: () => void | Promise<void>;
         children?: Snippet;
         [key: string]: unknown;
     } = $props();

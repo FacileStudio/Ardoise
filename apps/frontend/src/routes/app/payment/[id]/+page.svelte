@@ -112,12 +112,17 @@
   }
 
   async function handleSubmitPayment() {
-    if (!stripe || !elements) return;
+    console.log('handleSubmitPayment called', { stripe, elements, processingPayment });
+    if (!stripe || !elements) {
+      console.error('Stripe or elements not initialized');
+      return;
+    }
 
     processingPayment = true;
     error = '';
 
     try {
+      console.log('Calling stripe.confirmPayment...');
       const { error: submitError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -126,16 +131,21 @@
         redirect: 'if_required',
       });
 
+      console.log('stripe.confirmPayment result:', { submitError });
+
       if (submitError) {
         error = submitError.message || 'Erreur lors du paiement';
+        console.error('Payment error:', error);
       } else {
         paymentSuccess = true;
+        console.log('Payment successful!');
         setTimeout(() => {
           goto('/app');
         }, 3000);
       }
     } catch (err: any) {
       error = err.message || 'Erreur lors du paiement';
+      console.error('Payment exception:', err);
     } finally {
       processingPayment = false;
     }
@@ -382,7 +392,7 @@
                   intent="primary"
                   size="lg"
                   class="w-full bg-[#291334] hover:bg-[#291334]/90"
-                  onclick={handleSubmitPayment}
+                  onclick={() => handleSubmitPayment()}
                   disabled={processingPayment || !stripe || !elements}
                 >
                   {#if processingPayment}
