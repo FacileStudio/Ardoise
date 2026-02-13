@@ -294,7 +294,6 @@
 						quote_number: formData.quote_number,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						items: formData.items,
 						tva_rate: Number(formData.tva_rate),
 					});
 					break;
@@ -306,7 +305,6 @@
 						maintenance_period: formData.maintenance_period,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						items: formData.items,
 						tva_rate: Number(formData.tva_rate),
 					});
 					break;
@@ -401,7 +399,6 @@
 						quote_number: formData.quote_number,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						items: formData.items,
 						tva_rate: Number(formData.tva_rate),
 					});
 					break;
@@ -413,7 +410,6 @@
 						maintenance_period: formData.maintenance_period,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						items: formData.items,
 						tva_rate: Number(formData.tva_rate),
 					});
 					break;
