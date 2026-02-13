@@ -1,11 +1,19 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
+	type TrpcClient = {
+		media: {
+			getDownloadUrl: {
+				query: (params: { url: string }) => Promise<{ url: string }>;
+			};
+		};
+	};
+
 	interface Props {
 		src: string;
 		alt: string;
 		class?: string;
-		trpc: any;
+		trpc: TrpcClient;
 		fallback?: Snippet;
 	}
 

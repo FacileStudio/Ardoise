@@ -4,18 +4,25 @@
     import { logger } from '@repo/logger';
     import 'iconify-icon';
 
+    type TrpcClient = {
+        media: {
+            getDownloadUrl: {
+                query: (params: { url: string }) => Promise<{ url: string }>;
+            };
+        };
+    };
+
     interface Props {
         value: string;
         label?: string;
-        trpc?: any;
+        trpc?: TrpcClient;
         getPresignedUrl: (_filename: string, _folder: string) => Promise<string>;
     }
 
     let { value = $bindable(""), label = "Image de couverture", trpc = undefined, getPresignedUrl }: Props = $props();
 
-    let uploading = false;
+    let uploading = $state(false);
     let previewUrl = $state(value);
-    let loadingPresigned = $state(false);
     let fileInput: HTMLInputElement;
 
     async function loadPresignedPreview() {
@@ -24,15 +31,12 @@
             return;
         }
 
-        loadingPresigned = true;
         try {
             const result = await trpc.media.getDownloadUrl.query({ url: value });
             previewUrl = result.url;
         } catch (err) {
             logger.error({ err }, 'Failed to load presigned URL for preview');
             previewUrl = value;
-        } finally {
-            loadingPresigned = false;
         }
     }
 
@@ -93,7 +97,7 @@
         {#if previewUrl && !uploading}
             <button
                 type="button"
-                on:click|preventDefault={() => { value = ""; previewUrl = ""; }}
+                onclick={(e) => { e.preventDefault(); value = ""; previewUrl = ""; }}
                 class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full text-rose-500 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity"
                 aria-label="Remove image"
             >
@@ -104,7 +108,7 @@
         <input
             type="file"
             bind:this={fileInput}
-            on:change={handleFileChange}
+            onchange={handleFileChange}
             accept="image/*"
             class="absolute inset-0 opacity-0 cursor-pointer"
         />

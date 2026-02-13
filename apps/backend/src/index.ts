@@ -22,7 +22,7 @@ const VERSION = '1.2.1';
 const app = new Hono();
 
 app.onError((err, c) => {
-  logger.error('Unhandled error:', err);
+  logger.error({ err }, 'Unhandled error');
   return c.json(
     {
       error: 'Internal server error',

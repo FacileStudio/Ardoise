@@ -386,6 +386,17 @@ export const paymentService = {
       });
     }
 
+    const settings = await db.settings.findUnique({
+      where: { id: 'global' },
+    });
+
+    if (!settings) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Company settings not configured',
+      });
+    }
+
     const receiptData: ReceiptData = {
       receiptNumber: payment.id,
       receiptDate: payment.paidAt
@@ -397,12 +408,12 @@ export const paymentService = {
       clientCity: payment.client.billingCity,
       clientCountry: payment.client.billingCountry,
       clientSiret: payment.client.siret || '',
-      providerName: env.COMPANY_NAME,
-      providerAddress: env.COMPANY_ADDRESS,
-      providerCity: env.COMPANY_CITY,
-      providerSiret: env.COMPANY_SIRET,
-      providerEmail: env.COMPANY_EMAIL,
-      providerPhone: env.COMPANY_PHONE,
+      providerName: settings.companyName || env.COMPANY_NAME,
+      providerAddress: settings.companyAddress || '',
+      providerCity: settings.companyCity || '',
+      providerSiret: settings.companySiret || '',
+      providerEmail: settings.companyEmail || env.COMPANY_CONTACT_EMAIL,
+      providerPhone: settings.companyPhone || '',
       items: [
         {
           description: payment.description,
@@ -411,7 +422,7 @@ export const paymentService = {
           price: Number(payment.amount),
         },
       ],
-      tvaRate: 20,
+      tvaRate: Number(settings.tvaRate),
     };
 
     try {

@@ -5,14 +5,6 @@ const meta = {
   title: 'Atoms/Badge',
   component: Badge,
   tags: ['autodocs'],
-  // @ts-expect-error - Storybook argTypes don't fully support Svelte 5 components yet
-  argTypes: {
-    variant: {
-      control: 'select',
-      options: ['indigo', 'rose', 'amber', 'emerald', 'slate'],
-      description: 'The badge color variant',
-    },
-  },
 } satisfies Meta<Badge>;
 
 export default meta;

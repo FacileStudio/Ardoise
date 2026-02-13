@@ -11,7 +11,7 @@ export const userService = {
       password: string;
       firstName: string;
       lastName: string;
-      role: 'USER' | 'ADMIN';
+      role: 'CLIENT' | 'ADMIN';
     }
   ) => {
     const existingUser = await db.user.findUnique({
@@ -134,7 +134,7 @@ export const userService = {
   updateUser: async (
     db: PrismaClient,
     userId: string,
-    data: { role?: 'USER' | 'ADMIN' }
+    data: { role?: 'CLIENT' | 'ADMIN' }
   ) => {
     try {
       return await db.user.update({
@@ -157,7 +157,7 @@ export const userService = {
       email?: string;
       firstName?: string;
       lastName?: string;
-      role?: 'USER' | 'ADMIN';
+      role?: 'CLIENT' | 'ADMIN';
       password?: string;
     }
   ) => {

@@ -46,6 +46,16 @@ export const ProviderSchema = z.object({
   amount: z.number().nonnegative(),
 });
 
+export const ProviderDataSchema = z.object({
+  name: z.string(),
+  role: z.string(),
+  address: z.string(),
+  city: z.string(),
+  siret: z.string(),
+  email: z.string(),
+  amount: z.number().nonnegative(),
+});
+
 export const FeatureSchema = z.object({
   title: z.string(),
   desc: z.string(),
@@ -53,6 +63,13 @@ export const FeatureSchema = z.object({
 
 export const PaymentProviderSchema = z.object({
   id: z.string(),
+  amount_to_pay: z.number().nonnegative(),
+});
+
+export const PaymentProviderDataSchema = z.object({
+  name: z.string(),
+  iban: z.string(),
+  bic: z.string(),
   amount_to_pay: z.number().nonnegative(),
 });
 
@@ -231,7 +248,7 @@ const BackContractuelDataSchema = z.object({
   bank_name: z.string().optional(),
   iban: z.string().optional(),
   bic: z.string().optional(),
-  providers: z.array(ProviderSchema).min(1, "Au moins un sous-traitant est requis"),
+  providers: z.array(ProviderDataSchema).min(1, "Au moins un sous-traitant est requis"),
   features: z.array(FeatureSchema).optional().default([]),
   items: z.array(DocumentItemSchema).optional().default([]),
   tva_rate: z.number().nonnegative().default(20),
@@ -261,7 +278,7 @@ const AppelDeFondsDataSchema = z.object({
   bank_name: z.string().optional(),
   iban: z.string().optional(),
   bic: z.string().optional(),
-  payment_providers: z.array(PaymentProviderSchema).min(1, "Au moins un prestataire de paiement est requis"),
+  payment_providers: z.array(PaymentProviderDataSchema).min(1, "Au moins un prestataire de paiement est requis"),
   items: z.array(DocumentItemSchema).optional().default([]),
   tva_rate: z.number().nonnegative().default(20),
 }).passthrough();
@@ -321,6 +338,7 @@ const PrestationVideoDataSchema = z.object({
 }).passthrough();
 
 export const ContratPrestationInputSchema = z.object({
+  contract_reference: z.string().optional(),
   contract_date: z.string().min(1, "La date du contrat est requise"),
   quote_number: z.string().optional(),
   clientId: z.string().min(1, "Le client est requis"),
@@ -330,6 +348,7 @@ export const ContratPrestationInputSchema = z.object({
 export type ContratPrestationInput = z.infer<typeof ContratPrestationInputSchema>;
 
 export const ContratMaintenanceInputSchema = z.object({
+  contract_reference: z.string().optional(),
   contract_date: z.string().min(1, "La date du contrat est requise"),
   maintenance_period: z.string().min(1, "La période de maintenance est requise"),
   clientId: z.string().min(1, "Le client est requis"),
@@ -339,6 +358,7 @@ export const ContratMaintenanceInputSchema = z.object({
 export type ContratMaintenanceInput = z.infer<typeof ContratMaintenanceInputSchema>;
 
 export const BackContractuelInputSchema = z.object({
+  contract_reference: z.string().optional(),
   contract_date: z.string().min(1, "La date du contrat est requise"),
   project_name: z.string().min(1, "Le nom du projet est requis"),
   valid_until: z.string().min(1, "La date de validité est requise"),
@@ -352,6 +372,7 @@ export const BackContractuelInputSchema = z.object({
 export type BackContractuelInput = z.infer<typeof BackContractuelInputSchema>;
 
 export const AppelDeFondsInputSchema = z.object({
+  global_invoice_ref: z.string().optional(),
   invoice_date: z.string().min(1, "La date de facture est requise"),
   due_date: z.string().min(1, "La date d'échéance est requise"),
   project_step: z.string().min(1, "L'étape du projet est requise"),

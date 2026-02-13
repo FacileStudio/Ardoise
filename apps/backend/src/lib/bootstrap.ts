@@ -13,7 +13,7 @@ export async function bootstrapAdmin(
     });
 
     if (existingAdmin) {
-      logger.info('✅ Admin user already exists:', existingAdmin.email);
+      logger.info({ email: existingAdmin.email }, '✅ Admin user already exists');
       return;
     }
 
@@ -22,7 +22,7 @@ export async function bootstrapAdmin(
     });
 
     if (existingUser) {
-      logger.info('⚡ Upgrading existing user to ADMIN:', env.ADMIN_EMAIL);
+      logger.info({ email: env.ADMIN_EMAIL }, '⚡ Upgrading existing user to ADMIN');
       const passwordHash = await authManager.hashPassword(env.ADMIN_PASSWORD);
       await prisma.user.update({
         where: { email: env.ADMIN_EMAIL },
@@ -52,9 +52,9 @@ export async function bootstrapAdmin(
     });
 
     logger.info('✅ Admin user created successfully!');
-    logger.info('📧 Email:', admin.email);
-    logger.info('👤 Name:', `${admin.firstName} ${admin.lastName}`);
-    logger.info('🎯 Role:', admin.role);
+    logger.info({ email: admin.email }, '📧 Email');
+    logger.info({ name: `${admin.firstName} ${admin.lastName}` }, '👤 Name');
+    logger.info({ role: admin.role }, '🎯 Role');
   } catch (error: unknown) {
     const prismaError = error as { code?: string; meta?: { driverAdapterError?: string } };
     if (prismaError?.code === 'P2021' || prismaError?.meta?.driverAdapterError === 'TableDoesNotExist') {
@@ -62,7 +62,7 @@ export async function bootstrapAdmin(
       logger.info('📝 This is expected on first deployment - migrations will create tables first');
       return;
     }
-    logger.error('❌ Failed to bootstrap admin user:', error);
+    logger.error({ error }, '❌ Failed to bootstrap admin user');
     throw error;
   }
 }

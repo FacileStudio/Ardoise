@@ -37,7 +37,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
-  [UserRole.USER]: 1,
+  [UserRole.CLIENT]: 1,
   [UserRole.ADMIN]: 2,
 };
 

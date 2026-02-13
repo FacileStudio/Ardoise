@@ -14,9 +14,9 @@
   export let submitLabel = "Enregistrer";
   export let getPresignedUrl: (_filename: string, _folder: string) => Promise<string> = async () => "";
 
+  // @ts-expect-error - Type instantiation is excessively deep with dynamic schemas, but runtime behavior is correct
   const adapter = zod(schema);
 
-  // @ts-expect-error - superForm types don't support dynamic schemas, but runtime behavior is correct
   const { form, errors, constraints, enhance, delayed } = superForm(
     defaults(initialData, adapter),
     {

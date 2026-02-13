@@ -5,22 +5,6 @@ const meta = {
 	title: 'Atoms/Toggle',
 	component: Toggle,
 	tags: ['autodocs'],
-	// @ts-expect-error - Storybook argTypes don't fully support Svelte 5 components yet
-	argTypes: {
-		checked: {
-			control: 'boolean',
-			description: 'Whether the toggle is checked/on'
-		},
-		disabled: {
-			control: 'boolean',
-			description: 'Whether the toggle is disabled'
-		},
-		size: {
-			control: 'select',
-			options: ['sm', 'md', 'lg'],
-			description: 'The size of the toggle'
-		}
-	}
 } satisfies Meta<Toggle>;
 
 export default meta;

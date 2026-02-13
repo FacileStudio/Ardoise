@@ -59,7 +59,7 @@ export const authService = {
         firstName: input.firstName,
         lastName: input.lastName,
         password: passwordHash,
-        role: UserRole.USER,
+        role: UserRole.CLIENT,
       },
       include: {
         avatar: { select: { url: true } },
