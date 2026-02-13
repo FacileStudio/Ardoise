@@ -45,7 +45,6 @@ export const PrestationInputSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),
   providerId: z.string().min(1, 'Provider is required'),
   items: z.array(DocumentItemSchema).min(1, 'At least one item is required'),
-  tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
 });
 
@@ -57,7 +56,6 @@ export const MaintenanceInputSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),
   providerId: z.string().min(1, 'Provider is required'),
   items: z.array(DocumentItemSchema).min(1, 'At least one item is required'),
-  tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().nonnegative().optional().default(0),
 });
 

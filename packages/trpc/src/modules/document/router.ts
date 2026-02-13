@@ -202,6 +202,8 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
+        const tvaRate = provider.tvaRate || 20;
+
         const documentData = {
           type: 'prestation' as const,
           invoice_number: input.invoice_number,
@@ -225,7 +227,7 @@ export const documentRouter = router({
           iban: provider.iban || '',
           bic: provider.bic || '',
           items: input.items,
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: input.railway_estimate,
           providers: [],
           features: [],
@@ -266,6 +268,8 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
+        const tvaRate = provider.tvaRate || 20;
+
         const documentData = {
           type: 'prestation' as const,
           invoice_number: input.invoice_number,
@@ -289,7 +293,7 @@ export const documentRouter = router({
           iban: provider.iban || '',
           bic: provider.bic || '',
           items: input.items,
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: input.railway_estimate,
           providers: [],
           features: [],
@@ -304,7 +308,7 @@ export const documentRouter = router({
           0
         );
         const totalWithRailway = subtotal + (input.railway_estimate || 0);
-        const tva = totalWithRailway * (input.tva_rate / 100);
+        const tva = totalWithRailway * (tvaRate / 100);
         const total = totalWithRailway + tva;
 
         const document = await ctx.db.document.create({
@@ -329,7 +333,7 @@ export const documentRouter = router({
             subtotal,
             tva,
             total,
-            tvaRate: input.tva_rate,
+            tvaRate: tvaRate,
             railwayEstimate: input.railway_estimate,
             fileSize: pdfBuffer.length,
             createdBy: ctx.user!.id,
@@ -367,6 +371,8 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
+        const tvaRate = provider.tvaRate || 20;
+
         const documentData = {
           type: 'maintenance' as const,
           quote_number: input.quote_number,
@@ -391,7 +397,7 @@ export const documentRouter = router({
           iban: provider.iban || '',
           bic: provider.bic || '',
           items: input.items,
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: input.railway_estimate,
           providers: [],
           features: [],
@@ -432,6 +438,8 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
+        const tvaRate = provider.tvaRate || 20;
+
         const documentData = {
           type: 'maintenance' as const,
           quote_number: input.quote_number,
@@ -456,7 +464,7 @@ export const documentRouter = router({
           iban: provider.iban || '',
           bic: provider.bic || '',
           items: input.items,
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           providers: [],
           features: [],
           payment_providers: [],
@@ -471,7 +479,7 @@ export const documentRouter = router({
           0
         );
         const totalWithRailway = subtotal + (input.railway_estimate || 0);
-        const tva = totalWithRailway * (input.tva_rate / 100);
+        const tva = totalWithRailway * (tvaRate / 100);
         const total = totalWithRailway + tva;
 
         const document = await ctx.db.document.create({
@@ -496,7 +504,7 @@ export const documentRouter = router({
             subtotal,
             tva,
             total,
-            tvaRate: input.tva_rate,
+            tvaRate: tvaRate,
             railwayEstimate: input.railway_estimate,
             fileSize: pdfBuffer.length,
             createdBy: ctx.user!.id,
@@ -974,7 +982,7 @@ export const documentRouter = router({
           clientId: input.clientId,
           providerId: input.providerId,
           items: [],
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
@@ -1036,7 +1044,7 @@ export const documentRouter = router({
           clientId: input.clientId,
           providerId: input.providerId,
           items: [],
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
@@ -1087,7 +1095,7 @@ export const documentRouter = router({
             subtotal,
             tva,
             total,
-            tvaRate: input.tva_rate,
+            tvaRate: tvaRate,
             fileSize: pdfBuffer.length,
             createdBy: ctx.user!.id,
           },
@@ -1132,7 +1140,7 @@ export const documentRouter = router({
           clientId: input.clientId,
           providerId: input.providerId,
           items: [],
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
@@ -1194,7 +1202,7 @@ export const documentRouter = router({
           clientId: input.clientId,
           providerId: input.providerId,
           items: [],
-          tva_rate: input.tva_rate,
+          tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
@@ -1245,7 +1253,7 @@ export const documentRouter = router({
             subtotal,
             tva,
             total,
-            tvaRate: input.tva_rate,
+            tvaRate: tvaRate,
             fileSize: pdfBuffer.length,
             createdBy: ctx.user!.id,
           },
