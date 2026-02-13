@@ -82,11 +82,9 @@
 	});
 
 	let newItem = $state({ description: '', quantity: 1, unit: 'jour', price: 0 });
-	let newProvider = $state({ name: '', role: '', address: '', city: '', siret: '', email: '', amount: 0 });
-	let selectedProviderForCotraitance = $state('');
+	let newProvider = $state({ id: '', role: '', amount: 0 });
 	let newFeature = $state({ title: '', desc: '' });
-	let newPaymentProvider = $state({ name: '', iban: '', bic: '', amount_to_pay: 0 });
-	let selectedProviderForPayment = $state('');
+	let newPaymentProvider = $state({ id: '', amount_to_pay: 0 });
 
 	onMount(async () => {
 		await Promise.all([loadDocumentTypes(), loadClients(), loadProviders()]);
@@ -123,32 +121,7 @@
 		}
 	});
 
-	$effect(() => {
-		if (selectedProviderForCotraitance) {
-			const provider = providers.find((p) => p.id === selectedProviderForCotraitance);
-			if (provider) {
-				newProvider.name = provider.name;
-				newProvider.role = '';
-				newProvider.address = provider.address || '';
-				newProvider.city = provider.city || '';
-				newProvider.siret = provider.siret || '';
-				newProvider.email = provider.email || '';
-				newProvider.amount = 0;
-			}
-		}
-	});
 
-	$effect(() => {
-		if (selectedProviderForPayment) {
-			const provider = providers.find((p) => p.id === selectedProviderForPayment);
-			if (provider) {
-				newPaymentProvider.name = provider.name;
-				newPaymentProvider.iban = provider.iban || '';
-				newPaymentProvider.bic = provider.bic || '';
-				newPaymentProvider.amount_to_pay = 0;
-			}
-		}
-	});
 
 	async function loadDocumentTypes() {
 		try {
@@ -480,13 +453,12 @@
 	}
 
 	function addProvider() {
-		if (!newProvider.name || !newProvider.role || !newProvider.siret || !newProvider.email || newProvider.amount <= 0) {
-			toast.push('Veuillez remplir tous les champs du prestataire', 'error');
+		if (!newProvider.id || !newProvider.role || newProvider.amount <= 0) {
+			toast.push('Veuillez sélectionner un prestataire, définir son rôle et son montant', 'error');
 			return;
 		}
 		formData.providers = [...formData.providers, { ...newProvider }];
-		newProvider = { name: '', role: '', address: '', city: '', siret: '', email: '', amount: 0 };
-		selectedProviderForCotraitance = '';
+		newProvider = { id: '', role: '', amount: 0 };
 	}
 
 	function removeProvider(index: number) {
@@ -507,13 +479,12 @@
 	}
 
 	function addPaymentProvider() {
-		if (!newPaymentProvider.name || !newPaymentProvider.iban || !newPaymentProvider.bic || newPaymentProvider.amount_to_pay <= 0) {
-			toast.push('Veuillez remplir tous les champs du prestataire de paiement', 'error');
+		if (!newPaymentProvider.id || newPaymentProvider.amount_to_pay <= 0) {
+			toast.push('Veuillez sélectionner un prestataire et définir le montant à verser', 'error');
 			return;
 		}
 		formData.payment_providers = [...formData.payment_providers, { ...newPaymentProvider }];
-		newPaymentProvider = { name: '', iban: '', bic: '', amount_to_pay: 0 };
-		selectedProviderForPayment = '';
+		newPaymentProvider = { id: '', amount_to_pay: 0 };
 	}
 
 	function removePaymentProvider(index: number) {
@@ -814,13 +785,13 @@
 						<div>
 							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Sélectionner un prestataire
+								Prestataire *
 							</label>
 							<select
-								bind:value={selectedProviderForCotraitance}
+								bind:value={newProvider.id}
 								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
 							>
-								<option value="">-- Choisir depuis la liste --</option>
+								<option value="">-- Choisir un prestataire --</option>
 								{#each providers as provider (provider.id)}
 									<option value={provider.id}>{provider.name}</option>
 								{/each}
@@ -829,30 +800,10 @@
 
 						<div class="grid grid-cols-2 gap-4">
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Nom</label>
-								<Input bind:value={newProvider.name} placeholder="Ex: Saravenpi SASU" readonly={!!selectedProviderForCotraitance} />
-							</div>
-							<div>
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Rôle *</label>
 								<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
 							</div>
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Adresse</label>
-								<Input bind:value={newProvider.address} placeholder="Ex: 123 rue de la Paix" readonly={!!selectedProviderForCotraitance} />
-							</div>
-							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Ville</label>
-								<Input bind:value={newProvider.city} placeholder="Ex: Paris" readonly={!!selectedProviderForCotraitance} />
-							</div>
-							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">SIRET</label>
-								<Input bind:value={newProvider.siret} placeholder="Ex: 123 456 789 00001" readonly={!!selectedProviderForCotraitance} />
-							</div>
-							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Email</label>
-								<Input type="email" bind:value={newProvider.email} placeholder="Ex: contact@example.com" readonly={!!selectedProviderForCotraitance} />
-							</div>
-							<div class="col-span-2">
 								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant HT (€) *</label>
 								<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
 							</div>
@@ -872,12 +823,11 @@
 					{:else}
 						<div class="space-y-3">
 							{#each formData.providers as provider, i}
+								{@const providerInfo = providers.find(p => p.id === provider.id)}
 								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
 									<div class="flex-1 min-w-0">
-										<div class="font-black text-base text-slate-900 mb-2">{provider.name} - {provider.role}</div>
+										<div class="font-black text-base text-slate-900 mb-2">{providerInfo?.name || provider.id} - {provider.role}</div>
 										<div class="text-sm text-slate-500 space-y-1">
-											<div>{provider.address}, {provider.city}</div>
-											<div>SIRET: {provider.siret} • {provider.email}</div>
 											<div class="font-black text-[#291334]">Montant: {formatCurrency(provider.amount)} HT</div>
 										</div>
 									</div>
@@ -1093,36 +1043,22 @@
 						<div>
 							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Sélectionner un prestataire
+								Prestataire *
 							</label>
 							<select
-								bind:value={selectedProviderForPayment}
+								bind:value={newPaymentProvider.id}
 								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
 							>
-								<option value="">-- Choisir depuis la liste --</option>
+								<option value="">-- Choisir un prestataire --</option>
 								{#each providers as provider (provider.id)}
 									<option value={provider.id}>{provider.name}</option>
 								{/each}
 							</select>
 						</div>
 
-						<div class="grid grid-cols-2 gap-4">
-							<div class="col-span-2">
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Nom du bénéficiaire</label>
-								<Input bind:value={newPaymentProvider.name} placeholder="Ex: Saravenpi SASU" readonly={!!selectedProviderForPayment} />
-							</div>
-							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">IBAN</label>
-								<Input bind:value={newPaymentProvider.iban} placeholder="Ex: FR76 1234 5678 9012 3456 7890 123" readonly={!!selectedProviderForPayment} />
-							</div>
-							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">BIC</label>
-								<Input bind:value={newPaymentProvider.bic} placeholder="Ex: BNPAFRPP" readonly={!!selectedProviderForPayment} />
-							</div>
-							<div class="col-span-2">
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT) *</label>
-								<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
-							</div>
+						<div>
+							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT) *</label>
+							<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
 						</div>
 						<Button intent="primary" onclick={addPaymentProvider} class="w-full">
 							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
@@ -1139,13 +1075,10 @@
 					{:else}
 						<div class="space-y-3">
 							{#each formData.payment_providers as provider, i}
+								{@const providerInfo = providers.find(p => p.id === provider.id)}
 								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
 									<div class="flex-1 min-w-0">
-										<div class="font-black text-base text-slate-900 mb-2">{provider.name}</div>
-										<div class="text-sm text-slate-500 space-y-1 font-mono text-xs">
-											<div>IBAN: {provider.iban}</div>
-											<div>BIC: {provider.bic}</div>
-										</div>
+										<div class="font-black text-base text-slate-900 mb-2">{providerInfo?.name || provider.id}</div>
 										<div class="font-black text-[#291334] mt-2">Montant: {formatCurrency(provider.amount_to_pay)} HT</div>
 									</div>
 									<button
