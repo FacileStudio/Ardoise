@@ -70,7 +70,6 @@
 		provider_email: '',
 		provider_phone: '',
 		items: [],
-		tva_rate: 20,
 		railway_estimate: 0,
 		project_name: '',
 		valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -109,7 +108,6 @@
 			formData.providerId = selectedProviderId;
 			const provider = providers.find((p) => p.id === selectedProviderId);
 			if (provider) {
-				formData.tva_rate = provider.tvaRate;
 				formData.provider_name = provider.name;
 				formData.provider_legal = provider.legalName || '';
 				formData.provider_address = provider.address || '';
@@ -241,8 +239,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-						tva_rate: Number(formData.tva_rate),
-						railway_estimate: Number(formData.railway_estimate || 0),
+							railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -255,8 +252,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-						tva_rate: Number(formData.tva_rate),
-						railway_estimate: Number(formData.railway_estimate || 0),
+							railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -267,8 +263,7 @@
 						quote_number: formData.quote_number,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				case 'contrat_maintenance':
@@ -278,8 +273,7 @@
 						maintenance_period: formData.maintenance_period,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				case 'back_contractuel':
@@ -293,8 +287,7 @@
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				case 'appel_de_fonds':
@@ -307,8 +300,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId || undefined,
 						payment_providers: formData.payment_providers,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				default:
@@ -346,8 +338,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-						tva_rate: Number(formData.tva_rate),
-						railway_estimate: Number(formData.railway_estimate || 0),
+							railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -360,8 +351,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-						tva_rate: Number(formData.tva_rate),
-						railway_estimate: Number(formData.railway_estimate || 0),
+							railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -372,8 +362,7 @@
 						quote_number: formData.quote_number,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				case 'contrat_maintenance':
@@ -383,8 +372,7 @@
 						maintenance_period: formData.maintenance_period,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				case 'back_contractuel':
@@ -398,8 +386,7 @@
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				case 'appel_de_fonds':
@@ -412,8 +399,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId || undefined,
 						payment_providers: formData.payment_providers,
-						tva_rate: Number(formData.tva_rate),
-					});
+						});
 					break;
 
 				default:
@@ -521,7 +507,9 @@
 		formData.items.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0)
 	);
 	const totalWithRailway = $derived(subtotal + (formData.railway_estimate || 0));
-	const tva = $derived(totalWithRailway * (formData.tva_rate / 100));
+	const selectedProvider = $derived(providers.find(p => p.id === selectedProviderId));
+	const tvaRate = $derived(selectedProvider?.tvaRate || 20);
+	const tva = $derived(totalWithRailway * (tvaRate / 100));
 	const total = $derived(totalWithRailway + tva);
 </script>
 
@@ -728,7 +716,7 @@
 							<div>
 								<div class="font-black text-purple-900">{formData.provider_name}</div>
 								<div class="text-sm text-purple-700">
-									TVA: {formData.tva_rate}% • {formData.provider_email}
+									TVA: {tvaRate}% • {formData.provider_email}
 								</div>
 							</div>
 						</div>
@@ -1199,8 +1187,8 @@
 											)} HT
 										</div>
 										<div class="text-xs text-slate-600">
-											Prix TTC ({formData.tva_rate}%): {formatCurrency(
-												newItem.quantity * newItem.price * (1 + formData.tva_rate / 100)
+											Prix TTC ({tvaRate}%): {formatCurrency(
+												newItem.quantity * newItem.price * (1 + tvaRate / 100)
 											)}
 										</div>
 									</div>
@@ -1276,7 +1264,7 @@
 									<div class="text-lg font-black text-slate-900">{formatCurrency(subtotal)}</div>
 								</div>
 								<div class="text-xs text-slate-600">
-									<div class="font-black mb-2">TVA ({formData.tva_rate}%)</div>
+									<div class="font-black mb-2">TVA ({tvaRate}%)</div>
 									<div class="text-lg font-black text-slate-900">{formatCurrency(tva)}</div>
 								</div>
 								<div class="text-xs text-slate-600">
