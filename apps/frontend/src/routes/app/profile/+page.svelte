@@ -89,7 +89,7 @@
           <div class="space-y-4">
             <div>
               <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                Raison sociale
+                Nom de l'entreprise
               </p>
               <p class="text-2xl font-black text-[#291334] tracking-tight">
                 {client.companyName}
