@@ -40,6 +40,8 @@ model Document {
   createdBy        String
   createdByUser    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
+  paymentAttachments PaymentDocument[]
+
   @@index([createdBy])
   @@index([type])
   @@index([createdAt])

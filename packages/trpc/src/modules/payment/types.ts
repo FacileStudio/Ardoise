@@ -10,6 +10,7 @@ export const CreatePaymentSchema = z.object({
   frequency: PaymentFrequencySchema.default('ONE_TIME'),
   dueDate: z.coerce.date(),
   attachedFiles: z.array(z.string().url()).optional().default([]),
+  attachedDocumentIds: z.array(z.string()).optional().default([]),
 });
 
 export const UpdatePaymentSchema = z.object({
@@ -19,6 +20,7 @@ export const UpdatePaymentSchema = z.object({
   dueDate: z.coerce.date().optional(),
   status: PaymentStatusSchema.optional(),
   attachedFiles: z.array(z.string().url()).optional(),
+  attachedDocumentIds: z.array(z.string()).optional(),
 });
 
 export const ListPaymentsSchema = z.object({

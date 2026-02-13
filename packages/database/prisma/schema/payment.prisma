@@ -32,6 +32,8 @@ model Payment {
 
   attachedFiles String[]
 
+  attachedDocuments PaymentDocument[]
+
   receiptUrl String?
 
   createdAt DateTime @default(now())
@@ -41,4 +43,20 @@ model Payment {
   @@index([status])
   @@index([dueDate])
   @@index([stripePaymentIntentId])
+}
+
+model PaymentDocument {
+  id String @id @default(cuid())
+
+  paymentId  String
+  payment    Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  attachedAt DateTime @default(now())
+
+  @@unique([paymentId, documentId])
+  @@index([paymentId])
+  @@index([documentId])
 }

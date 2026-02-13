@@ -8,6 +8,17 @@
   import { loadStripe, type Stripe, type StripeElements } from '@stripe/stripe-js';
   import 'iconify-icon';
 
+  interface Document {
+    id: string;
+    name: string;
+    type: string;
+    invoiceNumber?: string;
+    quoteNumber?: string;
+    contractRef?: string;
+    pdfUrl?: string;
+    total: number;
+  }
+
   interface Payment {
     id: string;
     amount: number | string;
@@ -18,6 +29,10 @@
     dueDate: Date | string;
     paidAt?: Date | string;
     receiptUrl?: string;
+    attachedDocuments?: Array<{
+      id: string;
+      document: Document;
+    }>;
     client: {
       companyName: string;
       billingAddress: string;
@@ -204,6 +219,21 @@
       window.open(payment.receiptUrl, '_blank');
     }
   }
+
+  async function handleDownloadDocument(doc: Document) {
+    if (!doc.pdfUrl) return;
+
+    try {
+      if (doc.pdfUrl.includes('storageapi.dev')) {
+        const result = await trpc.media.getDownloadUrl.query({ url: doc.pdfUrl });
+        window.open(result.url, '_blank');
+      } else {
+        window.open(doc.pdfUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Failed to download document:', err);
+    }
+  }
 </script>
 
 <svelte:head>
@@ -365,6 +395,63 @@
               {/if}
             </div>
           </Card>
+
+          {#if payment.attachedDocuments && payment.attachedDocuments.length > 0}
+            <Card>
+              <div class="mb-6">
+                <h3 class="text-2xl font-black text-[#291334] mb-2 flex items-center gap-2">
+                  <iconify-icon icon="solar:document-text-bold" width="28" class="text-[#FEC129]"></iconify-icon>
+                  Documents joints
+                </h3>
+                <p class="text-[#291334]/60">
+                  Documents associés à ce paiement
+                </p>
+              </div>
+
+              <div class="space-y-3">
+                {#each payment.attachedDocuments as { document: doc }}
+                  <div class="p-4 bg-[#FAF7F5] rounded-xl border-2 border-transparent hover:border-[#FEC129]/30 transition-all">
+                    <div class="flex items-start gap-4">
+                      <div class="flex-shrink-0 w-12 h-12 bg-[#291334]/10 rounded-xl flex items-center justify-center">
+                        <iconify-icon icon="solar:document-bold" width="24" class="text-[#291334]"></iconify-icon>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <h4 class="font-black text-[#291334] mb-1 truncate">{doc.name}</h4>
+                        <div class="flex flex-wrap items-center gap-2 text-sm text-[#291334]/60">
+                          <span class="px-2 py-0.5 bg-[#291334]/10 rounded-md font-bold text-xs">
+                            {doc.type}
+                          </span>
+                          {#if doc.invoiceNumber}
+                            <span>N° {doc.invoiceNumber}</span>
+                          {/if}
+                          {#if doc.quoteNumber}
+                            <span>Devis N° {doc.quoteNumber}</span>
+                          {/if}
+                          {#if doc.contractRef}
+                            <span>Réf: {doc.contractRef}</span>
+                          {/if}
+                        </div>
+                        <div class="mt-2 text-lg font-black text-[#291334]">
+                          {formatAmount(doc.total)}
+                        </div>
+                      </div>
+                      {#if doc.pdfUrl}
+                        <Button
+                          intent="secondary"
+                          size="sm"
+                          class="flex-shrink-0"
+                          onclick={() => handleDownloadDocument(doc)}
+                        >
+                          <iconify-icon icon="solar:download-bold" width="18"></iconify-icon>
+                          Télécharger
+                        </Button>
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </Card>
+          {/if}
 
           {#if payment.status === 'PENDING'}
             <Card>

@@ -65,6 +65,11 @@ export const paymentService = {
             },
           },
         },
+        attachedDocuments: {
+          include: {
+            document: true,
+          },
+        },
       },
     });
 
@@ -104,6 +109,22 @@ export const paymentService = {
         code: 'NOT_FOUND',
         message: 'Client not found',
       });
+    }
+
+    if (data.attachedDocumentIds && data.attachedDocumentIds.length > 0) {
+      const documents = await db.document.findMany({
+        where: {
+          id: { in: data.attachedDocumentIds },
+        },
+        select: { id: true },
+      });
+
+      if (documents.length !== data.attachedDocumentIds.length) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'One or more documents not found',
+        });
+      }
     }
 
     const feeCalculation = calculateStripeFees(data.amount);
@@ -193,10 +214,20 @@ export const paymentService = {
         stripePaymentIntentId,
         stripeSubscriptionId,
         attachedFiles: data.attachedFiles || [],
+        attachedDocuments: {
+          create: (data.attachedDocumentIds || []).map((documentId) => ({
+            documentId,
+          })),
+        },
       },
       include: {
         client: {
           include: { user: true },
+        },
+        attachedDocuments: {
+          include: {
+            document: true,
+          },
         },
       },
     });

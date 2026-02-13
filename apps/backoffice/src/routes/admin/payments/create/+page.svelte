@@ -21,9 +21,24 @@
 		};
 	}
 
+	interface Document {
+		id: string;
+		name: string;
+		type: string;
+		invoiceNumber?: string;
+		quoteNumber?: string;
+		contractRef?: string;
+		clientName: string;
+		total: number;
+		createdAt: Date;
+	}
+
 	let submitting = $state(false);
 	let clients: Client[] = $state([]);
 	let selectedClientId = $state('');
+	let documents: Document[] = $state([]);
+	let documentSearchQuery = $state('');
+	let selectedDocumentIds = $state<string[]>([]);
 
 	let formData = $state({
 		clientId: '',
@@ -32,10 +47,11 @@
 		frequency: 'ONE_TIME' as PaymentFrequency,
 		dueDate: new Date().toISOString().split('T')[0],
 		attachedFiles: [] as string[],
+		attachedDocumentIds: [] as string[],
 	});
 
 	onMount(async () => {
-		await loadClients();
+		await Promise.all([loadClients(), loadDocuments()]);
 	});
 
 	async function loadClients() {
@@ -48,11 +64,50 @@
 		}
 	}
 
+	async function loadDocuments() {
+		try {
+			const result = await trpc.document.list.query({
+				page: 1,
+				pageSize: 100,
+				search: documentSearchQuery || undefined,
+			});
+			documents = result.items as Document[];
+		} catch (err) {
+			logger.error({ err }, 'Failed to fetch documents');
+			toast.push('Erreur lors du chargement des documents', 'error');
+		}
+	}
+
 	$effect(() => {
 		if (selectedClientId) {
 			formData.clientId = selectedClientId;
 		}
 	});
+
+	$effect(() => {
+		formData.attachedDocumentIds = selectedDocumentIds;
+	});
+
+	function toggleDocument(documentId: string) {
+		if (selectedDocumentIds.includes(documentId)) {
+			selectedDocumentIds = selectedDocumentIds.filter(id => id !== documentId);
+		} else {
+			selectedDocumentIds = [...selectedDocumentIds, documentId];
+		}
+	}
+
+	function removeDocument(documentId: string) {
+		selectedDocumentIds = selectedDocumentIds.filter(id => id !== documentId);
+	}
+
+	let filteredDocuments = $derived(
+		documents.filter((doc) => {
+			const searchTerm = documentSearchQuery.toLowerCase().trim();
+			if (!searchTerm) return true;
+			const searchContent = `${doc.name} ${doc.clientName} ${doc.invoiceNumber || ''} ${doc.quoteNumber || ''} ${doc.contractRef || ''}`.toLowerCase();
+			return searchContent.includes(searchTerm);
+		})
+	);
 
 	function validateForm(): string | null {
 		if (!formData.clientId) return 'Veuillez sélectionner un client';
@@ -223,6 +278,114 @@
 								</button>
 							{/each}
 						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Attached Documents -->
+			<div>
+				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+					<iconify-icon icon="solar:document-add-bold" width="24" class="text-[#FEC129]"></iconify-icon>
+					Documents joints
+				</h2>
+				<p class="text-sm text-slate-600 mb-4">
+					Les documents sélectionnés seront visibles et téléchargeables par le client sur la page de paiement.
+				</p>
+				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
+					<!-- Selected Documents Display -->
+					{#if selectedDocumentIds.length > 0}
+						<div class="space-y-2">
+							<label class="block text-sm font-black text-slate-700">Documents sélectionnés ({selectedDocumentIds.length})</label>
+							<div class="space-y-2">
+								{#each selectedDocumentIds as docId}
+									{@const doc = documents.find(d => d.id === docId)}
+									{#if doc}
+										<div class="bg-white rounded-lg p-3 flex items-center justify-between border border-slate-200">
+											<div class="flex items-center gap-3">
+												<iconify-icon icon="solar:document-bold" width="20" class="text-[#291334]"></iconify-icon>
+												<div>
+													<div class="font-bold text-sm text-slate-900">{doc.name}</div>
+													<div class="text-xs text-slate-500">
+														{doc.type} • {doc.clientName}
+														{#if doc.invoiceNumber} • N° {doc.invoiceNumber}{/if}
+													</div>
+												</div>
+											</div>
+											<button
+												type="button"
+												onclick={() => removeDocument(docId)}
+												class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+											>
+												<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+											</button>
+										</div>
+									{/if}
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					<!-- Search Bar -->
+					<div>
+						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<iconify-icon icon="solar:magnifer-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+							Rechercher un document
+						</label>
+						<div class="relative">
+							<iconify-icon
+								icon="solar:magnifer-linear"
+								width="20"
+								class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+							></iconify-icon>
+							<input
+								type="text"
+								bind:value={documentSearchQuery}
+								placeholder="Rechercher par nom, client, numéro..."
+								class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all text-sm"
+							/>
+						</div>
+					</div>
+
+					<!-- Document List -->
+					<div class="max-h-64 overflow-y-auto space-y-2">
+						{#if filteredDocuments.length === 0}
+							<div class="text-center py-8 text-slate-500">
+								<iconify-icon icon="solar:document-bold" width="32" class="mx-auto mb-2 opacity-30"></iconify-icon>
+								<p class="text-sm">Aucun document trouvé</p>
+							</div>
+						{:else}
+							{#each filteredDocuments as doc}
+								<button
+									type="button"
+									onclick={() => toggleDocument(doc.id)}
+									class="w-full bg-white rounded-lg p-3 flex items-center gap-3 border transition-all text-left {selectedDocumentIds.includes(doc.id)
+										? 'border-[#291334] bg-[#291334]/5'
+										: 'border-slate-200 hover:border-[#FEC129]'}"
+								>
+									<div class="flex-shrink-0">
+										{#if selectedDocumentIds.includes(doc.id)}
+											<div class="w-5 h-5 bg-[#291334] rounded flex items-center justify-center">
+												<iconify-icon icon="solar:check-circle-bold" width="16" class="text-white"></iconify-icon>
+											</div>
+										{:else}
+											<div class="w-5 h-5 border-2 border-slate-300 rounded"></div>
+										{/if}
+									</div>
+									<iconify-icon icon="solar:document-bold" width="20" class="text-slate-400 flex-shrink-0"></iconify-icon>
+									<div class="flex-1 min-w-0">
+										<div class="font-bold text-sm text-slate-900 truncate">{doc.name}</div>
+										<div class="text-xs text-slate-500 truncate">
+											{doc.type} • {doc.clientName}
+											{#if doc.invoiceNumber} • N° {doc.invoiceNumber}{/if}
+											{#if doc.quoteNumber} • Devis N° {doc.quoteNumber}{/if}
+										</div>
+									</div>
+									<div class="text-sm font-bold text-[#291334]">
+										{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(doc.total))}
+									</div>
+								</button>
+							{/each}
+						{/if}
 					</div>
 				</div>
 			</div>

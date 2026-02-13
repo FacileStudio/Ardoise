@@ -18,6 +18,14 @@ model Settings {
 
   tvaRate Decimal @default(20) @db.Decimal(5, 2)
 
+  nextInvoiceNumber Int @default(1)
+  nextQuoteNumber Int @default(1)
+  nextContractNumber Int @default(1)
+
+  invoiceNumberFormat String @default("FAC-{{year}}-{{number}}")
+  quoteNumberFormat String @default("DEVIS-{{year}}-{{number}}")
+  contractNumberFormat String @default("CONT-{{year}}-{{number}}")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

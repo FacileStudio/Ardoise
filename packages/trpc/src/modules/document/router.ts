@@ -8,6 +8,7 @@ import {
   AppelDeFondsInputSchema,
 } from './service';
 import { PrestationInputSchema, MaintenanceInputSchema } from './types';
+import { generateNextDocumentNumber, previewDocumentNumber } from './numbering';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
@@ -241,6 +242,8 @@ export const documentRouter = router({
     .input(PrestationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
+        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
+
         const client = await ctx.db.client.findUnique({
           where: { id: input.clientId },
         });
@@ -259,7 +262,7 @@ export const documentRouter = router({
 
         const documentData = {
           type: 'prestation' as const,
-          invoice_number: input.invoice_number,
+          invoice_number: invoiceNumber,
           invoice_date: input.invoice_date,
           due_date: input.due_date,
           clientId: input.clientId,
@@ -288,7 +291,7 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_${input.invoice_number}.pdf`;
+        const fileName = `prestation_${invoiceNumber}.pdf`;
 
         return {
           pdf: pdfBuffer.toString('base64'),
@@ -307,6 +310,8 @@ export const documentRouter = router({
     .input(PrestationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
+        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
+
         const client = await ctx.db.client.findUnique({
           where: { id: input.clientId },
         });
@@ -325,7 +330,7 @@ export const documentRouter = router({
 
         const documentData = {
           type: 'prestation' as const,
-          invoice_number: input.invoice_number,
+          invoice_number: invoiceNumber,
           invoice_date: input.invoice_date,
           due_date: input.due_date,
           clientId: input.clientId,
@@ -354,7 +359,7 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_${input.invoice_number}.pdf`;
+        const fileName = `prestation_${invoiceNumber}.pdf`;
 
         const subtotal = input.items.reduce(
           (sum, item) => sum + item.quantity * item.price,
@@ -368,7 +373,7 @@ export const documentRouter = router({
           data: {
             type: 'prestation',
             name: fileName,
-            invoiceNumber: input.invoice_number,
+            invoiceNumber: invoiceNumber,
             clientName: documentData.client_name,
             clientSiret: documentData.client_siret,
             clientAddress: documentData.client_address,
@@ -410,6 +415,8 @@ export const documentRouter = router({
     .input(MaintenanceInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
+        const quoteNumber = await previewDocumentNumber(ctx.db, 'quote');
+
         const client = await ctx.db.client.findUnique({
           where: { id: input.clientId },
         });
@@ -428,7 +435,7 @@ export const documentRouter = router({
 
         const documentData = {
           type: 'maintenance' as const,
-          quote_number: input.quote_number,
+          quote_number: quoteNumber,
           quote_date: input.quote_date,
           validity_date: input.validity_date,
           maintenance_period: input.maintenance_period,
@@ -458,7 +465,7 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `maintenance_${input.quote_number}.pdf`;
+        const fileName = `maintenance_${quoteNumber}.pdf`;
 
         return {
           pdf: pdfBuffer.toString('base64'),
@@ -477,6 +484,8 @@ export const documentRouter = router({
     .input(MaintenanceInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
+        const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
+
         const client = await ctx.db.client.findUnique({
           where: { id: input.clientId },
         });
@@ -495,7 +504,7 @@ export const documentRouter = router({
 
         const documentData = {
           type: 'maintenance' as const,
-          quote_number: input.quote_number,
+          quote_number: quoteNumber,
           quote_date: input.quote_date,
           validity_date: input.validity_date,
           maintenance_period: input.maintenance_period,
@@ -525,7 +534,7 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `maintenance_${input.quote_number}.pdf`;
+        const fileName = `maintenance_${quoteNumber}.pdf`;
 
         const subtotal = input.items.reduce(
           (sum, item) => sum + item.quantity * item.price,
@@ -539,7 +548,7 @@ export const documentRouter = router({
           data: {
             type: 'maintenance',
             name: fileName,
-            quoteNumber: input.quote_number,
+            quoteNumber: quoteNumber,
             clientName: documentData.client_name,
             clientSiret: documentData.client_siret,
             clientAddress: documentData.client_address,

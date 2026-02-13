@@ -89,6 +89,11 @@ export const paymentRouter = router({
             },
           },
         },
+        attachedDocuments: {
+          include: {
+            document: true,
+          },
+        },
       },
     });
 

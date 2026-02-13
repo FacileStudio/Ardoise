@@ -39,7 +39,6 @@ export const GenerateContratMaintenanceSchema = z.object({
 });
 
 export const PrestationInputSchema = z.object({
-  invoice_number: z.string().min(1, 'Invoice number is required'),
   invoice_date: z.string().min(1, 'Invoice date is required'),
   due_date: z.string().min(1, 'Due date is required'),
   clientId: z.string().min(1, 'Client is required'),
@@ -49,7 +48,6 @@ export const PrestationInputSchema = z.object({
 });
 
 export const MaintenanceInputSchema = z.object({
-  quote_number: z.string().min(1, 'Quote number is required'),
   quote_date: z.string().min(1, 'Quote date is required'),
   validity_date: z.string().min(1, 'Validity date is required'),
   maintenance_period: z.string().min(1, 'Maintenance period is required'),

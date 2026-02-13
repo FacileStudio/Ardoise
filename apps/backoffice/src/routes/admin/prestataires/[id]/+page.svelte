@@ -91,7 +91,26 @@
 			goto('/admin/prestataires');
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to update provider');
-			const message = err.message || 'Erreur lors de la modification';
+
+			let message = 'Erreur lors de la modification';
+
+			if (err.data?.zodError?.fieldErrors) {
+				const fieldErrors = err.data.zodError.fieldErrors;
+				const firstError = Object.values(fieldErrors)[0];
+				if (Array.isArray(firstError) && firstError.length > 0) {
+					message = firstError[0] as string;
+				}
+			} else if (err.message) {
+				try {
+					const parsed = JSON.parse(err.message);
+					if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].message) {
+						message = parsed[0].message;
+					}
+				} catch {
+					message = err.message;
+				}
+			}
+
 			toast.push(message, 'error');
 		} finally {
 			submitting = false;
