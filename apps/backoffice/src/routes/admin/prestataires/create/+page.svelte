@@ -47,7 +47,10 @@
 
 		try {
 			submitting = true;
-			await trpc.provider.create.mutate(formData);
+			await trpc.provider.create.mutate({
+				...formData,
+				tvaRate: Number(formData.tvaRate),
+			});
 			toast.push('Prestataire créé avec succès!', 'success');
 			goto('/admin/prestataires');
 		} catch (err: any) {
