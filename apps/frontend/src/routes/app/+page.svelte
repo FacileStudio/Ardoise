@@ -112,8 +112,9 @@
           </div>
           <div class="grid grid-cols-1 gap-6">
             {#each pendingPayments as payment}
-              <Card class="border-2 border-[#FEC129]/30 hover:border-[#FEC129] transition-all group" in:fly={{ y: 20, delay: 200 }}>
-                <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div in:fly={{ y: 20, delay: 200 }}>
+                <Card class="border-2 border-[#FEC129]/30 hover:border-[#FEC129] transition-all group">
+                  <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
                       <h3 class="font-black text-lg text-[#291334]">
@@ -143,7 +144,8 @@
                     </Button>
                   </div>
                 </div>
-              </Card>
+                </Card>
+              </div>
             {/each}
           </div>
         </div>
@@ -160,8 +162,9 @@
           </div>
           <div class="grid grid-cols-1 gap-4">
             {#each paidPayments as payment}
-              <Card class="border border-[#291334]/10 hover:border-[#291334]/30 transition-all" in:fly={{ y: 20, delay: 400 }}>
-                <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div in:fly={{ y: 20, delay: 400 }}>
+                <Card class="border border-[#291334]/10 hover:border-[#291334]/30 transition-all">
+                  <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
                       <h3 class="font-black text-lg text-[#291334]">
@@ -189,7 +192,8 @@
                     </Button>
                   {/if}
                 </div>
-              </Card>
+                </Card>
+              </div>
             {/each}
           </div>
         </div>
@@ -205,8 +209,9 @@
           </div>
           <div class="grid grid-cols-1 gap-4">
             {#each otherPayments as payment}
-              <Card class="border border-[#291334]/10" in:fly={{ y: 20, delay: 600 }}>
-                <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div in:fly={{ y: 20, delay: 600 }}>
+                <Card class="border border-[#291334]/10">
+                  <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
                       <h3 class="font-black text-lg text-[#291334]">
@@ -223,7 +228,8 @@
                     </div>
                   </div>
                 </div>
-              </Card>
+                </Card>
+              </div>
             {/each}
           </div>
         </div>
