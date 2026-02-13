@@ -1,9 +1,25 @@
+enum DocumentType {
+  prestation
+  maintenance
+  contrat_prestation
+  contrat_maintenance
+  back_contractuel
+  appel_de_fonds
+  prestation_barman
+  prestation_design
+  prestation_dev
+  prestation_photo
+  prestation_video
+  prestation_formation
+  prestation_btp
+}
+
 model Document {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type             String
+  type             DocumentType
   name             String
   invoiceNumber    String?
   quoteNumber      String?
@@ -33,6 +49,8 @@ model Document {
   tvaRate          Int      @default(20)
 
   railwayEstimate  Decimal? @db.Decimal(10, 2)
+
+  serviceData      Json?
 
   pdfUrl           String?
   fileSize         Int?

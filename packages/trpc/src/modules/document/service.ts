@@ -6,10 +6,31 @@ import {
   contrat_maintenance,
   back_contractuel,
   appel_de_fonds,
+  prestation_barman,
+  prestation_design,
+  prestation_dev,
+  prestation_photo,
+  prestation_video,
+  prestation_formation,
+  prestation_btp,
 } from '@repo/typst';
 import { z } from 'zod';
 
-export const DocTypeSchema = z.enum(['prestation', 'maintenance', 'contrat_prestation', 'contrat_maintenance', 'back_contractuel', 'appel_de_fonds']);
+export const DocTypeSchema = z.enum([
+  'prestation',
+  'maintenance',
+  'contrat_prestation',
+  'contrat_maintenance',
+  'back_contractuel',
+  'appel_de_fonds',
+  'prestation_barman',
+  'prestation_design',
+  'prestation_dev',
+  'prestation_photo',
+  'prestation_video',
+  'prestation_formation',
+  'prestation_btp',
+]);
 export type DocType = z.infer<typeof DocTypeSchema>;
 
 export const DocumentItemSchema = z.object({
@@ -245,6 +266,60 @@ const AppelDeFondsDataSchema = z.object({
   tva_rate: z.number().nonnegative().default(20),
 }).passthrough();
 
+const PrestationPhotoDataSchema = z.object({
+  type: z.literal('prestation_photo'),
+  invoice_number: z.string(),
+  invoice_date: z.string(),
+  due_date: z.string(),
+  clientId: z.string(),
+  providerId: z.string(),
+  client_name: z.string().optional(),
+  client_address: z.string().optional(),
+  client_city: z.string().optional(),
+  client_country: z.string().optional(),
+  client_siret: z.string().optional(),
+  provider_name: z.string().optional(),
+  provider_legal: z.string().optional(),
+  provider_address: z.string().optional(),
+  provider_city: z.string().optional(),
+  provider_siret: z.string().optional(),
+  provider_email: z.string().optional(),
+  provider_phone: z.string().optional(),
+  bank_name: z.string().optional(),
+  iban: z.string().optional(),
+  bic: z.string().optional(),
+  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour une facture"),
+  tva_rate: z.number().nonnegative().default(20),
+  railway_estimate: z.number().optional().default(0),
+}).passthrough();
+
+const PrestationVideoDataSchema = z.object({
+  type: z.literal('prestation_video'),
+  invoice_number: z.string(),
+  invoice_date: z.string(),
+  due_date: z.string(),
+  clientId: z.string(),
+  providerId: z.string(),
+  client_name: z.string().optional(),
+  client_address: z.string().optional(),
+  client_city: z.string().optional(),
+  client_country: z.string().optional(),
+  client_siret: z.string().optional(),
+  provider_name: z.string().optional(),
+  provider_legal: z.string().optional(),
+  provider_address: z.string().optional(),
+  provider_city: z.string().optional(),
+  provider_siret: z.string().optional(),
+  provider_email: z.string().optional(),
+  provider_phone: z.string().optional(),
+  bank_name: z.string().optional(),
+  iban: z.string().optional(),
+  bic: z.string().optional(),
+  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour une facture"),
+  tva_rate: z.number().nonnegative().default(20),
+  railway_estimate: z.number().optional().default(0),
+}).passthrough();
+
 export const ContratPrestationInputSchema = z.object({
   contract_date: z.string().min(1, "La date du contrat est requise"),
   quote_number: z.string().optional(),
@@ -289,6 +364,38 @@ export const AppelDeFondsInputSchema = z.object({
 
 export type AppelDeFondsInput = z.infer<typeof AppelDeFondsInputSchema>;
 
+export const PrestationPhotoInputSchema = z.object({
+  invoice_date: z.string().min(1, "La date de facture est requise"),
+  due_date: z.string().min(1, "La date d'échéance est requise"),
+  clientId: z.string().min(1, "Le client est requis"),
+  providerId: z.string().min(1, "Le prestataire est requis"),
+  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis"),
+  railway_estimate: z.number().nonnegative().optional().default(0),
+  shoot_date: z.string().min(1, "La date du shooting est requise"),
+  shoot_time: z.string().min(1, "L'heure du shooting est requise"),
+  shoot_location: z.string().min(1, "Le lieu du shooting est requis"),
+  shoot_duration: z.string().min(1, "La durée du shooting est requise"),
+  shoot_type: z.string().min(1, "Le type de shooting est requis"),
+});
+
+export type PrestationPhotoInput = z.infer<typeof PrestationPhotoInputSchema>;
+
+export const PrestationVideoInputSchema = z.object({
+  invoice_date: z.string().min(1, "La date de facture est requise"),
+  due_date: z.string().min(1, "La date d'échéance est requise"),
+  clientId: z.string().min(1, "Le client est requis"),
+  providerId: z.string().min(1, "Le prestataire est requis"),
+  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis"),
+  railway_estimate: z.number().nonnegative().optional().default(0),
+  shoot_date: z.string().min(1, "La date du tournage est requise"),
+  shoot_time: z.string().min(1, "L'heure du tournage est requise"),
+  shoot_location: z.string().min(1, "Le lieu du tournage est requis"),
+  shoot_duration: z.string().min(1, "La durée du tournage est requise"),
+  video_type: z.string().min(1, "Le type de vidéo est requis"),
+});
+
+export type PrestationVideoInput = z.infer<typeof PrestationVideoInputSchema>;
+
 const TEMPLATES: Record<DocType, string> = {
   prestation,
   maintenance,
@@ -296,6 +403,13 @@ const TEMPLATES: Record<DocType, string> = {
   contrat_maintenance,
   back_contractuel,
   appel_de_fonds,
+  prestation_barman,
+  prestation_design,
+  prestation_dev,
+  prestation_photo,
+  prestation_video,
+  prestation_formation,
+  prestation_btp,
 };
 
 export function formatItems(items: Array<{ description: string; quantity: number; unit: string; price: number }>): string {
@@ -370,6 +484,12 @@ export async function generateDocument(
       break;
     case 'appel_de_fonds':
       validated = AppelDeFondsDataSchema.parse(data);
+      break;
+    case 'prestation_photo':
+      validated = PrestationPhotoDataSchema.parse(data);
+      break;
+    case 'prestation_video':
+      validated = PrestationVideoDataSchema.parse(data);
       break;
     default:
       throw new Error(`Unknown document type: ${data.type}`);
