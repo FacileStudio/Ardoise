@@ -190,18 +190,21 @@
 			</p>
 		</div>
 	{:else if documents.length === 0}
-		<div class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100">
-			<iconify-icon icon="solar:document-text-bold" width="64" class="text-slate-300 mx-auto mb-4"
-			></iconify-icon>
-			<h3 class="text-xl font-black text-slate-900 mb-2">Aucun document</h3>
-			<p class="text-slate-500 mb-4">Créez votre premier document pour commencer</p>
-			<button
-				onclick={() => goto('/admin/documents/create')}
-				class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
-			>
-				<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-				<span>Créer un document</span>
-			</button>
+		<div class="text-center py-16">
+			<div class="flex flex-col items-center gap-4">
+				<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
+					<iconify-icon icon="solar:document-text-bold" width="40"></iconify-icon>
+				</div>
+				<h3 class="text-2xl font-black text-[#291334]">Aucun document</h3>
+				<p class="text-[#291334]/60 max-w-md">Créez votre premier document pour commencer</p>
+				<button
+					onclick={() => goto('/admin/documents/create')}
+					class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
+				>
+					<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+					<span>Créer un document</span>
+				</button>
+			</div>
 		</div>
 	{:else}
 		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
