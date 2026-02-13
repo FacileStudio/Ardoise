@@ -96,6 +96,7 @@ export const DocumentDataSchema = z.object({
 export type DocumentData = z.infer<typeof DocumentDataSchema>;
 
 // Type-specific schemas (no items requirement for contracts)
+// REBUILD_TRIGGER: 2026-02-13-v2
 const ContratMaintenanceDataSchema = DocumentDataSchema.extend({
   type: z.literal('contrat_maintenance'),
   items: z.array(DocumentItemSchema).optional().default([]),
