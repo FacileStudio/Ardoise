@@ -18,14 +18,7 @@
 		maintenance_period: '12 mois',
 		clientId: '',
 		providerId: '',
-		tva_rate: 20,
 	});
-
-	function handleProviderChange(_value: string, provider?: any) {
-		if (provider) {
-			formData.tva_rate = provider.tvaRate;
-		}
-	}
 
 	async function handlePreview() {
 		if (!formData.clientId || !formData.providerId) {
@@ -41,7 +34,6 @@
 				maintenance_period: formData.maintenance_period,
 				clientId: formData.clientId,
 				providerId: formData.providerId,
-				tva_rate: formData.tva_rate,
 			});
 
 			previewPdf = result.pdf;
@@ -69,7 +61,6 @@
 				maintenance_period: formData.maintenance_period,
 				clientId: formData.clientId,
 				providerId: formData.providerId,
-				tva_rate: formData.tva_rate,
 			});
 
 			toast.success('Contrat créé avec succès');
@@ -105,16 +96,11 @@
 				<label class="block text-sm font-medium mb-2">Période de maintenance *</label>
 				<Input bind:value={formData.maintenance_period} placeholder="12 mois" />
 			</div>
-
-			<div>
-				<label class="block text-sm font-medium mb-2">Taux TVA (%)</label>
-				<Input type="number" bind:value={formData.tva_rate} step="0.1" />
-			</div>
 		</div>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<ClientSelect bind:value={formData.clientId} />
-			<ProviderSelect bind:value={formData.providerId} onchange={handleProviderChange} />
+			<ProviderSelect bind:value={formData.providerId} />
 		</div>
 
 		<div class="flex gap-4 pt-4">

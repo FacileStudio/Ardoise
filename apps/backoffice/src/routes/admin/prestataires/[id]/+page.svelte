@@ -82,7 +82,7 @@
 			submitting = true;
 			await trpc.provider.update.mutate({
 				id: providerId,
-				...formData
+				data: formData
 			});
 			toast.push('Prestataire modifié avec succès!', 'success');
 			goto('/admin/prestataires');
