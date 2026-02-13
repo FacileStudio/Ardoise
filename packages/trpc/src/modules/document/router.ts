@@ -202,7 +202,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'prestation' as const,
@@ -268,7 +268,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'prestation' as const,
@@ -371,7 +371,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -438,7 +438,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -567,7 +567,7 @@ export const documentRouter = router({
           };
         });
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
         const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
@@ -657,7 +657,7 @@ export const documentRouter = router({
           };
         });
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
         const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
@@ -782,7 +782,7 @@ export const documentRouter = router({
           };
         });
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
         const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
@@ -870,7 +870,7 @@ export const documentRouter = router({
           };
         });
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
         const logoUrl = provider.logoUrl || undefined;
 
         const documentData = {
@@ -974,7 +974,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -1038,7 +1038,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -1136,7 +1136,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'contrat_maintenance' as const,
@@ -1200,7 +1200,7 @@ export const documentRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
         }
 
-        const tvaRate = provider.tvaRate || 20;
+        const tvaRate = Number(provider.tvaRate || 20);
 
         const documentData = {
           type: 'contrat_maintenance' as const,
