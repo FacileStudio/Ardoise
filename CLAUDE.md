@@ -586,15 +586,17 @@ This ensures Prisma client is generated before builds/dev runs.
    - `NODE_ENV=production`
 
 2. **Important**: `PUBLIC_STRIPE_PUBLISHABLE_KEY` must be available at **build time**:
-   - Railway automatically passes environment variables to the build
+   - Railway passes environment variables to Docker build via `ARG` instructions
+   - The frontend Dockerfile properly accepts `PUBLIC_STRIPE_PUBLISHABLE_KEY` as a build argument
+   - The build script explicitly passes the variable: `PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY vite build`
    - If you add/change this variable, trigger a new deployment
-   - Check build logs to verify the variable is present during build
 
 3. **Verify deployment**:
-   - Check build logs for `PUBLIC_STRIPE_PUBLISHABLE_KEY` references
+   - Check build logs for `PUBLIC_STRIPE_PUBLISHABLE_KEY` references during the build phase
+   - Look for: `ARG PUBLIC_STRIPE_PUBLISHABLE_KEY` in the Docker build output
    - Open browser console on your site
    - If you see "STRIPE_PUBLISHABLE_KEY not configured", the variable wasn't available at build time
-   - Solution: Redeploy the service from Railway dashboard
+   - Solution: Verify the variable is set in Railway Variables tab, then redeploy
 
 **Backend deployment requirements:**
 
