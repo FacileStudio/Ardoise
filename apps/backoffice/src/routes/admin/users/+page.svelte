@@ -100,7 +100,10 @@
 	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
 		<header class="flex items-center justify-between mb-6" in:fade>
 			<div>
-				<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.users.title')}</h1>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+					<iconify-icon icon="solar:users-group-two-rounded-bold" width="32" class="text-[#291334]"></iconify-icon>
+					{$i18n.t('backoffice.users.title')}
+				</h1>
 				<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.users.subtitle')}</p>
 			</div>
 			<button
@@ -131,19 +134,46 @@
 			</div>
 		{/if}
 
-		<div class="bg-white rounded-2xl border border-slate-100 p-4" in:fly={{ y: 20, delay: 300 }}>
-			<div class="flex gap-3 items-center">
-				<div class="flex-1">
-					<SearchInput bind:value={searchQuery} placeholder={$i18n.t('backoffice.users.searchPlaceholder')} />
-				</div>
-				<select
-					bind:value={filters.role}
-					class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm focus:border-indigo-300"
+		<div class="space-y-4" in:fly={{ y: 20, delay: 300 }}>
+			<div class="relative">
+				<iconify-icon
+					icon="solar:magnifer-linear"
+					width="20"
+					class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+				></iconify-icon>
+				<input
+					type="text"
+					placeholder={$i18n.t('backoffice.users.searchPlaceholder')}
+					class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-all"
+					bind:value={searchQuery}
+				/>
+			</div>
+
+			<div class="flex gap-2 flex-wrap">
+				<button
+					onclick={() => filters.role = 'all'}
+					class="px-4 py-2 rounded-xl font-bold text-sm transition-all {filters.role === 'all'
+						? 'bg-[#291334] text-white'
+						: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
 				>
-					<option value="all">{$i18n.t('backoffice.users.allRoles')}</option>
-					<option value="admin">{$i18n.t('backoffice.users.admin')}</option>
-					<option value="user">{$i18n.t('backoffice.users.user')}</option>
-				</select>
+					{$i18n.t('backoffice.users.allRoles')}
+				</button>
+				<button
+					onclick={() => filters.role = 'admin'}
+					class="px-4 py-2 rounded-xl font-bold text-sm transition-all {filters.role === 'admin'
+						? 'bg-[#291334] text-white'
+						: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+				>
+					{$i18n.t('backoffice.users.admin')}
+				</button>
+				<button
+					onclick={() => filters.role = 'user'}
+					class="px-4 py-2 rounded-xl font-bold text-sm transition-all {filters.role === 'user'
+						? 'bg-[#291334] text-white'
+						: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+				>
+					{$i18n.t('backoffice.users.user')}
+				</button>
 			</div>
 		</div>
 
@@ -153,11 +183,11 @@
 				<table class="w-full">
 					<thead class="bg-slate-50 border-b border-slate-100">
 						<tr>
-							<th class="text-left px-6 py-3 text-xs font-black text-slate-500 uppercase">{$i18n.t('backoffice.users.table.user')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-slate-500 uppercase">{$i18n.t('backoffice.users.table.status')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-slate-500 uppercase">{$i18n.t('backoffice.users.table.role')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-slate-500 uppercase">{$i18n.t('backoffice.users.table.joined')}</th>
-							<th class="text-right px-6 py-3 text-xs font-black text-slate-500 uppercase">{$i18n.t('backoffice.users.table.actions')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.users.table.user')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.users.table.status')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.users.table.role')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.users.table.joined')}</th>
+							<th class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.users.table.actions')}</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-slate-100">
@@ -228,11 +258,24 @@
 				{$i18n.t('backoffice.users.showing', { count: filteredUsers.length, total: users.length })}
 			</div>
 		{:else}
-			<EmptyState
-				icon="solar:users-group-two-rounded-bold"
-				title={$i18n.t('backoffice.users.noUsersFound')}
-				description={$i18n.t('backoffice.users.tryAdjustingFilters')}
-			/>
+			<div class="text-center py-16" in:fade>
+				<div class="flex flex-col items-center gap-4">
+					<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
+						<iconify-icon icon="solar:users-group-two-rounded-bold" width="40"></iconify-icon>
+					</div>
+					<h3 class="text-2xl font-black text-[#291334]">{$i18n.t('backoffice.users.noUsersFound')}</h3>
+					<p class="text-[#291334]/60 max-w-md">{$i18n.t('backoffice.users.tryAdjustingFilters')}</p>
+					{#if !searchQuery && filters.role === 'all'}
+						<button
+							onclick={() => goto('/admin/users/create')}
+							class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
+						>
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							<span>Nouvel utilisateur</span>
+						</button>
+					{/if}
+				</div>
+			</div>
 		{/if}
 	</div>
 {/if}

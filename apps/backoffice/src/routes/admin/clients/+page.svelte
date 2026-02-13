@@ -326,9 +326,12 @@
 	</div>
 {:else}
 	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
-		<header class="flex justify-between items-start" in:fade>
+		<header class="flex justify-between items-center" in:fade>
 			<div>
-				<h1 class="text-3xl font-black text-[#291334] tracking-tighter">{$i18n.t('backoffice.clients.title')}</h1>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+					<iconify-icon icon="solar:buildings-2-bold" width="32" class="text-[#291334]"></iconify-icon>
+					{$i18n.t('backoffice.clients.title')}
+				</h1>
 				<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.clients.subtitle')}</p>
 			</div>
 			<div class="flex gap-3">
@@ -374,11 +377,17 @@
 			</div>
 		</div>
 
-		<div class="bg-white rounded-2xl border border-slate-100 p-4" in:fly={{ y: 20, delay: 400 }}>
-			<SearchInput
-				value={searchQuery}
-				oninput={(e: any) => handleSearchInput(e.target.value)}
+		<div class="relative" in:fly={{ y: 20, delay: 400 }}>
+			<iconify-icon
+				icon="solar:magnifer-linear"
+				width="20"
+				class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+			></iconify-icon>
+			<input
+				type="text"
 				placeholder={$i18n.t('backoffice.clients.searchPlaceholder')}
+				class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-all"
+				oninput={(e: any) => handleSearchInput(e.target.value)}
 			/>
 		</div>
 
@@ -386,15 +395,15 @@
 		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
 			<div class="overflow-x-auto">
 				<table class="w-full">
-					<thead class="bg-[#FAF7F5] border-b border-slate-100">
+					<thead class="bg-slate-50 border-b border-slate-100">
 						<tr>
-							<th class="text-left px-6 py-3 text-xs font-black text-[#291334] uppercase">{$i18n.t('backoffice.clients.table.company')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-[#291334] uppercase">{$i18n.t('backoffice.clients.table.contact')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-[#291334] uppercase">{$i18n.t('backoffice.clients.table.location')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-[#291334] uppercase">{$i18n.t('backoffice.clients.table.siret')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-[#291334] uppercase">{$i18n.t('backoffice.clients.table.status')}</th>
-							<th class="text-left px-6 py-3 text-xs font-black text-[#291334] uppercase">{$i18n.t('backoffice.clients.table.joined')}</th>
-							<th class="text-right px-6 py-3 text-xs font-black text-[#291334] uppercase">{$i18n.t('backoffice.clients.table.actions')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.company')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.contact')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.location')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.siret')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.status')}</th>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.joined')}</th>
+							<th class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.actions')}</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-slate-100">
@@ -488,11 +497,24 @@
 				: $i18n.t('backoffice.clients.showing', { count: clients.length, total })}
 		</div>
 	{:else}
-			<EmptyState
-				icon="solar:buildings-2-bold"
-				title={$i18n.t('backoffice.clients.noClientsFound')}
-				description={searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}
-			/>
+			<div class="text-center py-16" in:fade>
+				<div class="flex flex-col items-center gap-4">
+					<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
+						<iconify-icon icon="solar:buildings-2-bold" width="40"></iconify-icon>
+					</div>
+					<h3 class="text-2xl font-black text-[#291334]">{$i18n.t('backoffice.clients.noClientsFound')}</h3>
+					<p class="text-[#291334]/60 max-w-md">{searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}</p>
+					{#if !searchQuery}
+						<button
+							onclick={openCreateModal}
+							class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
+						>
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							<span>{$i18n.t('backoffice.clients.newClient')}</span>
+						</button>
+					{/if}
+				</div>
+			</div>
 		{/if}
 	</div>
 {/if}

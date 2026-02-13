@@ -138,9 +138,12 @@
 	</div>
 {:else}
 	<div class="p-8 max-w-[1600px] mx-auto space-y-6">
-		<header class="flex justify-between items-start">
+		<header class="flex justify-between items-center" in:fade>
 			<div>
-				<h1 class="text-3xl font-black text-[#291334] tracking-tighter">Statistiques financières</h1>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+					<iconify-icon icon="solar:chart-bold" width="32" class="text-[#291334]"></iconify-icon>
+					Statistiques financières
+				</h1>
 				<p class="text-slate-500 text-sm mt-1">
 					Analyse détaillée des paiements et revenus
 				</p>
@@ -153,7 +156,7 @@
 			{/if}
 		</header>
 		<div class="grid grid-cols-4 gap-4">
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 100 }}>
 				<div class="flex items-center justify-between mb-2">
 					<div class="text-xs font-bold text-emerald-600 uppercase tracking-tight">
 						Revenu total
@@ -170,7 +173,7 @@
 				</div>
 			</div>
 
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 200 }}>
 				<div class="flex items-center justify-between mb-2">
 					<div class="text-xs font-bold text-amber-600 uppercase tracking-tight">
 						En attente
@@ -187,7 +190,7 @@
 				</div>
 			</div>
 
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 300 }}>
 				<div class="flex items-center justify-between mb-2">
 					<div class="text-xs font-bold text-slate-600 uppercase tracking-tight">
 						Ce mois
@@ -202,7 +205,7 @@
 				<div class="text-xs text-slate-500 mt-1">Revenus du mois actuel</div>
 			</div>
 
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 400 }}>
 				<div class="flex items-center justify-between mb-2">
 					<div class="text-xs font-bold text-indigo-600 uppercase tracking-tight">
 						Paiement moyen
@@ -219,7 +222,7 @@
 		</div>
 
 		<div class="grid grid-cols-2 gap-6">
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 500 }}>
 				<div class="mb-4">
 					<h2 class="text-lg font-black text-[#291334]">Revenus mensuels</h2>
 					<p class="text-xs text-slate-500">6 derniers mois</p>
@@ -240,7 +243,7 @@
 				{/if}
 			</div>
 
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 600 }}>
 				<div class="mb-4">
 					<h2 class="text-lg font-black text-[#291334]">Statut des paiements</h2>
 					<p class="text-xs text-slate-500">Répartition par statut</p>
@@ -260,7 +263,7 @@
 				{/if}
 			</div>
 
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 700 }}>
 				<div class="mb-4">
 					<h2 class="text-lg font-black text-[#291334]">Tendance des paiements</h2>
 					<p class="text-xs text-slate-500">Nombre de paiements créés</p>
@@ -280,7 +283,7 @@
 				{/if}
 			</div>
 
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 800 }}>
 				<div class="mb-4">
 					<h2 class="text-lg font-black text-[#291334]">Revenus par mois (barres)</h2>
 					<p class="text-xs text-slate-500">Comparaison mensuelle</p>

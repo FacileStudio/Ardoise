@@ -217,7 +217,10 @@
 	<div class="p-8 max-w-[1600px] mx-auto space-y-6">
 		<header class="flex items-center justify-between" in:fade>
 			<div>
-				<h1 class="text-3xl font-black text-slate-900 tracking-tighter">{$i18n.t('backoffice.payments.title')}</h1>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+					<iconify-icon icon="solar:wallet-money-bold" width="32" class="text-[#291334]"></iconify-icon>
+					{$i18n.t('backoffice.payments.title')}
+				</h1>
 				<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.payments.subtitle')}</p>
 			</div>
 		<div class="flex gap-3">
@@ -299,22 +302,62 @@
 		</div>
 	</div>
 
-	<div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm" in:fly={{ y: 20, delay: 500 }}>
-		<div class="flex gap-3 items-center">
-			<div class="flex-1">
-				<SearchInput bind:value={searchQuery} placeholder={$i18n.t('backoffice.payments.searchPlaceholder')} />
-			</div>
+	<div class="space-y-4" in:fly={{ y: 20, delay: 500 }}>
+		<div class="relative">
+			<iconify-icon
+				icon="solar:magnifer-linear"
+				width="20"
+				class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+			></iconify-icon>
+			<input
+				type="text"
+				placeholder={$i18n.t('backoffice.payments.searchPlaceholder')}
+				class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-all"
+				bind:value={searchQuery}
+			/>
+		</div>
 
-			<select
-				bind:value={filters.status}
-				class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm focus:border-[#FEC129] transition-colors"
+		<div class="flex gap-2 flex-wrap">
+			<button
+				onclick={() => filters.status = undefined}
+				class="px-4 py-2 rounded-xl font-bold text-sm transition-all {!filters.status
+					? 'bg-[#291334] text-white'
+					: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
 			>
-				<option value={undefined}>{$i18n.t('backoffice.payments.allStatus')}</option>
-				<option value="PENDING">{$i18n.t('common.status.pending')}</option>
-				<option value="PAID">{$i18n.t('common.status.paid')}</option>
-				<option value="EXPIRED">{$i18n.t('common.status.expired')}</option>
-				<option value="CANCELLED">{$i18n.t('common.status.cancelled')}</option>
-			</select>
+				{$i18n.t('backoffice.payments.allStatus')}
+			</button>
+			<button
+				onclick={() => filters.status = 'PENDING'}
+				class="px-4 py-2 rounded-xl font-bold text-sm transition-all {filters.status === 'PENDING'
+					? 'bg-[#291334] text-white'
+					: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+			>
+				{$i18n.t('common.status.pending')}
+			</button>
+			<button
+				onclick={() => filters.status = 'PAID'}
+				class="px-4 py-2 rounded-xl font-bold text-sm transition-all {filters.status === 'PAID'
+					? 'bg-[#291334] text-white'
+					: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+			>
+				{$i18n.t('common.status.paid')}
+			</button>
+			<button
+				onclick={() => filters.status = 'EXPIRED'}
+				class="px-4 py-2 rounded-xl font-bold text-sm transition-all {filters.status === 'EXPIRED'
+					? 'bg-[#291334] text-white'
+					: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+			>
+				{$i18n.t('common.status.expired')}
+			</button>
+			<button
+				onclick={() => filters.status = 'CANCELLED'}
+				class="px-4 py-2 rounded-xl font-bold text-sm transition-all {filters.status === 'CANCELLED'
+					? 'bg-[#291334] text-white'
+					: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+			>
+				{$i18n.t('common.status.cancelled')}
+			</button>
 		</div>
 	</div>
 
@@ -322,26 +365,26 @@
 		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm" in:fade>
 			<div class="overflow-x-auto">
 				<table class="w-full">
-					<thead class="bg-[#FAF7F5] border-b border-slate-100">
+					<thead class="bg-slate-50 border-b border-slate-100">
 						<tr>
-							<th class="text-left px-6 py-4 text-xs font-black text-slate-600 uppercase"
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
 								>{$i18n.t('backoffice.payments.table.payment')}</th
 							>
-							<th class="text-left px-6 py-4 text-xs font-black text-slate-600 uppercase"
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
 								>{$i18n.t('backoffice.payments.table.client')}</th
 							>
-							<th class="text-left px-6 py-4 text-xs font-black text-slate-600 uppercase"
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
 								>{$i18n.t('backoffice.payments.table.amount')}</th
 							>
-							<th class="text-left px-6 py-4 text-xs font-black text-slate-600 uppercase"
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
 								>{$i18n.t('backoffice.payments.table.status')}</th
 							>
-							<th class="text-left px-6 py-4 text-xs font-black text-slate-600 uppercase"
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
 								>{$i18n.t('backoffice.payments.table.frequency')}</th
 							>
-							<th class="text-left px-6 py-4 text-xs font-black text-slate-600 uppercase">{$i18n.t('backoffice.payments.table.date')}</th
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.payments.table.date')}</th
 							>
-							<th class="text-right px-6 py-4 text-xs font-black text-slate-600 uppercase"
+							<th class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider"
 								>{$i18n.t('backoffice.payments.table.actions')}</th
 							>
 						</tr>
@@ -463,11 +506,24 @@
 				{$i18n.t('backoffice.payments.showing', { count: filteredPayments.length, total: total })}
 			</div>
 		{:else}
-			<EmptyState
-				icon="solar:document-bold"
-				title={$i18n.t('backoffice.payments.noPaymentsFound')}
-				description={$i18n.t('backoffice.payments.tryAdjustingFilters')}
-			/>
+			<div class="text-center py-16" in:fade>
+				<div class="flex flex-col items-center gap-4">
+					<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
+						<iconify-icon icon="solar:wallet-money-bold" width="40"></iconify-icon>
+					</div>
+					<h3 class="text-2xl font-black text-[#291334]">{$i18n.t('backoffice.payments.noPaymentsFound')}</h3>
+					<p class="text-[#291334]/60 max-w-md">{$i18n.t('backoffice.payments.tryAdjustingFilters')}</p>
+					{#if !searchQuery && !filters.status}
+						<button
+							onclick={() => goto('/admin/payments/create')}
+							class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
+						>
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							<span>{$i18n.t('backoffice.payments.createPayment')}</span>
+						</button>
+					{/if}
+				</div>
+			</div>
 		{/if}
 	</div>
 {/if}
