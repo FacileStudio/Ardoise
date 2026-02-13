@@ -69,8 +69,13 @@
       payment = paymentData as Payment;
       settings = settingsData;
 
-      if (payment.status === 'PENDING' && env.STRIPE_PUBLISHABLE_KEY) {
-        await initializeStripe();
+      if (payment.status === 'PENDING') {
+        if (!env.STRIPE_PUBLISHABLE_KEY) {
+          error = 'Configuration Stripe manquante. Veuillez contacter le support.';
+          console.error('STRIPE_PUBLISHABLE_KEY not configured');
+        } else {
+          await initializeStripe();
+        }
       }
     } catch (err: any) {
       error = err.message || 'Erreur lors du chargement du paiement';
@@ -81,14 +86,20 @@
 
   async function initializeStripe() {
     try {
+      console.log('Initializing Stripe with publishable key:', env.STRIPE_PUBLISHABLE_KEY?.substring(0, 20) + '...');
+      console.log('Fetching client secret for payment:', paymentId);
+
       const secretData = await trpc.payment.getClientSecret.query({ id: paymentId });
       clientSecret = secretData.clientSecret;
+      console.log('Got client secret:', clientSecret?.substring(0, 20) + '...');
 
+      console.log('Loading Stripe.js...');
       stripe = await loadStripe(env.STRIPE_PUBLISHABLE_KEY || '');
 
       if (!stripe) {
         throw new Error('Failed to load Stripe');
       }
+      console.log('Stripe.js loaded successfully');
 
       const appearance = {
         theme: 'stripe' as const,
@@ -102,12 +113,18 @@
         },
       };
 
+      console.log('Creating Stripe Elements...');
       elements = stripe.elements({ clientSecret, appearance });
 
+      console.log('Creating payment element...');
       const paymentElement = elements.create('payment');
+
+      console.log('Mounting payment element...');
       paymentElement.mount('#payment-element');
+      console.log('Stripe initialization complete!');
     } catch (err: any) {
       error = err.message || 'Erreur lors de l\'initialisation du paiement';
+      console.error('Stripe initialization error:', err);
     }
   }
 
