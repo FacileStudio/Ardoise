@@ -150,6 +150,7 @@
 						bind:value={formData.logoUrl}
 						label="Logo du prestataire"
 						{getPresignedUrl}
+						{trpc}
 					/>
 					<p class="text-xs text-slate-500 mt-3 ml-2">
 						<iconify-icon icon="solar:info-circle-bold" width="14" class="inline"></iconify-icon>

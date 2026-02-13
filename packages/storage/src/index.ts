@@ -68,6 +68,13 @@ export class StorageService {
     return `${cleanBase}/${cleanPath}`;
   }
 
+  getPresignedUrl(path: string, expiresIn: number = 3600): string {
+    return this.client.file(path).presign({
+      expiresIn,
+      method: 'GET',
+    });
+  }
+
   async download(path: string): Promise<Uint8Array> {
     return new Uint8Array(await this.client.file(path).arrayBuffer());
   }

@@ -6,12 +6,36 @@
 
     export let value: string = "";
     export let label = "Image de couverture";
+    export let trpc: any = undefined;
 
     export let getPresignedUrl: (_filename: string, _folder: string) => Promise<string>;
 
     let uploading = false;
-    let previewUrl = value;
+    let previewUrl = $state(value);
+    let loadingPresigned = $state(false);
     let fileInput: HTMLInputElement;
+
+    async function loadPresignedPreview() {
+        if (!value || !value.includes('storageapi.dev') || !trpc) {
+            previewUrl = value;
+            return;
+        }
+
+        loadingPresigned = true;
+        try {
+            const result = await trpc.media.getDownloadUrl.query({ url: value });
+            previewUrl = result.url;
+        } catch (err) {
+            logger.error({ err }, 'Failed to load presigned URL for preview');
+            previewUrl = value;
+        } finally {
+            loadingPresigned = false;
+        }
+    }
+
+    $effect(() => {
+        loadPresignedPreview();
+    });
 
     async function handleFileChange(e: Event) {
         const file = (e.target as HTMLInputElement).files?.[0];

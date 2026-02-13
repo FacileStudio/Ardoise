@@ -5,6 +5,7 @@ export { default as Button } from './components/atoms/Button.svelte';
 export { default as Card } from './components/atoms/Card.svelte';
 export { default as Input } from './components/atoms/Input.svelte';
 export { default as LanguageSwitcher } from './components/atoms/LanguageSwitcher.svelte';
+export { default as S3Image } from './components/atoms/S3Image.svelte';
 export { default as Spinner } from './components/atoms/Spinner.svelte';
 export { default as Tabs } from './components/atoms/Tabs.svelte';
 export { default as Toggle } from './components/atoms/Toggle.svelte';

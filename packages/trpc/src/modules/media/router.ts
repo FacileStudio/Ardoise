@@ -23,6 +23,19 @@ export const mediaRouter = router({
       return mediaService.generateUploadUrl(ctx.storage, ctx.user.id, input);
     }),
 
+  getDownloadUrl: protectedProcedure
+    .input(z.object({ url: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const urlPath = new URL(input.url).pathname;
+      const pathParts = urlPath.split('/').filter(Boolean);
+      const bucketIndex = pathParts.findIndex(p => p.includes('organized-chest'));
+      const filePath = pathParts.slice(bucketIndex + 1).join('/');
+
+      return {
+        url: ctx.storage.getPresignedUrl(filePath, 3600),
+      };
+    }),
+
   updateAvatar: protectedProcedure.input(mediaSchema).mutation(async ({ ctx, input }) => {
     return mediaService.updateUserAvatar(ctx.db, ctx.storage, ctx.user.id, input);
   }),
