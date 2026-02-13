@@ -26,6 +26,7 @@
 		createdAt: Date;
 	};
 
+	let pageLoading = $state(true);
 	let loading = $state(false);
 	let submitting = $state(false);
 	let providers: Provider[] = $state([]);
@@ -54,11 +55,15 @@
 	});
 
 	onMount(async () => {
-		await loadProviders();
+		await loadProviders(true);
 	});
 
-	async function loadProviders() {
-		loading = true;
+	async function loadProviders(isInitialLoad = false) {
+		if (isInitialLoad) {
+			pageLoading = true;
+		} else {
+			loading = true;
+		}
 		try {
 			const result = await trpc.provider.list.query({
 				page: currentPage,
@@ -71,7 +76,11 @@
 			logger.error({ err }, 'Failed to load providers');
 			toast.push('Erreur lors du chargement des prestataires', 'error');
 		} finally {
-			loading = false;
+			if (isInitialLoad) {
+				pageLoading = false;
+			} else {
+				loading = false;
+			}
 		}
 	}
 
@@ -192,35 +201,42 @@
 	}
 </script>
 
-<div class="p-8 max-w-[1400px] mx-auto">
-	<div class="flex justify-between items-center mb-6" in:fade>
-		<div>
-			<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-				<iconify-icon icon="solar:buildings-2-bold" width="32" class="text-[#291334]"
-				></iconify-icon>
-				Prestataires
-			</h1>
-			<p class="text-slate-500 text-sm mt-1">Gérez les informations de vos différents prestataires</p>
-		</div>
-		<div class="flex gap-3">
-			{#if providers.length > 0}
-				<Button onclick={handleExportCSV} class="rounded-full">
-					<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
-					<span>Exporter CSV</span>
-				</Button>
-			{/if}
-			<button
-				onclick={openCreateDrawer}
-				class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
-			>
-				<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-				<span>Nouveau prestataire</span>
-			</button>
-		</div>
+{#if pageLoading}
+	<div class="flex flex-col items-center justify-center h-screen space-y-6">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+			Chargement...
+		</p>
 	</div>
+{:else}
+	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
+		<header class="flex justify-between items-center" in:fade>
+			<div>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+					<iconify-icon icon="solar:buildings-2-bold" width="32" class="text-[#291334]"
+					></iconify-icon>
+					Prestataires
+				</h1>
+				<p class="text-slate-500 text-sm mt-1">Gérez les informations de vos différents prestataires</p>
+			</div>
+			<div class="flex gap-3">
+				{#if providers.length > 0}
+					<Button onclick={handleExportCSV} class="rounded-full">
+						<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
+						<span>Exporter CSV</span>
+					</Button>
+				{/if}
+				<button
+					onclick={openCreateDrawer}
+					class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
+				>
+					<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+					<span>Nouveau prestataire</span>
+				</button>
+			</div>
+		</header>
 
-	<div class="mb-6">
-		<div class="relative">
+		<div class="relative" in:fly={{ y: 20, delay: 100 }}>
 			<iconify-icon
 				icon="solar:magnifer-linear"
 				width="20"
@@ -233,143 +249,138 @@
 				oninput={handleSearch}
 			/>
 		</div>
-	</div>
 
-	{#if loading}
-		<div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
-			<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-			<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-				Chargement...
-			</p>
-		</div>
-	{:else if providers.length === 0}
-		<div class="text-center py-16">
-			<div class="flex flex-col items-center gap-4">
-				<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
-					<iconify-icon icon="solar:buildings-2-bold" width="40"></iconify-icon>
-				</div>
-				<h3 class="text-2xl font-black text-[#291334]">Aucun prestataire</h3>
-				<p class="text-[#291334]/60 max-w-md">Créez votre premier prestataire pour commencer</p>
-				<button
-					onclick={openCreateDrawer}
-					class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
-				>
-					<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-					<span>Nouveau prestataire</span>
-				</button>
-			</div>
-		</div>
-	{:else}
-		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
-			<table class="w-full">
-				<thead class="bg-slate-50 border-b border-slate-100">
-					<tr>
-						<th
-							class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Nom</th
-						>
-						<th
-							class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>SIRET</th
-						>
-						<th
-							class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Email</th
-						>
-						<th
-							class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Téléphone</th
-						>
-						<th
-							class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Ville</th
-						>
-						<th
-							class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>TVA</th
-						>
-						<th
-							class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Actions</th
-						>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-slate-100">
-					{#each providers as provider (provider.id)}
-						<tr
-							class="hover:bg-[#FAF7F5] transition-colors cursor-pointer"
-							onclick={(e) => {
-								if (!(e.target as HTMLElement).closest('button')) {
-									goto(`/admin/prestataires/${provider.id}`);
-								}
-							}}
-						>
-							<td class="px-6 py-4">
-								<div>
-									<span class="font-bold text-slate-900">{provider.name}</span>
-									{#if provider.legalName}
-										<p class="text-xs text-slate-500">{provider.legalName}</p>
-									{/if}
-								</div>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm text-slate-600">{provider.siret || '-'}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm text-slate-600">{provider.email || '-'}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm text-slate-600">{provider.phone || '-'}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm text-slate-600">{provider.city || '-'}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm font-bold text-[#291334]">{provider.tvaRate}%</span>
-							</td>
-							<td class="px-6 py-4">
-								<div class="flex justify-end gap-2">
-									<button
-										onclick={() => openEditDrawer(provider)}
-										class="p-2 text-[#291334] hover:bg-[#291334]/10 rounded-lg transition-colors"
-										title="Modifier"
-									>
-										<iconify-icon icon="solar:pen-bold" width="18"></iconify-icon>
-									</button>
-									<button
-										onclick={() => handleDelete(provider.id)}
-										class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-										title="Supprimer"
-									>
-										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-									</button>
-								</div>
-							</td>
+		{#if providers.length > 0}
+			<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
+				<table class="w-full">
+					<thead class="bg-slate-50 border-b border-slate-100">
+						<tr>
+							<th
+								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Nom</th
+							>
+							<th
+								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>SIRET</th
+							>
+							<th
+								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Email</th
+							>
+							<th
+								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Téléphone</th
+							>
+							<th
+								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Ville</th
+							>
+							<th
+								class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>TVA</th
+							>
+							<th
+								class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Actions</th
+							>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+					</thead>
+					<tbody class="divide-y divide-slate-100">
+						{#each providers as provider (provider.id)}
+							<tr
+								class="hover:bg-[#FAF7F5] transition-colors cursor-pointer"
+								onclick={(e) => {
+									if (!(e.target as HTMLElement).closest('button')) {
+										goto(`/admin/prestataires/${provider.id}`);
+									}
+								}}
+							>
+								<td class="px-6 py-4">
+									<div>
+										<span class="font-bold text-slate-900">{provider.name}</span>
+										{#if provider.legalName}
+											<p class="text-xs text-slate-500">{provider.legalName}</p>
+										{/if}
+									</div>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm text-slate-600">{provider.siret || '-'}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm text-slate-600">{provider.email || '-'}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm text-slate-600">{provider.phone || '-'}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm text-slate-600">{provider.city || '-'}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm font-bold text-[#291334]">{provider.tvaRate}%</span>
+								</td>
+								<td class="px-6 py-4">
+									<div class="flex justify-end gap-2">
+										<button
+											onclick={() => openEditDrawer(provider)}
+											class="p-2 text-[#291334] hover:bg-[#291334]/10 rounded-lg transition-colors"
+											title="Modifier"
+										>
+											<iconify-icon icon="solar:pen-bold" width="18"></iconify-icon>
+										</button>
+										<button
+											onclick={() => handleDelete(provider.id)}
+											class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+											title="Supprimer"
+										>
+											<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 
-		{#if totalPages > 1}
-			<div class="flex justify-center mt-6 gap-2">
-				{#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
-					<button
-						onclick={() => {
-							currentPage = page;
-							loadProviders();
-						}}
-						class="px-4 py-2 rounded-xl font-bold text-sm transition-all {currentPage === page
-							? 'bg-[#291334] text-white'
-							: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
-					>
-						{page}
-					</button>
-				{/each}
+			{#if totalPages > 1}
+				<div class="flex justify-center gap-2">
+					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
+						<button
+							onclick={() => {
+								currentPage = page;
+								loadProviders();
+							}}
+							class="px-4 py-2 rounded-xl font-bold text-sm transition-all {currentPage === page
+								? 'bg-[#291334] text-white'
+								: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+						>
+							{page}
+						</button>
+					{/each}
+				</div>
+			{/if}
+		{:else}
+			<div class="text-center py-16" in:fly={{ y: 20, delay: 200 }}>
+				<div class="flex flex-col items-center gap-4">
+					<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
+						<iconify-icon icon="solar:buildings-2-bold" width="40"></iconify-icon>
+					</div>
+					<h3 class="text-2xl font-black text-[#291334]">Aucun prestataire</h3>
+					<p class="text-[#291334]/60 max-w-md">{searchQuery ? 'Aucun résultat trouvé pour votre recherche' : 'Créez votre premier prestataire pour commencer'}</p>
+					{#if !searchQuery}
+						<button
+							onclick={openCreateDrawer}
+							class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
+						>
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							<span>Nouveau prestataire</span>
+						</button>
+					{/if}
+				</div>
 			</div>
 		{/if}
-	{/if}
-</div>
+	</div>
+{/if}
 
 <Drawer bind:open={showCreateDrawer} title="Nouveau prestataire" onClose={() => (showCreateDrawer = false)}>
 	<div class="space-y-4 pb-6">

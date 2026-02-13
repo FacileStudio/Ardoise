@@ -24,6 +24,7 @@
 		};
 	};
 
+	let pageLoading = $state(true);
 	let loading = $state(false);
 	let documents: Document[] = $state([]);
 	let totalPages = $state(1);
@@ -35,7 +36,7 @@
 
 	onMount(async () => {
 		await loadDocumentTypes();
-		await loadDocuments();
+		await loadDocuments(true);
 	});
 
 	async function loadDocumentTypes() {
@@ -47,8 +48,12 @@
 		}
 	}
 
-	async function loadDocuments() {
-		loading = true;
+	async function loadDocuments(isInitialLoad = false) {
+		if (isInitialLoad) {
+			pageLoading = true;
+		} else {
+			loading = true;
+		}
 		try {
 			const result = await trpc.document.list.query({
 				page: currentPage,
@@ -62,7 +67,11 @@
 			logger.error({ err }, 'Failed to load documents');
 			toast.push('Erreur lors du chargement des documents', 'error');
 		} finally {
-			loading = false;
+			if (isInitialLoad) {
+				pageLoading = false;
+			} else {
+				loading = false;
+			}
 		}
 	}
 
@@ -133,173 +142,177 @@
 	}
 </script>
 
-<div class="p-8 max-w-[1400px] mx-auto">
-	<div class="flex justify-between items-center mb-6" in:fade>
-		<div>
-			<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-				<iconify-icon icon="solar:document-text-bold" width="32" class="text-[#291334]"
-				></iconify-icon>
-				Documents
-			</h1>
-			<p class="text-slate-500 text-sm mt-1">Gérez vos factures, devis et contrats</p>
-		</div>
-		<button
-			onclick={() => goto('/admin/documents/create')}
-			class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
-		>
-			<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-			<span>Créer un document</span>
-		</button>
+{#if pageLoading}
+	<div class="flex flex-col items-center justify-center h-screen space-y-6">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+			Chargement...
+		</p>
 	</div>
-
-	<div class="mb-6 space-y-4">
-		<div class="relative">
-			<iconify-icon
-				icon="solar:magnifer-linear"
-				width="20"
-				class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-			></iconify-icon>
-			<input
-				type="text"
-				placeholder="Rechercher par référence, client..."
-				class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-all"
-				oninput={handleSearch}
-			/>
-		</div>
-
-		<div class="flex gap-2 flex-wrap">
-			{#each docTypes as type (type.value)}
-				<button
-					onclick={() => handleTypeFilter(type.value)}
-					class="px-4 py-2 rounded-xl font-bold text-sm transition-all {selectedType ===
-					type.value
-						? 'bg-[#291334] text-white'
-						: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
-				>
-					{type.label}
-				</button>
-			{/each}
-		</div>
-	</div>
-
-	{#if loading}
-		<div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
-			<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-			<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-				Chargement...
-			</p>
-		</div>
-	{:else if documents.length === 0}
-		<div class="text-center py-16">
-			<div class="flex flex-col items-center gap-4">
-				<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
-					<iconify-icon icon="solar:document-text-bold" width="40"></iconify-icon>
-				</div>
-				<h3 class="text-2xl font-black text-[#291334]">Aucun document</h3>
-				<p class="text-[#291334]/60 max-w-md">Créez votre premier document pour commencer</p>
-				<button
-					onclick={() => goto('/admin/documents/create')}
-					class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
-				>
-					<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-					<span>Créer un document</span>
-				</button>
+{:else}
+	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
+		<header class="flex justify-between items-center" in:fade>
+			<div>
+				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+					<iconify-icon icon="solar:document-text-bold" width="32" class="text-[#291334]"
+					></iconify-icon>
+					Documents
+				</h1>
+				<p class="text-slate-500 text-sm mt-1">Gérez vos factures, devis et contrats</p>
 			</div>
-		</div>
-	{:else}
-		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
-			<table class="w-full">
-				<thead class="bg-slate-50 border-b border-slate-100">
-					<tr>
-						<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Référence</th
-						>
-						<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Type</th
-						>
-						<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Client</th
-						>
-						<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Montant</th
-						>
-						<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Date</th
-						>
-						<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Créé par</th
-						>
-						<th class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider"
-							>Actions</th
-						>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-slate-100">
-					{#each documents as doc (doc.id)}
-						<tr class="hover:bg-slate-50 transition-colors">
-							<td class="px-6 py-4">
-								<span class="font-bold text-slate-900">{getDocumentRef(doc)}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm font-medium text-slate-600"
-									>{docTypes.find((t) => t.value === doc.type)?.label || doc.type}</span
-								>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm font-medium text-slate-900">{doc.clientName}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm font-bold text-[#291334]">{formatCurrency(doc.total)}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm text-slate-600">{formatDate(doc.createdAt)}</span>
-							</td>
-							<td class="px-6 py-4">
-								<span class="text-sm text-slate-600"
-									>{doc.createdByUser.firstName}
-									{doc.createdByUser.lastName}</span
-								>
-							</td>
-							<td class="px-6 py-4">
-								<div class="flex justify-end gap-2">
-									<button
-										onclick={() => handleDownload(doc.id)}
-										class="p-2 text-[#291334] hover:bg-[#291334]/10 rounded-lg transition-colors"
-										title="Télécharger"
-									>
-										<iconify-icon icon="solar:download-bold" width="18"></iconify-icon>
-									</button>
-									<button
-										onclick={() => handleDelete(doc.id)}
-										class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-										title="Supprimer"
-									>
-										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+			<button
+				onclick={() => goto('/admin/documents/create')}
+				class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
+			>
+				<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+				<span>Créer un document</span>
+			</button>
+		</header>
 
-		{#if totalPages > 1}
-			<div class="flex justify-center mt-6 gap-2">
-				{#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
+		<div class="space-y-4">
+			<div class="relative" in:fly={{ y: 20, delay: 100 }}>
+				<iconify-icon
+					icon="solar:magnifer-linear"
+					width="20"
+					class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+				></iconify-icon>
+				<input
+					type="text"
+					placeholder="Rechercher par référence, client..."
+					class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-all"
+					oninput={handleSearch}
+				/>
+			</div>
+
+			<div class="flex gap-2 flex-wrap" in:fly={{ y: 20, delay: 200 }}>
+				{#each docTypes as type (type.value)}
 					<button
-						onclick={() => {
-							currentPage = page;
-							loadDocuments();
-						}}
-						class="px-4 py-2 rounded-xl font-bold text-sm transition-all {currentPage === page
+						onclick={() => handleTypeFilter(type.value)}
+						class="px-4 py-2 rounded-xl font-bold text-sm transition-all {selectedType ===
+						type.value
 							? 'bg-[#291334] text-white'
 							: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
 					>
-						{page}
+						{type.label}
 					</button>
 				{/each}
 			</div>
+		</div>
+
+		{#if documents.length > 0}
+			<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
+				<table class="w-full">
+					<thead class="bg-slate-50 border-b border-slate-100">
+						<tr>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Référence</th
+							>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Type</th
+							>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Client</th
+							>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Montant</th
+							>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Date</th
+							>
+							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Créé par</th
+							>
+							<th class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider"
+								>Actions</th
+							>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-slate-100">
+						{#each documents as doc (doc.id)}
+							<tr class="hover:bg-slate-50 transition-colors">
+								<td class="px-6 py-4">
+									<span class="font-bold text-slate-900">{getDocumentRef(doc)}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm font-medium text-slate-600"
+										>{docTypes.find((t) => t.value === doc.type)?.label || doc.type}</span
+									>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm font-medium text-slate-900">{doc.clientName}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm font-bold text-[#291334]">{formatCurrency(doc.total)}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm text-slate-600">{formatDate(doc.createdAt)}</span>
+								</td>
+								<td class="px-6 py-4">
+									<span class="text-sm text-slate-600"
+										>{doc.createdByUser.firstName}
+										{doc.createdByUser.lastName}</span
+									>
+								</td>
+								<td class="px-6 py-4">
+									<div class="flex justify-end gap-2">
+										<button
+											onclick={() => handleDownload(doc.id)}
+											class="p-2 text-[#291334] hover:bg-[#291334]/10 rounded-lg transition-colors"
+											title="Télécharger"
+										>
+											<iconify-icon icon="solar:download-bold" width="18"></iconify-icon>
+										</button>
+										<button
+											onclick={() => handleDelete(doc.id)}
+											class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+											title="Supprimer"
+										>
+											<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+
+			{#if totalPages > 1}
+				<div class="flex justify-center gap-2">
+					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
+						<button
+							onclick={() => {
+								currentPage = page;
+								loadDocuments();
+							}}
+							class="px-4 py-2 rounded-xl font-bold text-sm transition-all {currentPage === page
+								? 'bg-[#291334] text-white'
+								: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+						>
+							{page}
+						</button>
+					{/each}
+				</div>
+			{/if}
+		{:else}
+			<div class="text-center py-16" in:fly={{ y: 20, delay: 300 }}>
+				<div class="flex flex-col items-center gap-4">
+					<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
+						<iconify-icon icon="solar:document-text-bold" width="40"></iconify-icon>
+					</div>
+					<h3 class="text-2xl font-black text-[#291334]">Aucun document</h3>
+					<p class="text-[#291334]/60 max-w-md">{searchQuery || selectedType ? 'Aucun résultat trouvé pour votre recherche' : 'Créez votre premier document pour commencer'}</p>
+					{#if !searchQuery && !selectedType}
+						<button
+							onclick={() => goto('/admin/documents/create')}
+							class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
+						>
+							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							<span>Créer un document</span>
+						</button>
+					{/if}
+				</div>
+			</div>
 		{/if}
-	{/if}
-</div>
+	</div>
+{/if}

@@ -37,6 +37,7 @@
 	}
 
 	let pageLoading = $state(true);
+	let loading = $state(false);
 	let payments: Payment[] = $state([]);
 	let total = $state(0);
 	let searchQuery = $state('');
@@ -55,12 +56,19 @@
 		countExpired: 0,
 	});
 
+	let isInitialMount = true;
+
 	onMount(async () => {
-		await Promise.all([fetchPayments(), fetchStats()]);
+		await Promise.all([fetchPayments(true), fetchStats()]);
+		isInitialMount = false;
 	});
 
-	async function fetchPayments() {
-		pageLoading = true;
+	async function fetchPayments(isInitialLoad = false) {
+		if (isInitialLoad) {
+			pageLoading = true;
+		} else {
+			loading = true;
+		}
 		try {
 			const result = await trpc.payment.list.query({
 				page: filters.page,
@@ -72,7 +80,11 @@
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch payments');
 		} finally {
-			pageLoading = false;
+			if (isInitialLoad) {
+				pageLoading = false;
+			} else {
+				loading = false;
+			}
 		}
 	}
 
@@ -101,7 +113,9 @@
 	}
 
 	$effect(() => {
-		fetchPayments();
+		if (!isInitialMount) {
+			fetchPayments();
+		}
 	});
 
 

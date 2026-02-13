@@ -20,6 +20,7 @@
 	import 'iconify-icon';
 
 	let pageLoading = $state(true);
+	let loading = $state(false);
 	let clients: any[] = $state([]);
 	let searchQuery = $state('');
 	let currentPage = $state(1);
@@ -59,12 +60,19 @@
 
 	let submitting = $state(false);
 
+	let isInitialMount = true;
+
 	onMount(async () => {
-		await fetchClients();
+		await fetchClients(true);
+		isInitialMount = false;
 	});
 
-	async function fetchClients() {
-		pageLoading = true;
+	async function fetchClients(isInitialLoad = false) {
+		if (isInitialLoad) {
+			pageLoading = true;
+		} else {
+			loading = true;
+		}
 		try {
 			const response = await trpc.client.list.query({
 				page: currentPage,
@@ -77,14 +85,20 @@
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch clients');
 		} finally {
-			pageLoading = false;
+			if (isInitialLoad) {
+				pageLoading = false;
+			} else {
+				loading = false;
+			}
 		}
 	}
 
 	$effect(() => {
-		currentPage;
-		searchQuery;
-		fetchClients();
+		if (!isInitialMount) {
+			currentPage;
+			searchQuery;
+			fetchClients();
+		}
 	});
 
 	function resetForm() {
