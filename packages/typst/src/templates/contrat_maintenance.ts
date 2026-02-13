@@ -5,12 +5,12 @@ export const contratMaintenance: string = `#set document(
 
 #set page(
   paper: "a4",
-  margin: (top: 2cm, bottom: 2cm, left: 2cm, right: 2cm),
+  margin: (top: 2.5cm, bottom: 2.5cm, left: 2.5cm, right: 2.5cm),
   numbering: "1",
   number-align: right + bottom,
 )
 
-#set text(font: "Satoshi", size: 10pt, lang: "fr")
+#set text(font: "Satoshi", size: 10pt, lang: "fr", fill: rgb("#1a1a1a"))
 
 #let number = "{{number}}"
 #let date = "{{date}}"
@@ -28,31 +28,34 @@ export const contratMaintenance: string = `#set document(
 #let provider_email = "{{provider_email}}"
 #let provider_phone = "{{provider_phone}}"
 
-#align(center)[
-  #box(height: 24pt, baseline: 20%, image("logo.png", height: 24pt))
-  #h(0.3cm)
-  #text(size: 24pt, weight: "bold", font: "Poppins")[#provider_name]
-]
+// Header section - left-aligned logo and provider name
+#box(height: 26pt, baseline: 20%, image("logo.png", height: 26pt))
+#h(0.4cm)
+#text(size: 26pt, weight: "bold", fill: rgb("#1a1a1a"))[#provider_name]
 
-#v(1cm)
+#v(1.2cm)
 
-#align(center)[
-  #text(size: 18pt, weight: "bold", font: "Poppins")[CONTRAT DE MAINTENANCE]
-  #v(0.3cm)
-  #text(size: 11pt)[Contrat N° #number]
-  #v(0.2cm)
-  #text(size: 10pt)[Fait le #date]
-]
+// Main heading - left-aligned
+#text(size: 22pt, weight: "bold", fill: rgb("#1a1a1a"))[CONTRAT DE MAINTENANCE]
 
-#v(1.5cm)
+#v(0.6cm)
 
-#text(size: 12pt, weight: "bold", font: "Poppins")[ENTRE LES SOUSSIGNÉS :]
+// Contract metadata - left-aligned
+#text(size: 10pt, fill: rgb("#666666"))[Contrat N° #number]
+#v(0.2cm)
+#text(size: 10pt, fill: rgb("#666666"))[Fait le #date]
 
-#v(0.5cm)
+#v(1.8cm)
 
-#text(weight: "bold")[Le prestataire :]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[ENTRE LES SOUSSIGNÉS :]
 
-#text[
+#v(0.7cm)
+
+#text(weight: "bold", size: 10pt, fill: rgb("#555555"))[Le prestataire :]
+
+#v(0.3cm)
+
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   #provider_name \
   #provider_address \
   #provider_city \
@@ -63,21 +66,23 @@ export const contratMaintenance: string = `#set document(
 
 #v(0.5cm)
 
-#text[Ci-après dénommé « le Prestataire »,]
+#text(size: 9.5pt, fill: rgb("#555555"))[Ci-après dénommé « le Prestataire »,]
 
 #v(0.5cm)
 
-#text(weight: "bold")[D'une part,]
+#text(weight: "bold", size: 9.5pt, fill: rgb("#1a1a1a"))[D'une part,]
 
 #v(1cm)
 
-#text(weight: "bold")[ET :]
+#text(weight: "bold", size: 10pt, fill: rgb("#555555"))[ET :]
 
 #v(0.5cm)
 
-#text(weight: "bold")[Le client :]
+#text(weight: "bold", size: 10pt, fill: rgb("#555555"))[Le client :]
 
-#text[
+#v(0.3cm)
+
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   #client_name \
   #client_address \
   #client_city \
@@ -87,33 +92,33 @@ export const contratMaintenance: string = `#set document(
 
 #v(0.5cm)
 
-#text[Ci-après dénommé « le Client »,]
+#text(size: 9.5pt, fill: rgb("#555555"))[Ci-après dénommé « le Client »,]
 
 #v(0.5cm)
 
-#text(weight: "bold")[D'autre part,]
+#text(weight: "bold", size: 9.5pt, fill: rgb("#1a1a1a"))[D'autre part,]
 
 #pagebreak()
 
-#text(size: 12pt, weight: "bold", font: "Poppins")[IL A ÉTÉ CONVENU CE QUI SUIT :]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[IL A ÉTÉ CONVENU CE QUI SUIT :]
 
 #v(1cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 1 – Objet du contrat]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 1 – Objet du contrat]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Le présent contrat a pour objet la maintenance et le support technique de l'application ou du site web du Client par le Prestataire, selon les modalités définies ci-après.
 ]
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 2 – Prestations de maintenance]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 2 – Prestations de maintenance]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   La maintenance comprend :
   - La correction des bugs et anomalies constatés
   - Les mises à jour de sécurité
@@ -124,21 +129,21 @@ export const contratMaintenance: string = `#set document(
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 3 – Durée et renouvellement]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 3 – Durée et renouvellement]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Le présent contrat est conclu pour une durée de 12 mois à compter de la date de signature. Il sera tacitement reconduit pour des périodes successives de 12 mois, sauf résiliation par l'une des parties moyennant un préavis de 2 mois.
 ]
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 4 – Niveaux de service]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 4 – Niveaux de service]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Le Prestataire s'engage à :
   - Répondre aux demandes de support sous 48h ouvrées
   - Corriger les bugs critiques sous 72h ouvrées
@@ -148,11 +153,11 @@ export const contratMaintenance: string = `#set document(
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 5 – Obligations du Client]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 5 – Obligations du Client]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Le Client s'engage à :
   - Déclarer les anomalies de manière détaillée
   - Fournir les accès nécessaires à la maintenance
@@ -162,11 +167,11 @@ export const contratMaintenance: string = `#set document(
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 6 – Exclusions]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 6 – Exclusions]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Sont exclus du contrat de maintenance :
   - Le développement de nouvelles fonctionnalités
   - Les modifications graphiques ou de design
@@ -177,57 +182,57 @@ export const contratMaintenance: string = `#set document(
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 7 – Prix et modalités de paiement]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 7 – Prix et modalités de paiement]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Le prix de la maintenance est facturé mensuellement. Les modalités de paiement sont : paiement à réception de facture. Toute prestation supplémentaire fera l'objet d'un devis séparé.
 ]
 
 #pagebreak()
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 8 – Responsabilité]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 8 – Responsabilité]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Le Prestataire ne saurait être tenu responsable des dommages indirects ou consécutifs résultant de l'utilisation du service. Sa responsabilité est limitée au montant annuel du contrat.
 ]
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 9 – Confidentialité]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 9 – Confidentialité]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   Les parties s'engagent à respecter la confidentialité des informations échangées dans le cadre du présent contrat.
 ]
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 10 – Résiliation]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 10 – Résiliation]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   En cas de manquement grave de l'une des parties à ses obligations, le présent contrat pourra être résilié de plein droit par l'autre partie, 30 jours après mise en demeure restée sans effet.
 ]
 
 #v(0.8cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[Article 11 – Juridiction compétente]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[Article 11 – Juridiction compétente]
 
-#v(0.3cm)
+#v(0.4cm)
 
-#text[
+#text(size: 9.5pt, fill: rgb("#1a1a1a"))[
   En cas de litige relatif à l'interprétation ou à l'exécution du présent contrat, les parties s'engagent à rechercher une solution amiable. À défaut, le litige sera porté devant les tribunaux compétents.
 ]
 
 #v(2cm)
 
-#text(size: 11pt, weight: "bold", font: "Poppins")[SIGNATURES]
+#text(size: 12pt, weight: "bold", fill: rgb("#1a1a1a"))[SIGNATURES]
 
 #v(1cm)
 
@@ -235,36 +240,36 @@ export const contratMaintenance: string = `#set document(
   columns: (1fr, 1fr),
   column-gutter: 2cm,
   [
-    #text(weight: "bold")[Le Prestataire]
+    #text(weight: "bold", size: 10pt, fill: rgb("#1a1a1a"))[Le Prestataire]
     #v(0.5cm)
-    #text[#provider_name]
+    #text(size: 9.5pt, fill: rgb("#1a1a1a"))[#provider_name]
     #v(0.3cm)
-    #text(size: 9pt, fill: rgb("#666666"))[Fait à #provider_city]
-    #text(size: 9pt, fill: rgb("#666666"))[Le #date]
+    #text(size: 9pt, fill: rgb("#888888"))[Fait à #provider_city]
+    #v(0.1cm)
+    #text(size: 9pt, fill: rgb("#888888"))[Le #date]
     #v(2cm)
-    #text(size: 9pt, fill: rgb("#666666"))[Signature et cachet]
+    #text(size: 9pt, fill: rgb("#888888"))[Signature et cachet]
   ],
   [
-    #text(weight: "bold")[Le Client]
+    #text(weight: "bold", size: 10pt, fill: rgb("#1a1a1a"))[Le Client]
     #v(0.5cm)
-    #text[#client_name]
+    #text(size: 9.5pt, fill: rgb("#1a1a1a"))[#client_name]
     #v(0.3cm)
-    #text(size: 9pt, fill: rgb("#666666"))[Fait à #client_city]
-    #text(size: 9pt, fill: rgb("#666666"))[Le #date]
+    #text(size: 9pt, fill: rgb("#888888"))[Fait à #client_city]
+    #v(0.1cm)
+    #text(size: 9pt, fill: rgb("#888888"))[Le #date]
     #v(2cm)
-    #text(size: 9pt, fill: rgb("#666666"))[Signature et cachet]
+    #text(size: 9pt, fill: rgb("#888888"))[Signature et cachet]
   ]
 )
 
 #v(1fr)
 
-#line(length: 100%, stroke: 0.5pt + rgb("#cccccc"))
-#v(0.5cm)
-#text(size: 8pt, fill: rgb("#666666"))[
-  #align(center)[
-    #provider_name – Développeur Freelance \
-    #provider_address – #provider_city \
-    SIRET: #provider_siret
-  ]
+#line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
+#v(0.4cm)
+#text(size: 8.5pt, fill: rgb("#888888"))[
+  #provider_name – Développeur Freelance \
+  #provider_address – #provider_city \
+  SIRET: #provider_siret
 ]
 `;
