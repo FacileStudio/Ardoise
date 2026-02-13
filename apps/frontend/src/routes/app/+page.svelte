@@ -87,7 +87,7 @@
         </div>
       </div>
     {:else if payments.length === 0}
-      <Card class="text-center py-16">
+      <div class="text-center py-16">
         <div class="flex flex-col items-center gap-4">
           <div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
             <iconify-icon icon="solar:wallet-bold" width="40"></iconify-icon>
@@ -97,7 +97,7 @@
             Vous n'avez aucune facture pour le moment. Elles apparaîtront ici dès qu'elles seront créées.
           </p>
         </div>
-      </Card>
+      </div>
     {:else}
       {#if pendingPayments.length > 0}
         <div class="mb-12">
