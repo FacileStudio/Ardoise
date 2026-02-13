@@ -4,11 +4,14 @@
     import { logger } from '@repo/logger';
     import 'iconify-icon';
 
-    export let value: string = "";
-    export let label = "Image de couverture";
-    export let trpc: any = undefined;
+    interface Props {
+        value: string;
+        label?: string;
+        trpc?: any;
+        getPresignedUrl: (_filename: string, _folder: string) => Promise<string>;
+    }
 
-    export let getPresignedUrl: (_filename: string, _folder: string) => Promise<string>;
+    let { value = $bindable(""), label = "Image de couverture", trpc = undefined, getPresignedUrl }: Props = $props();
 
     let uploading = false;
     let previewUrl = $state(value);
