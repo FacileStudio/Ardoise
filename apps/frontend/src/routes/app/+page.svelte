@@ -73,9 +73,11 @@
     </div>
 
     {#if loading}
-      <div class="flex flex-col items-center justify-center py-20">
-        <iconify-icon icon="line-md:loading-twotone-loop" width="48" class="text-[#291334] mb-4"></iconify-icon>
-        <p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">Chargement...</p>
+      <div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
+        <iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
+        <p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
+          Chargement...
+        </p>
       </div>
     {:else if error}
       <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-800">
