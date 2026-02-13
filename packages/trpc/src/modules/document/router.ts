@@ -10,6 +10,59 @@ import {
 import { PrestationInputSchema, MaintenanceInputSchema } from './types';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import type { StorageService } from '@repo/storage';
+
+async function downloadLogoFromS3(logoUrl: string | null | undefined, storage: StorageService): Promise<string | undefined> {
+  if (!logoUrl || !logoUrl.includes('storageapi.dev')) {
+    return undefined;
+  }
+
+  try {
+    const urlPath = new URL(logoUrl).pathname;
+    const pathParts = urlPath.split('/').filter(Boolean);
+    const uploadsIndex = pathParts.indexOf('uploads');
+
+    if (uploadsIndex === -1) {
+      return undefined;
+    }
+
+    const filePath = pathParts.slice(uploadsIndex).join('/');
+    const fileData = await storage.download(filePath);
+
+    const tempDir = mkdtempSync(join(tmpdir(), 'logo-'));
+    const extension = logoUrl.split('.').pop() || 'png';
+    const localPath = join(tempDir, `logo.${extension}`);
+
+    writeFileSync(localPath, Buffer.from(fileData));
+
+    return localPath;
+  } catch (error) {
+    console.error('Failed to download logo from S3:', error);
+    return undefined;
+  }
+}
+
+async function generateDocumentWithLogo(
+  documentData: any,
+  logoUrl: string | null | undefined,
+  storage: StorageService
+): Promise<Buffer> {
+  const logoPath = await downloadLogoFromS3(logoUrl, storage);
+
+  try {
+    return await generateDocument(documentData, logoPath);
+  } finally {
+    if (logoPath) {
+      try {
+        const tempDir = logoPath.substring(0, logoPath.lastIndexOf('/'));
+        rmSync(tempDir, { recursive: true, force: true });
+      } catch (e) {}
+    }
+  }
+}
 
 export const documentRouter = router({
   list: adminProcedure
@@ -170,7 +223,7 @@ export const documentRouter = router({
           payment_providers: [],
         };
 
-        const pdfBuffer = await generateDocument(documentData, logoUrl);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
 
         return {
           pdf: pdfBuffer.toString('base64'),
@@ -234,7 +287,7 @@ export const documentRouter = router({
           payment_providers: [],
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `prestation_${input.invoice_number}.pdf`;
 
         return {
@@ -300,7 +353,7 @@ export const documentRouter = router({
           payment_providers: [],
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `prestation_${input.invoice_number}.pdf`;
 
         const subtotal = input.items.reduce(
@@ -404,7 +457,7 @@ export const documentRouter = router({
           payment_providers: [],
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `maintenance_${input.quote_number}.pdf`;
 
         return {
@@ -471,7 +524,7 @@ export const documentRouter = router({
           railway_estimate: input.railway_estimate,
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `maintenance_${input.quote_number}.pdf`;
 
         const subtotal = input.items.reduce(
@@ -601,7 +654,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, logoUrl);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
         return {
           pdf: pdfBuffer.toString('base64'),
           typstContent: generateTypstContent(documentData)
@@ -691,7 +744,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, logoUrl);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
         const fileName = `back_contractuel_${input.contract_reference}.pdf`;
 
         const subtotal = (input.items || []).reduce(
@@ -817,7 +870,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, logoUrl);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
         return {
           pdf: pdfBuffer.toString('base64'),
           typstContent: generateTypstContent(documentData)
@@ -905,7 +958,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, logoUrl);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
         const fileName = `appel_de_fonds_${input.global_invoice_ref}.pdf`;
 
         const subtotal = input.payment_providers.reduce(
@@ -1006,7 +1059,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         return {
           pdf: pdfBuffer.toString('base64'),
           fileName: `contrat_prestation_${input.contract_reference}.pdf`,
@@ -1070,7 +1123,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `contrat_prestation_${input.contract_reference}.pdf`;
 
         const subtotal = 0;
@@ -1168,7 +1221,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         return {
           pdf: pdfBuffer.toString('base64'),
           fileName: `contrat_maintenance_${input.contract_reference}.pdf`,
@@ -1232,7 +1285,7 @@ export const documentRouter = router({
           bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocument(documentData, provider.logoUrl || undefined);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `contrat_maintenance_${input.contract_reference}.pdf`;
 
         const subtotal = 0;
