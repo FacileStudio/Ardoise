@@ -163,7 +163,7 @@ export const documentRouter = router({
           iban: '',
           bic: '',
           items: document.items as any[],
-          tva_rate: document.tvaRate,
+          tva_rate: Number(document.tvaRate || 20),
           railway_estimate: Number(document.railwayEstimate || 0),
           providers: [],
           features: [],
