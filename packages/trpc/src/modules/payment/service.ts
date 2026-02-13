@@ -221,7 +221,6 @@ export const paymentService = {
         invoiceNumber: payment.id,
       });
     } catch (emailError) {
-      console.error('Failed to send payment notification email:', emailError);
     }
 
     return payment;
@@ -306,7 +305,6 @@ export const paymentService = {
         await stripe.client.subscriptions.cancel(payment.stripeSubscriptionId);
       }
     } catch (error) {
-      console.error('Failed to cancel on Stripe:', error);
     }
 
     return db.payment.update({
@@ -460,7 +458,6 @@ export const paymentService = {
               payment.id
             );
           } catch (error) {
-            console.error('Failed to generate receipt:', error);
           }
         }
         break;
@@ -493,7 +490,6 @@ export const paymentService = {
                 payment.id
               );
             } catch (error) {
-              console.error('Failed to generate receipt:', error);
             }
           }
         }
@@ -516,7 +512,6 @@ export const paymentService = {
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
     }
   },
 };
