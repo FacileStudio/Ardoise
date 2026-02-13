@@ -136,6 +136,8 @@ export const ContratMaintenanceInputSchema = z.object({
   tva_rate: z.number().nonnegative().default(20),
 });
 
+console.log('[ContratMaintenanceInputSchema] Items field is optional and defaults to empty array');
+
 export type ContratMaintenanceInput = z.infer<typeof ContratMaintenanceInputSchema>;
 
 export const BackContractuelInputSchema = z.object({
@@ -228,6 +230,7 @@ export async function generateDocument(
   data: DocumentData,
   logoPath?: string
 ): Promise<Buffer> {
+  console.log(`[generateDocument] Validating document type: ${data.type}, items count: ${data.items?.length || 0}`);
   const validated = DocumentDataSchema.parse(data);
   const template = TEMPLATES[validated.type];
 
