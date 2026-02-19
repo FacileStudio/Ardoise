@@ -21,21 +21,85 @@
 		siret: ''
 	});
 
-	function validateForm(): string | null {
-		if (!formData.email.trim()) return 'L\'email est requis';
-		if (!formData.firstName.trim()) return 'Le prénom est requis';
-		if (!formData.lastName.trim()) return 'Le nom est requis';
-		if (!formData.password || formData.password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
-		if (!formData.companyName.trim()) return 'Le nom de l\'entreprise est requis';
-		return null;
+	let formErrors = $state({
+		email: '',
+		firstName: '',
+		lastName: '',
+		password: '',
+		companyName: '',
+		billingAddress: '',
+		billingCity: '',
+		billingCountry: ''
+	});
+
+	function resetErrors() {
+		formErrors = {
+			email: '',
+			firstName: '',
+			lastName: '',
+			password: '',
+			companyName: '',
+			billingAddress: '',
+			billingCity: '',
+			billingCountry: ''
+		};
+	}
+
+	function validateForm(): boolean {
+		resetErrors();
+		let valid = true;
+
+		if (!formData.email.trim()) {
+			formErrors.email = "L'email est requis";
+			valid = false;
+		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+			formErrors.email = "Format d'email invalide";
+			valid = false;
+		}
+
+		if (!formData.firstName.trim()) {
+			formErrors.firstName = 'Le prénom est requis';
+			valid = false;
+		}
+
+		if (!formData.lastName.trim()) {
+			formErrors.lastName = 'Le nom est requis';
+			valid = false;
+		}
+
+		if (!formData.password) {
+			formErrors.password = 'Le mot de passe est requis';
+			valid = false;
+		} else if (formData.password.length < 8) {
+			formErrors.password = 'Le mot de passe doit contenir au moins 8 caractères';
+			valid = false;
+		}
+
+		if (!formData.companyName.trim()) {
+			formErrors.companyName = "Le nom de l'entreprise est requis";
+			valid = false;
+		}
+
+		if (!formData.billingAddress.trim()) {
+			formErrors.billingAddress = "L'adresse de facturation est requise";
+			valid = false;
+		}
+
+		if (!formData.billingCity.trim()) {
+			formErrors.billingCity = 'La ville est requise';
+			valid = false;
+		}
+
+		if (!formData.billingCountry.trim()) {
+			formErrors.billingCountry = 'Le pays est requis';
+			valid = false;
+		}
+
+		return valid;
 	}
 
 	async function handleCreate() {
-		const validationError = validateForm();
-		if (validationError) {
-			toast.push(validationError, 'error');
-			return;
-		}
+		if (!validateForm()) return;
 
 		try {
 			submitting = true;
@@ -45,7 +109,11 @@
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create client');
 			const message = err.message || 'Erreur lors de la création';
-			toast.push(message, 'error');
+			if (message.includes('email already exists')) {
+				formErrors.email = 'Un utilisateur avec cet email existe déjà';
+			} else {
+				toast.push(message, 'error');
+			}
 		} finally {
 			submitting = false;
 		}
@@ -82,49 +150,84 @@
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
-								Prénom *
+								Prénom <span class="text-rose-500">*</span>
 							</label>
-							<Input bind:value={formData.firstName} placeholder="Jean" />
+							<Input
+								bind:value={formData.firstName}
+								placeholder="Jean"
+								class={formErrors.firstName ? 'border-rose-400 focus:border-rose-500' : ''}
+							/>
+							{#if formErrors.firstName}
+								<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+									<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+									{formErrors.firstName}
+								</p>
+							{/if}
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
-								Nom *
+								Nom <span class="text-rose-500">*</span>
 							</label>
-							<Input bind:value={formData.lastName} placeholder="Dupont" />
+							<Input
+								bind:value={formData.lastName}
+								placeholder="Dupont"
+								class={formErrors.lastName ? 'border-rose-400 focus:border-rose-500' : ''}
+							/>
+							{#if formErrors.lastName}
+								<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+									<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+									{formErrors.lastName}
+								</p>
+							{/if}
 						</div>
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
-							Email *
+							Email <span class="text-rose-500">*</span>
 						</label>
 						<Input
 							bind:value={formData.email}
 							type="email"
 							placeholder="jean.dupont@entreprise.fr"
+							class={formErrors.email ? 'border-rose-400 focus:border-rose-500' : ''}
 						/>
+						{#if formErrors.email}
+							<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+								<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+								{formErrors.email}
+							</p>
+						{/if}
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:lock-password-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
-							Mot de passe *
+							Mot de passe <span class="text-rose-500">*</span>
 						</label>
 						<Input
 							bind:value={formData.password}
 							type="password"
 							placeholder="••••••••"
+							class={formErrors.password ? 'border-rose-400 focus:border-rose-500' : ''}
 						/>
-						<p class="text-xs text-slate-500 mt-1">Minimum 8 caractères</p>
+						{#if formErrors.password}
+							<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+								<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+								{formErrors.password}
+							</p>
+						{:else}
+							<p class="text-xs text-slate-500 mt-1">Minimum 8 caractères</p>
+						{/if}
 					</div>
 				</div>
 			</div>
@@ -137,16 +240,26 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
-							Nom de l'entreprise *
+							Nom de l'entreprise <span class="text-rose-500">*</span>
 						</label>
-						<Input bind:value={formData.companyName} placeholder="Entreprise SAS" />
+						<Input
+							bind:value={formData.companyName}
+							placeholder="Entreprise SAS"
+							class={formErrors.companyName ? 'border-rose-400 focus:border-rose-500' : ''}
+						/>
+						{#if formErrors.companyName}
+							<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+								<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+								{formErrors.companyName}
+							</p>
+						{/if}
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:bill-list-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							SIRET
@@ -164,31 +277,61 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:home-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
-							Adresse
+							Adresse <span class="text-rose-500">*</span>
 						</label>
-						<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
+						<Input
+							bind:value={formData.billingAddress}
+							placeholder="123 rue de la Paix"
+							class={formErrors.billingAddress ? 'border-rose-400 focus:border-rose-500' : ''}
+						/>
+						{#if formErrors.billingAddress}
+							<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+								<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+								{formErrors.billingAddress}
+							</p>
+						{/if}
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:city-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
-								Ville
+								Ville <span class="text-rose-500">*</span>
 							</label>
-							<Input bind:value={formData.billingCity} placeholder="Paris" />
+							<Input
+								bind:value={formData.billingCity}
+								placeholder="Paris"
+								class={formErrors.billingCity ? 'border-rose-400 focus:border-rose-500' : ''}
+							/>
+							{#if formErrors.billingCity}
+								<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+									<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+									{formErrors.billingCity}
+								</p>
+							{/if}
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:global-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
-								Pays
+								Pays <span class="text-rose-500">*</span>
 							</label>
-							<Input bind:value={formData.billingCountry} placeholder="France" />
+							<Input
+								bind:value={formData.billingCountry}
+								placeholder="France"
+								class={formErrors.billingCountry ? 'border-rose-400 focus:border-rose-500' : ''}
+							/>
+							{#if formErrors.billingCountry}
+								<p class="text-xs text-rose-500 mt-1 flex items-center gap-1">
+									<iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
+									{formErrors.billingCountry}
+								</p>
+							{/if}
 						</div>
 					</div>
 				</div>

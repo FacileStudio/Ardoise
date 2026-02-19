@@ -4,15 +4,10 @@
 	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import {
-		Spinner,
-		SearchInput,
 		Badge,
-		EmptyState,
-		Drawer,
-		Input,
-		Button,
 		ConfirmDialog,
-		Pagination
+		Pagination,
+		Button
 	} from '@repo/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -28,37 +23,8 @@
 	let total = $state(0);
 	let limit = $state(20);
 
-	let showCreateModal = $state(false);
-	let showEditModal = $state(false);
-	let editingClient: any = $state(null);
 	let confirmDeleteClient: any = $state(null);
 	let showDeleteDialog = $state(false);
-
-	let formData = $state({
-		email: '',
-		firstName: '',
-		lastName: '',
-		password: '',
-		companyName: '',
-		billingAddress: '',
-		billingCity: '',
-		billingCountry: 'France',
-		siret: ''
-	});
-
-	let formErrors = $state({
-		email: '',
-		firstName: '',
-		lastName: '',
-		password: '',
-		companyName: '',
-		billingAddress: '',
-		billingCity: '',
-		billingCountry: '',
-		siret: ''
-	});
-
-	let submitting = $state(false);
 
 	let isInitialMount = true;
 
@@ -100,162 +66,6 @@
 			fetchClients();
 		}
 	});
-
-	function resetForm() {
-		formData = {
-			email: '',
-			firstName: '',
-			lastName: '',
-			password: '',
-			companyName: '',
-			billingAddress: '',
-			billingCity: '',
-			billingCountry: 'France',
-			siret: ''
-		};
-		formErrors = {
-			email: '',
-			firstName: '',
-			lastName: '',
-			password: '',
-			companyName: '',
-			billingAddress: '',
-			billingCity: '',
-			billingCountry: '',
-			siret: ''
-		};
-	}
-
-	function openCreateModal() {
-		goto('/admin/clients/create');
-	}
-
-	function openEditModal(client: any) {
-		goto(`/admin/clients/${client.id}`);
-	}
-
-	function resetFormErrors() {
-		formErrors = {
-			email: '',
-			firstName: '',
-			lastName: '',
-			password: '',
-			companyName: '',
-			billingAddress: '',
-			billingCity: '',
-			billingCountry: '',
-			siret: ''
-		};
-	}
-
-	function validateForm(isEdit: boolean = false) {
-		resetFormErrors();
-		let isValid = true;
-
-		if (!isEdit && !formData.email) {
-			formErrors.email = 'Email est requis';
-			isValid = false;
-		} else if (!isEdit && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-			formErrors.email = 'Format d\'email invalide';
-			isValid = false;
-		}
-
-		if (!isEdit && !formData.firstName) {
-			formErrors.firstName = 'Le prénom est requis';
-			isValid = false;
-		}
-
-		if (!isEdit && !formData.lastName) {
-			formErrors.lastName = 'Le nom de famille est requis';
-			isValid = false;
-		}
-
-		if (!isEdit && !formData.password) {
-			formErrors.password = 'Le mot de passe est requis';
-			isValid = false;
-		} else if (!isEdit && formData.password.length < 8) {
-			formErrors.password = 'Le mot de passe doit contenir au moins 8 caractères';
-			isValid = false;
-		}
-
-		if (!formData.companyName) {
-			formErrors.companyName = 'Le nom de l\'entreprise est requis';
-			isValid = false;
-		}
-
-		if (!formData.billingAddress) {
-			formErrors.billingAddress = 'L\'adresse de facturation est requise';
-			isValid = false;
-		}
-
-		if (!formData.billingCity) {
-			formErrors.billingCity = 'La ville de facturation est requise';
-			isValid = false;
-		}
-
-		if (!formData.billingCountry) {
-			formErrors.billingCountry = 'Le pays de facturation est requis';
-			isValid = false;
-		}
-
-		return isValid;
-	}
-
-	async function handleCreateClient() {
-		if (!validateForm()) return;
-
-		submitting = true;
-		try {
-			await trpc.client.create.mutate({
-				email: formData.email,
-				firstName: formData.firstName,
-				lastName: formData.lastName,
-				password: formData.password,
-				companyName: formData.companyName,
-				billingAddress: formData.billingAddress,
-				billingCity: formData.billingCity,
-				billingCountry: formData.billingCountry,
-				siret: formData.siret || undefined
-			});
-			showCreateModal = false;
-			await fetchClients();
-			resetForm();
-		} catch (err: any) {
-			logger.error({ err }, 'Failed to create client');
-			if (err?.message?.includes('email already exists')) {
-				formErrors.email = 'Un utilisateur avec cet email existe déjà';
-			} else {
-				alert('Échec de la création du client: ' + (err?.message || 'Erreur inconnue'));
-			}
-		} finally {
-			submitting = false;
-		}
-	}
-
-	async function handleUpdateClient() {
-		if (!editingClient || !validateForm(true)) return;
-
-		submitting = true;
-		try {
-			await trpc.client.update.mutate({
-				id: editingClient.id,
-				companyName: formData.companyName,
-				billingAddress: formData.billingAddress,
-				billingCity: formData.billingCity,
-				billingCountry: formData.billingCountry,
-				siret: formData.siret || undefined
-			});
-			showEditModal = false;
-			await fetchClients();
-			editingClient = null;
-			resetForm();
-		} catch (err: any) {
-			logger.error({ err }, 'Failed to update client');
-			alert('Échec de la mise à jour du client: ' + (err?.message || 'Erreur inconnue'));
-		} finally {
-			submitting = false;
-		}
-	}
 
 	async function handleDeleteClient() {
 		if (!confirmDeleteClient) return;
@@ -356,7 +166,7 @@
 					</Button>
 				{/if}
 				<button
-					onclick={openCreateModal}
+					onclick={() => goto('/admin/clients/create')}
 					class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
 				>
 					<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
@@ -472,7 +282,7 @@
 								<td class="px-6 py-4">
 									<div class="flex items-center justify-end gap-2">
 										<button
-											onclick={() => openEditModal(client)}
+											onclick={() => goto(`/admin/clients/${client.id}`)}
 											class="p-2 text-[#291334] hover:bg-[#291334]/10 rounded-lg transition-colors"
 											title={$i18n.t('backoffice.clients.editClient')}
 										>
@@ -520,7 +330,7 @@
 					<p class="text-[#291334]/60 max-w-md">{searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}</p>
 					{#if !searchQuery}
 						<button
-							onclick={openCreateModal}
+							onclick={() => goto('/admin/clients/create')}
 							class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
 						>
 							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
@@ -529,295 +339,9 @@
 					{/if}
 				</div>
 			</div>
-		{/if}
+	{/if}
 	</div>
 {/if}
-
-<Drawer bind:open={showCreateModal} title={$i18n.t('backoffice.clients.createClient.title')}>
-	<form onsubmit={(e) => { e.preventDefault(); handleCreateClient(); }} class="space-y-4">
-		<div class="space-y-4 bg-[#FAF7F5] p-4 rounded-xl">
-			<h4 class="font-bold text-xs uppercase text-[#291334]">{$i18n.t('backoffice.clients.createClient.userAccount')}</h4>
-
-			<div class="grid grid-cols-2 gap-3">
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.firstName')}</label>
-					<input
-						type="text"
-						bind:value={formData.firstName}
-						class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-						placeholder="John"
-					/>
-					{#if formErrors.firstName}
-						<p class="text-xs text-rose-500 mt-1">{formErrors.firstName}</p>
-					{/if}
-				</div>
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.lastName')}</label>
-					<input
-						type="text"
-						bind:value={formData.lastName}
-						class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-						placeholder="Doe"
-					/>
-					{#if formErrors.lastName}
-						<p class="text-xs text-rose-500 mt-1">{formErrors.lastName}</p>
-					{/if}
-				</div>
-			</div>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.email')}</label>
-				<input
-					type="email"
-					bind:value={formData.email}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder="john.doe@company.com"
-				/>
-				{#if formErrors.email}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.email}</p>
-				{/if}
-			</div>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.password')}</label>
-				<input
-					type="password"
-					bind:value={formData.password}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder="Min. 8 characters"
-				/>
-				{#if formErrors.password}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.password}</p>
-				{/if}
-			</div>
-		</div>
-
-		<div class="space-y-4">
-			<h4 class="font-bold text-xs uppercase text-[#291334]">{$i18n.t('backoffice.clients.createClient.companyInfo')}</h4>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.companyName')}</label>
-				<input
-					type="text"
-					bind:value={formData.companyName}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder="Acme Corp"
-				/>
-				{#if formErrors.companyName}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.companyName}</p>
-				{/if}
-			</div>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.siret')}</label>
-				<input
-					type="text"
-					bind:value={formData.siret}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder={$i18n.t('backoffice.clients.createClient.siretPlaceholder')}
-				/>
-				{#if formErrors.siret}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.siret}</p>
-				{/if}
-			</div>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.billingAddress')}</label>
-				<input
-					type="text"
-					bind:value={formData.billingAddress}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder="123 Main Street"
-				/>
-				{#if formErrors.billingAddress}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.billingAddress}</p>
-				{/if}
-			</div>
-
-			<div class="grid grid-cols-2 gap-3">
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.city')}</label>
-					<input
-						type="text"
-						bind:value={formData.billingCity}
-						class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-						placeholder="Paris"
-					/>
-					{#if formErrors.billingCity}
-						<p class="text-xs text-rose-500 mt-1">{formErrors.billingCity}</p>
-					{/if}
-				</div>
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.country')}</label>
-					<input
-						type="text"
-						bind:value={formData.billingCountry}
-						class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-						placeholder="France"
-					/>
-					{#if formErrors.billingCountry}
-						<p class="text-xs text-rose-500 mt-1">{formErrors.billingCountry}</p>
-					{/if}
-				</div>
-			</div>
-		</div>
-
-		<div class="flex gap-3 pt-4">
-			<button
-				type="button"
-				onclick={() => { showCreateModal = false; resetForm(); }}
-				class="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
-				disabled={submitting}
-			>
-				{$i18n.t('common.buttons.cancel')}
-			</button>
-			<button
-				type="submit"
-				class="flex-1 px-4 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-				disabled={submitting}
-			>
-				{#if submitting}
-					<iconify-icon icon="line-md:loading-twotone-loop" width="20"></iconify-icon>
-					Loading
-				{:else}
-					{$i18n.t('backoffice.clients.createClient.createButton')}
-				{/if}
-			</button>
-		</div>
-	</form>
-</Drawer>
-
-<Drawer bind:open={showEditModal} title={$i18n.t('backoffice.clients.editClient.title')}>
-	<form onsubmit={(e) => { e.preventDefault(); handleUpdateClient(); }} class="space-y-4">
-		<div class="space-y-4 bg-[#FAF7F5] p-4 rounded-xl">
-			<h4 class="font-bold text-xs uppercase text-[#291334]">{$i18n.t('backoffice.clients.editClient.userInfoReadonly')}</h4>
-
-			<div class="grid grid-cols-2 gap-3">
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.firstName')}</label>
-					<input
-						type="text"
-						value={formData.firstName}
-						class="w-full px-4 py-2 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-500"
-						disabled
-					/>
-				</div>
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.lastName')}</label>
-					<input
-						type="text"
-						value={formData.lastName}
-						class="w-full px-4 py-2 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-500"
-						disabled
-					/>
-				</div>
-			</div>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.email')}</label>
-				<input
-					type="email"
-					value={formData.email}
-					class="w-full px-4 py-2 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-500"
-					disabled
-				/>
-			</div>
-		</div>
-
-		<div class="space-y-4">
-			<h4 class="font-bold text-xs uppercase text-[#291334]">{$i18n.t('backoffice.clients.createClient.companyInfo')}</h4>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.companyName')}</label>
-				<input
-					type="text"
-					bind:value={formData.companyName}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder="Acme Corp"
-				/>
-				{#if formErrors.companyName}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.companyName}</p>
-				{/if}
-			</div>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.siret')}</label>
-				<input
-					type="text"
-					bind:value={formData.siret}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder={$i18n.t('backoffice.clients.createClient.siretPlaceholder')}
-				/>
-				{#if formErrors.siret}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.siret}</p>
-				{/if}
-			</div>
-
-			<div>
-				<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.billingAddress')}</label>
-				<input
-					type="text"
-					bind:value={formData.billingAddress}
-					class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-					placeholder="123 Main Street"
-				/>
-				{#if formErrors.billingAddress}
-					<p class="text-xs text-rose-500 mt-1">{formErrors.billingAddress}</p>
-				{/if}
-			</div>
-
-			<div class="grid grid-cols-2 gap-3">
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.city')}</label>
-					<input
-						type="text"
-						bind:value={formData.billingCity}
-						class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-						placeholder="Paris"
-					/>
-					{#if formErrors.billingCity}
-						<p class="text-xs text-rose-500 mt-1">{formErrors.billingCity}</p>
-					{/if}
-				</div>
-				<div>
-					<label class="block text-sm font-bold text-slate-700 mb-1">{$i18n.t('backoffice.clients.createClient.country')}</label>
-					<input
-						type="text"
-						bind:value={formData.billingCountry}
-						class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-colors"
-						placeholder="France"
-					/>
-					{#if formErrors.billingCountry}
-						<p class="text-xs text-rose-500 mt-1">{formErrors.billingCountry}</p>
-					{/if}
-				</div>
-			</div>
-		</div>
-
-		<div class="flex gap-3 pt-4">
-			<button
-				type="button"
-				onclick={() => { showEditModal = false; editingClient = null; resetForm(); }}
-				class="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
-				disabled={submitting}
-			>
-				{$i18n.t('common.buttons.cancel')}
-			</button>
-			<button
-				type="submit"
-				class="flex-1 px-4 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-				disabled={submitting}
-			>
-				{#if submitting}
-					<iconify-icon icon="line-md:loading-twotone-loop" width="20"></iconify-icon>
-					Loading
-				{:else}
-					{$i18n.t('backoffice.clients.editClient.updateButton')}
-				{/if}
-			</button>
-		</div>
-	</form>
-</Drawer>
 
 <ConfirmDialog
 	bind:isOpen={showDeleteDialog}
