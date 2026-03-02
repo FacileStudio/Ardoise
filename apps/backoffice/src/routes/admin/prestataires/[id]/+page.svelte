@@ -3,7 +3,8 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Spinner, Button, Input, ImageUpload } from '@repo/ui';
+	import { Spinner, Button, Input } from '@repo/ui';
+	import { uploadFileSimple } from '@repo/storage-client';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
@@ -11,14 +12,9 @@
 	let providerId = $derived($page.params.id);
 	let pageLoading = $state(true);
 	let submitting = $state(false);
-
-	async function getPresignedUrl(filename: string, folder: string) {
-		const result = await trpc.media.getUploadUrl.mutate({
-			fileName: filename,
-			fileType: 'image/*'
-		});
-		return result.uploadUrl;
-	}
+	let uploadingLogo = $state(false);
+	let previewLogoUrl = $state('');
+	let fileInput: HTMLInputElement;
 
 	let formData = $state({
 		name: '',
@@ -57,12 +53,64 @@
 			formData.bic = provider.bic || '';
 			formData.logoUrl = provider.logoUrl || '';
 			formData.tvaRate = provider.tvaRate;
+			await loadLogoPreview();
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch provider');
 			toast.push('Erreur lors du chargement du prestataire', 'error');
 		} finally {
 			pageLoading = false;
 		}
+	}
+
+	async function loadLogoPreview() {
+		if (!formData.logoUrl) {
+			previewLogoUrl = '';
+			return;
+		}
+
+		if (formData.logoUrl.includes('storageapi.dev')) {
+			try {
+				const result = await trpc.media.getDownloadUrl.query({ url: formData.logoUrl });
+				previewLogoUrl = result.url;
+			} catch (err) {
+				logger.error({ err }, 'Failed to load logo preview');
+				previewLogoUrl = formData.logoUrl;
+			}
+		} else {
+			previewLogoUrl = formData.logoUrl;
+		}
+	}
+
+	async function handleLogoUpload(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+
+		previewLogoUrl = URL.createObjectURL(file);
+		uploadingLogo = true;
+
+		try {
+			const presignedUrlResult = await trpc.media.getUploadUrl.mutate({
+				fileName: file.name,
+				fileType: 'image/*'
+			});
+			const finalUrl = await uploadFileSimple(file, presignedUrlResult.uploadUrl);
+
+			formData.logoUrl = finalUrl;
+			await loadLogoPreview();
+			toast.push('Logo envoyé!', 'success');
+		} catch (err) {
+			logger.error({ err }, 'Logo upload failed');
+			toast.push("Erreur lors de l'upload du logo", 'error');
+			previewLogoUrl = formData.logoUrl;
+		} finally {
+			uploadingLogo = false;
+		}
+	}
+
+	function removeLogo() {
+		formData.logoUrl = '';
+		previewLogoUrl = '';
+		if (fileInput) fileInput.value = '';
 	}
 
 	function validateForm(): string | null {
@@ -206,16 +254,79 @@
 						Logo
 					</h2>
 					<div class="bg-slate-50 rounded-xl p-6">
-						<ImageUpload
-							bind:value={formData.logoUrl}
-							label="Logo du prestataire"
-							{getPresignedUrl}
-							{trpc}
-						/>
-						<p class="text-xs text-slate-500 mt-3 ml-2">
-							<iconify-icon icon="solar:info-circle-bold" width="14" class="inline"></iconify-icon>
-							Format recommandé: PNG ou SVG avec fond transparent, 512x512px minimum
-						</p>
+						<div class="flex items-start gap-6">
+							<!-- Logo Preview -->
+							<div class="relative group">
+								<div class="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex items-center justify-center p-3 transition-all group-hover:border-[#FEC129]/50">
+									{#if previewLogoUrl}
+										<img
+											src={previewLogoUrl}
+											alt="Logo preview"
+											class="max-w-full max-h-full object-contain {uploadingLogo ? 'opacity-40 blur-sm' : ''}"
+										/>
+									{:else}
+										<div class="flex flex-col items-center justify-center text-slate-300">
+											<iconify-icon icon="solar:gallery-bold-duotone" width="32"></iconify-icon>
+											<p class="text-[8px] font-black uppercase mt-1">Aucun logo</p>
+										</div>
+									{/if}
+
+									{#if uploadingLogo}
+										<div class="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+											<iconify-icon icon="line-md:loading-twotone-loop" width="24" class="text-[#FEC129]"></iconify-icon>
+										</div>
+									{/if}
+								</div>
+
+								{#if previewLogoUrl && !uploadingLogo}
+									<button
+										type="button"
+										onclick={removeLogo}
+										class="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+										title="Supprimer le logo"
+									>
+										<iconify-icon icon="solar:trash-bin-trash-bold" width="14"></iconify-icon>
+									</button>
+								{/if}
+							</div>
+
+							<!-- Upload Actions -->
+							<div class="flex-1 space-y-3">
+								<div>
+									<label class="block text-sm font-black text-slate-700 mb-2">
+										Télécharger un nouveau logo
+									</label>
+									<input
+										type="file"
+										bind:this={fileInput}
+										onchange={handleLogoUpload}
+										accept="image/*"
+										class="hidden"
+									/>
+									<button
+										type="button"
+										onclick={() => fileInput?.click()}
+										disabled={uploadingLogo}
+										class="px-4 py-2 bg-white border-2 border-slate-200 text-slate-700 rounded-lg font-bold text-sm hover:border-[#FEC129] hover:bg-[#FEC129]/5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										<iconify-icon icon="solar:cloud-upload-bold" width="18"></iconify-icon>
+										<span>Choisir un fichier</span>
+									</button>
+								</div>
+
+								<div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+									<p class="text-xs text-blue-700 flex items-start gap-2">
+										<iconify-icon icon="solar:info-circle-bold" width="14" class="mt-0.5 flex-shrink-0"></iconify-icon>
+										<span>
+											<span class="font-black">Recommandations:</span><br />
+											Format PNG ou SVG avec fond transparent<br />
+											Taille minimale: 512x512px<br />
+											Poids maximal: 5 MB
+										</span>
+									</p>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 
