@@ -3,6 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "apps/backend/Dockerfile"
 
 [deploy]
+preDeployCommand = "cd packages/database && bun run db:migrate:deploy"
 startCommand = "bun run apps/backend/src/index.ts"
 healthcheckPath = "/"
 healthcheckTimeout = 100
