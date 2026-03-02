@@ -22,12 +22,14 @@ const typeConfig: Record<DocumentType, NumberingConfig> = {
   },
 };
 
-function formatNumber(template: string, number: number): string {
+function formatNumber(template: string | null | undefined, number: number): string {
+  const safeTemplate = template || 'DOC-{{year}}-{{number}}';
+
   const year = new Date().getFullYear();
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
   const paddedNumber = String(number).padStart(3, '0');
 
-  return template
+  return safeTemplate
     .replace('{{year}}', String(year))
     .replace('{{month}}', month)
     .replace('{{number}}', paddedNumber);
