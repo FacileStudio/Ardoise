@@ -4,6 +4,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { logger } from '@repo/logger';
+	import { fade, fly } from 'svelte/transition';
 	import 'iconify-icon';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
