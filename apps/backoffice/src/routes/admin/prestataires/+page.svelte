@@ -327,7 +327,7 @@
 											<img
 												src={logoUrls.get(provider.id)}
 												alt={provider.name}
-												class="w-full h-full object-contain"
+												class="w-full h-full object-contain rounded-lg"
 												onerror={(e) => {
 													const img = e.target as HTMLImageElement;
 													img.style.display = 'none';

@@ -79,7 +79,7 @@
             <img
                 src={previewUrl}
                 alt="Preview"
-                class="w-full h-full object-cover {uploading ? 'opacity-40 blur-sm' : ''}"
+                class="w-full h-full object-contain {uploading ? 'opacity-40 blur-sm' : ''}"
             />
         {:else}
             <div class="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
