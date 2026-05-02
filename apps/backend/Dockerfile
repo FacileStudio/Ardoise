@@ -1,7 +1,22 @@
 # Use a specific version for consistency
 FROM oven/bun:1.3.7-alpine AS base
 
-RUN apk add --no-cache typst libstdc++ gcompat
+ARG TYPST_VERSION=0.13.1
+ARG TARGETARCH
+
+RUN apk add --no-cache ca-certificates curl libstdc++ xz \
+  && case "$TARGETARCH" in \
+    amd64) typst_arch="x86_64" ;; \
+    arm64) typst_arch="aarch64" ;; \
+    *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+  esac \
+  && curl --fail --show-error --silent --location \
+    --retry 5 --retry-delay 2 --retry-connrefused \
+    "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${typst_arch}-unknown-linux-musl.tar.xz" \
+    --output /tmp/typst.tar.xz \
+  && tar -xJf /tmp/typst.tar.xz -C /tmp \
+  && install -m 0755 "/tmp/typst-${typst_arch}-unknown-linux-musl/typst" /usr/local/bin/typst \
+  && rm -rf /tmp/typst.tar.xz "/tmp/typst-${typst_arch}-unknown-linux-musl"
 
 FROM base AS builder
 WORKDIR /app

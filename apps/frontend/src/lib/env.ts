@@ -1,3 +1,4 @@
+import process from 'node:process';
 import { publicEnvSchema } from '@repo/env';
 import { browser, building } from '$app/environment';
 import { ZodError } from 'zod';

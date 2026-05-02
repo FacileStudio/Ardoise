@@ -2,7 +2,6 @@
   import authStore from '$lib/auth-store';
   import { trpc } from '$lib/trpc';
   import { Button, Input, Spinner, Alert, LanguageSwitcher } from '@repo/ui';
-  import { logger } from '@repo/logger';
   import 'iconify-icon';
   import type { SessionUser } from '@repo/auth-shared';
   import { fade, slide } from 'svelte/transition';

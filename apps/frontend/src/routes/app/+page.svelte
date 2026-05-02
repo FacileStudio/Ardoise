@@ -1,13 +1,24 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { trpc } from '$lib/trpc';
-  import { Badge, Card, Button, Spinner } from '@repo/ui';
+  import { Badge, Card, Button } from '@repo/ui';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { fade, fly } from 'svelte/transition';
   import 'iconify-icon';
 
-  let payments: any[] = [];
+  interface PaymentSummary {
+    id: string;
+    description: string;
+    status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED' | string;
+    dueDate: string | Date;
+    paidAt?: string | Date;
+    createdAt: string | Date;
+    amount: number | string;
+    receiptUrl?: string | null;
+  }
+
+  let payments: PaymentSummary[] = [];
   let loading = true;
   let error = '';
 
@@ -15,8 +26,8 @@
     try {
       const result = await trpc.payment.myPayments.query();
       payments = result.payments || [];
-    } catch (err: any) {
-      error = err.message || 'Erreur lors du chargement des factures';
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Erreur lors du chargement des factures';
     } finally {
       loading = false;
     }
@@ -111,7 +122,7 @@
             <Badge variant="amber">{pendingPayments.length}</Badge>
           </div>
           <div class="grid grid-cols-1 gap-6">
-            {#each pendingPayments as payment}
+            {#each pendingPayments as payment (payment.id)}
               <div in:fly={{ y: 20, delay: 200 }}>
                 <Card class="border-2 border-[#FEC129]/30 hover:border-[#FEC129] transition-all group">
                   <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -161,7 +172,7 @@
             <Badge variant="emerald">{paidPayments.length}</Badge>
           </div>
           <div class="grid grid-cols-1 gap-4">
-            {#each paidPayments as payment}
+            {#each paidPayments as payment (payment.id)}
               <div in:fly={{ y: 20, delay: 400 }}>
                 <Card class="border border-[#291334]/10 hover:border-[#291334]/30 transition-all">
                   <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -208,7 +219,7 @@
             </h2>
           </div>
           <div class="grid grid-cols-1 gap-4">
-            {#each otherPayments as payment}
+            {#each otherPayments as payment (payment.id)}
               <div in:fly={{ y: 20, delay: 600 }}>
                 <Card class="border border-[#291334]/10">
                   <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
