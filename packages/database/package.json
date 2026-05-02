@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "db:generate": "rm -rf src/zod && prisma generate",
+    "db:generate": "rm -rf src/zod && prisma generate && bun run scripts/patch-zod-types.ts",
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
