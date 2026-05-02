@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import authStore from '$lib/auth-store';
   import { page } from '$app/stores';
   import 'iconify-icon';
@@ -28,7 +29,7 @@
     <nav class="flex-1 space-y-2">
       {#each menuItems as item (item.href)}
         <a
-          href={item.href}
+          href={resolve(item.href)}
           class="group relative flex items-center gap-4 px-6 py-3.5 rounded-full transition-all duration-200
           {$page.url.pathname === item.href
             ? 'bg-[#291334] text-white shadow-lg shadow-[#291334]/20'
@@ -62,7 +63,7 @@
         </div>
       </div>
       <a
-        href="/app/settings"
+        href={resolve('/app/settings')}
         class="w-full px-4 py-3 bg-[#291334] hover:bg-[#291334]/90 text-white rounded-2xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2"
       >
         <iconify-icon icon="solar:settings-bold" width="18"></iconify-icon>

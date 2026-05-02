@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { trpc } from '$lib/trpc';
   import env from '$lib/env';
   import { Card, Button, Badge, Spinner } from '@repo/ui';
@@ -92,8 +93,8 @@
           await initializeStripe();
         }
       }
-    } catch (err: any) {
-      error = err.message || 'Erreur lors du chargement du paiement';
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Erreur lors du chargement du paiement';
     } finally {
       loading = false;
     }
@@ -101,20 +102,13 @@
 
   async function initializeStripe() {
     try {
-      console.log('Initializing Stripe with publishable key:', env.STRIPE_PUBLISHABLE_KEY?.substring(0, 20) + '...');
-      console.log('Fetching client secret for payment:', paymentId);
-
       const secretData = await trpc.payment.getClientSecret.query({ id: paymentId });
       clientSecret = secretData.clientSecret;
-      console.log('Got client secret:', clientSecret?.substring(0, 20) + '...');
-
-      console.log('Loading Stripe.js...');
       stripe = await loadStripe(env.STRIPE_PUBLISHABLE_KEY || '');
 
       if (!stripe) {
         throw new Error('Failed to load Stripe');
       }
-      console.log('Stripe.js loaded successfully');
 
       const appearance = {
         theme: 'stripe' as const,
@@ -128,23 +122,16 @@
         },
       };
 
-      console.log('Creating Stripe Elements...');
       elements = stripe.elements({ clientSecret, appearance });
-
-      console.log('Creating payment element...');
       const paymentElement = elements.create('payment');
-
-      console.log('Mounting payment element...');
       paymentElement.mount('#payment-element');
-      console.log('Stripe initialization complete!');
-    } catch (err: any) {
-      error = err.message || 'Erreur lors de l\'initialisation du paiement';
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Erreur lors de l\'initialisation du paiement';
       console.error('Stripe initialization error:', err);
     }
   }
 
   async function handleSubmitPayment() {
-    console.log('handleSubmitPayment called', { stripe, elements, processingPayment });
     if (!stripe || !elements) {
       console.error('Stripe or elements not initialized');
       return;
@@ -154,7 +141,6 @@
     error = '';
 
     try {
-      console.log('Calling stripe.confirmPayment...');
       const { error: submitError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -163,20 +149,17 @@
         redirect: 'if_required',
       });
 
-      console.log('stripe.confirmPayment result:', { submitError });
-
       if (submitError) {
         error = submitError.message || 'Erreur lors du paiement';
         console.error('Payment error:', error);
       } else {
         paymentSuccess = true;
-        console.log('Payment successful!');
         setTimeout(() => {
-          goto('/app');
+          goto(resolve('/app'));
         }, 3000);
       }
-    } catch (err: any) {
-      error = err.message || 'Erreur lors du paiement';
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Erreur lors du paiement';
       console.error('Payment exception:', err);
     } finally {
       processingPayment = false;
@@ -261,7 +244,7 @@
             <h2 class="text-2xl font-black text-[#291334] mb-2">Erreur</h2>
             <p class="text-[#291334]/60 max-w-md">{error}</p>
           </div>
-          <Button intent="secondary" onclick={() => goto('/app')}>
+          <Button intent="secondary" onclick={() => goto(resolve('/app'))}>
             <iconify-icon icon="solar:arrow-left-bold"></iconify-icon>
             Retour aux factures
           </Button>
@@ -273,7 +256,7 @@
           intent="ghost"
           size="sm"
           class="mb-4"
-          onclick={() => goto('/app')}
+          onclick={() => goto(resolve('/app'))}
         >
           <iconify-icon icon="solar:arrow-left-bold" width="20"></iconify-icon>
           Retour
@@ -409,7 +392,7 @@
               </div>
 
               <div class="space-y-3">
-                {#each payment.attachedDocuments as { document: doc }}
+                {#each payment.attachedDocuments as { document: doc } (doc.id)}
                   <div class="p-4 bg-[#FAF7F5] rounded-xl border-2 border-transparent hover:border-[#FEC129]/30 transition-all">
                     <div class="flex items-start gap-4">
                       <div class="flex-shrink-0 w-12 h-12 bg-[#291334]/10 rounded-xl flex items-center justify-center">
