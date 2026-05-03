@@ -23,8 +23,12 @@
 	let loading = $state(true);
 	let error = $state(false);
 
+	function needsSignedUrl(url: string) {
+		return url.includes('storageapi.dev') || url.includes('/storage/');
+	}
+
 	async function loadPresignedUrl() {
-		if (!src || !src.includes('storageapi.dev')) {
+		if (!src || !needsSignedUrl(src)) {
 			presignedUrl = src;
 			loading = false;
 			return;

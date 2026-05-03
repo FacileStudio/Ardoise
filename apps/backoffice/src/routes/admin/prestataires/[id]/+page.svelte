@@ -68,7 +68,7 @@
 			return;
 		}
 
-		if (formData.logoUrl.includes('storageapi.dev')) {
+		if (formData.logoUrl.includes('storageapi.dev') || formData.logoUrl.includes('/storage/')) {
 			try {
 				const result = await trpc.media.getDownloadUrl.query({ url: formData.logoUrl });
 				previewLogoUrl = result.url;

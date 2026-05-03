@@ -91,7 +91,10 @@
 		const newLogoUrls = new Map();
 
 		for (const provider of providers) {
-			if (provider.logoUrl && provider.logoUrl.includes('storageapi.dev')) {
+			if (
+				provider.logoUrl &&
+				(provider.logoUrl.includes('storageapi.dev') || provider.logoUrl.includes('/storage/'))
+			) {
 				try {
 					const result = await trpc.media.getDownloadUrl.query({ url: provider.logoUrl });
 					newLogoUrls.set(provider.id, result.url);

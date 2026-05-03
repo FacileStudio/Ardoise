@@ -8,6 +8,7 @@ import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
 import trpcHandler from './handlers/trpc';
 import { openApiHandler } from './handlers/openapi';
+import { createStorageDownloadHandler, createStorageUploadHandler } from './handlers/storage';
 import {
   createHealthCheckHandler,
   createLivenessHandler,
@@ -56,6 +57,9 @@ app.get('/version', (c) => c.json({ version: VERSION }));
 app.get('/health', createHealthCheckHandler({ storage }));
 app.get('/health/live', createLivenessHandler());
 app.get('/health/ready', createReadinessHandler());
+
+app.put('/storage/*', createStorageUploadHandler({ authManager, storage, env }));
+app.get('/storage/*', createStorageDownloadHandler({ authManager, storage, env }));
 
 app.all(
   '/trpc/*',

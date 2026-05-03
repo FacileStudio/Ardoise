@@ -33,6 +33,7 @@ export const createContext = async ({
   const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
   const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host');
   const origin = req.headers.get('origin');
+  const apiOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : '';
   const appOrigin = origin || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : '');
 
   return {
@@ -44,6 +45,7 @@ export const createContext = async ({
     getSmtp: () => getSmtpClient(prisma),
     docuseal,
     env,
+    apiOrigin,
     appOrigin,
     ipAddress,
     userAgent,

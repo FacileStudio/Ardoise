@@ -25,8 +25,12 @@
     let previewUrl = $state(value);
     let fileInput: HTMLInputElement;
 
+    function needsSignedUrl(url: string) {
+        return url.includes('storageapi.dev') || url.includes('/storage/');
+    }
+
     async function loadPresignedPreview() {
-        if (!value || !value.includes('storageapi.dev') || !trpc) {
+        if (!value || !needsSignedUrl(value) || !trpc) {
             previewUrl = value;
             return;
         }

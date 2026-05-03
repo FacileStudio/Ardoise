@@ -219,13 +219,9 @@ Environment schemas are defined in `packages/env/src/index.ts`:
 Each app validates its environment on startup via `check-env` script using Zod.
 
 **Required backend variables:**
-- `DATABASE_URL`: PostgreSQL connection string (e.g., `postgresql://fangafunk@localhost:5432/charles`)
 - `ENCRYPTION_SECRET`: JWT encryption key (32+ characters)
-- `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_BUCKET_NAME`, `MINIO_PUBLIC_URL`
 - `ADMIN_EMAIL`: Default admin email (e.g., `admin@facile.studio`)
 - `ADMIN_PASSWORD`: Default admin password (minimum 8 characters)
-- `ADMIN_FIRST_NAME`: Default admin first name
-- `ADMIN_LAST_NAME`: Default admin last name
 - `TRUSTED_ORIGINS`: Comma-separated allowed origins (e.g., `http://localhost:5173,http://localhost:3001,http://localhost:3002`)
 - `PORT`: Backend server port (default: 3001)
 
@@ -280,8 +276,8 @@ The backend automatically creates an admin user on first startup if none exists.
 **Required environment variables:**
 - `ADMIN_EMAIL`: Admin email address
 - `ADMIN_PASSWORD`: Admin password (minimum 8 characters)
-- `ADMIN_FIRST_NAME`: Admin first name
-- `ADMIN_LAST_NAME`: Admin last name
+
+The default admin display name is always `Admin User`.
 
 **Local development:**
 ```bash

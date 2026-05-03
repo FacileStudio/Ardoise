@@ -1,5 +1,6 @@
 import { S3Client, type S3Stats } from 'bun';
 import { logger } from '@repo/logger';
+export { createStorageTicket, verifyStorageTicket } from './ticket';
 
 export type { S3Stats };
 

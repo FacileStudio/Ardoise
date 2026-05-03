@@ -3,6 +3,9 @@ import { AuthManager } from '@repo/auth';
 import type { ServerEnv } from '@repo/env';
 import { logger } from './logger';
 
+const DEFAULT_ADMIN_FIRST_NAME = 'Admin';
+const DEFAULT_ADMIN_LAST_NAME = 'User';
+
 export async function bootstrapAdmin(
   env: ServerEnv,
   authManager: AuthManager
@@ -18,8 +21,8 @@ export async function bootstrapAdmin(
         where: { email: env.ADMIN_EMAIL },
         data: {
           password: passwordHash,
-          firstName: env.ADMIN_FIRST_NAME,
-          lastName: env.ADMIN_LAST_NAME,
+          firstName: DEFAULT_ADMIN_FIRST_NAME,
+          lastName: DEFAULT_ADMIN_LAST_NAME,
           role: 'ADMIN',
           emailVerified: true,
           status: 'ACTIVE',
@@ -40,8 +43,8 @@ export async function bootstrapAdmin(
       data: {
         email: env.ADMIN_EMAIL,
         password: passwordHash,
-        firstName: env.ADMIN_FIRST_NAME,
-        lastName: env.ADMIN_LAST_NAME,
+        firstName: DEFAULT_ADMIN_FIRST_NAME,
+        lastName: DEFAULT_ADMIN_LAST_NAME,
         role: 'ADMIN',
         emailVerified: true,
         status: 'ACTIVE',

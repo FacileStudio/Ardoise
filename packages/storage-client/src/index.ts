@@ -1,6 +1,7 @@
 export interface UploadOptions {
   onProgress?: (percent: number) => void;
   signal?: AbortSignal;
+  token?: string;
 }
 
 export interface UploadResult {
@@ -61,6 +62,7 @@ export async function uploadFile(
 
       xhr.open('PUT', presignedUrl);
       xhr.setRequestHeader('Content-Type', file.type);
+      if (options.token) xhr.setRequestHeader('Authorization', `Bearer ${options.token}`);
       xhr.send(file);
     });
 
@@ -84,14 +86,22 @@ export async function uploadFile(
   }
 }
 
-export async function uploadFileSimple(file: File, presignedUrl: string): Promise<string> {
+export async function uploadFileSimple(
+  file: File,
+  presignedUrl: string,
+  options: UploadOptions = {}
+): Promise<string> {
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': file.type,
+    };
+    if (options.token) headers.Authorization = `Bearer ${options.token}`;
+
     const response = await fetch(presignedUrl, {
       method: 'PUT',
       body: file,
-      headers: {
-        'Content-Type': file.type,
-      },
+      headers,
+      signal: options.signal,
     });
 
     if (!response.ok) {

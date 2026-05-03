@@ -1,24 +1,29 @@
 import type { PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
+import { createStorageTicket } from '@repo/storage';
 
 export const mediaService = {
   generateUploadUrl: async (
-    storage: StorageService,
     userId: string,
-    data: { fileName: string; fileType: string }
+    data: { fileName: string; fileType: string },
+    appOrigin: string,
+    secret: string
   ) => {
     const fileKey = `uploads/${userId}/${Date.now()}-${data.fileName}`;
-
-    const uploadUrl = storage.client.file(fileKey).presign({
-      expiresIn: 900,
-      method: 'PUT',
-    });
+    const baseUrl = appOrigin.replace(/\/$/, '');
+    const ticket = createStorageTicket(secret, { method: 'PUT', key: fileKey }, 900);
 
     return {
-      uploadUrl,
+      uploadUrl: `${baseUrl}/storage/${fileKey}?ticket=${ticket}`,
       fileKey,
-      publicUrl: storage.getFileUrl(fileKey),
+      publicUrl: `${baseUrl}/storage/${fileKey}`,
     };
+  },
+
+  generateDownloadUrl: (key: string, appOrigin: string, secret: string) => {
+    const baseUrl = appOrigin.replace(/\/$/, '');
+    const ticket = createStorageTicket(secret, { method: 'GET', key }, 3600);
+    return `${baseUrl}/storage/${key}?ticket=${ticket}`;
   },
 
   updateUserAvatar: async (

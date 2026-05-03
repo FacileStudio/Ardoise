@@ -75,14 +75,6 @@ COPY packages/types ./packages/types
 COPY packages/typst ./packages/typst
 COPY packages/utils ./packages/utils
 
-ARG DATABASE_URL
-ARG ADMIN_EMAIL
-ARG ADMIN_PASSWORD
-
-ENV DATABASE_URL=$DATABASE_URL
-ENV ADMIN_EMAIL=$ADMIN_EMAIL
-ENV ADMIN_PASSWORD=$ADMIN_PASSWORD
-
 RUN cd packages/database && bun run db:generate
 
 FROM oven/bun:1.3.7 AS runner
