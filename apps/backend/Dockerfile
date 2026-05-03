@@ -1,23 +1,14 @@
 # Use a specific version for consistency
-FROM oven/bun:1.3.7-alpine AS base
+FROM oven/bun:1.3.7 AS base
 
 ARG TYPST_VERSION=0.13.1
 ARG TARGETARCH
 
 RUN set -eux; \
-  apk_add() { \
-    attempt=1; \
-    while [ "$attempt" -le 5 ]; do \
-      if apk add --no-cache ca-certificates curl libstdc++ xz; then \
-        return 0; \
-      fi; \
-      sleep "$((attempt * 2))"; \
-      attempt=$((attempt + 1)); \
-    done; \
-    return 1; \
-  }; \
-  apk_add \
-  && case "$TARGETARCH" in \
+  apt-get -o Acquire::Retries=5 update; \
+  apt-get install -y --no-install-recommends ca-certificates curl xz-utils; \
+  rm -rf /var/lib/apt/lists/*; \
+  case "$TARGETARCH" in \
     amd64) typst_arch="x86_64" ;; \
     arm64) typst_arch="aarch64" ;; \
     *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
