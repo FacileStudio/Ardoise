@@ -7,6 +7,7 @@ import { calculateStripeFees } from '@repo/utils';
 import { TRPCError } from '@trpc/server';
 import type { ServerEnv } from '@repo/env';
 import type Stripe from 'stripe';
+import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import type {
   CreatePaymentInput,
   UpdatePaymentInput,
@@ -426,8 +427,11 @@ export const paymentService = {
       tvaRate: Number(settings.tvaRate),
     };
 
+    let logoPath: string | undefined;
+
     try {
-      const receiptBuffer = generateReceipt(receiptData, env.LOGO_PATH);
+      logoPath = await downloadStoredFileToTempPath(settings.logoUrl, storage, 'receipt-logo');
+      const receiptBuffer = generateReceipt(receiptData, logoPath);
 
       const receiptKey = `receipts/${payment.id}-${Date.now()}.pdf`;
 
@@ -456,6 +460,8 @@ export const paymentService = {
         code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to generate or send receipt: ${error instanceof Error ? error.message : 'Unknown error'}`,
       });
+    } finally {
+      cleanupTempFile(logoPath);
     }
   },
 

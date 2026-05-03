@@ -4,13 +4,11 @@ import { type AuthManager } from '@repo/auth';
 import { type ServerEnv } from '@repo/env';
 import { StorageService } from '@repo/storage';
 import type { Logger } from '@repo/logger';
-import { DocuSealService } from './modules/docuseal/service';
-import { getSmtpClient, getStripeService } from './modules/settings/service';
+import { getDocuSealService, getSmtpClient, getStripeService } from './modules/settings/service';
 
 export interface CreateContextOptions extends FetchCreateContextFnOptions {
   authManager: AuthManager;
   storage: StorageService;
-  docuseal: DocuSealService;
   env: ServerEnv;
   logger: Logger;
 }
@@ -19,7 +17,6 @@ export const createContext = async ({
   req,
   authManager,
   storage,
-  docuseal,
   env,
   logger,
 }: CreateContextOptions) => {
@@ -43,7 +40,7 @@ export const createContext = async ({
     storage,
     getStripe: () => getStripeService(prisma),
     getSmtp: () => getSmtpClient(prisma),
-    docuseal,
+    docuseal: await getDocuSealService(prisma),
     env,
     apiOrigin,
     appOrigin,

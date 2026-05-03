@@ -1,0 +1,2 @@
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "docusealApiUrl" TEXT;
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "docusealApiKey" TEXT;

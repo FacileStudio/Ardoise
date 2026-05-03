@@ -33,13 +33,17 @@ export const mediaRouter = router({
     .query(async ({ ctx, input }) => {
       const urlPath = new URL(input.url).pathname;
       const pathParts = urlPath.split('/').filter(Boolean);
+      const storageIndex = pathParts.indexOf('storage');
       const uploadsIndex = pathParts.indexOf('uploads');
 
-      if (uploadsIndex === -1) {
-        throw new Error('Invalid file URL: uploads folder not found');
+      let filePath = '';
+      if (storageIndex !== -1) {
+        filePath = pathParts.slice(storageIndex + 1).join('/');
+      } else if (uploadsIndex !== -1) {
+        filePath = pathParts.slice(uploadsIndex).join('/');
+      } else {
+        throw new Error('Invalid file URL: storage path not found');
       }
-
-      const filePath = pathParts.slice(uploadsIndex).join('/');
 
       return {
         url: mediaService.generateDownloadUrl(filePath, ctx.apiOrigin, ctx.env.ENCRYPTION_SECRET),

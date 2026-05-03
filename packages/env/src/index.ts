@@ -31,11 +31,6 @@ export const serverEnvSchema = baseSchema.extend({
 
   DISCORD_WEBHOOK_URL: z.string().url().optional(),
 
-  LOGO_PATH: z.string().optional(),
-
-  DOCUSEAL_API_URL: z.string().url().optional(),
-  DOCUSEAL_API_KEY: z.string().min(1).optional(),
-
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(8),
 });

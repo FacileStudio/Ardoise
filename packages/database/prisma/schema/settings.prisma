@@ -20,6 +20,9 @@ model Settings {
   smtpPass String?
   smtpFrom String?
 
+  docusealApiUrl String?
+  docusealApiKey String?
+
   bankName String?
   iban String?
   bic String?

@@ -230,9 +230,6 @@ Each app validates its environment on startup via `check-env` script using Zod.
 Stripe, SMTP, and company settings live in the backoffice settings screen, not env.
 
 **Optional backend variables:**
-- `DOCUSEAL_API_URL`: DocuSeal instance URL (e.g., `https://docuseal.example.com/api`)
-- `DOCUSEAL_API_KEY`: DocuSeal API key for document signing
-- `LOGO_PATH`: Path to company logo for PDFs
 - `DISCORD_WEBHOOK_URL`: Discord webhook for notifications
 
 **Frontend variables:**

@@ -3,7 +3,6 @@ import { loggerMiddleware } from './middleware/logger.middleware';
 import env from './lib/env';
 import { AuthManager } from '@repo/auth';
 import { StorageService } from '@repo/storage';
-import { DocuSealService } from '@repo/trpc';
 import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
 import trpcHandler from './handlers/trpc';
@@ -44,9 +43,8 @@ const storage = new StorageService({
   bucket: env.MINIO_BUCKET_NAME,
 });
 
-const docuseal = new DocuSealService(env.DOCUSEAL_API_URL, env.DOCUSEAL_API_KEY);
-
 app.use('*', corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]));
+app.options('*', corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]));
 app.use('*', loggerMiddleware);
 
 app.post('/webhook', createStripeWebhookHandler(storage, env));
@@ -66,7 +64,6 @@ app.all(
   trpcHandler({
     authManager,
     storage,
-    docuseal,
     env,
   })
 );

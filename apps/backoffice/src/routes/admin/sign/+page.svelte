@@ -180,7 +180,7 @@
 					<div>
 						<h3 class="font-black text-yellow-900 mb-2">DocuSeal non configuré</h3>
 						<p class="text-yellow-800 text-sm font-medium">
-							Pour utiliser la signature de documents, configurez les variables d'environnement DOCUSEAL_API_URL et DOCUSEAL_API_KEY.
+							Pour utiliser la signature de documents, configurez DocuSeal dans les paramètres du backoffice.
 						</p>
 					</div>
 				</div>

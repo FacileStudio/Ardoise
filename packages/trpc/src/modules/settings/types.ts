@@ -17,6 +17,8 @@ export const UpdateSettingsSchema = z.object({
   smtpUser: z.string().optional(),
   smtpPass: z.string().optional(),
   smtpFrom: z.string().email().optional().or(z.literal('')),
+  docusealApiUrl: z.string().url().optional().or(z.literal('')),
+  docusealApiKey: z.string().optional(),
   bankName: z.string().optional(),
   iban: z.string().optional(),
   bic: z.string().optional(),

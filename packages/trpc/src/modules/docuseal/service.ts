@@ -21,7 +21,7 @@ export class DocuSealService {
 
   private ensureConfigured(): DocuSealClient {
     if (!this.client) {
-      throw new Error('DocuSeal is not configured. Please set DOCUSEAL_API_URL and DOCUSEAL_API_KEY environment variables.');
+      throw new Error('DocuSeal is not configured. Please configure DocuSeal in the backoffice settings.');
     }
     return this.client;
   }

@@ -24,7 +24,7 @@ export const settingsRouter = router({
   requestLogoUpload: adminProcedure
     .input(UploadLogoSchema)
     .mutation(async ({ ctx }) => {
-      return SettingsService.requestLogoUpload(ctx.storage);
+      return SettingsService.requestLogoUpload(ctx.storage, ctx.apiOrigin, ctx.env.ENCRYPTION_SECRET);
     }),
 
   confirmLogoUpload: adminProcedure
