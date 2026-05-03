@@ -38,6 +38,7 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
+      network: host
     container_name: charles-backend
     environment:
       NODE_ENV: production
@@ -80,6 +81,7 @@ services:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
+      network: host
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/trpc}
         PUBLIC_STRIPE_PUBLISHABLE_KEY: ${PUBLIC_STRIPE_PUBLISHABLE_KEY}
@@ -97,6 +99,7 @@ services:
     build:
       context: .
       dockerfile: apps/backoffice/Dockerfile
+      network: host
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/trpc}
     container_name: charles-backoffice
