@@ -2,7 +2,7 @@ FROM ghcr.io/typst/typst:v0.13.1 AS typst
 
 FROM oven/bun:1.3.7 AS base
 
-COPY --from=typst /typst /usr/local/bin/typst
+COPY --from=typst /bin/typst /usr/local/bin/typst
 
 FROM base AS builder
 WORKDIR /app
