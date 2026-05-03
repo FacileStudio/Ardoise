@@ -88,7 +88,7 @@ ARG PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV VITE_API_URL=$VITE_API_URL
 ENV PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY
 
-RUN cd apps/frontend && bun run build
+RUN cd apps/frontend && bun --bun run build
 
 FROM oven/bun:1.3.7-alpine AS runner
 WORKDIR /app

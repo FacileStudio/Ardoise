@@ -86,7 +86,7 @@ COPY packages/utils ./packages/utils
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN cd apps/backoffice && bun run build
+RUN cd apps/backoffice && bun --bun run build
 
 FROM oven/bun:1.3.7-alpine AS runner
 WORKDIR /app
