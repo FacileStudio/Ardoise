@@ -185,11 +185,11 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Sélectionner un client *
-						</label>
+						</div>
 						<select
 							bind:value={selectedClientId}
 							class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-medium"
@@ -214,11 +214,11 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Description *
-						</label>
+						</div>
 						<textarea
 							bind:value={formData.description}
 							rows="3"
@@ -229,11 +229,11 @@
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:wallet-money-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Montant (€) *
-							</label>
+							</div>
 							<input
 								type="number"
 								step="0.01"
@@ -245,11 +245,11 @@
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Date d'échéance *
-							</label>
+							</div>
 							<input
 								type="date"
 								bind:value={formData.dueDate}
@@ -259,11 +259,11 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:refresh-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Fréquence *
-						</label>
+						</div>
 						<div class="grid grid-cols-3 gap-3">
 							{#each ['ONE_TIME', 'MONTHLY', 'YEARLY'] as freq}
 								<button
@@ -295,7 +295,7 @@
 					<!-- Selected Documents Display -->
 					{#if selectedDocumentIds.length > 0}
 						<div class="space-y-2">
-							<label class="block text-sm font-black text-slate-700">Documents sélectionnés ({selectedDocumentIds.length})</label>
+							<div class="block text-sm font-black text-slate-700">Documents sélectionnés ({selectedDocumentIds.length})</div>
 							<div class="space-y-2">
 								{#each selectedDocumentIds as docId}
 									{@const doc = documents.find(d => d.id === docId)}
@@ -315,6 +315,7 @@
 												type="button"
 												onclick={() => removeDocument(docId)}
 												class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+												aria-label="Retirer le document"
 											>
 												<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
 											</button>
@@ -327,10 +328,10 @@
 
 					<!-- Search Bar -->
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:magnifer-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 							Rechercher un document
-						</label>
+						</div>
 						<div class="relative">
 							<iconify-icon
 								icon="solar:magnifer-linear"

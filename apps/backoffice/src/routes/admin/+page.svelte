@@ -74,12 +74,6 @@
     margin: 0;
   }
 
-  .loading {
-    text-align: center;
-    padding: 3rem;
-    color: #6b7280;
-  }
-
   .entity-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));

@@ -435,71 +435,71 @@
 	<div class="space-y-4 pb-6">
 		<div class="grid grid-cols-2 gap-4">
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+				<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 					<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 					></iconify-icon>
 					Nom du prestataire *
-				</label>
+				</div>
 				<Input bind:value={formData.name} placeholder="Nom du prestataire" required />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">Raison sociale</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Raison sociale</div>
 				<Input bind:value={formData.legalName} placeholder="SARL Nom du prestataire" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">SIRET</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">SIRET</div>
 				<Input bind:value={formData.siret} placeholder="12345678900001" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Taux TVA (%)</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Taux TVA (%)</div>
 				<Input type="number" bind:value={formData.tvaRate} placeholder="20" />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">Adresse</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Adresse</div>
 				<Input bind:value={formData.address} placeholder="123 Rue du Développeur" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Ville</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Ville</div>
 				<Input bind:value={formData.city} placeholder="75001 Paris" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Pays</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Pays</div>
 				<Input bind:value={formData.country} placeholder="France" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Email</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Email</div>
 				<Input type="email" bind:value={formData.email} placeholder="contact@example.com" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Téléphone</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Téléphone</div>
 				<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">Banque</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Banque</div>
 				<Input bind:value={formData.bankName} placeholder="Banque Postale" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">IBAN</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">IBAN</div>
 				<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">BIC</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">BIC</div>
 				<Input bind:value={formData.bic} placeholder="PSSTFRPP" />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">URL du logo</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">URL du logo</div>
 				<Input bind:value={formData.logoUrl} placeholder="https://example.com/logo.png" />
 			</div>
 		</div>
@@ -522,71 +522,71 @@
 	<div class="space-y-4 pb-6">
 		<div class="grid grid-cols-2 gap-4">
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+				<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 					<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 					></iconify-icon>
 					Nom du prestataire *
-				</label>
+				</div>
 				<Input bind:value={formData.name} placeholder="Nom du prestataire" required />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">Raison sociale</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Raison sociale</div>
 				<Input bind:value={formData.legalName} placeholder="SARL Nom du prestataire" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">SIRET</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">SIRET</div>
 				<Input bind:value={formData.siret} placeholder="12345678900001" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Taux TVA (%)</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Taux TVA (%)</div>
 				<Input type="number" bind:value={formData.tvaRate} placeholder="20" />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">Adresse</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Adresse</div>
 				<Input bind:value={formData.address} placeholder="123 Rue du Développeur" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Ville</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Ville</div>
 				<Input bind:value={formData.city} placeholder="75001 Paris" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Pays</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Pays</div>
 				<Input bind:value={formData.country} placeholder="France" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Email</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Email</div>
 				<Input type="email" bind:value={formData.email} placeholder="contact@example.com" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">Téléphone</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Téléphone</div>
 				<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">Banque</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">Banque</div>
 				<Input bind:value={formData.bankName} placeholder="Banque Postale" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">IBAN</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">IBAN</div>
 				<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-black text-slate-700 mb-2">BIC</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">BIC</div>
 				<Input bind:value={formData.bic} placeholder="PSSTFRPP" />
 			</div>
 
 			<div class="col-span-2">
-				<label class="block text-sm font-black text-slate-700 mb-2">URL du logo</label>
+				<div class="block text-sm font-black text-slate-700 mb-2">URL du logo</div>
 				<Input bind:value={formData.logoUrl} placeholder="https://example.com/logo.png" />
 			</div>
 		</div>

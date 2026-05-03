@@ -111,39 +111,39 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Nom du prestataire *
-						</label>
+						</div>
 						<Input bind:value={formData.name} placeholder="Nom du prestataire" />
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:document-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Raison sociale
-						</label>
+						</div>
 						<Input bind:value={formData.legalName} placeholder="ex: Facile Studio SAS" />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:bill-list-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								SIRET
-							</label>
+							</div>
 							<Input bind:value={formData.siret} placeholder="12345678901234" />
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:percent-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Taux de TVA (%) *
-							</label>
+							</div>
 							<input
 								type="number"
 								step="0.1"
@@ -186,30 +186,30 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:home-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Adresse
-						</label>
+						</div>
 						<Input bind:value={formData.address} placeholder="123 rue de la Paix" />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:city-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Ville
-							</label>
+							</div>
 							<Input bind:value={formData.city} placeholder="Paris" />
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:global-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Pays
-							</label>
+							</div>
 							<Input bind:value={formData.country} placeholder="France" />
 						</div>
 					</div>
@@ -225,11 +225,11 @@
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Email
-							</label>
+							</div>
 							<Input
 								bind:value={formData.email}
 								type="email"
@@ -238,11 +238,11 @@
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:phone-calling-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Téléphone
-							</label>
+							</div>
 							<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
 						</div>
 					</div>
@@ -257,30 +257,30 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:bank-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Nom de la banque
-						</label>
+						</div>
 						<Input bind:value={formData.bankName} placeholder="BNP Paribas" />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:card-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								IBAN
-							</label>
+							</div>
 							<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:card-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								BIC
-							</label>
+							</div>
 							<Input bind:value={formData.bic} placeholder="BNPAFRPPXXX" />
 						</div>
 					</div>

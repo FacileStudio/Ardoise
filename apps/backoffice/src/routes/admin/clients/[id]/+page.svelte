@@ -166,20 +166,20 @@
 						</h2>
 						<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 							<div>
-								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 									></iconify-icon>
 									Nom de l'entreprise *
-								</label>
+								</div>
 								<Input bind:value={formData.companyName} placeholder="Entreprise SAS" />
 							</div>
 
 							<div>
-								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:bill-list-bold" width="16" class="text-[#FEC129]"
 									></iconify-icon>
 									SIRET
-								</label>
+								</div>
 								<Input bind:value={formData.siret} placeholder="12345678901234" />
 							</div>
 						</div>
@@ -193,30 +193,30 @@
 						</h2>
 						<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 							<div>
-								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:home-bold" width="16" class="text-[#FEC129]"
 									></iconify-icon>
 									Adresse
-								</label>
+								</div>
 								<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
 							</div>
 
 							<div class="grid grid-cols-2 gap-4">
 								<div>
-									<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+									<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 										<iconify-icon icon="solar:city-bold" width="16" class="text-[#FEC129]"
 										></iconify-icon>
 										Ville
-									</label>
+									</div>
 									<Input bind:value={formData.billingCity} placeholder="Paris" />
 								</div>
 
 								<div>
-									<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+									<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 										<iconify-icon icon="solar:global-bold" width="16" class="text-[#FEC129]"
 										></iconify-icon>
 										Pays
-									</label>
+									</div>
 									<Input bind:value={formData.billingCountry} placeholder="France" />
 								</div>
 							</div>
@@ -232,30 +232,30 @@
 						<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 							<div class="grid grid-cols-2 gap-4">
 								<div>
-									<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+									<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 										<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
 										></iconify-icon>
 										Prénom *
-									</label>
+									</div>
 									<Input bind:value={formData.firstName} placeholder="Jean" />
 								</div>
 
 								<div>
-									<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+									<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 										<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
 										></iconify-icon>
 										Nom *
-									</label>
+									</div>
 									<Input bind:value={formData.lastName} placeholder="Dupont" />
 								</div>
 							</div>
 
 							<div>
-								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"
 									></iconify-icon>
 									Email *
-								</label>
+								</div>
 								<Input
 									bind:value={formData.email}
 									type="email"
@@ -281,7 +281,7 @@
 
 								<div class="space-y-3">
 									{#each client.payments as payment (payment.id)}
-										<div class="flex items-center gap-4 p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border border-slate-200 hover:border-[#FEC129] transition-all cursor-pointer" onclick={() => goto(`/admin/payments/${payment.id}`)}>
+										<button type="button" class="w-full text-left flex items-center gap-4 p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border border-slate-200 hover:border-[#FEC129] transition-all cursor-pointer" onclick={() => goto(`/admin/payments/${payment.id}`)}>
 											<div class="p-3 bg-white rounded-xl shadow-sm">
 												<iconify-icon
 													icon={payment.status === 'PAID' ? 'solar:check-circle-bold' : payment.status === 'PENDING' ? 'solar:clock-circle-bold' : 'solar:close-circle-bold'}
@@ -305,7 +305,7 @@
 											<div class="p-2 text-[#291334]">
 												<iconify-icon icon="solar:eye-bold" width="18"></iconify-icon>
 											</div>
-										</div>
+										</button>
 									{/each}
 								</div>
 							</div>

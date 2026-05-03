@@ -263,7 +263,7 @@
 									<div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
 										<iconify-icon icon="solar:file-bold" width="20" class="text-slate-400"></iconify-icon>
 										<span class="flex-1 text-sm font-medium text-slate-700">{file}</span>
-										<button class="p-2 hover:bg-white rounded-lg transition-colors text-indigo-600">
+										<button class="p-2 hover:bg-white rounded-lg transition-colors text-indigo-600" aria-label="Télécharger le fichier">
 											<iconify-icon icon="solar:download-bold" width="18"></iconify-icon>
 										</button>
 									</div>

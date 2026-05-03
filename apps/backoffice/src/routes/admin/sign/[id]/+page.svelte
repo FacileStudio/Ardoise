@@ -97,6 +97,7 @@
 			<button
 				onclick={() => goto('/admin/sign')}
 				class="w-10 h-10 rounded-xl bg-white border border-[#291334]/10 flex items-center justify-center hover:bg-[#291334]/5 transition-all duration-200"
+				aria-label="Retour aux signatures"
 			>
 				<iconify-icon icon="solar:arrow-left-bold" width="20" class="text-[#291334]"></iconify-icon>
 			</button>

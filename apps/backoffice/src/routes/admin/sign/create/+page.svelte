@@ -137,6 +137,7 @@
 			<button
 				onclick={() => goto('/admin/sign')}
 				class="w-10 h-10 rounded-xl bg-white border border-[#291334]/10 flex items-center justify-center hover:bg-[#291334]/5 transition-all duration-200"
+				aria-label="Retour aux signatures"
 			>
 				<iconify-icon icon="solar:arrow-left-bold" width="20" class="text-[#291334]"></iconify-icon>
 			</button>
@@ -158,9 +159,9 @@
 			<form onsubmit={handleSubmit} class="max-w-3xl">
 				<div class="bg-white rounded-2xl border border-[#291334]/10 p-8 space-y-8">
 					<div>
-						<label class="block text-sm font-black text-[#291334] mb-3">
+						<div class="block text-sm font-black text-[#291334] mb-3">
 							Template <span class="text-red-500">*</span>
-						</label>
+						</div>
 						<select
 							bind:value={selectedTemplateId}
 							class="w-full px-4 py-3 rounded-xl border border-[#291334]/20 bg-white focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all duration-200 font-medium"
@@ -217,9 +218,9 @@
 									<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 										{#if selectedTemplateId === null}
 											<div>
-												<label class="block text-sm font-bold text-[#291334] mb-2">
+												<div class="block text-sm font-bold text-[#291334] mb-2">
 													Rôle <span class="text-red-500">*</span>
-												</label>
+												</div>
 												<input
 													type="text"
 													bind:value={submitter.role}
@@ -231,9 +232,9 @@
 										{/if}
 
 										<div>
-											<label class="block text-sm font-bold text-[#291334] mb-2">
+											<div class="block text-sm font-bold text-[#291334] mb-2">
 												Nom
-											</label>
+											</div>
 											<input
 												type="text"
 												bind:value={submitter.name}
@@ -243,9 +244,9 @@
 										</div>
 
 										<div>
-											<label class="block text-sm font-bold text-[#291334] mb-2">
+											<div class="block text-sm font-bold text-[#291334] mb-2">
 												Email <span class="text-red-500">*</span>
-											</label>
+											</div>
 											<input
 												type="email"
 												bind:value={submitter.email}
@@ -257,9 +258,9 @@
 
 										{#if formData.send_sms}
 											<div>
-												<label class="block text-sm font-bold text-[#291334] mb-2">
+												<div class="block text-sm font-bold text-[#291334] mb-2">
 													Téléphone
-												</label>
+												</div>
 												<input
 													type="tel"
 													bind:value={submitter.phone}
@@ -301,7 +302,7 @@
 							<h3 class="text-lg font-black text-[#291334]">Message personnalisé (optionnel)</h3>
 
 							<div>
-								<label class="block text-sm font-bold text-[#291334] mb-2">Sujet de l'email</label>
+								<div class="block text-sm font-bold text-[#291334] mb-2">Sujet de l'email</div>
 								<input
 									type="text"
 									bind:value={formData.message.subject}
@@ -311,7 +312,7 @@
 							</div>
 
 							<div>
-								<label class="block text-sm font-bold text-[#291334] mb-2">Corps du message</label>
+								<div class="block text-sm font-bold text-[#291334] mb-2">Corps du message</div>
 								<textarea
 									bind:value={formData.message.body}
 									rows="4"

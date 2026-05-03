@@ -14,7 +14,7 @@
 		<div class="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
 			<div class="flex justify-between items-center p-4 border-b">
 				<h2 class="text-xl font-bold">{title}</h2>
-				<button onclick={onclose} class="text-gray-500 hover:text-gray-700">
+				<button onclick={onclose} class="text-gray-500 hover:text-gray-700" aria-label="Fermer l'aperçu">
 					<iconify-icon icon="mdi:close" width="24"></iconify-icon>
 				</button>
 			</div>

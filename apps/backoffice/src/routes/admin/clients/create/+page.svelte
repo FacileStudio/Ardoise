@@ -150,11 +150,11 @@
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Prénom <span class="text-rose-500">*</span>
-							</label>
+							</div>
 							<Input
 								bind:value={formData.firstName}
 								placeholder="Jean"
@@ -169,11 +169,11 @@
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Nom <span class="text-rose-500">*</span>
-							</label>
+							</div>
 							<Input
 								bind:value={formData.lastName}
 								placeholder="Dupont"
@@ -189,11 +189,11 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Email <span class="text-rose-500">*</span>
-						</label>
+						</div>
 						<Input
 							bind:value={formData.email}
 							type="email"
@@ -209,11 +209,11 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:lock-password-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Mot de passe <span class="text-rose-500">*</span>
-						</label>
+						</div>
 						<Input
 							bind:value={formData.password}
 							type="password"
@@ -240,11 +240,11 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Nom de l'entreprise <span class="text-rose-500">*</span>
-						</label>
+						</div>
 						<Input
 							bind:value={formData.companyName}
 							placeholder="Entreprise SAS"
@@ -259,11 +259,11 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:bill-list-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							SIRET
-						</label>
+						</div>
 						<Input bind:value={formData.siret} placeholder="12345678901234" />
 					</div>
 				</div>
@@ -277,11 +277,11 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 							<iconify-icon icon="solar:home-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Adresse <span class="text-rose-500">*</span>
-						</label>
+						</div>
 						<Input
 							bind:value={formData.billingAddress}
 							placeholder="123 rue de la Paix"
@@ -297,11 +297,11 @@
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:city-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Ville <span class="text-rose-500">*</span>
-							</label>
+							</div>
 							<Input
 								bind:value={formData.billingCity}
 								placeholder="Paris"
@@ -316,11 +316,11 @@
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
 								<iconify-icon icon="solar:global-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Pays <span class="text-rose-500">*</span>
-							</label>
+							</div>
 							<Input
 								bind:value={formData.billingCountry}
 								placeholder="France"

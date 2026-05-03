@@ -45,9 +45,9 @@
 </script>
 
 <div>
-	<label class="block text-sm font-medium mb-2">
+	<div class="block text-sm font-medium mb-2">
 		Client {required ? '*' : ''}
-	</label>
+	</div>
 	<select
 		value={value}
 		onchange={handleChange}

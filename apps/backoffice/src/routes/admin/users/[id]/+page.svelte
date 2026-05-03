@@ -162,10 +162,10 @@
 					</h2>
 					<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Email *
-							</label>
+							</div>
 							<input
 								type="email"
 								bind:value={formData.email}
@@ -182,10 +182,10 @@
 
 						<div class="grid grid-cols-2 gap-4">
 							<div>
-								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 									Prénom *
-								</label>
+								</div>
 								<input
 									type="text"
 									bind:value={formData.firstName}
@@ -201,10 +201,10 @@
 							</div>
 
 							<div>
-								<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 									Nom *
-								</label>
+								</div>
 								<input
 									type="text"
 									bind:value={formData.lastName}
@@ -248,10 +248,10 @@
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:lock-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Nouveau mot de passe
-							</label>
+							</div>
 							<input
 								type="password"
 								bind:value={formData.password}
@@ -267,10 +267,10 @@
 						</div>
 
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:lock-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Confirmer le nouveau mot de passe
-							</label>
+							</div>
 							<input
 								type="password"
 								bind:value={formData.confirmPassword}

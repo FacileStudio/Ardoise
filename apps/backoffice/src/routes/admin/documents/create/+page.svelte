@@ -553,100 +553,100 @@
 				<div class="grid grid-cols-3 gap-4">
 					{#if formData.type === 'prestation'}
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								N° Facture
-							</label>
+							</div>
 							<Input bind:value={formData.invoice_number} />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Date Facture
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.invoice_date} />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:alarm-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Date Échéance
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.due_date} />
 						</div>
 					{:else if formData.type === 'maintenance'}
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								N° Devis
-							</label>
+							</div>
 							<Input bind:value={formData.quote_number} />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Date Devis
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.quote_date} />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:alarm-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Validité
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.validity_date} />
 						</div>
 					{:else if formData.type === 'back_contractuel'}
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Référence Contrat
-							</label>
+							</div>
 							<Input bind:value={formData.contract_reference} />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Date Contrat
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.contract_date} />
 						</div>
 					{:else if formData.type === 'appel_de_fonds'}
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Date Facture
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.invoice_date} />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:alarm-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Date Échéance
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.due_date} />
 						</div>
 					{:else}
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Référence Contrat
-							</label>
+							</div>
 							<Input bind:value={formData.contract_reference} />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
 								Date Contrat
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.contract_date} />
 						</div>
 					{/if}
@@ -735,17 +735,17 @@
 					</h2>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Nom du projet
-							</label>
+							</div>
 							<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Date de validité
-							</label>
+							</div>
 							<Input type="date" bind:value={formData.valid_until} />
 						</div>
 					</div>
@@ -771,10 +771,10 @@
 
 						<!-- Select Provider -->
 						<div>
-							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+							<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Prestataire *
-							</label>
+							</div>
 							<select
 								bind:value={newProvider.id}
 								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
@@ -788,11 +788,11 @@
 
 						<div class="grid grid-cols-2 gap-4">
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Rôle *</label>
+								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Rôle *</div>
 								<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
 							</div>
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant HT (€) *</label>
+								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant HT (€) *</div>
 								<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
 							</div>
 						</div>
@@ -851,11 +851,11 @@
 						</h3>
 						<div class="space-y-4">
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Titre</label>
+								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Titre</div>
 								<Input bind:value={newFeature.title} placeholder="Ex: Design UI/UX" />
 							</div>
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</label>
+								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</div>
 								<textarea
 									bind:value={newFeature.desc}
 									rows="3"
@@ -916,7 +916,7 @@
 						</h3>
 						<div class="space-y-4">
 							<div>
-								<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</label>
+								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</div>
 								<textarea
 									placeholder="Ex: Développement d'un site web vitrine responsive..."
 									bind:value={newItem.description}
@@ -926,15 +926,15 @@
 							</div>
 							<div class="grid grid-cols-3 gap-4">
 								<div>
-									<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Quantité</label>
+									<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Quantité</div>
 									<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
 								</div>
 								<div>
-									<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Unité</label>
+									<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Unité</div>
 									<Input placeholder="jour" bind:value={newItem.unit} />
 								</div>
 								<div>
-									<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Prix HT (€)</label>
+									<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Prix HT (€)</div>
 									<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
 								</div>
 							</div>
@@ -986,24 +986,24 @@
 					</h2>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Référence globale
-							</label>
+							</div>
 							<Input bind:value={formData.global_invoice_ref} placeholder="Ex: ADF-001" />
 						</div>
 						<div>
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Étape du projet
-							</label>
+							</div>
 							<Input bind:value={formData.project_step} placeholder="Ex: Acompte 30%" />
 						</div>
 						<div class="col-span-2">
-							<label class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Nom du projet
-							</label>
+							</div>
 							<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
 						</div>
 					</div>
@@ -1029,10 +1029,10 @@
 
 						<!-- Select Provider -->
 						<div>
-							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+							<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
 								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
 								Prestataire *
-							</label>
+							</div>
 							<select
 								bind:value={newPaymentProvider.id}
 								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
@@ -1045,7 +1045,7 @@
 						</div>
 
 						<div>
-							<label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT) *</label>
+							<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT) *</div>
 							<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
 						</div>
 						<Button intent="primary" onclick={addPaymentProvider} class="w-full">
@@ -1121,13 +1121,13 @@
 						</h3>
 						<div class="space-y-4">
 							<div>
-								<label
+								<div
 									class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
 								>
 									<iconify-icon icon="solar:pen-bold" width="14" class="text-[#FEC129]"
 									></iconify-icon>
 									Que facturez-vous ?
-								</label>
+								</div>
 								<textarea
 									placeholder="Ex: Développement d'un site web vitrine responsive avec système de gestion de contenu..."
 									bind:value={newItem.description}
@@ -1137,33 +1137,33 @@
 							</div>
 							<div class="grid grid-cols-3 gap-4">
 								<div>
-									<label
+									<div
 										class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
 									>
 										<iconify-icon icon="solar:calculator-bold" width="14" class="text-[#FEC129]"
 										></iconify-icon>
 										Quantité
-									</label>
+									</div>
 									<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
 								</div>
 								<div>
-									<label
+									<div
 										class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
 									>
 										<iconify-icon icon="solar:tag-bold" width="14" class="text-[#FEC129]"
 										></iconify-icon>
 										Unité
-									</label>
+									</div>
 									<Input placeholder="jour" bind:value={newItem.unit} />
 								</div>
 								<div>
-									<label
+									<div
 										class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
 									>
 										<iconify-icon icon="solar:euro-bold" width="14" class="text-[#FEC129]"
 										></iconify-icon>
 										Prix HT (€)
-									</label>
+									</div>
 									<Input
 										type="number"
 										placeholder="500"

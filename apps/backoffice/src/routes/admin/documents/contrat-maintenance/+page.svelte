@@ -83,17 +83,17 @@
 	<div class="bg-white rounded-lg shadow p-6 space-y-6">
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
-				<label class="block text-sm font-medium mb-2">Référence du contrat *</label>
+				<div class="block text-sm font-medium mb-2">Référence du contrat *</div>
 				<Input bind:value={formData.contract_reference} placeholder="CTR-001" />
 			</div>
 
 			<div>
-				<label class="block text-sm font-medium mb-2">Date du contrat *</label>
+				<div class="block text-sm font-medium mb-2">Date du contrat *</div>
 				<Input type="date" bind:value={formData.contract_date} />
 			</div>
 
 			<div>
-				<label class="block text-sm font-medium mb-2">Période de maintenance *</label>
+				<div class="block text-sm font-medium mb-2">Période de maintenance *</div>
 				<Input bind:value={formData.maintenance_period} placeholder="12 mois" />
 			</div>
 		</div>

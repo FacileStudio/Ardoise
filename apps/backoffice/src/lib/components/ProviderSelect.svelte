@@ -47,9 +47,9 @@
 </script>
 
 <div>
-	<label class="block text-sm font-medium mb-2">
+	<div class="block text-sm font-medium mb-2">
 		Prestataire {required ? '*' : ''}
-	</label>
+	</div>
 	<select
 		value={value}
 		onchange={handleChange}
