@@ -29,8 +29,6 @@ export const serverEnvSchema = baseSchema.extend({
   MINIO_ENDPOINT: z.string().url().default('http://minio:9000'),
   MINIO_PUBLIC_URL: z.string().url().optional(),
 
-  DISCORD_WEBHOOK_URL: z.string().url().optional(),
-
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(8),
 });

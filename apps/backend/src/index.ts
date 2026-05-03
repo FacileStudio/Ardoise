@@ -43,9 +43,15 @@ const storage = new StorageService({
   bucket: env.MINIO_BUCKET_NAME,
 });
 
-app.use('*', corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]));
-app.options('*', corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]));
+const cors = corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]);
+
+app.use('*', cors);
 app.use('*', loggerMiddleware);
+
+app.options('/trpc/*', (c) => c.body(null, 204));
+app.options('/storage/*', (c) => c.body(null, 204));
+app.options('/webhook', (c) => c.body(null, 204));
+app.options('*', (c) => c.body(null, 204));
 
 app.post('/webhook', createStripeWebhookHandler(storage, env));
 

@@ -229,9 +229,6 @@ Each app validates its environment on startup via `check-env` script using Zod.
 
 Stripe, SMTP, and company settings live in the backoffice settings screen, not env.
 
-**Optional backend variables:**
-- `DISCORD_WEBHOOK_URL`: Discord webhook for notifications
-
 **Frontend variables:**
 - `PORT`: Frontend server port (default: 5173)
 - `VITE_API_URL`: Backend URL, set from `BACKEND_URL` in Docker Compose
