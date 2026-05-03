@@ -222,7 +222,9 @@ Each app validates its environment on startup via `check-env` script using Zod.
 - `ENCRYPTION_SECRET`: JWT encryption key (32+ characters)
 - `ADMIN_EMAIL`: Default admin email (e.g., `admin@facile.studio`)
 - `ADMIN_PASSWORD`: Default admin password (minimum 8 characters)
-- `TRUSTED_ORIGINS`: Comma-separated allowed origins (e.g., `http://localhost:5173,http://localhost:3001,http://localhost:3002`)
+- `BACKEND_URL`: Public backend URL, used for API/storage links
+- `FRONTEND_URL`: Public frontend URL, allowed by CORS
+- `BACKOFFICE_URL`: Public backoffice URL, allowed by CORS
 - `PORT`: Backend server port (default: 3001)
 
 Stripe, SMTP, and company settings live in the backoffice settings screen, not env.
@@ -235,12 +237,12 @@ Stripe, SMTP, and company settings live in the backoffice settings screen, not e
 
 **Frontend variables:**
 - `PORT`: Frontend server port (default: 5173)
-- `VITE_API_URL`: Optional backend API URL override (defaults to `/trpc` on current origin)
+- `VITE_API_URL`: Backend URL, set from `BACKEND_URL` in Docker Compose
 - `NODE_ENV`: Environment (development/production)
 
 **Backoffice variables:**
 - `PORT`: Backoffice server port (default: 3002)
-- `VITE_API_URL`: Optional backend API URL override (defaults to `/trpc` on current origin)
+- `VITE_API_URL`: Backend URL, set from `BACKEND_URL` in Docker Compose
 - `NODE_ENV`: Environment (development/production)
 
 See `apps/backend/.env.example` and `apps/frontend/.env` for complete reference.
@@ -557,12 +559,12 @@ This ensures Prisma client is generated before builds/dev runs.
 **Frontend deployment requirements:**
 
 1. **Environment Variables** - Set these in Railway's Variables tab:
-   - `VITE_API_URL` only when the API is not served from the same origin
+   - `BACKEND_URL`, `FRONTEND_URL`, and `BACKOFFICE_URL` for public domains
    - `NODE_ENV=production`
 
 2. **Verify deployment**:
    - Configure Stripe, SMTP, and company settings in the backoffice after first admin login
-   - If API calls hit the wrong host, set `VITE_API_URL` explicitly
+   - If API calls hit the wrong host, check `BACKEND_URL`; Docker Compose passes it to frontend/backoffice as `VITE_API_URL`
 
 **Backend deployment requirements:**
 
@@ -606,12 +608,12 @@ cd packages/database && DATABASE_URL="postgresql://fangafunk@localhost:5432/char
 
 ### Frontend Can't Connect to Backend
 
-**Cause**: Backend not running, missing same-origin proxy, or incorrect `VITE_API_URL`.
+**Cause**: Backend not running or incorrect `BACKEND_URL`.
 
 **Fix**:
 1. Ensure backend is running: `just backend` or `cd apps/backend && bun run dev`
-2. If frontend/backoffice do not proxy `/trpc`, set `VITE_API_URL` to the backend URL (default local backend: `http://localhost:3001`)
-3. Verify CORS settings in backend: `TRUSTED_ORIGINS` should include frontend URL
+2. Set `BACKEND_URL` to the public backend URL; Docker Compose passes it to frontend/backoffice as `VITE_API_URL`
+3. Verify `FRONTEND_URL` and `BACKOFFICE_URL`; backend CORS is derived from those values
 
 ### Prisma Client Not Generated
 

@@ -36,7 +36,7 @@ try {
     console.error(error.message);
   }
 
-  console.error('\nVITE_API_URL is optional. When omitted, the app calls /trpc on the current origin.\n');
+  console.error('\nSet BACKEND_URL in Docker Compose so VITE_API_URL points at the backend domain.\n');
 
   throw error;
 }

@@ -46,7 +46,7 @@ const storage = new StorageService({
 
 const docuseal = new DocuSealService(env.DOCUSEAL_API_URL, env.DOCUSEAL_API_KEY);
 
-app.use('*', corsHandler(env.TRUSTED_ORIGINS));
+app.use('*', corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]));
 app.use('*', loggerMiddleware);
 
 app.post('/webhook', createStripeWebhookHandler(storage, env));

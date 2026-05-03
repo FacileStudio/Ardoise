@@ -61,6 +61,9 @@ RUN bun install --no-frozen-lockfile --network-concurrency 8
 FROM deps AS builder
 WORKDIR /app
 
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 COPY apps/frontend ./apps/frontend
 COPY packages/admin ./packages/admin
 COPY packages/auth ./packages/auth
@@ -90,6 +93,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 frontend

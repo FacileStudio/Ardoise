@@ -4,16 +4,22 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']),
 });
 
+const urlSchema = (fallback: string) =>
+  z
+    .string()
+    .url()
+    .default(fallback)
+    .transform((url) => url.replace(/\/$/, ''));
+
 export const publicEnvSchema = baseSchema.extend({
   API_URL: z.string().url().optional(),
 });
 
 export const serverEnvSchema = baseSchema.extend({
   PORT: z.coerce.number().default(3001),
-  TRUSTED_ORIGINS: z
-    .string()
-    .default('http://localhost:3000,http://localhost:3001,http://localhost:3002')
-    .transform((s) => s.split(',').map((u) => u.trim())),
+  BACKEND_URL: urlSchema('http://localhost:3001'),
+  FRONTEND_URL: urlSchema('http://localhost:3000'),
+  BACKOFFICE_URL: urlSchema('http://localhost:3002'),
 
   ENCRYPTION_SECRET: z.string().min(1),
 

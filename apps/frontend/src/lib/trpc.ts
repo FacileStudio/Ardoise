@@ -3,7 +3,7 @@ import { authStore } from './auth-store';
 import { get } from 'svelte/store';
 import env from '../lib/env';
 
-const apiUrl = env.API_URL?.replace(/\/trpc\/?$/, '');
+const apiUrl = env.API_URL?.replace(/\/trpc\/?$/, '').replace(/\/$/, '');
 
 export const trpc = createUniversalTrpcClient({
   baseUrl: apiUrl ? `${apiUrl}/trpc` : '/trpc',

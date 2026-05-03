@@ -109,7 +109,7 @@ MINIO_BUCKET_NAME=charles-uploads
 ```
 
 Configure Stripe, SMTP, and company details in the backoffice settings screen.
-`VITE_API_URL` is optional; when omitted, frontend and backoffice call `/trpc`
+`BACKEND_URL` is passed to frontend and backoffice as `VITE_API_URL` during Docker builds so browser API calls target the backend domain.
 on the current origin.
 
 ### Database Setup
@@ -243,7 +243,9 @@ Required environment variables:
 - `DATABASE_URL`
 - `ENCRYPTION_SECRET`
 - `MINIO_*` variables
-- `TRUSTED_ORIGINS`
+- `BACKEND_URL`
+- `FRONTEND_URL`
+- `BACKOFFICE_URL`
 
 #### Frontend & Backoffice
 
@@ -254,7 +256,7 @@ node build
 ```
 
 Optional build-time environment variables:
-- `VITE_API_URL` when the API is not served from the same origin
+- `VITE_API_URL`, set from `BACKEND_URL` by Docker Compose
 
 ## Architecture
 
