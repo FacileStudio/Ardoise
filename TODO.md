@@ -222,7 +222,6 @@
 
 ### Developer Docs
 - [ ] Swagger/OpenAPI pour tRPC (tRPC OpenAPI)
-- [ ] Storybook pour @repo/ui
 - [ ] Guide de contribution (CONTRIBUTING.md)
 - [ ] Architecture Decision Records (ADR)
 - [ ] Database schema documentation

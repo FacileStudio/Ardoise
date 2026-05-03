@@ -10,9 +10,7 @@
   ],
   "scripts": {
     "lint": "NODE_OPTIONS='--max-old-space-size=4096' eslint .",
-    "typecheck": "svelte-check",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "typecheck": "svelte-check"
   },
   "peerDependencies": {
     "svelte": "^5.49.1",
@@ -35,12 +33,6 @@
     "@ampproject/remapping": "^2.3.0",
     "@fontsource/poppins": "^5.2.7",
     "@repo/eslint-config": "workspace:*",
-    "@storybook/addon-essentials": "^8.6.14",
-    "@storybook/addon-interactions": "^8.6.14",
-    "@storybook/addon-links": "8.6.14",
-    "@storybook/blocks": "^8.6.14",
-    "@storybook/svelte": "8.6.14",
-    "@storybook/svelte-vite": "8.6.14",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/leaflet": "^1.9.21",
@@ -52,7 +44,6 @@
     "magic-string": "^0.30.21",
     "periscopic": "^4.0.2",
     "postcss": "^8.5.6",
-    "storybook": "8.6.14",
     "svelte-check": "^4.3.6",
     "svelte-hmr": "^0.16.0",
     "tailwindcss": "^4.1.18",

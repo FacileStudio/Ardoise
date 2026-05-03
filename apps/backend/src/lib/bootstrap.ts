@@ -8,36 +8,33 @@ export async function bootstrapAdmin(
   authManager: AuthManager
 ): Promise<void> {
   try {
-    const existingAdmin = await prisma.user.findFirst({
-      where: { role: 'ADMIN' },
-    });
-
-    if (existingAdmin) {
-      logger.info({ email: existingAdmin.email }, '✅ Admin user already exists');
-      return;
-    }
-
     const existingUser = await prisma.user.findUnique({
       where: { email: env.ADMIN_EMAIL },
     });
+    const passwordHash = await authManager.hashPassword(env.ADMIN_PASSWORD);
 
     if (existingUser) {
-      logger.info({ email: env.ADMIN_EMAIL }, '⚡ Upgrading existing user to ADMIN');
-      const passwordHash = await authManager.hashPassword(env.ADMIN_PASSWORD);
       await prisma.user.update({
         where: { email: env.ADMIN_EMAIL },
         data: {
           password: passwordHash,
+          firstName: env.ADMIN_FIRST_NAME,
+          lastName: env.ADMIN_LAST_NAME,
           role: 'ADMIN',
           emailVerified: true,
           status: 'ACTIVE',
+          isBanned: false,
+          banReason: null,
+          bannedAt: null,
+          bannedBy: null,
+          isSuspended: false,
+          suspendedUntil: null,
+          suspensionReason: null,
         },
       });
-      logger.info('✅ User upgraded to ADMIN successfully!');
+      logger.info({ email: env.ADMIN_EMAIL }, 'Default admin user updated');
       return;
     }
-
-    const passwordHash = await authManager.hashPassword(env.ADMIN_PASSWORD);
 
     const admin = await prisma.user.create({
       data: {
@@ -51,10 +48,7 @@ export async function bootstrapAdmin(
       },
     });
 
-    logger.info('✅ Admin user created successfully!');
-    logger.info({ email: admin.email }, '📧 Email');
-    logger.info({ name: `${admin.firstName} ${admin.lastName}` }, '👤 Name');
-    logger.info({ role: admin.role }, '🎯 Role');
+    logger.info({ email: admin.email, role: admin.role }, 'Default admin user created');
   } catch (error: unknown) {
     const prismaError = error as { code?: string; meta?: { driverAdapterError?: string } };
     if (prismaError?.code === 'P2021' || prismaError?.meta?.driverAdapterError === 'TableDoesNotExist') {
