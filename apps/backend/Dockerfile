@@ -4,7 +4,19 @@ FROM oven/bun:1.3.7-alpine AS base
 ARG TYPST_VERSION=0.13.1
 ARG TARGETARCH
 
-RUN apk add --no-cache ca-certificates curl libstdc++ xz \
+RUN set -eux; \
+  apk_add() { \
+    attempt=1; \
+    while [ "$attempt" -le 5 ]; do \
+      if apk add --no-cache ca-certificates curl libstdc++ xz; then \
+        return 0; \
+      fi; \
+      sleep "$((attempt * 2))"; \
+      attempt=$((attempt + 1)); \
+    done; \
+    return 1; \
+  }; \
+  apk_add \
   && case "$TARGETARCH" in \
     amd64) typst_arch="x86_64" ;; \
     arm64) typst_arch="aarch64" ;; \
