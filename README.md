@@ -224,6 +224,10 @@ docker-compose up -d
 - Backoffice: http://localhost:3002
 - MinIO Console: http://localhost:9001
 
+The base `docker-compose.yml` exposes app ports only inside Docker so Dokploy can
+route them without binding host ports. `docker-compose.override.yml` publishes
+`3000`, `3001`, and `3002` for local runs.
+
 4. View logs:
 
 ```bash

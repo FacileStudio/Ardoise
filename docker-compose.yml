@@ -68,8 +68,8 @@ services:
       COMPANY_PHONE: ${COMPANY_PHONE}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOGTAIL_TOKEN: ${LOGTAIL_TOKEN:-}
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,8 +89,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       - backend
     restart: unless-stopped
@@ -106,8 +106,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3002
-    ports:
-      - "3002:3002"
+    expose:
+      - "3002"
     depends_on:
       - backend
     restart: unless-stopped
