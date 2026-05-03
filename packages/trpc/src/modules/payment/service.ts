@@ -3,7 +3,7 @@ import type { StripeService } from '@repo/stripe';
 import type { StorageService } from '@repo/storage';
 import { SMTPClient, EmailTemplates } from '@repo/smtp';
 import { generateReceipt, type ReceiptData } from '@repo/typst';
-import { calculateStripeFees } from '@repo/utils';
+import { calculateStripeFees } from '@repo/utils/stripe-fees';
 import { TRPCError } from '@trpc/server';
 import type { ServerEnv } from '@repo/env';
 import type Stripe from 'stripe';

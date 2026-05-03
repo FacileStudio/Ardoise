@@ -8,14 +8,17 @@
   "exports": {
     ".": "./src/index.ts",
     "./toast": "./src/toastStore.ts",
-    "./csv": "./src/csv.ts"
+    "./csv": "./src/csv.ts",
+    "./stripe-fees": "./src/stripe-fees.ts"
   },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "svelte": "^5.49.1"
+    "clsx": "^2.1.1",
+    "svelte": "^5.49.1",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
