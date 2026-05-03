@@ -35,8 +35,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 backend
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 --gid nodejs backend
 
 # Copy built assets
 COPY --from=builder --chown=backend:nodejs /app/apps/backend ./apps/backend
