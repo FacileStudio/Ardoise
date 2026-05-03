@@ -8,13 +8,13 @@ const isBuilding = building;
 function getEnv() {
   if (isBrowser || isBuilding) {
     return {
-      API_URL: import.meta.env.VITE_API_URL,
+      API_URL: import.meta.env.VITE_API_URL || undefined,
       NODE_ENV: import.meta.env.MODE || 'development',
     };
   }
 
   return {
-    API_URL: process.env.VITE_API_URL || import.meta.env.VITE_API_URL || '',
+    API_URL: process.env.VITE_API_URL || import.meta.env.VITE_API_URL || undefined,
     NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
   };
 }
@@ -35,9 +35,7 @@ try {
     console.error(error.message);
   }
 
-  console.error('\nRequired environment variables:');
-  console.error('  - VITE_API_URL: Backend API URL');
-  console.error('\nThis must be set as a build argument in Railway.\n');
+  console.error('\nVITE_API_URL is optional. When omitted, the app calls /trpc on the current origin.\n');
 
   throw error;
 }

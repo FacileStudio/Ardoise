@@ -14,6 +14,7 @@
         { label: 'Prestataires', icon: 'solar:buildings-2-bold', href: '/admin/prestataires' },
         { label: $i18n.t('nav.statistics'), icon: 'solar:chart-bold', href: '/admin/statistics' },
         { label: $i18n.t('nav.users'), icon: 'solar:user-bold', href: '/admin/users' },
+        { label: 'Paramètres', icon: 'solar:settings-bold', href: '/admin/settings' },
     ];
 </script>
 

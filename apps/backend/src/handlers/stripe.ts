@@ -1,16 +1,13 @@
 import { Context } from 'hono';
-import { StripeService } from '@repo/stripe';
 import { StorageService } from '@repo/storage';
-import { SMTPClient } from '@repo/smtp';
 import { paymentService } from '@repo/trpc';
 import { prisma } from '@repo/database';
 import { logger } from '../lib/logger';
 import type { ServerEnv } from '@repo/env';
+import { getSmtpClient, getStripeService } from '@repo/trpc/settings';
 
 export const createStripeWebhookHandler = (
-  stripe: StripeService,
   storage: StorageService,
-  smtp: SMTPClient,
   env: ServerEnv
 ) => {
   return async (c: Context) => {
@@ -23,6 +20,10 @@ export const createStripeWebhookHandler = (
 
       const rawBody = await c.req.text();
 
+      const [stripe, smtp] = await Promise.all([
+        getStripeService(prisma),
+        getSmtpClient(prisma),
+      ]);
       const event = await stripe.constructEvent(rawBody, signature);
 
       await paymentService.handleWebhook(prisma, storage, smtp, env, event);

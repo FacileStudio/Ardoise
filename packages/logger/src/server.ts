@@ -1,7 +1,7 @@
 import pino from 'pino';
 
 const isProd = process.env.NODE_ENV === 'production';
-const logLevel = process.env.LOG_LEVEL || (isProd ? 'info' : 'debug');
+const logLevel = isProd ? 'info' : 'debug';
 
 const redactPaths = [
   'password',
@@ -20,12 +20,7 @@ const redactPaths = [
 
 let transport;
 
-if (isProd && process.env.LOGTAIL_TOKEN) {
-  transport = pino.transport({
-    target: '@logtail/pino',
-    options: { sourceToken: process.env.LOGTAIL_TOKEN },
-  });
-} else if (!isProd) {
+if (!isProd) {
   transport = pino.transport({
     target: 'pino-pretty',
     options: {

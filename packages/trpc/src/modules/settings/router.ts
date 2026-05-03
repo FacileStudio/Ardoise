@@ -11,6 +11,10 @@ export const settingsRouter = router({
     return SettingsService.getSettings(ctx.db);
   }),
 
+  getAdmin: adminProcedure.query(async ({ ctx }) => {
+    return SettingsService.getAdminSettings(ctx.db);
+  }),
+
   update: adminProcedure
     .input(UpdateSettingsSchema)
     .mutation(async ({ ctx, input }) => {

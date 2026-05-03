@@ -24,18 +24,14 @@ export const paymentRouter = router({
   create: adminProcedure
     .input(CreatePaymentSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.smtp) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'SMTP client not configured',
-        });
-      }
+      const [stripe, smtp] = await Promise.all([ctx.getStripe(), ctx.getSmtp()]);
 
       return paymentService.createPayment(
         ctx.db,
-        ctx.stripe,
-        ctx.smtp,
+        stripe,
+        smtp,
         ctx.env,
+        ctx.appOrigin,
         input
       );
     }),
@@ -50,7 +46,7 @@ export const paymentRouter = router({
   cancel: adminProcedure
     .input(CancelPaymentSchema)
     .mutation(async ({ ctx, input }) => {
-      return paymentService.cancelPayment(ctx.db, ctx.stripe, input.id);
+      return paymentService.cancelPayment(ctx.db, await ctx.getStripe(), input.id);
     }),
 
   markExpired: adminProcedure.mutation(async ({ ctx }) => {
@@ -128,14 +124,15 @@ export const paymentRouter = router({
       }
 
       let clientSecret: string | null = null;
+      const stripe = await ctx.getStripe();
 
       if (payment.stripePaymentIntentId) {
-        const paymentIntent = await ctx.stripe.client.paymentIntents.retrieve(
+        const paymentIntent = await stripe.client.paymentIntents.retrieve(
           payment.stripePaymentIntentId
         );
         clientSecret = paymentIntent.client_secret;
       } else if (payment.stripeSubscriptionId) {
-        const subscription = await ctx.stripe.client.subscriptions.retrieve(
+        const subscription = await stripe.client.subscriptions.retrieve(
           payment.stripeSubscriptionId,
           { expand: ['latest_invoice.payment_intent'] }
         );
@@ -156,20 +153,14 @@ export const paymentRouter = router({
   handleWebhook: publicProcedure
     .input(WebhookSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.smtp) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'SMTP client not configured',
-        });
-      }
-
       try {
-        const event = await ctx.stripe.constructEvent(input.body, input.signature);
+        const [stripe, smtp] = await Promise.all([ctx.getStripe(), ctx.getSmtp()]);
+        const event = await stripe.constructEvent(input.body, input.signature);
 
         await paymentService.handleWebhook(
           ctx.db,
           ctx.storage,
-          ctx.smtp,
+          smtp,
           ctx.env,
           event
         );

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
-    "./modules/docuseal/service": "./src/modules/docuseal/service.ts"
+    "./modules/docuseal/service": "./src/modules/docuseal/service.ts",
+    "./settings": "./src/modules/settings/service.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -15,6 +16,8 @@
     "@repo/admin": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/smtp": "workspace:*",
+    "@repo/stripe": "workspace:*",
     "@trpc/server": "^11.9.0",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",

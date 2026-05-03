@@ -3,16 +3,13 @@ import { prisma } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
 import { type ServerEnv } from '@repo/env';
 import { StorageService } from '@repo/storage';
-import { StripeService } from '@repo/stripe';
-import { SMTPClient } from '@repo/smtp';
 import type { Logger } from '@repo/logger';
 import { DocuSealService } from './modules/docuseal/service';
+import { getSmtpClient, getStripeService } from './modules/settings/service';
 
 export interface CreateContextOptions extends FetchCreateContextFnOptions {
   authManager: AuthManager;
   storage: StorageService;
-  stripe: StripeService;
-  smtp?: SMTPClient;
   docuseal: DocuSealService;
   env: ServerEnv;
   logger: Logger;
@@ -22,8 +19,6 @@ export const createContext = async ({
   req,
   authManager,
   storage,
-  stripe,
-  smtp,
   docuseal,
   env,
   logger,
@@ -35,16 +30,21 @@ export const createContext = async ({
   const ipAddress =
     req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || undefined;
   const userAgent = req.headers.get('user-agent') || undefined;
+  const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
+  const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host');
+  const origin = req.headers.get('origin');
+  const appOrigin = origin || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : '');
 
   return {
     user,
     db: prisma,
     auth: authManager,
     storage,
-    stripe,
-    smtp,
+    getStripe: () => getStripeService(prisma),
+    getSmtp: () => getSmtpClient(prisma),
     docuseal,
     env,
+    appOrigin,
     ipAddress,
     userAgent,
     log: contextLogger,

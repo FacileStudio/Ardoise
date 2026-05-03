@@ -9,15 +9,13 @@ const isBuilding = building;
 function getEnv() {
   if (isBrowser || isBuilding) {
     return {
-      API_URL: import.meta.env.VITE_API_URL,
-      STRIPE_PUBLISHABLE_KEY: import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY,
+      API_URL: import.meta.env.VITE_API_URL || undefined,
       NODE_ENV: import.meta.env.MODE || 'development',
     };
   }
 
   return {
-    API_URL: process.env.VITE_API_URL || import.meta.env.VITE_API_URL || '',
-    STRIPE_PUBLISHABLE_KEY: process.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+    API_URL: process.env.VITE_API_URL || import.meta.env.VITE_API_URL || undefined,
     NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
   };
 }
@@ -38,10 +36,7 @@ try {
     console.error(error.message);
   }
 
-  console.error('\nRequired environment variables:');
-  console.error('  - VITE_API_URL: Backend API URL');
-  console.error('  - PUBLIC_STRIPE_PUBLISHABLE_KEY: Stripe publishable key (optional)');
-  console.error('\nThese must be set as build arguments in Railway.\n');
+  console.error('\nVITE_API_URL is optional. When omitted, the app calls /trpc on the current origin.\n');
 
   throw error;
 }

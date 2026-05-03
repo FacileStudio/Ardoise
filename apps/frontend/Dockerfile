@@ -83,11 +83,6 @@ COPY packages/typst ./packages/typst
 COPY packages/ui ./packages/ui
 COPY packages/utils ./packages/utils
 
-ARG VITE_API_URL
-ARG PUBLIC_STRIPE_PUBLISHABLE_KEY
-ENV VITE_API_URL=$VITE_API_URL
-ENV PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY
-
 RUN cd apps/frontend && bun --bun run build
 
 FROM oven/bun:1.3.7-alpine AS runner
@@ -95,11 +90,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-
-ARG VITE_API_URL
-ARG PUBLIC_STRIPE_PUBLISHABLE_KEY
-ENV VITE_API_URL=$VITE_API_URL
-ENV PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 frontend

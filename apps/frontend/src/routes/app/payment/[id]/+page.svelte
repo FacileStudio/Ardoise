@@ -4,7 +4,6 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { trpc } from '$lib/trpc';
-  import env from '$lib/env';
   import { Card, Button, Badge, Spinner } from '@repo/ui';
   import { loadStripe, type Stripe, type StripeElements } from '@stripe/stripe-js';
   import 'iconify-icon';
@@ -55,6 +54,7 @@
     iban?: string;
     bic?: string;
     logoUrl?: string;
+    stripePublishableKey?: string;
   }
 
   let paymentId = '';
@@ -86,9 +86,9 @@
       settings = settingsData;
 
       if (payment.status === 'PENDING') {
-        if (!env.STRIPE_PUBLISHABLE_KEY) {
+        if (!settings?.stripePublishableKey) {
           error = 'Configuration Stripe manquante. Veuillez contacter le support.';
-          console.error('STRIPE_PUBLISHABLE_KEY not configured');
+          console.error('Stripe publishable key not configured');
         } else {
           await initializeStripe();
         }
@@ -104,7 +104,7 @@
     try {
       const secretData = await trpc.payment.getClientSecret.query({ id: paymentId });
       clientSecret = secretData.clientSecret;
-      stripe = await loadStripe(env.STRIPE_PUBLISHABLE_KEY || '');
+      stripe = await loadStripe(settings?.stripePublishableKey || '');
 
       if (!stripe) {
         throw new Error('Failed to load Stripe');

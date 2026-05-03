@@ -6,8 +6,6 @@ export const trpcHandler =
   ({
     authManager,
     storage,
-    stripe,
-    smtp,
     docuseal,
     env,
   }: Omit<CreateContextOptions, 'req' | 'resHeaders' | 'info' | 'logger'>) =>
@@ -21,8 +19,6 @@ export const trpcHandler =
           req: c.req.raw,
           authManager,
           storage,
-          stripe,
-          smtp,
           docuseal,
           env,
           logger,

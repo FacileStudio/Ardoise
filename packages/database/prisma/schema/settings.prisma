@@ -10,6 +10,16 @@ model Settings {
   companyEmail String?
   companyPhone String?
 
+  stripeSecretKey String?
+  stripeWebhookSecret String?
+  stripePublishableKey String?
+
+  smtpHost String?
+  smtpPort Int?
+  smtpUser String?
+  smtpPass String?
+  smtpFrom String?
+
   bankName String?
   iban String?
   bic String?

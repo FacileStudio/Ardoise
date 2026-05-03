@@ -88,6 +88,7 @@ export const paymentService = {
     stripe: StripeService,
     smtpClient: SMTPClient,
     env: ServerEnv,
+    appOrigin: string,
     data: CreatePaymentInput
   ): Promise<Payment> => {
     const client = await db.client.findUnique({
@@ -236,7 +237,7 @@ export const paymentService = {
       const emailTemplates = new EmailTemplates(smtpClient);
       await emailTemplates.sendPaymentNotification({
         clientEmail: client.user.email,
-        paymentLink: `${env.FRONTEND_URL}/app/payment/${payment.id}`,
+        paymentLink: `${appOrigin}/app/payment/${payment.id}`,
         amount: Number(payment.totalWithFees),
         dueDate: payment.dueDate,
         clientName: `${client.user.firstName} ${client.user.lastName}`,
@@ -408,11 +409,11 @@ export const paymentService = {
       clientCity: payment.client.billingCity,
       clientCountry: payment.client.billingCountry,
       clientSiret: payment.client.siret || '',
-      providerName: settings.companyName || env.COMPANY_NAME,
+      providerName: settings.companyName || '',
       providerAddress: settings.companyAddress || '',
       providerCity: settings.companyCity || '',
       providerSiret: settings.companySiret || '',
-      providerEmail: settings.companyEmail || env.COMPANY_CONTACT_EMAIL,
+      providerEmail: settings.companyEmail || '',
       providerPhone: settings.companyPhone || '',
       items: [
         {

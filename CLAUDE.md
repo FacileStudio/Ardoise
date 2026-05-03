@@ -213,49 +213,38 @@ The backend (`apps/backend/src/index.ts`) initializes:
 ### Environment Variables
 
 Environment schemas are defined in `packages/env/src/index.ts`:
-- `serverEnvSchema`: Backend-only variables (JWT secrets, Stripe keys, MinIO credentials)
-- `publicEnvSchema`: Frontend-safe variables (API URLs)
+- `serverEnvSchema`: Backend-only runtime variables (JWT secrets, MinIO credentials, admin bootstrap)
+- `publicEnvSchema`: Frontend-safe optional variables (API URL override)
 
 Each app validates its environment on startup via `check-env` script using Zod.
 
 **Required backend variables:**
 - `DATABASE_URL`: PostgreSQL connection string (e.g., `postgresql://fangafunk@localhost:5432/charles`)
 - `ENCRYPTION_SECRET`: JWT encryption key (32+ characters)
-- `STRIPE_SECRET_KEY`: Stripe API key (must start with `sk_`)
-- `STRIPE_WEBHOOK_SECRET`: Stripe webhook secret (must start with `whsec_`)
-- `PUBLIC_STRIPE_PUBLISHABLE_KEY`: Stripe publishable key (must start with `pk_`)
 - `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_BUCKET_NAME`, `MINIO_PUBLIC_URL`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
-- `COMPANY_NAME`: Company name for documents (e.g., `Facile Studio`)
-- `COMPANY_CONTACT_EMAIL`: Contact email for documents (e.g., `contact@facile.studio`)
 - `ADMIN_EMAIL`: Default admin email (e.g., `admin@facile.studio`)
 - `ADMIN_PASSWORD`: Default admin password (minimum 8 characters)
 - `ADMIN_FIRST_NAME`: Default admin first name
 - `ADMIN_LAST_NAME`: Default admin last name
-- `FRONTEND_URL`: Frontend URL for CORS (e.g., `http://localhost:5173`)
 - `TRUSTED_ORIGINS`: Comma-separated allowed origins (e.g., `http://localhost:5173,http://localhost:3001,http://localhost:3002`)
 - `PORT`: Backend server port (default: 3001)
+
+Stripe, SMTP, and company settings live in the backoffice settings screen, not env.
 
 **Optional backend variables:**
 - `DOCUSEAL_API_URL`: DocuSeal instance URL (e.g., `https://docuseal.example.com/api`)
 - `DOCUSEAL_API_KEY`: DocuSeal API key for document signing
 - `LOGO_PATH`: Path to company logo for PDFs
 - `DISCORD_WEBHOOK_URL`: Discord webhook for notifications
-- `LOG_LEVEL`: Logging level (debug, info, warn, error)
-- `LOGTAIL_TOKEN`: Logtail token for remote logging
 
-**Required frontend variables:**
+**Frontend variables:**
 - `PORT`: Frontend server port (default: 5173)
-- `VITE_API_URL`: Backend API URL (e.g., `http://localhost:3001`)
-- `PUBLIC_STRIPE_PUBLISHABLE_KEY`: Stripe publishable key (must start with `pk_`)
-  - **IMPORTANT**: This variable MUST be available at build time for SvelteKit
-  - In Railway: Set in Variables tab, then trigger a rebuild
-  - In Docker: Pass as `--build-arg PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...`
+- `VITE_API_URL`: Optional backend API URL override (defaults to `/trpc` on current origin)
 - `NODE_ENV`: Environment (development/production)
 
-**Required backoffice variables:**
+**Backoffice variables:**
 - `PORT`: Backoffice server port (default: 3002)
-- `VITE_API_URL`: Backend API URL (e.g., `http://localhost:3001`)
+- `VITE_API_URL`: Optional backend API URL override (defaults to `/trpc` on current origin)
 - `NODE_ENV`: Environment (development/production)
 
 See `apps/backend/.env.example` and `apps/frontend/.env` for complete reference.
@@ -331,7 +320,7 @@ Stripe is integrated for client payments in Charles:
 - `packages/stripe`: Service wrapper around Stripe SDK
 - `packages/trpc/src/modules/payment`: Payment creation, status tracking, Stripe checkout
 - `apps/backend/src/handlers/stripe.ts`: Webhook handler for payment status updates
-- Webhook endpoint: `POST /webhook` (validates signature with `STRIPE_WEBHOOK_SECRET`)
+- Webhook endpoint: `POST /webhook` (validates signature with the webhook secret stored in settings)
 
 **Payment flow:**
 1. Admin creates payment in backoffice via `payment.create.mutate()`
@@ -343,10 +332,7 @@ Stripe is integrated for client payments in Charles:
 7. Stripe webhook updates payment status to PAID
 8. Receipt becomes available for download
 
-**Environment variables:**
-- `STRIPE_SECRET_KEY`: Stripe API key (must start with `sk_`)
-- `STRIPE_WEBHOOK_SECRET`: Webhook signature secret (must start with `whsec_`)
-- `PUBLIC_STRIPE_PUBLISHABLE_KEY`: Client-side publishable key (must start with `pk_`)
+Stripe keys are configured in backoffice settings.
 
 ### Storage (S3/MinIO)
 
@@ -388,13 +374,7 @@ Email notifications are sent automatically when payments are created:
 3. Client receives email with payment link and details
 4. Email includes company logo and branding
 
-**Environment variables:**
-- `SMTP_HOST`: SMTP server hostname
-- `SMTP_PORT`: SMTP server port (usually 587 or 465)
-- `SMTP_USER`: SMTP username
-- `SMTP_PASSWORD`: SMTP password
-- `SMTP_FROM_EMAIL`: Sender email address
-- `SMTP_FROM_NAME`: Sender display name
+SMTP settings are configured in backoffice settings.
 
 ### Internationalization (i18n)
 
@@ -581,39 +561,18 @@ This ensures Prisma client is generated before builds/dev runs.
 **Frontend deployment requirements:**
 
 1. **Environment Variables** - Set these in Railway's Variables tab:
-   - `VITE_API_URL` - Your backend API URL
-   - `PUBLIC_STRIPE_PUBLISHABLE_KEY` - Your Stripe publishable key (pk_test_ or pk_live_)
+   - `VITE_API_URL` only when the API is not served from the same origin
    - `NODE_ENV=production`
 
-2. **Important**: `PUBLIC_STRIPE_PUBLISHABLE_KEY` must be available at **build time**:
-   - Railway passes environment variables to Docker build via `ARG` instructions
-   - The frontend Dockerfile properly accepts `PUBLIC_STRIPE_PUBLISHABLE_KEY` as a build argument
-   - The build script explicitly passes the variable: `PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY vite build`
-   - If you add/change this variable, trigger a new deployment
-
-3. **Verify deployment**:
-   - Check build logs for `PUBLIC_STRIPE_PUBLISHABLE_KEY` references during the build phase
-   - Look for: `ARG PUBLIC_STRIPE_PUBLISHABLE_KEY` in the Docker build output
-   - Open browser console on your site
-   - If you see "STRIPE_PUBLISHABLE_KEY not configured", the variable wasn't available at build time
-   - Solution: Verify the variable is set in Railway Variables tab, then redeploy
+2. **Verify deployment**:
+   - Configure Stripe, SMTP, and company settings in the backoffice after first admin login
+   - If API calls hit the wrong host, set `VITE_API_URL` explicitly
 
 **Backend deployment requirements:**
 
 All backend environment variables (see "Environment Variables" section above) must be set in Railway's Variables tab. The backend uses runtime environment variables, so no rebuild is needed when changing them.
 
 ## Common Issues & Troubleshooting
-
-### "STRIPE_PUBLISHABLE_KEY not configured" in Production
-
-**Cause**: The `PUBLIC_STRIPE_PUBLISHABLE_KEY` environment variable wasn't available during the SvelteKit build process.
-
-**Fix**:
-1. Go to Railway → Frontend service → Variables tab
-2. Verify `PUBLIC_STRIPE_PUBLISHABLE_KEY` is set with a valid Stripe key (pk_test_ or pk_live_)
-3. Go to Settings → Deploy → Click "Redeploy"
-4. Monitor build logs to confirm the variable is present during build
-5. Once deployed, refresh your payment page and check browser console
 
 ### "Buffer is not defined" in Browser
 
@@ -651,11 +610,11 @@ cd packages/database && DATABASE_URL="postgresql://fangafunk@localhost:5432/char
 
 ### Frontend Can't Connect to Backend
 
-**Cause**: Backend not running or incorrect `VITE_API_URL`.
+**Cause**: Backend not running, missing same-origin proxy, or incorrect `VITE_API_URL`.
 
 **Fix**:
 1. Ensure backend is running: `just backend` or `cd apps/backend && bun run dev`
-2. Check `VITE_API_URL` in `apps/frontend/.env` matches backend URL (default: `http://localhost:3001`)
+2. If frontend/backoffice do not proxy `/trpc`, set `VITE_API_URL` to the backend URL (default local backend: `http://localhost:3001`)
 3. Verify CORS settings in backend: `TRUSTED_ORIGINS` should include frontend URL
 
 ### Prisma Client Not Generated

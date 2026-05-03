@@ -3,8 +3,6 @@ import { loggerMiddleware } from './middleware/logger.middleware';
 import env from './lib/env';
 import { AuthManager } from '@repo/auth';
 import { StorageService } from '@repo/storage';
-import { StripeService } from '@repo/stripe';
-import { SMTPClient } from '@repo/smtp';
 import { DocuSealService } from '@repo/trpc';
 import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
@@ -45,30 +43,17 @@ const storage = new StorageService({
   bucket: env.MINIO_BUCKET_NAME,
 });
 
-const stripe = new StripeService({
-  apiKey: env.STRIPE_SECRET_KEY,
-  webhookSecret: env.STRIPE_WEBHOOK_SECRET,
-});
-
-const smtp = new SMTPClient({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  user: env.SMTP_USER,
-  pass: env.SMTP_PASS,
-  from: env.SMTP_FROM,
-});
-
 const docuseal = new DocuSealService(env.DOCUSEAL_API_URL, env.DOCUSEAL_API_KEY);
 
 app.use('*', corsHandler(env.TRUSTED_ORIGINS));
 app.use('*', loggerMiddleware);
 
-app.post('/webhook', createStripeWebhookHandler(stripe, storage, smtp, env));
+app.post('/webhook', createStripeWebhookHandler(storage, env));
 
 app.get('/openapi.json', openApiHandler);
 
 app.get('/version', (c) => c.json({ version: VERSION }));
-app.get('/health', createHealthCheckHandler({ storage, stripe }));
+app.get('/health', createHealthCheckHandler({ storage }));
 app.get('/health/live', createLivenessHandler());
 app.get('/health/ready', createReadinessHandler());
 
@@ -77,8 +62,6 @@ app.all(
   trpcHandler({
     authManager,
     storage,
-    stripe,
-    smtp,
     docuseal,
     env,
   })

@@ -45,29 +45,16 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/charles
       ENCRYPTION_SECRET: ${ENCRYPTION_SECRET}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      PUBLIC_STRIPE_PUBLISHABLE_KEY: ${PUBLIC_STRIPE_PUBLISHABLE_KEY}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-Admin}
+      ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-User}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadminpassword
       MINIO_BUCKET_NAME: charles-uploads
       MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      SMTP_FROM: ${SMTP_FROM}
-      COMPANY_NAME: ${COMPANY_NAME:-Facile Studio}
-      COMPANY_ADDRESS: ${COMPANY_ADDRESS}
-      COMPANY_CITY: ${COMPANY_CITY}
-      COMPANY_SIRET: ${COMPANY_SIRET}
-      COMPANY_EMAIL: ${COMPANY_EMAIL}
-      COMPANY_PHONE: ${COMPANY_PHONE}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      LOGTAIL_TOKEN: ${LOGTAIL_TOKEN:-}
     expose:
       - "3001"
     depends_on:
@@ -82,9 +69,6 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
       network: host
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/trpc}
-        PUBLIC_STRIPE_PUBLISHABLE_KEY: ${PUBLIC_STRIPE_PUBLISHABLE_KEY}
     container_name: charles-frontend
     environment:
       NODE_ENV: production
@@ -100,8 +84,6 @@ services:
       context: .
       dockerfile: apps/backoffice/Dockerfile
       network: host
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/trpc}
     container_name: charles-backoffice
     environment:
       NODE_ENV: production

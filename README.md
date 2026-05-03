@@ -102,32 +102,15 @@ Edit `apps/backend/.env` with your credentials:
 ```env
 DATABASE_URL=postgresql://fangafunk@localhost:5432/charles
 ENCRYPTION_SECRET=your-secret-key-min-32-chars
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 MINIO_ENDPOINT=http://127.0.0.1:9000
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=minioadminpassword
 MINIO_BUCKET_NAME=charles-uploads
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM=your-email@gmail.com
-COMPANY_NAME=Facile Studio
-COMPANY_ADDRESS=123 Example Street
-COMPANY_CITY=75001 Paris, France
-COMPANY_SIRET=123 456 789 00010
-COMPANY_EMAIL=contact@facile.studio
-COMPANY_PHONE=+33 1 23 45 67 89
 ```
 
-Edit `apps/frontend/.env`:
-
-```env
-VITE_API_URL=http://localhost:3001/trpc
-PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-```
+Configure Stripe, SMTP, and company details in the backoffice settings screen.
+`VITE_API_URL` is optional; when omitted, frontend and backoffice call `/trpc`
+on the current origin.
 
 ### Database Setup
 
@@ -259,13 +242,7 @@ bun run start
 Required environment variables:
 - `DATABASE_URL`
 - `ENCRYPTION_SECRET`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `MINIO_*` variables
-- `SMTP_*` variables
-- `COMPANY_*` variables
-- `FRONTEND_URL`
 - `TRUSTED_ORIGINS`
 
 #### Frontend & Backoffice
@@ -276,9 +253,8 @@ bun run build
 node build
 ```
 
-Build-time environment variables:
-- `VITE_API_URL`
-- `PUBLIC_STRIPE_PUBLISHABLE_KEY`
+Optional build-time environment variables:
+- `VITE_API_URL` when the API is not served from the same origin
 
 ## Architecture
 
