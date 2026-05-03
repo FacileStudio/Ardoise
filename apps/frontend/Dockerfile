@@ -10,7 +10,7 @@ ARG PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV VITE_API_URL=$VITE_API_URL
 ENV PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLIC_STRIPE_PUBLISHABLE_KEY
 
-RUN bun install --no-frozen-lockfile
+RUN bun install --frozen-lockfile --network-concurrency 8
 RUN cd apps/frontend && bun run build
 
 FROM base AS runner

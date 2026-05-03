@@ -8,7 +8,7 @@ COPY . .
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN bun install --no-frozen-lockfile
+RUN bun install --frozen-lockfile --network-concurrency 8
 RUN cd apps/backoffice && bun run build
 
 FROM base AS runner

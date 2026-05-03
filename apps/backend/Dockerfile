@@ -8,7 +8,7 @@ FROM base AS builder
 WORKDIR /app
 
 # Copy dependency files first to leverage Docker cache
-COPY package.json bun.lockb* turbo.json ./
+COPY package.json bun.lock turbo.json ./
 COPY packages/database/package.json ./packages/database/
 COPY apps/backend/package.json ./apps/backend/
 
@@ -27,7 +27,7 @@ ENV ADMIN_PASSWORD=$ADMIN_PASSWORD
 ENV ADMIN_FIRST_NAME=$ADMIN_FIRST_NAME
 ENV ADMIN_LAST_NAME=$ADMIN_LAST_NAME
 
-RUN bun install --no-frozen-lockfile
+RUN bun install --frozen-lockfile --network-concurrency 8
 RUN cd packages/database && bun run db:generate
 
 FROM base AS runner
