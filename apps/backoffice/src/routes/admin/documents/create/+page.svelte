@@ -37,6 +37,7 @@
 	let generating = $state(false);
 	let showPreview = $state(false);
 	let previewPdf = $state('');
+	let formMessage = $state('');
 
 	let docTypes: Array<{ value: string; label: string }> = $state([]);
 	let clients: Client[] = $state([]);
@@ -84,6 +85,17 @@
 	let newProvider = $state({ id: '', role: '', amount: 0 });
 	let newFeature = $state({ title: '', desc: '' });
 	let newPaymentProvider = $state({ id: '', amount_to_pay: 0 });
+
+	const providerFieldLabels = {
+		address: 'adresse',
+		city: 'ville',
+		siret: 'SIRET',
+		email: 'email',
+		phone: 'téléphone',
+		bankName: 'nom de la banque',
+		iban: 'IBAN',
+		bic: 'BIC',
+	} as const;
 
 	onMount(async () => {
 		await Promise.all([loadDocumentTypes(), loadClients(), loadProviders()]);
@@ -151,7 +163,45 @@
 		}
 	}
 
+	function isBlank(value: string | null | undefined) {
+		return !value || value.trim() === '';
+	}
+
+	function isValidEmail(value: string | null | undefined) {
+		if (isBlank(value)) return false;
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value!.trim());
+	}
+
+	function getRequiredProviderFields(type: DocType) {
+		const commonFields = ['address', 'city', 'siret', 'email', 'phone'] as const;
+		if (type === 'prestation' || type === 'maintenance') {
+			return [...commonFields, 'bankName', 'iban', 'bic'] as const;
+		}
+		return commonFields;
+	}
+
+	function getMissingProviderFields(provider: Provider | undefined, type: DocType) {
+		if (!provider) return [];
+
+		return getRequiredProviderFields(type).filter((field) => {
+			if (field === 'email') {
+				return !isValidEmail(provider.email);
+			}
+			return isBlank(provider[field]);
+		});
+	}
+
+	function getProviderValidationMessage(provider: Provider | undefined, type: DocType) {
+		const missingFields = getMissingProviderFields(provider, type);
+		if (missingFields.length === 0) return null;
+
+		const labels = missingFields.map((field) => providerFieldLabels[field]).join(', ');
+		return `Prestataire incomplet: renseignez ${labels} dans la fiche prestataire avant de générer ce document`;
+	}
+
 	function validateForm(): string | null {
+		formMessage = '';
+
 		if (!selectedClientId) {
 			return 'Veuillez sélectionner un client';
 		}
@@ -195,6 +245,11 @@
 			return 'Veuillez sélectionner un prestataire';
 		}
 
+		const providerValidationMessage = getProviderValidationMessage(selectedProvider, formData.type as DocType);
+		if (providerValidationMessage) {
+			return providerValidationMessage;
+		}
+
 		if (formData.type === 'prestation' || formData.type === 'maintenance') {
 			if (!formData.items || formData.items.length === 0) {
 				return 'Veuillez ajouter au moins un item à la facture';
@@ -222,11 +277,13 @@
 	async function handlePreview() {
 		const validationError = validateForm();
 		if (validationError) {
+			formMessage = validationError;
 			toast.push(validationError, 'error');
 			return;
 		}
 
 		try {
+			formMessage = '';
 			generating = true;
 			let result;
 
@@ -312,6 +369,7 @@
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to preview document');
 			const message = err.message || 'Erreur lors de la prévisualisation';
+			formMessage = message;
 			toast.push(message, 'error');
 		} finally {
 			generating = false;
@@ -321,11 +379,13 @@
 	async function handleCreate() {
 		const validationError = validateForm();
 		if (validationError) {
+			formMessage = validationError;
 			toast.push(validationError, 'error');
 			return;
 		}
 
 		try {
+			formMessage = '';
 			generating = true;
 			let result;
 
@@ -419,6 +479,7 @@
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create document');
 			const message = err.message || 'Erreur lors de la création';
+			formMessage = message;
 			toast.push(message, 'error');
 		} finally {
 			generating = false;
@@ -508,6 +569,7 @@
 	);
 	const totalWithRailway = $derived(subtotal + (formData.railway_estimate || 0));
 	const selectedProvider = $derived(providers.find(p => p.id === selectedProviderId));
+	const selectedProviderMissingFields = $derived(getMissingProviderFields(selectedProvider, formData.type as DocType));
 	const tvaRate = $derived(selectedProvider?.tvaRate || 20);
 	const tva = $derived(totalWithRailway * (tvaRate / 100));
 	const total = $derived(totalWithRailway + tva);
@@ -534,6 +596,12 @@
 
 		<!-- Main Form -->
 		<div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-8">
+			{#if formMessage}
+				<div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+					{formMessage}
+				</div>
+			{/if}
+
 			<!-- Type de document -->
 			<div class="space-y-4">
 				<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
@@ -709,15 +777,25 @@
 					{#if selectedProviderId}
 						<div
 							transition:fly={{ y: -10, duration: 200 }}
-							class="p-4 bg-purple-50 border-2 border-purple-200 rounded-xl flex items-center gap-3"
+							class="p-4 rounded-xl border-2 flex items-start gap-3 {selectedProviderMissingFields.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-purple-50 border-purple-200'}"
 						>
-							<iconify-icon icon="solar:check-circle-bold" width="24" class="text-purple-600"
+							<iconify-icon
+								icon={selectedProviderMissingFields.length > 0 ? 'solar:danger-triangle-bold' : 'solar:check-circle-bold'}
+								width="24"
+								class={selectedProviderMissingFields.length > 0 ? 'text-amber-600' : 'text-purple-600'}
 							></iconify-icon>
-							<div>
-								<div class="font-black text-purple-900">{formData.provider_name}</div>
-								<div class="text-sm text-purple-700">
-									TVA: {tvaRate}% • {formData.provider_email}
+							<div class="min-w-0">
+								<div class={selectedProviderMissingFields.length > 0 ? 'font-black text-amber-900' : 'font-black text-purple-900'}>
+									{formData.provider_name}
 								</div>
+								<div class={selectedProviderMissingFields.length > 0 ? 'text-sm text-amber-700' : 'text-sm text-purple-700'}>
+									TVA: {tvaRate}% • {formData.provider_email || 'email manquant'}
+								</div>
+								{#if selectedProviderMissingFields.length > 0}
+									<p class="mt-2 text-sm font-bold text-amber-800">
+										Champs manquants: {selectedProviderMissingFields.map((field) => providerFieldLabels[field]).join(', ')}
+									</p>
+								{/if}
 							</div>
 						</div>
 					{/if}

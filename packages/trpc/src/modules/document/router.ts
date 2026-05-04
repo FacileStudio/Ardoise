@@ -171,12 +171,18 @@ export const documentRouter = router({
 
       try {
         let logoUrl: string | undefined;
+        let bankName = '';
+        let iban = '';
+        let bic = '';
         if (document.providerId) {
           const provider = await ctx.db.provider.findUnique({
             where: { id: document.providerId },
-            select: { logoUrl: true },
+            select: { logoUrl: true, bankName: true, iban: true, bic: true },
           });
           logoUrl = provider?.logoUrl || undefined;
+          bankName = provider?.bankName || '';
+          iban = provider?.iban || '';
+          bic = provider?.bic || '';
         }
 
         const documentData = {
@@ -198,9 +204,9 @@ export const documentRouter = router({
           provider_city: document.providerCity || '',
           provider_email: document.providerEmail || '',
           provider_phone: document.providerPhone || '',
-          bank_name: '',
-          iban: '',
-          bic: '',
+          bank_name: bankName,
+          iban,
+          bic,
           items: document.items as any[],
           tva_rate: Number(document.tvaRate || 20),
           railway_estimate: Number(document.railwayEstimate || 0),

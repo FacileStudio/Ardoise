@@ -3,8 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Spinner, Button, Input } from '@repo/ui';
-	import { uploadFileSimple } from '@repo/storage-client';
+	import { Spinner, Button, Input, ImageUpload } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
@@ -12,9 +11,8 @@
 	let providerId = $derived($page.params.id);
 	let pageLoading = $state(true);
 	let submitting = $state(false);
-	let uploadingLogo = $state(false);
-	let previewLogoUrl = $state('');
-	let fileInput = $state<HTMLInputElement | null>(null);
+	let formMessage = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 
 	let formData = $state({
 		name: '',
@@ -36,6 +34,40 @@
 		await fetchProvider();
 	});
 
+	async function getPresignedUrl(filename: string, folder: string) {
+		const result = await trpc.media.getUploadUrl.mutate({
+			fileName: filename,
+			fileType: 'image/*'
+		});
+		return result.uploadUrl;
+	}
+
+	function getFieldError(field: string): string {
+		return fieldErrors[field] || '';
+	}
+
+	function clearMessages() {
+		formMessage = '';
+		fieldErrors = {};
+	}
+
+	function normalizePayload() {
+		const optionalFields = ['legalName', 'siret', 'address', 'city', 'email', 'phone', 'bankName', 'iban', 'bic', 'logoUrl'] as const;
+		const payload = {
+			...formData,
+			name: formData.name.trim(),
+			country: formData.country.trim() || 'France',
+			tvaRate: Number(formData.tvaRate),
+		} as Record<string, string | number>;
+
+		for (const field of optionalFields) {
+			const value = String(payload[field] || '').trim();
+			payload[field] = value === '' ? undefined : value;
+		}
+
+		return payload;
+	}
+
 	async function fetchProvider() {
 		pageLoading = true;
 		try {
@@ -53,7 +85,6 @@
 			formData.bic = provider.bic || '';
 			formData.logoUrl = provider.logoUrl || '';
 			formData.tvaRate = provider.tvaRate;
-			await loadLogoPreview();
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch provider');
 			toast.push('Erreur lors du chargement du prestataire', 'error');
@@ -62,67 +93,60 @@
 		}
 	}
 
-	async function loadLogoPreview() {
-		if (!formData.logoUrl) {
-			previewLogoUrl = '';
-			return;
+	function validateForm(): boolean {
+		const nextErrors: Record<string, string> = {};
+
+		if (!formData.name.trim()) nextErrors.name = 'Le nom du prestataire est requis';
+		if (Number(formData.tvaRate) < 0 || Number(formData.tvaRate) > 100) {
+			nextErrors.tvaRate = 'Le taux de TVA doit être entre 0 et 100';
 		}
 
-		if (formData.logoUrl.includes('storageapi.dev') || formData.logoUrl.includes('/storage/')) {
-			try {
-				const result = await trpc.media.getDownloadUrl.query({ url: formData.logoUrl });
-				previewLogoUrl = result.url;
-			} catch (err) {
-				logger.error({ err }, 'Failed to load logo preview');
-				previewLogoUrl = formData.logoUrl;
+		fieldErrors = nextErrors;
+		formMessage = Object.values(nextErrors)[0] || '';
+		return Object.keys(nextErrors).length === 0;
+	}
+
+	function applyServerErrors(err: any) {
+		const nextErrors: Record<string, string> = {};
+		let message = 'Erreur lors de la modification';
+
+		const zodErrors = err.data?.zodError?.fieldErrors || err.shape?.data?.zodError?.fieldErrors;
+		if (zodErrors) {
+			for (const [field, errors] of Object.entries(zodErrors)) {
+				if (Array.isArray(errors) && errors.length > 0) {
+					nextErrors[field] = String(errors[0]);
+				}
 			}
-		} else {
-			previewLogoUrl = formData.logoUrl;
+			message = Object.values(nextErrors)[0] || message;
+		} else if (err.message) {
+			try {
+				const parsed = JSON.parse(err.message);
+				if (Array.isArray(parsed) && parsed.length > 0) {
+					for (const issue of parsed) {
+						const field = Array.isArray(issue.path) ? issue.path[0] : undefined;
+						if (field && !nextErrors[String(field)] && issue.message) {
+							nextErrors[String(field)] = String(issue.message);
+						}
+					}
+					message = parsed[0]?.message || message;
+				} else {
+					message = err.message;
+				}
+			} catch {
+				message = err.message;
+			}
 		}
-	}
 
-	async function handleLogoUpload(e: Event) {
-		const file = (e.target as HTMLInputElement).files?.[0];
-		if (!file) return;
-
-		previewLogoUrl = URL.createObjectURL(file);
-		uploadingLogo = true;
-
-		try {
-			const presignedUrlResult = await trpc.media.getUploadUrl.mutate({
-				fileName: file.name,
-				fileType: 'image/*'
-			});
-			const finalUrl = await uploadFileSimple(file, presignedUrlResult.uploadUrl);
-
-			formData.logoUrl = finalUrl;
-			await loadLogoPreview();
-			toast.push('Logo envoyé!', 'success');
-		} catch (err) {
-			logger.error({ err }, 'Logo upload failed');
-			toast.push("Erreur lors de l'upload du logo", 'error');
-			previewLogoUrl = formData.logoUrl;
-		} finally {
-			uploadingLogo = false;
-		}
-	}
-
-	function removeLogo() {
-		formData.logoUrl = '';
-		previewLogoUrl = '';
-		if (fileInput) fileInput.value = '';
-	}
-
-	function validateForm(): string | null {
-		if (!formData.name.trim()) return 'Le nom est requis';
-		if (formData.tvaRate < 0 || formData.tvaRate > 100) return 'Le taux de TVA doit être entre 0 et 100';
-		return null;
+		fieldErrors = nextErrors;
+		formMessage = message;
+		return message;
 	}
 
 	async function handleUpdate() {
-		const validationError = validateForm();
-		if (validationError) {
-			toast.push(validationError, 'error');
+		clearMessages();
+
+		if (!validateForm()) {
+			toast.push(formMessage, 'error');
 			return;
 		}
 
@@ -130,35 +154,13 @@
 			submitting = true;
 			await trpc.provider.update.mutate({
 				id: providerId,
-				data: {
-					...formData,
-					tvaRate: Number(formData.tvaRate),
-				}
+				data: normalizePayload()
 			});
 			toast.push('Prestataire modifié avec succès!', 'success');
 			goto('/admin/prestataires');
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to update provider');
-
-			let message = 'Erreur lors de la modification';
-
-			if (err.data?.zodError?.fieldErrors) {
-				const fieldErrors = err.data.zodError.fieldErrors;
-				const firstError = Object.values(fieldErrors)[0];
-				if (Array.isArray(firstError) && firstError.length > 0) {
-					message = firstError[0] as string;
-				}
-			} else if (err.message) {
-				try {
-					const parsed = JSON.parse(err.message);
-					if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].message) {
-						message = parsed[0].message;
-					}
-				} catch {
-					message = err.message;
-				}
-			}
-
+			const message = applyServerErrors(err);
 			toast.push(message, 'error');
 		} finally {
 			submitting = false;
@@ -192,6 +194,12 @@
 
 			<!-- Main Form -->
 			<div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-8">
+				{#if formMessage}
+					<div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+						{formMessage}
+					</div>
+				{/if}
+
 				<!-- General Information -->
 				<div>
 					<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
@@ -203,9 +211,12 @@
 							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
-								Nom du prestataire *
+								Nom du prestataire <span class="text-rose-500">*</span>
 							</div>
-							<Input bind:value={formData.name} placeholder="Nom du prestataire" />
+							<Input bind:value={formData.name} placeholder="Nom du prestataire" error={!!getFieldError('name')} />
+							{#if getFieldError('name')}
+								<p class="mt-2 text-sm font-bold text-rose-600">{getFieldError('name')}</p>
+							{/if}
 						</div>
 
 						<div>
@@ -231,7 +242,7 @@
 								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:percent-bold" width="16" class="text-[#FEC129]"
 									></iconify-icon>
-									Taux de TVA (%) *
+									Taux de TVA (%) <span class="text-rose-500">*</span>
 								</div>
 								<input
 									type="number"
@@ -239,9 +250,12 @@
 									min="0"
 									max="100"
 									bind:value={formData.tvaRate}
-									class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+									class="w-full px-4 py-3 bg-white border rounded-xl outline-none focus:ring-2 transition-all {getFieldError('tvaRate') ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200' : 'border-slate-200 focus:border-[#FEC129] focus:ring-[#FEC129]/20'}"
 									placeholder="20"
 								/>
+								{#if getFieldError('tvaRate')}
+									<p class="mt-2 text-sm font-bold text-rose-600">{getFieldError('tvaRate')}</p>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -254,79 +268,16 @@
 						Logo
 					</h2>
 					<div class="bg-slate-50 rounded-xl p-6">
-						<div class="flex items-start gap-6">
-							<!-- Logo Preview -->
-							<div class="relative group">
-								<div class="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex items-center justify-center p-3 transition-all group-hover:border-[#FEC129]/50">
-									{#if previewLogoUrl}
-										<img
-											src={previewLogoUrl}
-											alt="Logo preview"
-											class="max-w-full max-h-full object-contain {uploadingLogo ? 'opacity-40 blur-sm' : ''}"
-										/>
-									{:else}
-										<div class="flex flex-col items-center justify-center text-slate-300">
-											<iconify-icon icon="solar:gallery-bold-duotone" width="32"></iconify-icon>
-											<p class="text-[8px] font-black uppercase mt-1">Aucun logo</p>
-										</div>
-									{/if}
-
-									{#if uploadingLogo}
-										<div class="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm">
-											<iconify-icon icon="line-md:loading-twotone-loop" width="24" class="text-[#FEC129]"></iconify-icon>
-										</div>
-									{/if}
-								</div>
-
-								{#if previewLogoUrl && !uploadingLogo}
-									<button
-										type="button"
-										onclick={removeLogo}
-										class="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-										title="Supprimer le logo"
-									>
-										<iconify-icon icon="solar:trash-bin-trash-bold" width="14"></iconify-icon>
-									</button>
-								{/if}
-							</div>
-
-							<!-- Upload Actions -->
-							<div class="flex-1 space-y-3">
-								<div>
-									<div class="block text-sm font-black text-slate-700 mb-2">
-										Télécharger un nouveau logo
-									</div>
-									<input
-										type="file"
-										bind:this={fileInput}
-										onchange={handleLogoUpload}
-										accept="image/*"
-										class="hidden"
-									/>
-									<button
-										type="button"
-										onclick={() => fileInput?.click()}
-										disabled={uploadingLogo}
-										class="px-4 py-2 bg-white border-2 border-slate-200 text-slate-700 rounded-lg font-bold text-sm hover:border-[#FEC129] hover:bg-[#FEC129]/5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-									>
-										<iconify-icon icon="solar:cloud-upload-bold" width="18"></iconify-icon>
-										<span>Choisir un fichier</span>
-									</button>
-								</div>
-
-								<div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
-									<p class="text-xs text-blue-700 flex items-start gap-2">
-										<iconify-icon icon="solar:info-circle-bold" width="14" class="mt-0.5 flex-shrink-0"></iconify-icon>
-										<span>
-											<span class="font-black">Recommandations:</span><br />
-											Format PNG ou SVG avec fond transparent<br />
-											Taille minimale: 512x512px<br />
-											Poids maximal: 5 MB
-										</span>
-									</p>
-								</div>
-							</div>
-						</div>
+						<ImageUpload
+							bind:value={formData.logoUrl}
+							label="Logo du prestataire"
+							{getPresignedUrl}
+							{trpc}
+						/>
+						<p class="text-xs text-slate-500 mt-3 ml-2">
+							<iconify-icon icon="solar:info-circle-bold" width="14" class="inline"></iconify-icon>
+							Format recommandé: PNG ou SVG avec fond transparent, 512x512px minimum
+						</p>
 					</div>
 				</div>
 
@@ -386,7 +337,11 @@
 									bind:value={formData.email}
 									type="email"
 									placeholder="contact@example.com"
+									error={!!getFieldError('email')}
 								/>
+								{#if getFieldError('email')}
+									<p class="mt-2 text-sm font-bold text-rose-600">{getFieldError('email')}</p>
+								{/if}
 							</div>
 
 							<div>

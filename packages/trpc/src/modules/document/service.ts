@@ -481,6 +481,36 @@ export function injectVariables(content: string, variables: Record<string, any>)
   return result;
 }
 
+function isBlank(value: string | null | undefined): boolean {
+  return !value || value.trim() === '';
+}
+
+function isValidEmail(value: string | null | undefined): boolean {
+  if (isBlank(value)) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value!.trim());
+}
+
+function getMissingProviderFields(data: DocumentData): string[] {
+  if (!data.providerId) return [];
+
+  const missingFields: string[] = [];
+  const requiresBanking = data.type === 'maintenance' || data.type.startsWith('prestation');
+
+  if (isBlank(data.provider_address)) missingFields.push('adresse');
+  if (isBlank(data.provider_city)) missingFields.push('ville');
+  if (isBlank(data.provider_siret)) missingFields.push('SIRET');
+  if (!isValidEmail(data.provider_email)) missingFields.push('email');
+  if (isBlank(data.provider_phone)) missingFields.push('téléphone');
+
+  if (requiresBanking) {
+    if (isBlank(data.bank_name)) missingFields.push('nom de la banque');
+    if (isBlank(data.iban)) missingFields.push('IBAN');
+    if (isBlank(data.bic)) missingFields.push('BIC');
+  }
+
+  return missingFields;
+}
+
 export async function generateDocument(
   data: DocumentData,
   logoPath?: string
@@ -520,6 +550,13 @@ export async function generateDocument(
 
   if (!template) {
     throw new Error(`Template not found for type: ${validated.type}`);
+  }
+
+  const missingProviderFields = getMissingProviderFields(validated);
+  if (missingProviderFields.length > 0) {
+    throw new Error(
+      `Prestataire incomplet: renseignez ${missingProviderFields.join(', ')} dans la fiche prestataire avant de générer ce document`
+    );
   }
 
   const templateData: Record<string, any> = {
