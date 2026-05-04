@@ -83,13 +83,13 @@ export const AdminPermissionScalarFieldEnumSchema = z.enum(['id','userId','entit
 
 export const AuditLogScalarFieldEnumSchema = z.enum(['id','userId','entity','entityId','action','changes','ipAddress','userAgent','createdAt']);
 
-export const ClientScalarFieldEnumSchema = z.enum(['id','userId','companyName','billingAddress','billingCity','billingCountry','siret','stripeCustomerId','createdAt','updatedAt']);
+export const ClientScalarFieldEnumSchema = z.enum(['id','userId','contactFirstName','contactLastName','contactEmail','companyName','billingAddress','billingCity','billingCountry','siret','stripeCustomerId','createdAt','updatedAt']);
 
 export const DocumentScalarFieldEnumSchema = z.enum(['id','createdAt','updatedAt','type','name','invoiceNumber','quoteNumber','contractRef','clientName','clientSiret','clientAddress','clientCity','clientCountry','providerId','providerName','providerLegal','providerSiret','providerAddress','providerCity','providerEmail','providerPhone','items','subtotal','tva','total','tvaRate','railwayEstimate','serviceData','pdfUrl','fileSize','createdBy']);
 
 export const MediaScalarFieldEnumSchema = z.enum(['id','url','key','mimeType','size','avatarUserId','coverUserId','createdAt']);
 
-export const PaymentScalarFieldEnumSchema = z.enum(['id','clientId','amount','stripeFee','totalWithFees','description','status','frequency','dueDate','paidAt','stripePaymentIntentId','stripeSubscriptionId','attachedFiles','receiptUrl','createdAt','updatedAt']);
+export const PaymentScalarFieldEnumSchema = z.enum(['id','clientId','amount','stripeFee','totalWithFees','description','status','frequency','collectionMethod','reference','dueDate','paidAt','stripePaymentIntentId','stripeSubscriptionId','attachedFiles','receiptUrl','createdAt','updatedAt']);
 
 export const PaymentDocumentScalarFieldEnumSchema = z.enum(['id','paymentId','documentId','attachedAt']);
 
@@ -97,7 +97,7 @@ export const ProviderScalarFieldEnumSchema = z.enum(['id','name','legalName','ad
 
 export const SessionScalarFieldEnumSchema = z.enum(['id','userId','token','expiresAt','ipAddress','userAgent','createdAt','updatedAt']);
 
-export const SettingsScalarFieldEnumSchema = z.enum(['id','companyName','companyLegal','companyAddress','companyCity','companyCountry','companySiret','companyEmail','companyPhone','bankName','iban','bic','logoUrl','tvaRate','nextInvoiceNumber','nextQuoteNumber','nextContractNumber','invoiceNumberFormat','quoteNumberFormat','contractNumberFormat','createdAt','updatedAt']);
+export const SettingsScalarFieldEnumSchema = z.enum(['id','companyName','companyLegal','companyAddress','companyCity','companyCountry','companySiret','companyEmail','companyPhone','stripeSecretKey','stripeWebhookSecret','stripePublishableKey','smtpHost','smtpPort','smtpUser','smtpPass','smtpFrom','docusealApiUrl','docusealApiKey','webhookUrl','webhookSecret','webhookEvents','bankName','iban','bic','logoUrl','tvaRate','nextInvoiceNumber','nextQuoteNumber','nextContractNumber','invoiceNumberFormat','quoteNumberFormat','contractNumberFormat','createdAt','updatedAt']);
 
 export const UserScalarFieldEnumSchema = z.enum(['id','email','firstName','lastName','password','emailVerified','role','status','isBanned','banReason','bannedAt','bannedBy','isSuspended','suspendedUntil','suspensionReason','lastLoginAt','lastLoginIp','createdAt','updatedAt']);
 
@@ -130,6 +130,10 @@ export type PaymentStatusType = `${z.infer<typeof PaymentStatusSchema>}`
 export const PaymentFrequencySchema = z.enum(['ONE_TIME','MONTHLY','YEARLY']);
 
 export type PaymentFrequencyType = `${z.infer<typeof PaymentFrequencySchema>}`
+
+export const PaymentCollectionMethodSchema = z.enum(['STRIPE','MANUAL']);
+
+export type PaymentCollectionMethodType = `${z.infer<typeof PaymentCollectionMethodSchema>}`
 
 export const UserRoleSchema = z.enum(['ADMIN','CLIENT']);
 
@@ -248,7 +252,10 @@ export const AuditLogWithRelationsSchema: z.ZodType<AuditLogWithRelations> = Aud
 
 export const ClientSchema = z.object({
   id: z.string(),
-  userId: z.string(),
+  userId: z.string().nullable(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -265,14 +272,14 @@ export type Client = z.infer<typeof ClientSchema>
 //------------------------------------------------------
 
 export type ClientRelations = {
-  user: UserWithRelations;
+  user?: UserWithRelations | null;
   payments: PaymentWithRelations[];
 };
 
 export type ClientWithRelations = z.infer<typeof ClientSchema> & ClientRelations
 
 export const ClientWithRelationsSchema: z.ZodType<ClientWithRelations> = ClientSchema.merge(z.object({
-  user: z.lazy(() => UserWithRelationsSchema),
+  user: z.lazy(() => UserWithRelationsSchema).nullable(),
   payments: z.lazy(() => PaymentWithRelationsSchema).array(),
 }))
 
@@ -374,12 +381,14 @@ export const MediaWithRelationsSchema: z.ZodType<MediaWithRelations> = MediaSche
 export const PaymentSchema = z.object({
   status: PaymentStatusSchema,
   frequency: PaymentFrequencySchema,
+  collectionMethod: PaymentCollectionMethodSchema,
   id: z.string(),
   clientId: z.string(),
   amount: z.instanceof(Prisma.Decimal, { message: "Field 'amount' must be a Decimal. Location: ['Models', 'Payment']"}),
   stripeFee: z.instanceof(Prisma.Decimal, { message: "Field 'stripeFee' must be a Decimal. Location: ['Models', 'Payment']"}),
   totalWithFees: z.instanceof(Prisma.Decimal, { message: "Field 'totalWithFees' must be a Decimal. Location: ['Models', 'Payment']"}),
   description: z.string(),
+  reference: z.string().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().nullable(),
   stripePaymentIntentId: z.string().nullable(),
@@ -517,6 +526,19 @@ export const SettingsSchema = z.object({
   companySiret: z.string().nullable(),
   companyEmail: z.string().nullable(),
   companyPhone: z.string().nullable(),
+  stripeSecretKey: z.string().nullable(),
+  stripeWebhookSecret: z.string().nullable(),
+  stripePublishableKey: z.string().nullable(),
+  smtpHost: z.string().nullable(),
+  smtpPort: z.number().nullable(),
+  smtpUser: z.string().nullable(),
+  smtpPass: z.string().nullable(),
+  smtpFrom: z.string().nullable(),
+  docusealApiUrl: z.string().nullable(),
+  docusealApiKey: z.string().nullable(),
+  webhookUrl: z.string().nullable(),
+  webhookSecret: z.string().nullable(),
+  webhookEvents: z.string().array(),
   bankName: z.string().nullable(),
   iban: z.string().nullable(),
   bic: z.string().nullable(),
@@ -712,6 +734,9 @@ export const ClientCountOutputTypeSelectSchema: z.ZodType<Prisma.ClientCountOutp
 export const ClientSelectSchema: z.ZodType<Prisma.ClientSelect> = z.object({
   id: z.boolean().optional(),
   userId: z.boolean().optional(),
+  contactFirstName: z.boolean().optional(),
+  contactLastName: z.boolean().optional(),
+  contactEmail: z.boolean().optional(),
   companyName: z.boolean().optional(),
   billingAddress: z.boolean().optional(),
   billingCity: z.boolean().optional(),
@@ -843,6 +868,8 @@ export const PaymentSelectSchema: z.ZodType<Prisma.PaymentSelect> = z.object({
   description: z.boolean().optional(),
   status: z.boolean().optional(),
   frequency: z.boolean().optional(),
+  collectionMethod: z.boolean().optional(),
+  reference: z.boolean().optional(),
   dueDate: z.boolean().optional(),
   paidAt: z.boolean().optional(),
   stripePaymentIntentId: z.boolean().optional(),
@@ -957,6 +984,19 @@ export const SettingsSelectSchema: z.ZodType<Prisma.SettingsSelect> = z.object({
   companySiret: z.boolean().optional(),
   companyEmail: z.boolean().optional(),
   companyPhone: z.boolean().optional(),
+  stripeSecretKey: z.boolean().optional(),
+  stripeWebhookSecret: z.boolean().optional(),
+  stripePublishableKey: z.boolean().optional(),
+  smtpHost: z.boolean().optional(),
+  smtpPort: z.boolean().optional(),
+  smtpUser: z.boolean().optional(),
+  smtpPass: z.boolean().optional(),
+  smtpFrom: z.boolean().optional(),
+  docusealApiUrl: z.boolean().optional(),
+  docusealApiKey: z.boolean().optional(),
+  webhookUrl: z.boolean().optional(),
+  webhookSecret: z.boolean().optional(),
+  webhookEvents: z.boolean().optional(),
   bankName: z.boolean().optional(),
   iban: z.boolean().optional(),
   bic: z.boolean().optional(),
@@ -1331,7 +1371,10 @@ export const ClientWhereInputSchema: z.ZodType<Prisma.ClientWhereInput> = z.obje
   OR: z.lazy(() => ClientWhereInputSchema).array().optional(),
   NOT: z.union([ z.lazy(() => ClientWhereInputSchema), z.lazy(() => ClientWhereInputSchema).array() ]).optional(),
   id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  userId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  userId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  contactFirstName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  contactLastName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  contactEmail: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   companyName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   billingAddress: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   billingCity: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
@@ -1340,13 +1383,16 @@ export const ClientWhereInputSchema: z.ZodType<Prisma.ClientWhereInput> = z.obje
   stripeCustomerId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  user: z.union([ z.lazy(() => UserScalarRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional(),
+  user: z.union([ z.lazy(() => UserNullableScalarRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional().nullable(),
   payments: z.lazy(() => PaymentListRelationFilterSchema).optional(),
 }).strict();
 
 export const ClientOrderByWithRelationInputSchema: z.ZodType<Prisma.ClientOrderByWithRelationInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
-  userId: z.lazy(() => SortOrderSchema).optional(),
+  userId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  contactFirstName: z.lazy(() => SortOrderSchema).optional(),
+  contactLastName: z.lazy(() => SortOrderSchema).optional(),
+  contactEmail: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   companyName: z.lazy(() => SortOrderSchema).optional(),
   billingAddress: z.lazy(() => SortOrderSchema).optional(),
   billingCity: z.lazy(() => SortOrderSchema).optional(),
@@ -1394,6 +1440,9 @@ export const ClientWhereUniqueInputSchema: z.ZodType<Prisma.ClientWhereUniqueInp
   AND: z.union([ z.lazy(() => ClientWhereInputSchema), z.lazy(() => ClientWhereInputSchema).array() ]).optional(),
   OR: z.lazy(() => ClientWhereInputSchema).array().optional(),
   NOT: z.union([ z.lazy(() => ClientWhereInputSchema), z.lazy(() => ClientWhereInputSchema).array() ]).optional(),
+  contactFirstName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  contactLastName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  contactEmail: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   companyName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   billingAddress: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   billingCity: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
@@ -1401,13 +1450,16 @@ export const ClientWhereUniqueInputSchema: z.ZodType<Prisma.ClientWhereUniqueInp
   siret: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  user: z.union([ z.lazy(() => UserScalarRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional(),
+  user: z.union([ z.lazy(() => UserNullableScalarRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional().nullable(),
   payments: z.lazy(() => PaymentListRelationFilterSchema).optional(),
 }).strict());
 
 export const ClientOrderByWithAggregationInputSchema: z.ZodType<Prisma.ClientOrderByWithAggregationInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
-  userId: z.lazy(() => SortOrderSchema).optional(),
+  userId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  contactFirstName: z.lazy(() => SortOrderSchema).optional(),
+  contactLastName: z.lazy(() => SortOrderSchema).optional(),
+  contactEmail: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   companyName: z.lazy(() => SortOrderSchema).optional(),
   billingAddress: z.lazy(() => SortOrderSchema).optional(),
   billingCity: z.lazy(() => SortOrderSchema).optional(),
@@ -1426,7 +1478,10 @@ export const ClientScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Client
   OR: z.lazy(() => ClientScalarWhereWithAggregatesInputSchema).array().optional(),
   NOT: z.union([ z.lazy(() => ClientScalarWhereWithAggregatesInputSchema), z.lazy(() => ClientScalarWhereWithAggregatesInputSchema).array() ]).optional(),
   id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
-  userId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  userId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  contactFirstName: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  contactLastName: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  contactEmail: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   companyName: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   billingAddress: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   billingCity: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
@@ -1784,6 +1839,8 @@ export const PaymentWhereInputSchema: z.ZodType<Prisma.PaymentWhereInput> = z.ob
   description: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   status: z.union([ z.lazy(() => EnumPaymentStatusFilterSchema), z.lazy(() => PaymentStatusSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => EnumPaymentFrequencyFilterSchema), z.lazy(() => PaymentFrequencySchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => EnumPaymentCollectionMethodFilterSchema), z.lazy(() => PaymentCollectionMethodSchema) ]).optional(),
+  reference: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   dueDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
@@ -1805,6 +1862,8 @@ export const PaymentOrderByWithRelationInputSchema: z.ZodType<Prisma.PaymentOrde
   description: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   frequency: z.lazy(() => SortOrderSchema).optional(),
+  collectionMethod: z.lazy(() => SortOrderSchema).optional(),
+  reference: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   dueDate: z.lazy(() => SortOrderSchema).optional(),
   paidAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   stripePaymentIntentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
@@ -1842,6 +1901,8 @@ export const PaymentWhereUniqueInputSchema: z.ZodType<Prisma.PaymentWhereUniqueI
   description: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   status: z.union([ z.lazy(() => EnumPaymentStatusFilterSchema), z.lazy(() => PaymentStatusSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => EnumPaymentFrequencyFilterSchema), z.lazy(() => PaymentFrequencySchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => EnumPaymentCollectionMethodFilterSchema), z.lazy(() => PaymentCollectionMethodSchema) ]).optional(),
+  reference: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   dueDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
@@ -1862,6 +1923,8 @@ export const PaymentOrderByWithAggregationInputSchema: z.ZodType<Prisma.PaymentO
   description: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   frequency: z.lazy(() => SortOrderSchema).optional(),
+  collectionMethod: z.lazy(() => SortOrderSchema).optional(),
+  reference: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   dueDate: z.lazy(() => SortOrderSchema).optional(),
   paidAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   stripePaymentIntentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
@@ -1889,6 +1952,8 @@ export const PaymentScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Payme
   description: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   status: z.union([ z.lazy(() => EnumPaymentStatusWithAggregatesFilterSchema), z.lazy(() => PaymentStatusSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => EnumPaymentFrequencyWithAggregatesFilterSchema), z.lazy(() => PaymentFrequencySchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => EnumPaymentCollectionMethodWithAggregatesFilterSchema), z.lazy(() => PaymentCollectionMethodSchema) ]).optional(),
+  reference: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   dueDate: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   paidAt: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
@@ -2175,6 +2240,19 @@ export const SettingsWhereInputSchema: z.ZodType<Prisma.SettingsWhereInput> = z.
   companySiret: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   companyEmail: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   companyPhone: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripeSecretKey: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripeWebhookSecret: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripePublishableKey: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpHost: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpPort: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  smtpUser: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpPass: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpFrom: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  docusealApiUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  docusealApiKey: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  webhookUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  webhookSecret: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  webhookEvents: z.lazy(() => StringNullableListFilterSchema).optional(),
   bankName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   iban: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   bic: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
@@ -2200,6 +2278,19 @@ export const SettingsOrderByWithRelationInputSchema: z.ZodType<Prisma.SettingsOr
   companySiret: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   companyEmail: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   companyPhone: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripeSecretKey: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripeWebhookSecret: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripePublishableKey: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpHost: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpPort: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpUser: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpPass: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpFrom: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  docusealApiUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  docusealApiKey: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  webhookUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  webhookSecret: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  webhookEvents: z.lazy(() => SortOrderSchema).optional(),
   bankName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   iban: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   bic: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
@@ -2231,6 +2322,19 @@ export const SettingsWhereUniqueInputSchema: z.ZodType<Prisma.SettingsWhereUniqu
   companySiret: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   companyEmail: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   companyPhone: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripeSecretKey: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripeWebhookSecret: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripePublishableKey: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpHost: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpPort: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  smtpUser: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpPass: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  smtpFrom: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  docusealApiUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  docusealApiKey: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  webhookUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  webhookSecret: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  webhookEvents: z.lazy(() => StringNullableListFilterSchema).optional(),
   bankName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   iban: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   bic: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
@@ -2256,6 +2360,19 @@ export const SettingsOrderByWithAggregationInputSchema: z.ZodType<Prisma.Setting
   companySiret: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   companyEmail: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   companyPhone: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripeSecretKey: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripeWebhookSecret: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripePublishableKey: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpHost: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpPort: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpUser: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpPass: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  smtpFrom: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  docusealApiUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  docusealApiKey: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  webhookUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  webhookSecret: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  webhookEvents: z.lazy(() => SortOrderSchema).optional(),
   bankName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   iban: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   bic: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
@@ -2289,6 +2406,19 @@ export const SettingsScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Sett
   companySiret: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   companyEmail: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   companyPhone: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  stripeSecretKey: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  stripeWebhookSecret: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  stripePublishableKey: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  smtpHost: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  smtpPort: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  smtpUser: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  smtpPass: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  smtpFrom: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  docusealApiUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  docusealApiKey: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  webhookUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  webhookSecret: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  webhookEvents: z.lazy(() => StringNullableListFilterSchema).optional(),
   bankName: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   iban: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   bic: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
@@ -2811,6 +2941,9 @@ export const AuditLogUncheckedUpdateManyInputSchema: z.ZodType<Prisma.AuditLogUn
 
 export const ClientCreateInputSchema: z.ZodType<Prisma.ClientCreateInput> = z.object({
   id: z.string().optional(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().optional().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -2819,13 +2952,16 @@ export const ClientCreateInputSchema: z.ZodType<Prisma.ClientCreateInput> = z.ob
   stripeCustomerId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  user: z.lazy(() => UserCreateNestedOneWithoutClientInputSchema),
+  user: z.lazy(() => UserCreateNestedOneWithoutClientInputSchema).optional(),
   payments: z.lazy(() => PaymentCreateNestedManyWithoutClientInputSchema).optional(),
 }).strict();
 
 export const ClientUncheckedCreateInputSchema: z.ZodType<Prisma.ClientUncheckedCreateInput> = z.object({
   id: z.string().optional(),
-  userId: z.string(),
+  userId: z.string().optional().nullable(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().optional().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -2839,6 +2975,9 @@ export const ClientUncheckedCreateInputSchema: z.ZodType<Prisma.ClientUncheckedC
 
 export const ClientUpdateInputSchema: z.ZodType<Prisma.ClientUpdateInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -2847,13 +2986,16 @@ export const ClientUpdateInputSchema: z.ZodType<Prisma.ClientUpdateInput> = z.ob
   stripeCustomerId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  user: z.lazy(() => UserUpdateOneRequiredWithoutClientNestedInputSchema).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutClientNestedInputSchema).optional(),
   payments: z.lazy(() => PaymentUpdateManyWithoutClientNestedInputSchema).optional(),
 }).strict();
 
 export const ClientUncheckedUpdateInputSchema: z.ZodType<Prisma.ClientUncheckedUpdateInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  userId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -2867,7 +3009,10 @@ export const ClientUncheckedUpdateInputSchema: z.ZodType<Prisma.ClientUncheckedU
 
 export const ClientCreateManyInputSchema: z.ZodType<Prisma.ClientCreateManyInput> = z.object({
   id: z.string().optional(),
-  userId: z.string(),
+  userId: z.string().optional().nullable(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().optional().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -2880,6 +3025,9 @@ export const ClientCreateManyInputSchema: z.ZodType<Prisma.ClientCreateManyInput
 
 export const ClientUpdateManyMutationInputSchema: z.ZodType<Prisma.ClientUpdateManyMutationInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -2892,7 +3040,10 @@ export const ClientUpdateManyMutationInputSchema: z.ZodType<Prisma.ClientUpdateM
 
 export const ClientUncheckedUpdateManyInputSchema: z.ZodType<Prisma.ClientUncheckedUpdateManyInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  userId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -3226,6 +3377,8 @@ export const PaymentCreateInputSchema: z.ZodType<Prisma.PaymentCreateInput> = z.
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -3247,6 +3400,8 @@ export const PaymentUncheckedCreateInputSchema: z.ZodType<Prisma.PaymentUnchecke
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -3266,6 +3421,8 @@ export const PaymentUpdateInputSchema: z.ZodType<Prisma.PaymentUpdateInput> = z.
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -3287,6 +3444,8 @@ export const PaymentUncheckedUpdateInputSchema: z.ZodType<Prisma.PaymentUnchecke
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -3307,6 +3466,8 @@ export const PaymentCreateManyInputSchema: z.ZodType<Prisma.PaymentCreateManyInp
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -3325,6 +3486,8 @@ export const PaymentUpdateManyMutationInputSchema: z.ZodType<Prisma.PaymentUpdat
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -3344,6 +3507,8 @@ export const PaymentUncheckedUpdateManyInputSchema: z.ZodType<Prisma.PaymentUnch
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -3624,6 +3789,19 @@ export const SettingsCreateInputSchema: z.ZodType<Prisma.SettingsCreateInput> = 
   companySiret: z.string().optional().nullable(),
   companyEmail: z.string().optional().nullable(),
   companyPhone: z.string().optional().nullable(),
+  stripeSecretKey: z.string().optional().nullable(),
+  stripeWebhookSecret: z.string().optional().nullable(),
+  stripePublishableKey: z.string().optional().nullable(),
+  smtpHost: z.string().optional().nullable(),
+  smtpPort: z.number().optional().nullable(),
+  smtpUser: z.string().optional().nullable(),
+  smtpPass: z.string().optional().nullable(),
+  smtpFrom: z.string().optional().nullable(),
+  docusealApiUrl: z.string().optional().nullable(),
+  docusealApiKey: z.string().optional().nullable(),
+  webhookUrl: z.string().optional().nullable(),
+  webhookSecret: z.string().optional().nullable(),
+  webhookEvents: z.union([ z.lazy(() => SettingsCreatewebhookEventsInputSchema), z.string().array() ]).optional(),
   bankName: z.string().optional().nullable(),
   iban: z.string().optional().nullable(),
   bic: z.string().optional().nullable(),
@@ -3649,6 +3827,19 @@ export const SettingsUncheckedCreateInputSchema: z.ZodType<Prisma.SettingsUnchec
   companySiret: z.string().optional().nullable(),
   companyEmail: z.string().optional().nullable(),
   companyPhone: z.string().optional().nullable(),
+  stripeSecretKey: z.string().optional().nullable(),
+  stripeWebhookSecret: z.string().optional().nullable(),
+  stripePublishableKey: z.string().optional().nullable(),
+  smtpHost: z.string().optional().nullable(),
+  smtpPort: z.number().optional().nullable(),
+  smtpUser: z.string().optional().nullable(),
+  smtpPass: z.string().optional().nullable(),
+  smtpFrom: z.string().optional().nullable(),
+  docusealApiUrl: z.string().optional().nullable(),
+  docusealApiKey: z.string().optional().nullable(),
+  webhookUrl: z.string().optional().nullable(),
+  webhookSecret: z.string().optional().nullable(),
+  webhookEvents: z.union([ z.lazy(() => SettingsCreatewebhookEventsInputSchema), z.string().array() ]).optional(),
   bankName: z.string().optional().nullable(),
   iban: z.string().optional().nullable(),
   bic: z.string().optional().nullable(),
@@ -3674,6 +3865,19 @@ export const SettingsUpdateInputSchema: z.ZodType<Prisma.SettingsUpdateInput> = 
   companySiret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyPhone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeSecretKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeWebhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripePublishableKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpHost: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPort: z.union([ z.number(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpUser: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPass: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpFrom: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookEvents: z.union([ z.lazy(() => SettingsUpdatewebhookEventsInputSchema), z.string().array() ]).optional(),
   bankName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   iban: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   bic: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -3699,6 +3903,19 @@ export const SettingsUncheckedUpdateInputSchema: z.ZodType<Prisma.SettingsUnchec
   companySiret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyPhone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeSecretKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeWebhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripePublishableKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpHost: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPort: z.union([ z.number(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpUser: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPass: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpFrom: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookEvents: z.union([ z.lazy(() => SettingsUpdatewebhookEventsInputSchema), z.string().array() ]).optional(),
   bankName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   iban: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   bic: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -3724,6 +3941,19 @@ export const SettingsCreateManyInputSchema: z.ZodType<Prisma.SettingsCreateManyI
   companySiret: z.string().optional().nullable(),
   companyEmail: z.string().optional().nullable(),
   companyPhone: z.string().optional().nullable(),
+  stripeSecretKey: z.string().optional().nullable(),
+  stripeWebhookSecret: z.string().optional().nullable(),
+  stripePublishableKey: z.string().optional().nullable(),
+  smtpHost: z.string().optional().nullable(),
+  smtpPort: z.number().optional().nullable(),
+  smtpUser: z.string().optional().nullable(),
+  smtpPass: z.string().optional().nullable(),
+  smtpFrom: z.string().optional().nullable(),
+  docusealApiUrl: z.string().optional().nullable(),
+  docusealApiKey: z.string().optional().nullable(),
+  webhookUrl: z.string().optional().nullable(),
+  webhookSecret: z.string().optional().nullable(),
+  webhookEvents: z.union([ z.lazy(() => SettingsCreatewebhookEventsInputSchema), z.string().array() ]).optional(),
   bankName: z.string().optional().nullable(),
   iban: z.string().optional().nullable(),
   bic: z.string().optional().nullable(),
@@ -3749,6 +3979,19 @@ export const SettingsUpdateManyMutationInputSchema: z.ZodType<Prisma.SettingsUpd
   companySiret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyPhone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeSecretKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeWebhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripePublishableKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpHost: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPort: z.union([ z.number(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpUser: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPass: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpFrom: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookEvents: z.union([ z.lazy(() => SettingsUpdatewebhookEventsInputSchema), z.string().array() ]).optional(),
   bankName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   iban: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   bic: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -3774,6 +4017,19 @@ export const SettingsUncheckedUpdateManyInputSchema: z.ZodType<Prisma.SettingsUn
   companySiret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyPhone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeSecretKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeWebhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripePublishableKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpHost: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPort: z.union([ z.number(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpUser: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpPass: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  smtpFrom: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  docusealApiKey: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookSecret: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  webhookEvents: z.union([ z.lazy(() => SettingsUpdatewebhookEventsInputSchema), z.string().array() ]).optional(),
   bankName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   iban: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   bic: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -4359,6 +4615,11 @@ export const JsonNullableWithAggregatesFilterSchema: z.ZodType<Prisma.JsonNullab
   _max: z.lazy(() => NestedJsonNullableFilterSchema).optional(),
 }).strict();
 
+export const UserNullableScalarRelationFilterSchema: z.ZodType<Prisma.UserNullableScalarRelationFilter> = z.object({
+  is: z.lazy(() => UserWhereInputSchema).optional().nullable(),
+  isNot: z.lazy(() => UserWhereInputSchema).optional().nullable(),
+}).strict();
+
 export const PaymentListRelationFilterSchema: z.ZodType<Prisma.PaymentListRelationFilter> = z.object({
   every: z.lazy(() => PaymentWhereInputSchema).optional(),
   some: z.lazy(() => PaymentWhereInputSchema).optional(),
@@ -4372,6 +4633,9 @@ export const PaymentOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Paymen
 export const ClientCountOrderByAggregateInputSchema: z.ZodType<Prisma.ClientCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   userId: z.lazy(() => SortOrderSchema).optional(),
+  contactFirstName: z.lazy(() => SortOrderSchema).optional(),
+  contactLastName: z.lazy(() => SortOrderSchema).optional(),
+  contactEmail: z.lazy(() => SortOrderSchema).optional(),
   companyName: z.lazy(() => SortOrderSchema).optional(),
   billingAddress: z.lazy(() => SortOrderSchema).optional(),
   billingCity: z.lazy(() => SortOrderSchema).optional(),
@@ -4385,6 +4649,9 @@ export const ClientCountOrderByAggregateInputSchema: z.ZodType<Prisma.ClientCoun
 export const ClientMaxOrderByAggregateInputSchema: z.ZodType<Prisma.ClientMaxOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   userId: z.lazy(() => SortOrderSchema).optional(),
+  contactFirstName: z.lazy(() => SortOrderSchema).optional(),
+  contactLastName: z.lazy(() => SortOrderSchema).optional(),
+  contactEmail: z.lazy(() => SortOrderSchema).optional(),
   companyName: z.lazy(() => SortOrderSchema).optional(),
   billingAddress: z.lazy(() => SortOrderSchema).optional(),
   billingCity: z.lazy(() => SortOrderSchema).optional(),
@@ -4398,6 +4665,9 @@ export const ClientMaxOrderByAggregateInputSchema: z.ZodType<Prisma.ClientMaxOrd
 export const ClientMinOrderByAggregateInputSchema: z.ZodType<Prisma.ClientMinOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   userId: z.lazy(() => SortOrderSchema).optional(),
+  contactFirstName: z.lazy(() => SortOrderSchema).optional(),
+  contactLastName: z.lazy(() => SortOrderSchema).optional(),
+  contactEmail: z.lazy(() => SortOrderSchema).optional(),
   companyName: z.lazy(() => SortOrderSchema).optional(),
   billingAddress: z.lazy(() => SortOrderSchema).optional(),
   billingCity: z.lazy(() => SortOrderSchema).optional(),
@@ -4701,11 +4971,6 @@ export const IntNullableWithAggregatesFilterSchema: z.ZodType<Prisma.IntNullable
   _max: z.lazy(() => NestedIntNullableFilterSchema).optional(),
 }).strict();
 
-export const UserNullableScalarRelationFilterSchema: z.ZodType<Prisma.UserNullableScalarRelationFilter> = z.object({
-  is: z.lazy(() => UserWhereInputSchema).optional().nullable(),
-  isNot: z.lazy(() => UserWhereInputSchema).optional().nullable(),
-}).strict();
-
 export const MediaCountOrderByAggregateInputSchema: z.ZodType<Prisma.MediaCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   url: z.lazy(() => SortOrderSchema).optional(),
@@ -4761,6 +5026,13 @@ export const EnumPaymentFrequencyFilterSchema: z.ZodType<Prisma.EnumPaymentFrequ
   not: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => NestedEnumPaymentFrequencyFilterSchema) ]).optional(),
 }).strict();
 
+export const EnumPaymentCollectionMethodFilterSchema: z.ZodType<Prisma.EnumPaymentCollectionMethodFilter> = z.object({
+  equals: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  in: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  notIn: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema) ]).optional(),
+}).strict();
+
 export const StringNullableListFilterSchema: z.ZodType<Prisma.StringNullableListFilter> = z.object({
   equals: z.string().array().optional().nullable(),
   has: z.string().optional().nullable(),
@@ -4783,6 +5055,8 @@ export const PaymentCountOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentCo
   description: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   frequency: z.lazy(() => SortOrderSchema).optional(),
+  collectionMethod: z.lazy(() => SortOrderSchema).optional(),
+  reference: z.lazy(() => SortOrderSchema).optional(),
   dueDate: z.lazy(() => SortOrderSchema).optional(),
   paidAt: z.lazy(() => SortOrderSchema).optional(),
   stripePaymentIntentId: z.lazy(() => SortOrderSchema).optional(),
@@ -4808,6 +5082,8 @@ export const PaymentMaxOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentMaxO
   description: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   frequency: z.lazy(() => SortOrderSchema).optional(),
+  collectionMethod: z.lazy(() => SortOrderSchema).optional(),
+  reference: z.lazy(() => SortOrderSchema).optional(),
   dueDate: z.lazy(() => SortOrderSchema).optional(),
   paidAt: z.lazy(() => SortOrderSchema).optional(),
   stripePaymentIntentId: z.lazy(() => SortOrderSchema).optional(),
@@ -4826,6 +5102,8 @@ export const PaymentMinOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentMinO
   description: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   frequency: z.lazy(() => SortOrderSchema).optional(),
+  collectionMethod: z.lazy(() => SortOrderSchema).optional(),
+  reference: z.lazy(() => SortOrderSchema).optional(),
   dueDate: z.lazy(() => SortOrderSchema).optional(),
   paidAt: z.lazy(() => SortOrderSchema).optional(),
   stripePaymentIntentId: z.lazy(() => SortOrderSchema).optional(),
@@ -4859,6 +5137,16 @@ export const EnumPaymentFrequencyWithAggregatesFilterSchema: z.ZodType<Prisma.En
   _count: z.lazy(() => NestedIntFilterSchema).optional(),
   _min: z.lazy(() => NestedEnumPaymentFrequencyFilterSchema).optional(),
   _max: z.lazy(() => NestedEnumPaymentFrequencyFilterSchema).optional(),
+}).strict();
+
+export const EnumPaymentCollectionMethodWithAggregatesFilterSchema: z.ZodType<Prisma.EnumPaymentCollectionMethodWithAggregatesFilter> = z.object({
+  equals: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  in: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  notIn: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => NestedEnumPaymentCollectionMethodWithAggregatesFilterSchema) ]).optional(),
+  _count: z.lazy(() => NestedIntFilterSchema).optional(),
+  _min: z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema).optional(),
+  _max: z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema).optional(),
 }).strict();
 
 export const PaymentScalarRelationFilterSchema: z.ZodType<Prisma.PaymentScalarRelationFilter> = z.object({
@@ -5015,6 +5303,19 @@ export const SettingsCountOrderByAggregateInputSchema: z.ZodType<Prisma.Settings
   companySiret: z.lazy(() => SortOrderSchema).optional(),
   companyEmail: z.lazy(() => SortOrderSchema).optional(),
   companyPhone: z.lazy(() => SortOrderSchema).optional(),
+  stripeSecretKey: z.lazy(() => SortOrderSchema).optional(),
+  stripeWebhookSecret: z.lazy(() => SortOrderSchema).optional(),
+  stripePublishableKey: z.lazy(() => SortOrderSchema).optional(),
+  smtpHost: z.lazy(() => SortOrderSchema).optional(),
+  smtpPort: z.lazy(() => SortOrderSchema).optional(),
+  smtpUser: z.lazy(() => SortOrderSchema).optional(),
+  smtpPass: z.lazy(() => SortOrderSchema).optional(),
+  smtpFrom: z.lazy(() => SortOrderSchema).optional(),
+  docusealApiUrl: z.lazy(() => SortOrderSchema).optional(),
+  docusealApiKey: z.lazy(() => SortOrderSchema).optional(),
+  webhookUrl: z.lazy(() => SortOrderSchema).optional(),
+  webhookSecret: z.lazy(() => SortOrderSchema).optional(),
+  webhookEvents: z.lazy(() => SortOrderSchema).optional(),
   bankName: z.lazy(() => SortOrderSchema).optional(),
   iban: z.lazy(() => SortOrderSchema).optional(),
   bic: z.lazy(() => SortOrderSchema).optional(),
@@ -5031,6 +5332,7 @@ export const SettingsCountOrderByAggregateInputSchema: z.ZodType<Prisma.Settings
 }).strict();
 
 export const SettingsAvgOrderByAggregateInputSchema: z.ZodType<Prisma.SettingsAvgOrderByAggregateInput> = z.object({
+  smtpPort: z.lazy(() => SortOrderSchema).optional(),
   tvaRate: z.lazy(() => SortOrderSchema).optional(),
   nextInvoiceNumber: z.lazy(() => SortOrderSchema).optional(),
   nextQuoteNumber: z.lazy(() => SortOrderSchema).optional(),
@@ -5047,6 +5349,18 @@ export const SettingsMaxOrderByAggregateInputSchema: z.ZodType<Prisma.SettingsMa
   companySiret: z.lazy(() => SortOrderSchema).optional(),
   companyEmail: z.lazy(() => SortOrderSchema).optional(),
   companyPhone: z.lazy(() => SortOrderSchema).optional(),
+  stripeSecretKey: z.lazy(() => SortOrderSchema).optional(),
+  stripeWebhookSecret: z.lazy(() => SortOrderSchema).optional(),
+  stripePublishableKey: z.lazy(() => SortOrderSchema).optional(),
+  smtpHost: z.lazy(() => SortOrderSchema).optional(),
+  smtpPort: z.lazy(() => SortOrderSchema).optional(),
+  smtpUser: z.lazy(() => SortOrderSchema).optional(),
+  smtpPass: z.lazy(() => SortOrderSchema).optional(),
+  smtpFrom: z.lazy(() => SortOrderSchema).optional(),
+  docusealApiUrl: z.lazy(() => SortOrderSchema).optional(),
+  docusealApiKey: z.lazy(() => SortOrderSchema).optional(),
+  webhookUrl: z.lazy(() => SortOrderSchema).optional(),
+  webhookSecret: z.lazy(() => SortOrderSchema).optional(),
   bankName: z.lazy(() => SortOrderSchema).optional(),
   iban: z.lazy(() => SortOrderSchema).optional(),
   bic: z.lazy(() => SortOrderSchema).optional(),
@@ -5072,6 +5386,18 @@ export const SettingsMinOrderByAggregateInputSchema: z.ZodType<Prisma.SettingsMi
   companySiret: z.lazy(() => SortOrderSchema).optional(),
   companyEmail: z.lazy(() => SortOrderSchema).optional(),
   companyPhone: z.lazy(() => SortOrderSchema).optional(),
+  stripeSecretKey: z.lazy(() => SortOrderSchema).optional(),
+  stripeWebhookSecret: z.lazy(() => SortOrderSchema).optional(),
+  stripePublishableKey: z.lazy(() => SortOrderSchema).optional(),
+  smtpHost: z.lazy(() => SortOrderSchema).optional(),
+  smtpPort: z.lazy(() => SortOrderSchema).optional(),
+  smtpUser: z.lazy(() => SortOrderSchema).optional(),
+  smtpPass: z.lazy(() => SortOrderSchema).optional(),
+  smtpFrom: z.lazy(() => SortOrderSchema).optional(),
+  docusealApiUrl: z.lazy(() => SortOrderSchema).optional(),
+  docusealApiKey: z.lazy(() => SortOrderSchema).optional(),
+  webhookUrl: z.lazy(() => SortOrderSchema).optional(),
+  webhookSecret: z.lazy(() => SortOrderSchema).optional(),
   bankName: z.lazy(() => SortOrderSchema).optional(),
   iban: z.lazy(() => SortOrderSchema).optional(),
   bic: z.lazy(() => SortOrderSchema).optional(),
@@ -5088,6 +5414,7 @@ export const SettingsMinOrderByAggregateInputSchema: z.ZodType<Prisma.SettingsMi
 }).strict();
 
 export const SettingsSumOrderByAggregateInputSchema: z.ZodType<Prisma.SettingsSumOrderByAggregateInput> = z.object({
+  smtpPort: z.lazy(() => SortOrderSchema).optional(),
   tvaRate: z.lazy(() => SortOrderSchema).optional(),
   nextInvoiceNumber: z.lazy(() => SortOrderSchema).optional(),
   nextQuoteNumber: z.lazy(() => SortOrderSchema).optional(),
@@ -5362,10 +5689,12 @@ export const PaymentUncheckedCreateNestedManyWithoutClientInputSchema: z.ZodType
   connect: z.union([ z.lazy(() => PaymentWhereUniqueInputSchema), z.lazy(() => PaymentWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
-export const UserUpdateOneRequiredWithoutClientNestedInputSchema: z.ZodType<Prisma.UserUpdateOneRequiredWithoutClientNestedInput> = z.object({
+export const UserUpdateOneWithoutClientNestedInputSchema: z.ZodType<Prisma.UserUpdateOneWithoutClientNestedInput> = z.object({
   create: z.union([ z.lazy(() => UserCreateWithoutClientInputSchema), z.lazy(() => UserUncheckedCreateWithoutClientInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => UserCreateOrConnectWithoutClientInputSchema).optional(),
   upsert: z.lazy(() => UserUpsertWithoutClientInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => UserWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => UserWhereInputSchema) ]).optional(),
   connect: z.lazy(() => UserWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => UserUpdateToOneWithWhereWithoutClientInputSchema), z.lazy(() => UserUpdateWithoutClientInputSchema), z.lazy(() => UserUncheckedUpdateWithoutClientInputSchema) ]).optional(),
 }).strict();
@@ -5570,6 +5899,10 @@ export const EnumPaymentFrequencyFieldUpdateOperationsInputSchema: z.ZodType<Pri
   set: z.lazy(() => PaymentFrequencySchema).optional(),
 }).strict();
 
+export const EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema: z.ZodType<Prisma.EnumPaymentCollectionMethodFieldUpdateOperationsInput> = z.object({
+  set: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+}).strict();
+
 export const PaymentUpdateattachedFilesInputSchema: z.ZodType<Prisma.PaymentUpdateattachedFilesInput> = z.object({
   set: z.string().array().optional(),
   push: z.union([ z.string(),z.string().array() ]).optional(),
@@ -5693,6 +6026,15 @@ export const UserUpdateOneRequiredWithoutSessionsNestedInputSchema: z.ZodType<Pr
   upsert: z.lazy(() => UserUpsertWithoutSessionsInputSchema).optional(),
   connect: z.lazy(() => UserWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => UserUpdateToOneWithWhereWithoutSessionsInputSchema), z.lazy(() => UserUpdateWithoutSessionsInputSchema), z.lazy(() => UserUncheckedUpdateWithoutSessionsInputSchema) ]).optional(),
+}).strict();
+
+export const SettingsCreatewebhookEventsInputSchema: z.ZodType<Prisma.SettingsCreatewebhookEventsInput> = z.object({
+  set: z.string().array(),
+}).strict();
+
+export const SettingsUpdatewebhookEventsInputSchema: z.ZodType<Prisma.SettingsUpdatewebhookEventsInput> = z.object({
+  set: z.string().array().optional(),
+  push: z.union([ z.string(),z.string().array() ]).optional(),
 }).strict();
 
 export const MediaCreateNestedOneWithoutAvatarUserInputSchema: z.ZodType<Prisma.MediaCreateNestedOneWithoutAvatarUserInput> = z.object({
@@ -6346,6 +6688,13 @@ export const NestedEnumPaymentFrequencyFilterSchema: z.ZodType<Prisma.NestedEnum
   not: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => NestedEnumPaymentFrequencyFilterSchema) ]).optional(),
 }).strict();
 
+export const NestedEnumPaymentCollectionMethodFilterSchema: z.ZodType<Prisma.NestedEnumPaymentCollectionMethodFilter> = z.object({
+  equals: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  in: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  notIn: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema) ]).optional(),
+}).strict();
+
 export const NestedEnumPaymentStatusWithAggregatesFilterSchema: z.ZodType<Prisma.NestedEnumPaymentStatusWithAggregatesFilter> = z.object({
   equals: z.lazy(() => PaymentStatusSchema).optional(),
   in: z.lazy(() => PaymentStatusSchema).array().optional(),
@@ -6364,6 +6713,16 @@ export const NestedEnumPaymentFrequencyWithAggregatesFilterSchema: z.ZodType<Pri
   _count: z.lazy(() => NestedIntFilterSchema).optional(),
   _min: z.lazy(() => NestedEnumPaymentFrequencyFilterSchema).optional(),
   _max: z.lazy(() => NestedEnumPaymentFrequencyFilterSchema).optional(),
+}).strict();
+
+export const NestedEnumPaymentCollectionMethodWithAggregatesFilterSchema: z.ZodType<Prisma.NestedEnumPaymentCollectionMethodWithAggregatesFilter> = z.object({
+  equals: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  in: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  notIn: z.lazy(() => PaymentCollectionMethodSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => NestedEnumPaymentCollectionMethodWithAggregatesFilterSchema) ]).optional(),
+  _count: z.lazy(() => NestedIntFilterSchema).optional(),
+  _min: z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema).optional(),
+  _max: z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema).optional(),
 }).strict();
 
 export const NestedEnumUserRoleFilterSchema: z.ZodType<Prisma.NestedEnumUserRoleFilter> = z.object({
@@ -6867,6 +7226,8 @@ export const PaymentCreateWithoutClientInputSchema: z.ZodType<Prisma.PaymentCrea
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -6886,6 +7247,8 @@ export const PaymentUncheckedCreateWithoutClientInputSchema: z.ZodType<Prisma.Pa
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -7004,6 +7367,8 @@ export const PaymentScalarWhereInputSchema: z.ZodType<Prisma.PaymentScalarWhereI
   description: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   status: z.union([ z.lazy(() => EnumPaymentStatusFilterSchema), z.lazy(() => PaymentStatusSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => EnumPaymentFrequencyFilterSchema), z.lazy(() => PaymentFrequencySchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => EnumPaymentCollectionMethodFilterSchema), z.lazy(() => PaymentCollectionMethodSchema) ]).optional(),
+  reference: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   dueDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
@@ -7552,6 +7917,9 @@ export const UserUncheckedUpdateWithoutCoverImageInputSchema: z.ZodType<Prisma.U
 
 export const ClientCreateWithoutPaymentsInputSchema: z.ZodType<Prisma.ClientCreateWithoutPaymentsInput> = z.object({
   id: z.string().optional(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().optional().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -7560,12 +7928,15 @@ export const ClientCreateWithoutPaymentsInputSchema: z.ZodType<Prisma.ClientCrea
   stripeCustomerId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  user: z.lazy(() => UserCreateNestedOneWithoutClientInputSchema),
+  user: z.lazy(() => UserCreateNestedOneWithoutClientInputSchema).optional(),
 }).strict();
 
 export const ClientUncheckedCreateWithoutPaymentsInputSchema: z.ZodType<Prisma.ClientUncheckedCreateWithoutPaymentsInput> = z.object({
   id: z.string().optional(),
-  userId: z.string(),
+  userId: z.string().optional().nullable(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().optional().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -7616,6 +7987,9 @@ export const ClientUpdateToOneWithWhereWithoutPaymentsInputSchema: z.ZodType<Pri
 
 export const ClientUpdateWithoutPaymentsInputSchema: z.ZodType<Prisma.ClientUpdateWithoutPaymentsInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -7624,12 +7998,15 @@ export const ClientUpdateWithoutPaymentsInputSchema: z.ZodType<Prisma.ClientUpda
   stripeCustomerId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  user: z.lazy(() => UserUpdateOneRequiredWithoutClientNestedInputSchema).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutClientNestedInputSchema).optional(),
 }).strict();
 
 export const ClientUncheckedUpdateWithoutPaymentsInputSchema: z.ZodType<Prisma.ClientUncheckedUpdateWithoutPaymentsInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  userId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -7664,6 +8041,8 @@ export const PaymentCreateWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -7684,6 +8063,8 @@ export const PaymentUncheckedCreateWithoutAttachedDocumentsInputSchema: z.ZodTyp
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -7791,6 +8172,8 @@ export const PaymentUpdateWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -7811,6 +8194,8 @@ export const PaymentUncheckedUpdateWithoutAttachedDocumentsInputSchema: z.ZodTyp
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -8349,6 +8734,9 @@ export const AdminPermissionCreateManyUserInputEnvelopeSchema: z.ZodType<Prisma.
 
 export const ClientCreateWithoutUserInputSchema: z.ZodType<Prisma.ClientCreateWithoutUserInput> = z.object({
   id: z.string().optional(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().optional().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -8362,6 +8750,9 @@ export const ClientCreateWithoutUserInputSchema: z.ZodType<Prisma.ClientCreateWi
 
 export const ClientUncheckedCreateWithoutUserInputSchema: z.ZodType<Prisma.ClientUncheckedCreateWithoutUserInput> = z.object({
   id: z.string().optional(),
+  contactFirstName: z.string(),
+  contactLastName: z.string(),
+  contactEmail: z.string().optional().nullable(),
   companyName: z.string(),
   billingAddress: z.string(),
   billingCity: z.string(),
@@ -8658,6 +9049,9 @@ export const ClientUpdateToOneWithWhereWithoutUserInputSchema: z.ZodType<Prisma.
 
 export const ClientUpdateWithoutUserInputSchema: z.ZodType<Prisma.ClientUpdateWithoutUserInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -8671,6 +9065,9 @@ export const ClientUpdateWithoutUserInputSchema: z.ZodType<Prisma.ClientUpdateWi
 
 export const ClientUncheckedUpdateWithoutUserInputSchema: z.ZodType<Prisma.ClientUncheckedUpdateWithoutUserInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactFirstName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactLastName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contactEmail: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   companyName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingAddress: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   billingCity: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -8706,6 +9103,8 @@ export const PaymentCreateManyClientInputSchema: z.ZodType<Prisma.PaymentCreateM
   description: z.string(),
   status: z.lazy(() => PaymentStatusSchema).optional(),
   frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
   dueDate: z.coerce.date(),
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
@@ -8724,6 +9123,8 @@ export const PaymentUpdateWithoutClientInputSchema: z.ZodType<Prisma.PaymentUpda
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -8743,6 +9144,8 @@ export const PaymentUncheckedUpdateWithoutClientInputSchema: z.ZodType<Prisma.Pa
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -8762,6 +9165,8 @@ export const PaymentUncheckedUpdateManyWithoutClientInputSchema: z.ZodType<Prism
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
   frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),

@@ -13,14 +13,15 @@ import { tmpdir } from 'os';
 const SETTINGS_ID = 'global';
 const LOGO_KEY = 'settings/logo.png';
 
-const secretFields = [
+export const secretFields = [
   'stripeSecretKey',
   'stripeWebhookSecret',
   'smtpPass',
   'docusealApiKey',
+  'webhookSecret',
 ] as const;
 
-function redactSecrets<T extends Record<string, unknown>>(settings: T) {
+export function redactSecrets<T extends Record<string, unknown>>(settings: T) {
   const result = { ...settings } as Record<string, unknown>;
 
   for (const field of secretFields) {
@@ -43,6 +44,9 @@ function publicSettings<T extends Record<string, unknown>>(settings: T) {
   delete safeSettings.smtpFrom;
   delete safeSettings.docusealApiUrl;
   delete safeSettings.docusealApiKey;
+  delete safeSettings.webhookUrl;
+  delete safeSettings.webhookSecret;
+  delete safeSettings.webhookEvents;
   return safeSettings;
 }
 

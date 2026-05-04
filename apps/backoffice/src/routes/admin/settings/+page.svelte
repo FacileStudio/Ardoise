@@ -11,6 +11,7 @@
   let uploadingLogo = $state(false);
   let logoPreviewUrl = $state('');
   let logoInput: HTMLInputElement | null = null;
+  let webhookEventsText = $state('');
 
   let formData = $state({
     companyName: '',
@@ -31,6 +32,9 @@
     smtpFrom: '',
     docusealApiUrl: '',
     docusealApiKey: '',
+    webhookUrl: '',
+    webhookSecret: '',
+    webhookEvents: [] as string[],
     bankName: '',
     iban: '',
     bic: '',
@@ -67,12 +71,16 @@
         smtpFrom: settings.smtpFrom || '',
         docusealApiUrl: settings.docusealApiUrl || '',
         docusealApiKey: settings.docusealApiKey || '',
+        webhookUrl: settings.webhookUrl || '',
+        webhookSecret: settings.webhookSecret || '',
+        webhookEvents: Array.isArray(settings.webhookEvents) ? settings.webhookEvents : [],
         bankName: settings.bankName || '',
         iban: settings.iban || '',
         bic: settings.bic || '',
         logoUrl: settings.logoUrl || '',
         tvaRate: Number(settings.tvaRate || 20),
       };
+      webhookEventsText = formData.webhookEvents.join('\n');
       await refreshLogoPreview();
     } catch {
       message = { type: 'error', text: 'Impossible de charger les paramètres' };
@@ -86,11 +94,15 @@
     message = null;
 
     try {
-      await trpc.settings.update.mutate(formData);
+      await trpc.settings.update.mutate({
+        ...formData,
+        webhookEvents: parseWebhookEvents(webhookEventsText),
+      });
       formData.stripeSecretKey = '';
       formData.stripeWebhookSecret = '';
       formData.smtpPass = '';
       formData.docusealApiKey = '';
+      formData.webhookSecret = '';
       message = { type: 'success', text: 'Paramètres enregistrés' };
     } catch {
       message = { type: 'error', text: 'Impossible d’enregistrer les paramètres' };
@@ -139,6 +151,15 @@
       uploadingLogo = false;
       if (logoInput) logoInput.value = '';
     }
+  }
+
+  function parseWebhookEvents(value: string) {
+    return Array.from(new Set(
+      value
+        .split(/[\n,]/)
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    ));
   }
 </script>
 
@@ -231,6 +252,31 @@
         <div class="grid md:grid-cols-2 gap-5">
           <Input bind:value={formData.docusealApiUrl} placeholder="https://docuseal.example.com/api" />
           <Input bind:value={formData.docusealApiKey} type="password" placeholder="Nouvelle clé API" />
+        </div>
+      </section>
+
+      <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">
+        <div class="space-y-2">
+          <h2 class="text-xl font-black text-[#291334]">Webhooks</h2>
+          <p class="text-sm text-[#291334]/65">
+            Charles envoie des `POST` avec `X-Charles-Event`, `X-Charles-Delivery` et
+            `X-Charles-Signature-256` si un secret est défini.
+          </p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5">
+          <Input bind:value={formData.webhookUrl} placeholder="https://example.com/webhooks/charles" class="md:col-span-2" />
+          <Input bind:value={formData.webhookSecret} type="password" placeholder="Secret de signature optionnel" class="md:col-span-2" />
+          <div class="md:col-span-2 space-y-2">
+            <label class="text-sm font-bold text-[#291334]" for="webhook-events">Événements</label>
+            <textarea
+              id="webhook-events"
+              bind:value={webhookEventsText}
+              rows="5"
+              placeholder={"admin.user.created\nadmin.user.updated\nsettings.updated\nsettings.*"}
+              class="w-full rounded-[24px] border border-[#291334]/15 bg-white px-5 py-4 text-sm text-[#291334] outline-none transition focus:border-[#291334]/40 focus:ring-2 focus:ring-[#291334]/10"
+            ></textarea>
+            <p class="text-xs text-[#291334]/55">Un événement par ligne ou séparé par des virgules. Laisse vide pour tout envoyer.</p>
+          </div>
         </div>
       </section>
 

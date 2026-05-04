@@ -12,6 +12,7 @@ import {
   adminGetAllAuditLogsSchema,
 } from './types';
 import { settingsRouter } from '../settings/router';
+import { dispatchConfiguredWebhook } from '../webhook/service';
 
 export const adminRouter = router({
   settings: settingsRouter,
@@ -65,7 +66,24 @@ export const adminRouter = router({
       userAgent: ctx.userAgent,
     };
 
-    return engine.create(context, input.data);
+    const record = await engine.create(context, input.data);
+
+    await dispatchConfiguredWebhook({
+      db: ctx.db,
+      log: ctx.log,
+      event: `admin.${input.entity}.created`,
+      actor: {
+        id: ctx.user!.id,
+        email: ctx.user!.email,
+        role: ctx.user!.role,
+      },
+      data: {
+        entity: input.entity,
+        record,
+      },
+    });
+
+    return record;
   }),
 
   update: adminProcedure.input(adminUpdateSchema).mutation(async ({ ctx, input }) => {
@@ -79,7 +97,25 @@ export const adminRouter = router({
       userAgent: ctx.userAgent,
     };
 
-    return engine.update(context, input.id, input.data);
+    const record = await engine.update(context, input.id, input.data);
+
+    await dispatchConfiguredWebhook({
+      db: ctx.db,
+      log: ctx.log,
+      event: `admin.${input.entity}.updated`,
+      actor: {
+        id: ctx.user!.id,
+        email: ctx.user!.email,
+        role: ctx.user!.role,
+      },
+      data: {
+        entity: input.entity,
+        entityId: input.id,
+        record,
+      },
+    });
+
+    return record;
   }),
 
   delete: adminProcedure.input(adminDeleteSchema).mutation(async ({ ctx, input }) => {
@@ -93,7 +129,22 @@ export const adminRouter = router({
       userAgent: ctx.userAgent,
     };
 
-    return engine.delete(context, input.id);
+    await engine.delete(context, input.id);
+
+    await dispatchConfiguredWebhook({
+      db: ctx.db,
+      log: ctx.log,
+      event: `admin.${input.entity}.deleted`,
+      actor: {
+        id: ctx.user!.id,
+        email: ctx.user!.email,
+        role: ctx.user!.role,
+      },
+      data: {
+        entity: input.entity,
+        entityId: input.id,
+      },
+    });
   }),
 
   getPermissions: adminProcedure.input(adminGetPermissionsSchema).query(async ({ ctx, input }) => {

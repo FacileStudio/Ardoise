@@ -22,6 +22,9 @@ model Settings {
 
   docusealApiUrl String?
   docusealApiKey String?
+  webhookUrl    String?
+  webhookSecret String?
+  webhookEvents String[] @default([])
 
   bankName String?
   iban String?
