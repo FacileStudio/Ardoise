@@ -97,4 +97,4 @@ USER backend
 
 EXPOSE 3001
 
-CMD ["bun", "run", "apps/backend/src/index.ts"]
+CMD ["/bin/sh", "-lc", "cd /app/packages/database && bun run db:migrate:deploy && cd /app && bun run apps/backend/src/index.ts"]
