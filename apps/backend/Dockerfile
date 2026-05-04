@@ -86,6 +86,7 @@ ENV NODE_ENV=production
 
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 --gid nodejs backend
+RUN mkdir -p /data/uploads && chown backend:nodejs /data/uploads
 
 COPY --from=builder --chown=backend:nodejs /app/apps/backend ./apps/backend
 COPY --from=builder --chown=backend:nodejs /app/packages ./packages
