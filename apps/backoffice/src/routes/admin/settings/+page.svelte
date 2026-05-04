@@ -1,16 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { trpc } from '$lib/trpc';
-  import { Button, Input, Spinner, Alert } from '@repo/ui';
-  import { uploadFileSimple } from '@repo/storage-client';
+  import { Button, Input, Spinner, Alert, ImageUpload } from '@repo/ui';
   import 'iconify-icon';
 
   let loading = $state(true);
   let saving = $state(false);
   let message = $state<{ type: 'success' | 'error'; text: string } | null>(null);
-  let uploadingLogo = $state(false);
-  let logoPreviewUrl = $state('');
-  let logoInput: HTMLInputElement | null = null;
   let webhookEventsText = $state('');
 
   let formData = $state({
@@ -81,7 +77,6 @@
         tvaRate: Number(settings.tvaRate || 20),
       };
       webhookEventsText = formData.webhookEvents.join('\n');
-      await refreshLogoPreview();
     } catch {
       message = { type: 'error', text: 'Impossible de charger les paramètres' };
     } finally {
@@ -111,46 +106,12 @@
     }
   }
 
-  async function refreshLogoPreview() {
-    if (!formData.logoUrl) {
-      logoPreviewUrl = '';
-      return;
-    }
-
-    if (formData.logoUrl.includes('/storage/') || formData.logoUrl.includes('storageapi.dev')) {
-      try {
-        const result = await trpc.media.getDownloadUrl.query({ url: formData.logoUrl });
-        logoPreviewUrl = result.url;
-        return;
-      } catch {}
-    }
-
-    logoPreviewUrl = formData.logoUrl;
-  }
-
-  async function handleLogoUpload(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
-    uploadingLogo = true;
-    message = null;
-
-    try {
-      const upload = await trpc.settings.requestLogoUpload.mutate({
-        fileName: file.name,
-        fileType: file.type || 'image/png',
-      });
-      await uploadFileSimple(file, upload.uploadUrl);
-      await trpc.settings.confirmLogoUpload.mutate({ logoUrl: upload.publicUrl });
-      formData.logoUrl = upload.publicUrl;
-      await refreshLogoPreview();
-      message = { type: 'success', text: 'Logo enregistré' };
-    } catch {
-      message = { type: 'error', text: 'Impossible d’envoyer le logo' };
-    } finally {
-      uploadingLogo = false;
-      if (logoInput) logoInput.value = '';
-    }
+  async function getPresignedUrl(filename: string, _folder: string) {
+    const result = await trpc.media.getUploadUrl.mutate({
+      fileName: filename,
+      fileType: ‘image/*’,
+    });
+    return result.uploadUrl;
   }
 
   function parseWebhookEvents(value: string) {
@@ -203,28 +164,12 @@
           <Input bind:value={formData.companyEmail} type="email" placeholder="Email" />
           <Input bind:value={formData.companyPhone} placeholder="Téléphone" />
         </div>
-        <div class="space-y-4">
-          <div class="flex items-center gap-4">
-            <Button type="button" onclick={() => logoInput?.click()} disabled={uploadingLogo}>
-              {#if uploadingLogo}
-                <Spinner size="sm" />
-              {:else}
-                <iconify-icon icon="solar:upload-bold" width="18"></iconify-icon>
-              {/if}
-              Logo
-            </Button>
-            <input
-              bind:this={logoInput}
-              type="file"
-              accept="image/*"
-              class="hidden"
-              onchange={handleLogoUpload}
-            />
-          </div>
-          {#if logoPreviewUrl}
-            <img src={logoPreviewUrl} alt="Logo" class="h-24 w-auto object-contain rounded-xl border border-[#291334]/10 bg-[#FAF7F5] p-3" />
-          {/if}
-        </div>
+        <ImageUpload
+          bind:value={formData.logoUrl}
+          label="Logo de l'entreprise"
+          {getPresignedUrl}
+          {trpc}
+        />
       </section>
 
       <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">

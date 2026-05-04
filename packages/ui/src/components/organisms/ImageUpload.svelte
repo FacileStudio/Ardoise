@@ -71,7 +71,7 @@
     }
 </script>
 
-<div class="flex flex-col gap-2 w-full">
+<div class="flex flex-col gap-2 w-full max-w-md">
     <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
         {label}
     </span>
