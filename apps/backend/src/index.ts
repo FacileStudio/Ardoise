@@ -37,10 +37,8 @@ const authManager = new AuthManager({
 await bootstrapAdmin(env, authManager);
 
 const storage = new StorageService({
-  endpoint: env.MINIO_ENDPOINT,
-  accessKeyId: env.MINIO_ROOT_USER,
-  secretAccessKey: env.MINIO_ROOT_PASSWORD,
-  bucket: env.MINIO_BUCKET_NAME,
+  storagePath: env.STORAGE_PATH,
+  publicUrl: env.BACKEND_URL,
 });
 
 const cors = corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]);

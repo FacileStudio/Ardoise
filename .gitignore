@@ -38,6 +38,9 @@ lerna-debug.log*
 # Testing
 coverage
 
+# Storage
+data/
+
 # Misc
 *.swp
 *.swo

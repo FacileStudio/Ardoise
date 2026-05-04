@@ -23,11 +23,7 @@ export const serverEnvSchema = baseSchema.extend({
 
   ENCRYPTION_SECRET: z.string().min(1),
 
-  MINIO_ROOT_USER: z.string().min(1).default('minioadmin'),
-  MINIO_ROOT_PASSWORD: z.string().min(1).default('minioadminpassword'),
-  MINIO_BUCKET_NAME: z.string().min(1).default('charles-uploads'),
-  MINIO_ENDPOINT: z.string().url().default('http://minio:9000'),
-  MINIO_PUBLIC_URL: z.string().url().optional(),
+  STORAGE_PATH: z.string().min(1).default('./data/uploads'),
 
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(8),

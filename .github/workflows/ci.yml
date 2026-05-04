@@ -14,11 +14,7 @@ env:
   STRIPE_SECRET_KEY: sk_test_fake_key_for_ci_only_needs_valid_format
   STRIPE_WEBHOOK_SECRET: whsec_fake_webhook_secret_for_ci_testing_only
   PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_fake_publishable_key_for_ci
-  MINIO_ENDPOINT: http://localhost:9000
-  MINIO_ROOT_USER: minioadmin
-  MINIO_ROOT_PASSWORD: minioadmin
-  MINIO_BUCKET_NAME: test-bucket
-  MINIO_PUBLIC_URL: http://localhost:9000
+  STORAGE_PATH: ./data/uploads
   SMTP_HOST: smtp.example.com
   SMTP_PORT: 587
   SMTP_USER: test@example.com

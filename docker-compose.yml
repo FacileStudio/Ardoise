@@ -14,21 +14,6 @@ services:
       timeout: 5s
       retries: 5
 
-  minio:
-    image: minio/minio:latest
-    container_name: charles-minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadminpassword
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: .
@@ -45,16 +30,13 @@ services:
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3001}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       BACKOFFICE_URL: ${BACKOFFICE_URL:-http://localhost:3002}
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadminpassword
-      MINIO_BUCKET_NAME: charles-uploads
+      STORAGE_PATH: /data/uploads
+    volumes:
+      - uploads_data:/data/uploads
     expose:
       - "3001"
     depends_on:
       postgres:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     restart: unless-stopped
 
@@ -98,4 +80,4 @@ services:
 
 volumes:
   postgres_data:
-  minio_data:
+  uploads_data:
