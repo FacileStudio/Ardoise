@@ -20,9 +20,9 @@ export const UpdateClientSchema = z.object({
   contactLastName: z.string().min(1).optional(),
   contactEmail: z.string().email().optional().or(z.literal('')),
   companyName: z.string().min(1).optional(),
-  billingAddress: z.string().min(1).optional(),
-  billingCity: z.string().min(1).optional(),
-  billingCountry: z.string().min(1).optional(),
+  billingAddress: z.string().optional().nullable(),
+  billingCity: z.string().optional().nullable(),
+  billingCountry: z.string().optional().nullable(),
   siret: z.string().optional(),
 });
 
