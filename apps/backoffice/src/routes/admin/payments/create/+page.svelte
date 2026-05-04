@@ -9,11 +9,15 @@
 	import 'iconify-icon';
 
 	type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
+	type PaymentCollectionMethod = 'STRIPE' | 'MANUAL';
 
 	interface Client {
 		id: string;
 		companyName: string;
-		user: {
+		contactFirstName: string;
+		contactLastName: string;
+		contactEmail?: string | null;
+		user?: {
 			id: string;
 			email: string;
 			firstName: string;
@@ -45,6 +49,8 @@
 		amount: 0,
 		description: '',
 		frequency: 'ONE_TIME' as PaymentFrequency,
+		collectionMethod: 'STRIPE' as PaymentCollectionMethod,
+		reference: '',
 		dueDate: new Date().toISOString().split('T')[0],
 		attachedFiles: [] as string[],
 		attachedDocumentIds: [] as string[],
@@ -114,6 +120,16 @@
 		if (!formData.amount || formData.amount <= 0) return 'Le montant doit être supérieur à 0';
 		if (!formData.description.trim()) return 'La description est requise';
 		if (!formData.dueDate) return "La date d'échéance est requise";
+		if (formData.collectionMethod === 'STRIPE') {
+			const client = clients.find((item) => item.id === formData.clientId);
+			const clientEmail = client?.contactEmail || client?.user?.email;
+			if (!clientEmail) {
+				return 'Un email de contact client est requis pour créer un paiement Stripe';
+			}
+		}
+		if (formData.collectionMethod === 'MANUAL' && !formData.reference.trim()) {
+			return 'La référence manuelle est requise';
+		}
 		return null;
 	}
 
@@ -128,10 +144,16 @@
 			submitting = true;
 			await trpc.payment.create.mutate({
 				...formData,
+				reference: formData.reference.trim() || undefined,
 				dueDate: new Date(formData.dueDate),
 			});
 
-			toast.push('Paiement créé avec succès! Un email a été envoyé au client.', 'success');
+			toast.push(
+				formData.collectionMethod === 'STRIPE'
+					? 'Paiement créé avec succès! Un email a été envoyé au client.'
+					: 'Paiement manuel enregistré avec succès!',
+				'success'
+			);
 			goto('/admin/payments');
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create payment');
@@ -153,6 +175,10 @@
 			default:
 				return frequency;
 		}
+	}
+
+	function getCollectionMethodLabel(method: PaymentCollectionMethod) {
+		return method === 'STRIPE' ? 'Paiement Stripe' : 'Suivi manuel';
 	}
 </script>
 
@@ -197,8 +223,9 @@
 							<option value="">-- Choisir un client --</option>
 							{#each clients as client (client.id)}
 								<option value={client.id}>
-									{client.companyName} - {client.user.firstName}
-									{client.user.lastName} ({client.user.email})
+									{client.companyName} - {client.contactFirstName}
+									{client.contactLastName}
+									({client.contactEmail || client.user?.email || 'aucun email'})
 								</option>
 							{/each}
 						</select>
@@ -260,6 +287,27 @@
 
 					<div>
 						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+							<iconify-icon icon="solar:card-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+							Mode de paiement *
+						</div>
+						<div class="grid grid-cols-2 gap-3">
+							{#each ['STRIPE', 'MANUAL'] as method}
+								<button
+									type="button"
+									onclick={() => (formData.collectionMethod = method as PaymentCollectionMethod)}
+									class="px-4 py-3 rounded-xl font-bold text-sm transition-all {formData.collectionMethod ===
+									method
+										? 'bg-[#291334] text-white'
+										: 'bg-white text-slate-700 border border-slate-200 hover:border-[#FEC129]'}"
+								>
+									{getCollectionMethodLabel(method as PaymentCollectionMethod)}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<div>
+						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:refresh-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
 							Fréquence *
@@ -279,6 +327,21 @@
 							{/each}
 						</div>
 					</div>
+
+					{#if formData.collectionMethod === 'MANUAL'}
+						<div>
+							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"></iconify-icon>
+								Référence manuelle *
+							</div>
+							<Input bind:value={formData.reference} placeholder="Ex: VIR-2026-001" />
+							<p class="mt-2 text-xs text-slate-500">Utilisée pour tracer un paiement hors ligne ou déjà demandé ailleurs.</p>
+						</div>
+					{:else}
+						<p class="text-xs text-slate-500">
+							Un lien de paiement Stripe sera créé. Le client doit avoir un email de contact.
+						</p>
+					{/if}
 				</div>
 			</div>
 

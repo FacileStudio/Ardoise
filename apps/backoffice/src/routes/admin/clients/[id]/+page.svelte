@@ -15,9 +15,9 @@
 	let client: any = $state(null);
 
 	let formData = $state({
-		firstName: '',
-		lastName: '',
-		email: '',
+		contactFirstName: '',
+		contactLastName: '',
+		contactEmail: '',
 		companyName: '',
 		billingAddress: '',
 		billingCity: '',
@@ -33,10 +33,9 @@
 		pageLoading = true;
 		try {
 			client = await trpc.client.getById.query({ id: clientId });
-			// Populate form data
-			formData.firstName = client.user.firstName;
-			formData.lastName = client.user.lastName;
-			formData.email = client.user.email;
+			formData.contactFirstName = client.contactFirstName;
+			formData.contactLastName = client.contactLastName;
+			formData.contactEmail = client.contactEmail || '';
 			formData.companyName = client.companyName;
 			formData.billingAddress = client.billingAddress || '';
 			formData.billingCity = client.billingCity || '';
@@ -51,9 +50,11 @@
 	}
 
 	function validateForm(): string | null {
-		if (!formData.firstName.trim()) return 'Le prénom est requis';
-		if (!formData.lastName.trim()) return 'Le nom est requis';
-		if (!formData.email.trim()) return 'L\'email est requis';
+		if (!formData.contactFirstName.trim()) return 'Le prénom est requis';
+		if (!formData.contactLastName.trim()) return 'Le nom est requis';
+		if (formData.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
+			return "Format d'email invalide";
+		}
 		if (!formData.companyName.trim()) return 'Le nom de l\'entreprise est requis';
 		return null;
 	}
@@ -237,7 +238,7 @@
 										></iconify-icon>
 										Prénom *
 									</div>
-									<Input bind:value={formData.firstName} placeholder="Jean" />
+									<Input bind:value={formData.contactFirstName} placeholder="Jean" />
 								</div>
 
 								<div>
@@ -246,7 +247,7 @@
 										></iconify-icon>
 										Nom *
 									</div>
-									<Input bind:value={formData.lastName} placeholder="Dupont" />
+									<Input bind:value={formData.contactLastName} placeholder="Dupont" />
 								</div>
 							</div>
 
@@ -254,13 +255,16 @@
 								<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 									<iconify-icon icon="solar:letter-bold" width="16" class="text-[#FEC129]"
 									></iconify-icon>
-									Email *
+									Email de contact
 								</div>
 								<Input
-									bind:value={formData.email}
+									bind:value={formData.contactEmail}
 									type="email"
 									placeholder="jean.dupont@entreprise.fr"
 								/>
+								{#if client.user?.email}
+									<p class="mt-2 text-xs text-slate-500">Email de connexion: {client.user.email}</p>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -356,12 +360,16 @@
 							<div class="space-y-3">
 								<div>
 									<div class="text-xs font-black uppercase text-slate-400 mb-2">Statut du compte</div>
-									<Badge variant={getStatusColor(client.user.status)}>
-										{client.user.status}
-									</Badge>
+									{#if client.user}
+										<Badge variant={getStatusColor(client.user.status)}>
+											{client.user.status}
+										</Badge>
+									{:else}
+										<Badge variant="slate">Aucun accès</Badge>
+									{/if}
 								</div>
 
-								{#if client.user.emailVerified}
+								{#if client.user?.emailVerified}
 									<div>
 										<div class="text-xs font-black uppercase text-slate-400 mb-2">Email vérifié</div>
 										<Badge variant="emerald">
@@ -397,7 +405,7 @@
 									<div class="text-sm text-slate-700">{formatDate(client.updatedAt)}</div>
 								</div>
 
-								{#if client.user.lastLoginAt}
+								{#if client.user?.lastLoginAt}
 									<div>
 										<div class="text-xs font-black uppercase text-slate-400 mb-1">Dernière connexion</div>
 										<div class="text-sm text-slate-700">{formatDate(client.user.lastLoginAt)}</div>

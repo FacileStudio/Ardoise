@@ -11,6 +11,11 @@ enum PaymentFrequency {
   YEARLY
 }
 
+enum PaymentCollectionMethod {
+  STRIPE
+  MANUAL
+}
+
 model Payment {
   id String @id @default(cuid())
 
@@ -23,6 +28,8 @@ model Payment {
   description String
   status PaymentStatus @default(PENDING)
   frequency PaymentFrequency @default(ONE_TIME)
+  collectionMethod PaymentCollectionMethod @default(STRIPE)
+  reference String?
 
   dueDate DateTime
   paidAt DateTime?
@@ -42,6 +49,7 @@ model Payment {
   @@index([clientId])
   @@index([status])
   @@index([dueDate])
+  @@index([collectionMethod])
   @@index([stripePaymentIntentId])
 }
 

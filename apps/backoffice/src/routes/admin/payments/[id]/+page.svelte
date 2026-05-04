@@ -18,7 +18,10 @@
 		billingCity: string;
 		billingCountry: string;
 		siret: string | null;
-		user: {
+		contactFirstName: string;
+		contactLastName: string;
+		contactEmail?: string | null;
+		user?: {
 			id: string;
 			email: string;
 			firstName: string;
@@ -34,6 +37,8 @@
 		description: string;
 		status: PaymentStatus;
 		frequency: PaymentFrequency;
+		collectionMethod?: 'STRIPE' | 'MANUAL';
+		reference?: string | null;
 		dueDate: Date;
 		paidAt: Date | null;
 		createdAt: Date;
@@ -224,6 +229,11 @@
 								</div>
 
 								<div>
+									<div class="text-xs font-black uppercase text-slate-400 mb-2">Mode</div>
+									<div class="font-bold text-slate-900">{payment.collectionMethod === 'MANUAL' ? 'Manuel' : 'Stripe'}</div>
+								</div>
+
+								<div>
 									<div class="text-xs font-black uppercase text-slate-400 mb-2">Date d'échéance</div>
 									<div class="font-bold text-slate-900 flex items-center gap-2">
 										<iconify-icon icon="solar:calendar-bold" width="16" class="text-amber-500"></iconify-icon>
@@ -231,6 +241,13 @@
 									</div>
 								</div>
 							</div>
+
+							{#if payment.reference}
+								<div>
+									<div class="text-xs font-black uppercase text-slate-400 mb-2">Référence</div>
+									<div class="font-bold text-slate-900">{payment.reference}</div>
+								</div>
+							{/if}
 
 							{#if payment.paidAt}
 								<div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
@@ -344,9 +361,9 @@
 								<div class="text-xs font-black uppercase text-slate-400 mb-2">Contact</div>
 								<div class="space-y-1">
 									<div class="font-bold text-slate-900">
-										{payment.client.user.firstName} {payment.client.user.lastName}
+										{payment.client.contactFirstName} {payment.client.contactLastName}
 									</div>
-									<div class="text-sm text-slate-500">{payment.client.user.email}</div>
+									<div class="text-sm text-slate-500">{payment.client.contactEmail || payment.client.user?.email || 'Aucun email de contact'}</div>
 								</div>
 							</div>
 

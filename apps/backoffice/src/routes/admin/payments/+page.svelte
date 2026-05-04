@@ -15,7 +15,9 @@
 	interface Client {
 		id: string;
 		companyName: string;
-		user: {
+		contactFirstName: string;
+		contactLastName: string;
+		user?: {
 			id: string;
 			email: string;
 			firstName: string;
@@ -26,9 +28,13 @@
 	interface Payment {
 		id: string;
 		amount: number;
+		stripeFee?: number | null;
+		totalWithFees?: number | null;
 		description: string;
 		status: PaymentStatus;
 		frequency: PaymentFrequency;
+		collectionMethod?: 'STRIPE' | 'MANUAL';
+		reference?: string | null;
 		dueDate: Date;
 		paidAt: Date | null;
 		createdAt: Date;
@@ -434,8 +440,8 @@
 									<div class="space-y-1">
 										<div class="font-bold text-base text-slate-900">{payment.client.companyName}</div>
 										<div class="text-sm text-slate-500">
-											{payment.client.user.firstName}
-											{payment.client.user.lastName}
+											{payment.client.contactFirstName}
+											{payment.client.contactLastName}
 										</div>
 									</div>
 								</td>
@@ -461,7 +467,12 @@
 									</Badge>
 								</td>
 								<td class="px-6 py-4">
-									<div class="text-sm text-slate-600">{getFrequencyLabel(payment.frequency)}</div>
+									<div class="space-y-1">
+										<div class="text-sm text-slate-600">{getFrequencyLabel(payment.frequency)}</div>
+										<div class="text-xs text-slate-400">
+											{payment.collectionMethod === 'MANUAL' ? 'Manuel' : 'Stripe'}
+										</div>
+									</div>
 								</td>
 								<td class="px-6 py-4">
 									<div class="space-y-1">
@@ -541,4 +552,3 @@
 		{/if}
 	</div>
 {/if}
-

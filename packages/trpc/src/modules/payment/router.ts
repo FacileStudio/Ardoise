@@ -24,7 +24,8 @@ export const paymentRouter = router({
   create: adminProcedure
     .input(CreatePaymentSchema)
     .mutation(async ({ ctx, input }) => {
-      const [stripe, smtp] = await Promise.all([ctx.getStripe(), ctx.getSmtp()]);
+      const stripe = input.collectionMethod === 'STRIPE' ? await ctx.getStripe() : null;
+      const smtp = input.collectionMethod === 'STRIPE' ? await ctx.getSmtp() : null;
 
       return paymentService.createPayment(
         ctx.db,
@@ -120,6 +121,13 @@ export const paymentRouter = router({
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Payment is not pending',
+        });
+      }
+
+      if (payment.collectionMethod !== 'STRIPE') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This payment is not payable online',
         });
       }
 

@@ -127,14 +127,15 @@
 
 	function handleExportCSV() {
 		const csvData = clients.map(client => ({
-			'Nom': `${client.user?.firstName} ${client.user?.lastName}`,
-			'Email': client.user?.email || '',
+			'Nom': `${client.contactFirstName} ${client.contactLastName}`,
+			'Email contact': client.contactEmail || '',
+			'Email connexion': client.user?.email || '',
 			'Entreprise': client.companyName || '',
 			'SIRET': client.siret || '',
 			'Adresse': client.billingAddress || '',
 			'Ville': client.billingCity || '',
 			'Pays': client.billingCountry || '',
-			'Statut': client.user?.status || '',
+			'Statut accès': client.user?.status || 'AUCUN ACCÈS',
 			'Date création': new Date(client.createdAt).toLocaleDateString('fr-FR')
 		}));
 		downloadCSV(csvData, 'clients');
@@ -255,12 +256,15 @@
 								</td>
 								<td class="px-6 py-4">
 									<div class="font-bold text-slate-900 flex items-center gap-2">
-										{client.user.firstName} {client.user.lastName}
-										{#if client.user.emailVerified}
+										{client.contactFirstName} {client.contactLastName}
+										{#if client.user?.emailVerified}
 											<iconify-icon icon="solar:verified-check-bold" class="text-emerald-500" width="14"></iconify-icon>
 										{/if}
 									</div>
-									<div class="text-sm text-slate-500">{client.user.email}</div>
+									<div class="text-sm text-slate-500">{client.contactEmail || 'Aucun email de contact'}</div>
+									{#if client.user?.email}
+										<div class="text-xs text-slate-400">Accès client: {client.user.email}</div>
+									{/if}
 								</td>
 								<td class="px-6 py-4">
 									<div class="text-sm text-slate-700">{client.billingCity}</div>
@@ -272,9 +276,13 @@
 									</div>
 								</td>
 								<td class="px-6 py-4">
-									<Badge variant={getStatusColor(client.user.status)}>
-										{getStatusLabel(client.user.status)}
-									</Badge>
+									{#if client.user}
+										<Badge variant={getStatusColor(client.user.status)}>
+											{getStatusLabel(client.user.status)}
+										</Badge>
+									{:else}
+										<Badge variant="slate">Aucun accès</Badge>
+									{/if}
 								</td>
 								<td class="px-6 py-4 text-sm text-slate-600">
 									{formatDate(client.createdAt)}

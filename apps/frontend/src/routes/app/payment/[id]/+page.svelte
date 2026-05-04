@@ -26,6 +26,8 @@
     totalWithFees?: number | string;
     description: string;
     status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+    collectionMethod?: 'STRIPE' | 'MANUAL';
+    reference?: string | null;
     dueDate: Date | string;
     paidAt?: Date | string;
     receiptUrl?: string;
@@ -85,7 +87,7 @@
       payment = paymentData as Payment;
       settings = settingsData;
 
-      if (payment.status === 'PENDING') {
+      if (payment.status === 'PENDING' && payment.collectionMethod !== 'MANUAL') {
         if (!settings?.stripePublishableKey) {
           error = 'Configuration Stripe manquante. Veuillez contacter le support.';
           console.error('Stripe publishable key not configured');
@@ -436,7 +438,24 @@
             </Card>
           {/if}
 
-          {#if payment.status === 'PENDING'}
+          {#if payment.status === 'PENDING' && payment.collectionMethod === 'MANUAL'}
+            <Card>
+              <div class="py-8 text-center">
+                <div
+                  class="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                >
+                  <iconify-icon icon="solar:document-text-bold" width="32"></iconify-icon>
+                </div>
+                <h3 class="text-2xl font-black text-[#291334] mb-2">Paiement suivi hors ligne</h3>
+                <p class="text-[#291334]/60 mb-4">
+                  Ce paiement n'est pas réglable sur cette page.
+                </p>
+                {#if payment.reference}
+                  <p class="text-sm font-bold text-[#291334]">Référence: {payment.reference}</p>
+                {/if}
+              </div>
+            </Card>
+          {:else if payment.status === 'PENDING'}
             <Card>
               <div class="mb-6">
                 <h3 class="text-2xl font-black text-[#291334] mb-2">Payer cette facture</h3>

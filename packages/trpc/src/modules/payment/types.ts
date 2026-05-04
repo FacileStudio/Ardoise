@@ -2,12 +2,15 @@ import { z } from 'zod';
 
 export const PaymentStatusSchema = z.enum(['PENDING', 'PAID', 'EXPIRED', 'CANCELLED']);
 export const PaymentFrequencySchema = z.enum(['ONE_TIME', 'MONTHLY', 'YEARLY']);
+export const PaymentCollectionMethodSchema = z.enum(['STRIPE', 'MANUAL']);
 
 export const CreatePaymentSchema = z.object({
   clientId: z.string().min(1, 'Client ID is required'),
   amount: z.number().positive('Amount must be positive'),
   description: z.string().min(1, 'Description is required'),
   frequency: PaymentFrequencySchema.default('ONE_TIME'),
+  collectionMethod: PaymentCollectionMethodSchema.default('STRIPE'),
+  reference: z.string().optional(),
   dueDate: z.coerce.date(),
   attachedFiles: z.array(z.string().url()).optional().default([]),
   attachedDocumentIds: z.array(z.string()).optional().default([]),
@@ -19,6 +22,8 @@ export const UpdatePaymentSchema = z.object({
   description: z.string().min(1).optional(),
   dueDate: z.coerce.date().optional(),
   status: PaymentStatusSchema.optional(),
+  collectionMethod: PaymentCollectionMethodSchema.optional(),
+  reference: z.string().optional(),
   attachedFiles: z.array(z.string().url()).optional(),
   attachedDocumentIds: z.array(z.string()).optional(),
 });
@@ -45,6 +50,7 @@ export const WebhookSchema = z.object({
 
 export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
 export type PaymentFrequency = z.infer<typeof PaymentFrequencySchema>;
+export type PaymentCollectionMethod = z.infer<typeof PaymentCollectionMethodSchema>;
 export type CreatePaymentInput = z.infer<typeof CreatePaymentSchema>;
 export type UpdatePaymentInput = z.infer<typeof UpdatePaymentSchema>;
 export type ListPaymentsInput = z.infer<typeof ListPaymentsSchema>;

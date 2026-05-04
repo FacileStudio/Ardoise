@@ -3,6 +3,11 @@ import { type PrismaClient } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
 import type { CreateClientInput, UpdateClientInput, ListClientsInput } from './types';
 
+function normalizeOptional(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export const clientService = {
   listClients: async (db: PrismaClient, params: ListClientsInput) => {
     const { page, limit, search } = params;
@@ -15,6 +20,9 @@ export const clientService = {
         { companyName: { contains: search, mode: 'insensitive' } },
         { siret: { contains: search, mode: 'insensitive' } },
         { billingCity: { contains: search, mode: 'insensitive' } },
+        { contactEmail: { contains: search, mode: 'insensitive' } },
+        { contactFirstName: { contains: search, mode: 'insensitive' } },
+        { contactLastName: { contains: search, mode: 'insensitive' } },
         { user: { email: { contains: search, mode: 'insensitive' } } },
         { user: { firstName: { contains: search, mode: 'insensitive' } } },
         { user: { lastName: { contains: search, mode: 'insensitive' } } },
@@ -90,36 +98,60 @@ export const clientService = {
   },
 
   createClient: async (db: PrismaClient, auth: AuthManager, data: CreateClientInput) => {
-    const existingUser = await db.user.findUnique({
-      where: { email: data.email },
-    });
+    const credentialEmail = data.credentialEmail?.trim();
+    const credentialPassword = data.credentialPassword?.trim();
 
-    if (existingUser) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'A user with this email already exists',
+    if (data.createCredentials) {
+      if (!credentialEmail) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Credential email is required when creating client access',
+        });
+      }
+
+      if (!credentialPassword || credentialPassword.length < 8) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Credential password must contain at least 8 characters',
+        });
+      }
+
+      const existingUser = await db.user.findUnique({
+        where: { email: credentialEmail },
       });
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'A user with this email already exists',
+        });
+      }
     }
 
-    const hashedPassword = await auth.hashPassword(data.password);
+    const userData = data.createCredentials
+      ? {
+          create: {
+            email: credentialEmail!,
+            firstName: data.contactFirstName,
+            lastName: data.contactLastName,
+            password: await auth.hashPassword(credentialPassword!),
+            role: 'CLIENT' as const,
+            emailVerified: false,
+          },
+        }
+      : undefined;
 
     const client = await db.client.create({
       data: {
+        contactFirstName: data.contactFirstName,
+        contactLastName: data.contactLastName,
+        contactEmail: normalizeOptional(data.contactEmail),
         companyName: data.companyName,
         billingAddress: data.billingAddress,
         billingCity: data.billingCity,
         billingCountry: data.billingCountry,
         siret: data.siret,
-        user: {
-          create: {
-            email: data.email,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            password: hashedPassword,
-            role: 'CLIENT',
-            emailVerified: false,
-          },
-        },
+        user: userData,
       },
       include: {
         user: {
@@ -156,12 +188,12 @@ export const clientService = {
     }
 
     const userUpdateData: any = {};
-    if (data.firstName !== undefined) userUpdateData.firstName = data.firstName;
-    if (data.lastName !== undefined) userUpdateData.lastName = data.lastName;
-    if (data.email !== undefined) {
+    if (existingClient.userId && data.contactFirstName !== undefined) userUpdateData.firstName = data.contactFirstName;
+    if (existingClient.userId && data.contactLastName !== undefined) userUpdateData.lastName = data.contactLastName;
+    if (existingClient.userId && data.contactEmail !== undefined && data.contactEmail !== '') {
       const emailExists = await db.user.findFirst({
         where: {
-          email: data.email,
+          email: data.contactEmail,
           id: { not: existingClient.userId },
         },
       });
@@ -173,10 +205,10 @@ export const clientService = {
         });
       }
 
-      userUpdateData.email = data.email;
+      userUpdateData.email = data.contactEmail;
     }
 
-    if (Object.keys(userUpdateData).length > 0) {
+    if (existingClient.userId && Object.keys(userUpdateData).length > 0) {
       await db.user.update({
         where: { id: existingClient.userId },
         data: userUpdateData,
@@ -184,6 +216,9 @@ export const clientService = {
     }
 
     const clientUpdateData: any = {};
+    if (data.contactFirstName !== undefined) clientUpdateData.contactFirstName = data.contactFirstName;
+    if (data.contactLastName !== undefined) clientUpdateData.contactLastName = data.contactLastName;
+    if (data.contactEmail !== undefined) clientUpdateData.contactEmail = normalizeOptional(data.contactEmail);
     if (data.companyName !== undefined) clientUpdateData.companyName = data.companyName;
     if (data.billingAddress !== undefined) clientUpdateData.billingAddress = data.billingAddress;
     if (data.billingCity !== undefined) clientUpdateData.billingCity = data.billingCity;

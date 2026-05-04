@@ -1,7 +1,11 @@
 model Client {
   id String @id @default(cuid())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String? @unique
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  contactFirstName String
+  contactLastName String
+  contactEmail String?
 
   companyName String
   billingAddress String
@@ -17,5 +21,6 @@ model Client {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([contactEmail])
   @@index([stripeCustomerId])
 }

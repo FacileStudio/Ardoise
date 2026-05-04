@@ -86,8 +86,8 @@ export const paymentService = {
 
   createPayment: async (
     db: PrismaClient,
-    stripe: StripeService,
-    smtpClient: SMTPClient,
+    stripe: StripeService | null,
+    smtpClient: SMTPClient | null,
     env: ServerEnv,
     appOrigin: string,
     data: CreatePaymentInput
@@ -130,88 +130,116 @@ export const paymentService = {
     }
 
     const feeCalculation = calculateStripeFees(data.amount);
+    const clientEmail = client.contactEmail || client.user?.email || null;
+    const clientName = `${client.contactFirstName} ${client.contactLastName}`.trim();
+    const useStripe = data.collectionMethod === 'STRIPE';
 
     let stripePaymentIntentId: string | undefined;
     let stripeSubscriptionId: string | undefined;
 
-    try {
-      if (data.frequency === 'ONE_TIME') {
-        const paymentIntent = await stripe.client.paymentIntents.create({
-          amount: Math.round(feeCalculation.totalWithFees * 100),
-          currency: 'eur',
-          metadata: {
-            clientId: client.id,
-            description: data.description,
-          },
-          automatic_payment_methods: { enabled: true },
+    if (useStripe) {
+      if (!stripe) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Stripe is not configured',
         });
-        stripePaymentIntentId = paymentIntent.id;
-      } else {
-        let customerId = client.stripeCustomerId;
+      }
 
-        if (!customerId) {
-          const customer = await stripe.client.customers.create({
-            email: client.user.email,
-            name: client.companyName,
-            metadata: { clientId: client.id },
+      if (!smtpClient) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'SMTP is not configured',
+        });
+      }
+
+      if (!clientEmail) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Client contact email is required for Stripe payments',
+        });
+      }
+
+      try {
+        if (data.frequency === 'ONE_TIME') {
+          const paymentIntent = await stripe.client.paymentIntents.create({
+            amount: Math.round(feeCalculation.totalWithFees * 100),
+            currency: 'eur',
+            metadata: {
+              clientId: client.id,
+              description: data.description,
+            },
+            automatic_payment_methods: { enabled: true },
           });
-          customerId = customer.id;
+          stripePaymentIntentId = paymentIntent.id;
+        } else {
+          let customerId = client.stripeCustomerId;
 
-          await db.client.update({
-            where: { id: client.id },
-            data: {
-              stripeCustomerId: customerId,
+          if (!customerId) {
+            const customer = await stripe.client.customers.create({
+              email: clientEmail,
+              name: client.companyName,
+              metadata: { clientId: client.id },
+            });
+            customerId = customer.id;
+
+            await db.client.update({
+              where: { id: client.id },
+              data: {
+                stripeCustomerId: customerId,
+              },
+            });
+          }
+
+          const intervalMap = {
+            MONTHLY: 'month' as const,
+            YEARLY: 'year' as const,
+            ONE_TIME: 'month' as const,
+          };
+
+          const price = await stripe.client.prices.create({
+            currency: 'eur',
+            unit_amount: Math.round(feeCalculation.totalWithFees * 100),
+            recurring: {
+              interval: intervalMap[data.frequency],
+            },
+            product_data: {
+              name: data.description,
             },
           });
+
+          const subscription = await stripe.client.subscriptions.create({
+            customer: customerId,
+            items: [{ price: price.id }],
+            payment_behavior: 'default_incomplete',
+            payment_settings: { save_default_payment_method: 'on_subscription' },
+            expand: ['latest_invoice.payment_intent'],
+            metadata: {
+              clientId: client.id,
+              description: data.description,
+            },
+          });
+
+          stripeSubscriptionId = subscription.id;
         }
-
-        const intervalMap = {
-          MONTHLY: 'month' as const,
-          YEARLY: 'year' as const,
-          ONE_TIME: 'month' as const,
-        };
-
-        const price = await stripe.client.prices.create({
-          currency: 'eur',
-          unit_amount: Math.round(feeCalculation.totalWithFees * 100),
-          recurring: {
-            interval: intervalMap[data.frequency],
-          },
-          product_data: {
-            name: data.description,
-          },
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Stripe error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         });
-
-        const subscription = await stripe.client.subscriptions.create({
-          customer: customerId,
-          items: [{ price: price.id }],
-          payment_behavior: 'default_incomplete',
-          payment_settings: { save_default_payment_method: 'on_subscription' },
-          expand: ['latest_invoice.payment_intent'],
-          metadata: {
-            clientId: client.id,
-            description: data.description,
-          },
-        });
-
-        stripeSubscriptionId = subscription.id;
       }
-    } catch (error) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Stripe error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      });
     }
 
     const payment = await db.payment.create({
       data: {
         clientId: data.clientId,
         amount: feeCalculation.amount,
-        stripeFee: feeCalculation.stripeFee,
-        totalWithFees: feeCalculation.totalWithFees,
+        stripeFee: useStripe ? feeCalculation.stripeFee : 0,
+        totalWithFees: useStripe ? feeCalculation.totalWithFees : feeCalculation.amount,
         description: data.description,
         status: 'PENDING',
         frequency: data.frequency,
+        collectionMethod: data.collectionMethod,
+        reference: data.reference?.trim() || null,
         dueDate: data.dueDate,
         stripePaymentIntentId,
         stripeSubscriptionId,
@@ -234,17 +262,19 @@ export const paymentService = {
       },
     });
 
-    try {
-      const emailTemplates = new EmailTemplates(smtpClient);
-      await emailTemplates.sendPaymentNotification({
-        clientEmail: client.user.email,
-        paymentLink: `${appOrigin}/app/payment/${payment.id}`,
-        amount: Number(payment.totalWithFees),
-        dueDate: payment.dueDate,
-        clientName: `${client.user.firstName} ${client.user.lastName}`,
-        invoiceNumber: payment.id,
-      });
-    } catch (emailError) {
+    if (useStripe && smtpClient && clientEmail) {
+      try {
+        const emailTemplates = new EmailTemplates(smtpClient);
+        await emailTemplates.sendPaymentNotification({
+          clientEmail,
+          paymentLink: `${appOrigin}/app/payment/${payment.id}`,
+          amount: Number(payment.totalWithFees),
+          dueDate: payment.dueDate,
+          clientName,
+          invoiceNumber: payment.id,
+        });
+      } catch (emailError) {
+      }
     }
 
     return payment;
@@ -277,6 +307,8 @@ export const paymentService = {
     if (data.description !== undefined) updateData.description = data.description;
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.collectionMethod !== undefined) updateData.collectionMethod = data.collectionMethod;
+    if (data.reference !== undefined) updateData.reference = data.reference;
     if (data.attachedFiles !== undefined) updateData.attachedFiles = data.attachedFiles;
 
     return db.payment.update({
@@ -446,10 +478,10 @@ export const paymentService = {
 
       const emailTemplates = new EmailTemplates(smtpClient);
       await emailTemplates.sendPaymentConfirmation({
-        clientEmail: payment.client.user.email,
+        clientEmail: payment.client.contactEmail || payment.client.user?.email || '',
         receiptPdfBuffer: receiptBuffer,
         amount: Number(payment.amount),
-        clientName: `${payment.client.user.firstName} ${payment.client.user.lastName}`,
+        clientName: `${payment.client.contactFirstName} ${payment.client.contactLastName}`.trim(),
         paymentDate: payment.paidAt || new Date(),
         invoiceNumber: payment.id,
       });

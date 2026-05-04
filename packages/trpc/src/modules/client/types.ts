@@ -1,22 +1,24 @@
 import { z } from 'zod';
 
 export const CreateClientSchema = z.object({
-  email: z.string().email(),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  contactEmail: z.string().email().optional().or(z.literal('')),
+  contactFirstName: z.string().min(1),
+  contactLastName: z.string().min(1),
   companyName: z.string().min(1),
   billingAddress: z.string().min(1),
   billingCity: z.string().min(1),
   billingCountry: z.string().min(1).default('France'),
   siret: z.string().optional(),
-  password: z.string().min(8),
+  createCredentials: z.boolean().default(false),
+  credentialEmail: z.string().email().optional().or(z.literal('')),
+  credentialPassword: z.string().min(8).optional().or(z.literal('')),
 });
 
 export const UpdateClientSchema = z.object({
   id: z.string(),
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
-  email: z.string().email().optional(),
+  contactFirstName: z.string().min(1).optional(),
+  contactLastName: z.string().min(1).optional(),
+  contactEmail: z.string().email().optional().or(z.literal('')),
   companyName: z.string().min(1).optional(),
   billingAddress: z.string().min(1).optional(),
   billingCity: z.string().min(1).optional(),
