@@ -2,20 +2,26 @@ import { router, adminProcedure } from '../../trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
+const emptyStringToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    schema.optional()
+  );
+
 const ProviderInput = z.object({
-  name: z.string().min(1),
-  legalName: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
+  name: z.string().trim().min(1, 'Le nom du prestataire est requis'),
+  legalName: emptyStringToUndefined(z.string().trim()),
+  address: emptyStringToUndefined(z.string().trim()),
+  city: emptyStringToUndefined(z.string().trim()),
   country: z.string().default('France'),
-  siret: z.string().optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  bankName: z.string().optional(),
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-  logoUrl: z.string().optional(),
-  tvaRate: z.number().default(20),
+  siret: emptyStringToUndefined(z.string().trim()),
+  email: emptyStringToUndefined(z.string().trim().email('Email invalide')),
+  phone: emptyStringToUndefined(z.string().trim()),
+  bankName: emptyStringToUndefined(z.string().trim()),
+  iban: emptyStringToUndefined(z.string().trim()),
+  bic: emptyStringToUndefined(z.string().trim()),
+  logoUrl: emptyStringToUndefined(z.string().trim()),
+  tvaRate: z.number().min(0, 'Le taux de TVA doit être entre 0 et 100').max(100, 'Le taux de TVA doit être entre 0 et 100').default(20),
 });
 
 export const providerRouter = router({

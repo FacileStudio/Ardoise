@@ -7,6 +7,8 @@
 	import 'iconify-icon';
 
 	let submitting = $state(false);
+	let formMessage = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 
 	async function getPresignedUrl(filename: string, folder: string) {
 		const result = await trpc.media.getUploadUrl.mutate({
@@ -32,49 +34,97 @@
 		tvaRate: 20,
 	});
 
-	function validateForm(): string | null {
-		if (!formData.name.trim()) return 'Le nom est requis';
-		if (formData.tvaRate < 0 || formData.tvaRate > 100) return 'Le taux de TVA doit être entre 0 et 100';
-		return null;
+	function getFieldError(field: string): string {
+		return fieldErrors[field] || '';
+	}
+
+	function clearMessages() {
+		formMessage = '';
+		fieldErrors = {};
+	}
+
+	function normalizePayload() {
+		const optionalFields = ['legalName', 'siret', 'address', 'city', 'email', 'phone', 'bankName', 'iban', 'bic', 'logoUrl'] as const;
+		const payload = {
+			...formData,
+			name: formData.name.trim(),
+			country: formData.country.trim() || 'France',
+			tvaRate: Number(formData.tvaRate),
+		} as Record<string, string | number>;
+
+		for (const field of optionalFields) {
+			const value = String(payload[field] || '').trim();
+			payload[field] = value === '' ? undefined : value;
+		}
+
+		return payload;
+	}
+
+	function validateForm(): boolean {
+		const nextErrors: Record<string, string> = {};
+
+		if (!formData.name.trim()) nextErrors.name = 'Le nom du prestataire est requis';
+		if (Number(formData.tvaRate) < 0 || Number(formData.tvaRate) > 100) {
+			nextErrors.tvaRate = 'Le taux de TVA doit être entre 0 et 100';
+		}
+
+		fieldErrors = nextErrors;
+		formMessage = Object.values(nextErrors)[0] || '';
+		return Object.keys(nextErrors).length === 0;
+	}
+
+	function applyServerErrors(err: any) {
+		const nextErrors: Record<string, string> = {};
+		let message = 'Erreur lors de la création';
+
+		const zodErrors = err.data?.zodError?.fieldErrors || err.shape?.data?.zodError?.fieldErrors;
+		if (zodErrors) {
+			for (const [field, errors] of Object.entries(zodErrors)) {
+				if (Array.isArray(errors) && errors.length > 0) {
+					nextErrors[field] = String(errors[0]);
+				}
+			}
+			message = Object.values(nextErrors)[0] || message;
+		} else if (err.message) {
+			try {
+				const parsed = JSON.parse(err.message);
+				if (Array.isArray(parsed) && parsed.length > 0) {
+					for (const issue of parsed) {
+						const field = Array.isArray(issue.path) ? issue.path[0] : undefined;
+						if (field && !nextErrors[String(field)] && issue.message) {
+							nextErrors[String(field)] = String(issue.message);
+						}
+					}
+					message = parsed[0]?.message || message;
+				} else {
+					message = err.message;
+				}
+			} catch {
+				message = err.message;
+			}
+		}
+
+		fieldErrors = nextErrors;
+		formMessage = message;
+		return message;
 	}
 
 	async function handleCreate() {
-		const validationError = validateForm();
-		if (validationError) {
-			toast.push(validationError, 'error');
+		clearMessages();
+
+		if (!validateForm()) {
+			toast.push(formMessage, 'error');
 			return;
 		}
 
 		try {
 			submitting = true;
-			await trpc.provider.create.mutate({
-				...formData,
-				tvaRate: Number(formData.tvaRate),
-			});
+			await trpc.provider.create.mutate(normalizePayload());
 			toast.push('Prestataire créé avec succès!', 'success');
 			goto('/admin/prestataires');
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create provider');
-
-			let message = 'Erreur lors de la création';
-
-			if (err.data?.zodError?.fieldErrors) {
-				const fieldErrors = err.data.zodError.fieldErrors;
-				const firstError = Object.values(fieldErrors)[0];
-				if (Array.isArray(firstError) && firstError.length > 0) {
-					message = firstError[0] as string;
-				}
-			} else if (err.message) {
-				try {
-					const parsed = JSON.parse(err.message);
-					if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].message) {
-						message = parsed[0].message;
-					}
-				} catch {
-					message = err.message;
-				}
-			}
-
+			const message = applyServerErrors(err);
 			toast.push(message, 'error');
 		} finally {
 			submitting = false;
@@ -103,6 +153,12 @@
 
 		<!-- Main Form -->
 		<div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-8">
+			{#if formMessage}
+				<div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+					{formMessage}
+				</div>
+			{/if}
+
 			<!-- General Information -->
 			<div>
 				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
@@ -114,9 +170,12 @@
 						<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 							<iconify-icon icon="solar:buildings-2-bold" width="16" class="text-[#FEC129]"
 							></iconify-icon>
-							Nom du prestataire *
+							Nom du prestataire <span class="text-rose-500">*</span>
 						</div>
-						<Input bind:value={formData.name} placeholder="Nom du prestataire" />
+						<Input bind:value={formData.name} placeholder="Nom du prestataire" error={!!getFieldError('name')} />
+						{#if getFieldError('name')}
+							<p class="mt-2 text-sm font-bold text-rose-600">{getFieldError('name')}</p>
+						{/if}
 					</div>
 
 					<div>
@@ -142,7 +201,7 @@
 							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
 								<iconify-icon icon="solar:percent-bold" width="16" class="text-[#FEC129]"
 								></iconify-icon>
-								Taux de TVA (%) *
+								Taux de TVA (%) <span class="text-rose-500">*</span>
 							</div>
 							<input
 								type="number"
@@ -150,9 +209,12 @@
 								min="0"
 								max="100"
 								bind:value={formData.tvaRate}
-								class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all"
+								class="w-full px-4 py-3 bg-white border rounded-xl outline-none focus:ring-2 transition-all {getFieldError('tvaRate') ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200' : 'border-slate-200 focus:border-[#FEC129] focus:ring-[#FEC129]/20'}"
 								placeholder="20"
 							/>
+							{#if getFieldError('tvaRate')}
+								<p class="mt-2 text-sm font-bold text-rose-600">{getFieldError('tvaRate')}</p>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -234,7 +296,11 @@
 								bind:value={formData.email}
 								type="email"
 								placeholder="contact@example.com"
+								error={!!getFieldError('email')}
 							/>
+							{#if getFieldError('email')}
+								<p class="mt-2 text-sm font-bold text-rose-600">{getFieldError('email')}</p>
+							{/if}
 						</div>
 
 						<div>
