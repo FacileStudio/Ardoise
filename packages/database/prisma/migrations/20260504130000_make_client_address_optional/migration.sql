@@ -1,0 +1,4 @@
+ALTER TABLE "Client" ALTER COLUMN "billingAddress" DROP NOT NULL;
+ALTER TABLE "Client" ALTER COLUMN "billingCity" DROP NOT NULL;
+ALTER TABLE "Client" ALTER COLUMN "billingCountry" DROP NOT NULL;
+ALTER TABLE "Client" ALTER COLUMN "billingCountry" DROP DEFAULT;
