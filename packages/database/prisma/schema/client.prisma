@@ -8,9 +8,9 @@ model Client {
   contactEmail String?
 
   companyName String
-  billingAddress String
-  billingCity String
-  billingCountry String @default("France")
+  billingAddress String?
+  billingCity String?
+  billingCountry String?
   siret String?
 
   stripeCustomerId String? @unique

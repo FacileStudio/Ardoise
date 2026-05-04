@@ -17,7 +17,7 @@
 		companyName: '',
 		billingAddress: '',
 		billingCity: '',
-		billingCountry: 'France',
+		billingCountry: '',
 		siret: '',
 		createCredentials: false,
 		credentialEmail: '',
@@ -57,18 +57,6 @@
 
 		if (!formData.companyName.trim()) {
 			nextErrors.companyName = "Le nom de l'entreprise est requis";
-		}
-
-		if (!formData.billingAddress.trim()) {
-			nextErrors.billingAddress = "L'adresse de facturation est requise";
-		}
-
-		if (!formData.billingCity.trim()) {
-			nextErrors.billingCity = 'La ville est requise';
-		}
-
-		if (!formData.billingCountry.trim()) {
-			nextErrors.billingCountry = 'Le pays est requis';
 		}
 
 		if (formData.createCredentials) {
@@ -217,28 +205,19 @@
 				</h2>
 				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
 					<div>
-						<div class="block text-sm font-black text-slate-700 mb-2">Adresse <span class="text-rose-500">*</span></div>
-						<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" error={!!getFieldError('billingAddress')} />
-						{#if getFieldError('billingAddress')}
-							<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('billingAddress')}</p>
-						{/if}
+						<div class="block text-sm font-black text-slate-700 mb-2">Adresse</div>
+						<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2">Ville <span class="text-rose-500">*</span></div>
-							<Input bind:value={formData.billingCity} placeholder="Paris" error={!!getFieldError('billingCity')} />
-							{#if getFieldError('billingCity')}
-								<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('billingCity')}</p>
-							{/if}
+							<div class="block text-sm font-black text-slate-700 mb-2">Ville</div>
+							<Input bind:value={formData.billingCity} placeholder="Paris" />
 						</div>
 
 						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2">Pays <span class="text-rose-500">*</span></div>
-							<Input bind:value={formData.billingCountry} placeholder="France" error={!!getFieldError('billingCountry')} />
-							{#if getFieldError('billingCountry')}
-								<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('billingCountry')}</p>
-							{/if}
+							<div class="block text-sm font-black text-slate-700 mb-2">Pays</div>
+							<Input bind:value={formData.billingCountry} placeholder="France" />
 						</div>
 					</div>
 				</div>

@@ -6,6 +6,7 @@ import {
   ListClientsSchema,
   GetByIdSchema,
 } from './types';
+import { dispatchConfiguredWebhook } from '../webhook/service';
 
 export const clientRouter = router({
   list: adminProcedure.input(ListClientsSchema).query(async ({ ctx, input }) => {
@@ -17,16 +18,46 @@ export const clientRouter = router({
   }),
 
   create: adminProcedure.input(CreateClientSchema).mutation(async ({ ctx, input }) => {
-    return clientService.createClient(ctx.db, ctx.auth, input);
+    const client = await clientService.createClient(ctx.db, ctx.auth, input);
+
+    await dispatchConfiguredWebhook({
+      db: ctx.db,
+      log: ctx.log,
+      event: 'client.created',
+      actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
+      data: { client },
+    });
+
+    return client;
   }),
 
   update: adminProcedure.input(UpdateClientSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
-    return clientService.updateClient(ctx.db, id, data);
+    const client = await clientService.updateClient(ctx.db, id, data);
+
+    await dispatchConfiguredWebhook({
+      db: ctx.db,
+      log: ctx.log,
+      event: 'client.updated',
+      actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
+      data: { clientId: id, client },
+    });
+
+    return client;
   }),
 
   delete: adminProcedure.input(GetByIdSchema).mutation(async ({ ctx, input }) => {
-    return clientService.deleteClient(ctx.db, input.id);
+    const result = await clientService.deleteClient(ctx.db, input.id);
+
+    await dispatchConfiguredWebhook({
+      db: ctx.db,
+      log: ctx.log,
+      event: 'client.deleted',
+      actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
+      data: { clientId: input.id },
+    });
+
+    return result;
   }),
 
   me: protectedProcedure.query(async ({ ctx }) => {
