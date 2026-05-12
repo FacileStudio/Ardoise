@@ -74,26 +74,33 @@
 	}
 </script>
 
-<div class="max-w-4xl mx-auto p-6">
-	<div class="mb-6">
-		<h1 class="text-3xl font-bold">Nouveau Contrat de Maintenance</h1>
-		<p class="text-gray-600 mt-2">Créer un contrat de maintenance (sans lignes de facturation)</p>
+<div class="max-w-2xl mx-auto p-6 space-y-6">
+	<div>
+		<button
+			onclick={() => goto('/admin/documents')}
+			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
+		>
+			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
+			Retour aux documents
+		</button>
+		<h1 class="text-2xl font-bold tracking-tight text-foreground">Nouveau Contrat de Maintenance</h1>
+		<p class="text-sm text-muted-foreground mt-1">Créer un contrat de maintenance (sans lignes de facturation)</p>
 	</div>
 
-	<div class="bg-white rounded-lg shadow p-6 space-y-6">
+	<div class="rounded-xl border border-border p-6 space-y-4">
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
-				<div class="block text-sm font-medium mb-2">Référence du contrat *</div>
+				<div class="text-sm font-medium mb-2">Référence du contrat *</div>
 				<Input bind:value={formData.contract_reference} placeholder="CTR-001" />
 			</div>
 
 			<div>
-				<div class="block text-sm font-medium mb-2">Date du contrat *</div>
+				<div class="text-sm font-medium mb-2">Date du contrat *</div>
 				<Input type="date" bind:value={formData.contract_date} />
 			</div>
 
 			<div>
-				<div class="block text-sm font-medium mb-2">Période de maintenance *</div>
+				<div class="text-sm font-medium mb-2">Période de maintenance *</div>
 				<Input bind:value={formData.maintenance_period} placeholder="12 mois" />
 			</div>
 		</div>
@@ -103,14 +110,18 @@
 			<ProviderSelect bind:value={formData.providerId} />
 		</div>
 
-		<div class="flex gap-4 pt-4">
+		<div class="flex gap-3 pt-4">
 			<Button onclick={handlePreview} disabled={generating}>
 				{generating ? 'Génération...' : 'Aperçu'}
 			</Button>
-			<Button onclick={handleCreate} variant="primary" disabled={generating}>
+			<button
+				onclick={handleCreate}
+				disabled={generating}
+				class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50"
+			>
 				{generating ? 'Création...' : 'Créer le contrat'}
-			</Button>
-			<Button onclick={() => goto('/admin/documents')} variant="secondary">
+			</button>
+			<Button onclick={() => goto('/admin/documents')} intent="secondary">
 				Annuler
 			</Button>
 		</div>

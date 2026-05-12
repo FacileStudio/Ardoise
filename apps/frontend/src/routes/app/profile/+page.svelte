@@ -1,7 +1,6 @@
 <script lang="ts">
   import { trpc } from '$lib/trpc';
   import { onMount } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
   import { toast } from '@repo/utils';
   import 'iconify-icon';
 
@@ -56,194 +55,108 @@
   }
 </script>
 
-<main class="min-h-screen bg-[#FAF7F5] p-8">
+<div class="flex flex-col gap-6 p-6 max-w-4xl">
   {#if loading}
-    <div class="flex flex-col items-center justify-center h-[80vh] space-y-6" in:fade>
-      <iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-      <p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-        Chargement...
-      </p>
+    <div class="flex items-center justify-center py-32">
+      <iconify-icon icon="svg-spinners:ring-resize" width="24" class="text-muted-foreground"></iconify-icon>
     </div>
   {:else if user && client}
-    <div class="max-w-5xl mx-auto space-y-8">
-      <div in:fade>
-        <h1 class="text-4xl font-black text-[#291334] tracking-tight mb-2 flex items-center gap-3">
-          <iconify-icon icon="solar:user-id-bold" width="40" class="text-[#291334]"></iconify-icon>
-          Informations client
-        </h1>
-        <p class="text-[#291334]/60 font-bold">
-          Consultez les informations de votre société enregistrées dans Charles
-        </p>
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-foreground">Informations client</h1>
+      <p class="text-sm text-muted-foreground">
+        Consultez les informations de votre société enregistrées dans Charles
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="rounded-xl border border-border p-6">
+        <p class="text-xs font-medium text-muted-foreground mb-4">Entreprise</p>
+        <div class="space-y-3">
+          <div>
+            <p class="text-xs font-medium text-muted-foreground mb-0.5">Nom de l'entreprise</p>
+            <p class="text-base font-semibold text-foreground">{client.companyName}</p>
+          </div>
+          {#if client.siret}
+            <div>
+              <p class="text-xs font-medium text-muted-foreground mb-0.5">SIRET</p>
+              <p class="text-sm font-medium text-foreground">{client.siret}</p>
+            </div>
+          {/if}
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div
-          in:fly={{ y: 20, delay: 100 }}
-          class="p-8 bg-white border-2 border-[#291334]/10 rounded-3xl hover:border-[#FEC129] transition-all group shadow-sm"
-        >
-          <div class="flex items-center justify-between mb-6">
-            <span class="text-xs font-black uppercase tracking-widest text-[#291334]/40">
-              Entreprise
-            </span>
-            <iconify-icon icon="solar:buildings-2-bold" width="24" class="text-[#291334]/20"></iconify-icon>
+      <div class="rounded-xl border border-border p-6">
+        <p class="text-xs font-medium text-muted-foreground mb-4">Adresse</p>
+        <div class="space-y-3">
+          <div>
+            <p class="text-xs font-medium text-muted-foreground mb-0.5">Adresse de facturation</p>
+            <p class="text-sm font-medium text-foreground">{client.billingAddress}</p>
           </div>
-          <div class="space-y-4">
-            <div>
-              <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                Nom de l'entreprise
-              </p>
-              <p class="text-2xl font-black text-[#291334] tracking-tight">
-                {client.companyName}
-              </p>
+          <div class="flex gap-4">
+            <div class="flex-1">
+              <p class="text-xs font-medium text-muted-foreground mb-0.5">Ville</p>
+              <p class="text-sm font-medium text-foreground">{client.billingCity}</p>
             </div>
-            {#if client.siret}
-              <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                  SIRET
-                </p>
-                <p class="text-lg font-bold text-[#291334]">
-                  {client.siret}
-                </p>
-              </div>
-            {/if}
-          </div>
-        </div>
-
-        <div
-          in:fly={{ y: 20, delay: 200 }}
-          class="p-8 bg-white border-2 border-[#291334]/10 rounded-3xl hover:border-[#FEC129] transition-all group shadow-sm"
-        >
-          <div class="flex items-center justify-between mb-6">
-            <span class="text-xs font-black uppercase tracking-widest text-[#291334]/40">
-              Adresse
-            </span>
-            <iconify-icon icon="solar:map-point-bold" width="24" class="text-[#291334]/20"></iconify-icon>
-          </div>
-          <div class="space-y-3">
-            <div>
-              <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                Adresse de facturation
-              </p>
-              <p class="text-lg font-bold text-[#291334]">
-                {client.billingAddress}
-              </p>
+            <div class="flex-1">
+              <p class="text-xs font-medium text-muted-foreground mb-0.5">Pays</p>
+              <p class="text-sm font-medium text-foreground">{client.billingCountry}</p>
             </div>
-            <div class="flex gap-4">
-              <div class="flex-1">
-                <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                  Ville
-                </p>
-                <p class="text-lg font-bold text-[#291334]">
-                  {client.billingCity}
-                </p>
-              </div>
-              <div class="flex-1">
-                <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                  Pays
-                </p>
-                <p class="text-lg font-bold text-[#291334]">
-                  {client.billingCountry}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          in:fly={{ y: 20, delay: 300 }}
-          class="p-8 bg-white border-2 border-[#291334]/10 rounded-3xl hover:border-[#FEC129] transition-all group shadow-sm"
-        >
-          <div class="flex items-center justify-between mb-6">
-            <span class="text-xs font-black uppercase tracking-widest text-[#291334]/40">
-              Contact
-            </span>
-            <iconify-icon icon="solar:user-bold" width="24" class="text-[#291334]/20"></iconify-icon>
-          </div>
-          <div class="space-y-4">
-            <div>
-              <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                Contact principal
-              </p>
-              <p class="text-2xl font-black text-[#291334] tracking-tight">
-                {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Non renseigné'}
-              </p>
-            </div>
-            <div>
-              <p class="text-xs font-bold uppercase tracking-wider text-[#291334]/50 mb-1">
-                Email
-              </p>
-              <p class="text-lg font-bold text-[#291334]">
-                {user.email}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div
-          in:fly={{ y: 20, delay: 400 }}
-          class="p-8 bg-[#291334] text-white rounded-3xl shadow-lg relative overflow-hidden group"
-        >
-          <div class="relative z-10">
-            <div class="flex items-center justify-between mb-6">
-              <span class="text-xs font-black uppercase tracking-widest text-white/60">
-                Compte
-              </span>
-              <iconify-icon icon="solar:calendar-bold" width="24" class="text-white/30"></iconify-icon>
-            </div>
-            <div class="space-y-4">
-              <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-white/60 mb-1">
-                  Client depuis
-                </p>
-                <p class="text-2xl font-black tracking-tight">
-                  {formatDate(client.createdAt)}
-                </p>
-              </div>
-              <div class="flex items-center gap-2 pt-4 border-t border-white/10">
-                <div class="w-2 h-2 rounded-full bg-[#FEC129]"></div>
-                <p class="text-sm font-bold text-white/80">
-                  Compte actif
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="absolute -right-6 -bottom-6 opacity-[0.05] group-hover:scale-110 transition-transform duration-1000">
-            <iconify-icon icon="solar:verified-check-bold" width="160"></iconify-icon>
           </div>
         </div>
       </div>
 
-      <div
-        in:fly={{ y: 20, delay: 500 }}
-        class="p-8 bg-white border-2 border-[#291334]/10 rounded-3xl shadow-sm"
-      >
-        <div class="flex items-start gap-4">
-          <div class="w-12 h-12 rounded-2xl bg-[#FEC129]/10 flex items-center justify-center flex-shrink-0">
-            <iconify-icon icon="solar:info-circle-bold" width="24" class="text-[#FEC129]"></iconify-icon>
-          </div>
-          <div class="flex-1">
-            <h3 class="text-lg font-black text-[#291334] mb-2">
-              Besoin de modifier vos informations ?
-            </h3>
-            <p class="text-[#291334]/60 font-bold leading-relaxed">
-              Pour toute modification de vos informations d'entreprise ou de facturation,
-              veuillez nous contacter directement.
+      <div class="rounded-xl border border-border p-6">
+        <p class="text-xs font-medium text-muted-foreground mb-4">Contact</p>
+        <div class="space-y-3">
+          <div>
+            <p class="text-xs font-medium text-muted-foreground mb-0.5">Contact principal</p>
+            <p class="text-base font-semibold text-foreground">
+              {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Non renseigné'}
             </p>
           </div>
+          <div>
+            <p class="text-xs font-medium text-muted-foreground mb-0.5">Email</p>
+            <p class="text-sm font-medium text-foreground">{user.email}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-foreground text-background p-6">
+        <p class="text-xs font-medium text-background/60 mb-4">Compte</p>
+        <div class="space-y-3">
+          <div>
+            <p class="text-xs font-medium text-background/60 mb-0.5">Client depuis</p>
+            <p class="text-base font-semibold">{formatDate(client.createdAt)}</p>
+          </div>
+          <div class="flex items-center gap-2 pt-3 border-t border-background/10">
+            <div class="w-2 h-2 rounded-full bg-green-400"></div>
+            <p class="text-sm text-background/80">Compte actif</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-border p-4">
+      <div class="flex items-start gap-3">
+        <iconify-icon icon="solar:info-circle-linear" width="18" class="text-muted-foreground mt-0.5"></iconify-icon>
+        <div>
+          <h3 class="text-sm font-medium text-foreground mb-0.5">
+            Besoin de modifier vos informations ?
+          </h3>
+          <p class="text-sm text-muted-foreground">
+            Pour toute modification de vos informations d'entreprise ou de facturation,
+            veuillez nous contacter directement.
+          </p>
         </div>
       </div>
     </div>
   {:else}
-    <div class="flex flex-col items-center justify-center h-[80vh] space-y-6" in:fade>
-      <iconify-icon icon="solar:sad-circle-bold" width="64" class="text-[#291334]/20"></iconify-icon>
-      <div class="text-center">
-        <h2 class="text-2xl font-black text-[#291334] mb-2">
-          Aucune donnée disponible
-        </h2>
-        <p class="text-[#291334]/60 font-bold">
-          Impossible de charger vos informations
-        </p>
+    <div class="flex flex-col items-center justify-center py-32">
+      <div class="size-12 rounded-lg border border-border flex items-center justify-center mb-4">
+        <iconify-icon icon="solar:user-linear" width="24" class="text-muted-foreground"></iconify-icon>
       </div>
+      <h2 class="text-lg font-semibold text-foreground mb-1">Aucune donnée disponible</h2>
+      <p class="text-sm text-muted-foreground">Impossible de charger vos informations</p>
     </div>
   {/if}
-</main>
+</div>

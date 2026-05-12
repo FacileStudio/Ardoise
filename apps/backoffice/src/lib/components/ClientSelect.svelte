@@ -45,13 +45,13 @@
 </script>
 
 <div>
-	<div class="block text-sm font-medium mb-2">
+	<div class="block text-sm font-medium text-foreground mb-2">
 		Client {required ? '*' : ''}
 	</div>
 	<select
 		value={value}
 		onchange={handleChange}
-		class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+		class="w-full h-9 px-3 text-sm bg-transparent border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:bg-muted disabled:text-muted-foreground"
 		disabled={loading}
 		required={required}
 	>

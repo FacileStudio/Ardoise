@@ -7,74 +7,73 @@
     import 'iconify-icon';
 
     const menuItems = [
-        { label: $i18n.t('nav.clients'), icon: 'solar:users-group-rounded-bold', href: '/admin/clients' },
-        { label: $i18n.t('nav.payments'), icon: 'solar:wallet-bold', href: '/admin/payments' },
-        { label: $i18n.t('nav.documents'), icon: 'solar:document-text-bold', href: '/admin/documents' },
-        // { label: 'Signature', icon: 'solar:pen-new-square-bold-duotone', href: '/admin/sign' },
-        { label: 'Prestataires', icon: 'solar:buildings-2-bold', href: '/admin/prestataires' },
-        { label: $i18n.t('nav.statistics'), icon: 'solar:chart-bold', href: '/admin/statistics' },
-        { label: $i18n.t('nav.users'), icon: 'solar:user-bold', href: '/admin/users' },
-        { label: 'Paramètres', icon: 'solar:settings-bold', href: '/admin/settings' },
+        { label: $i18n.t('nav.clients'), icon: 'solar:users-group-rounded-linear', href: '/admin/clients' },
+        { label: $i18n.t('nav.payments'), icon: 'solar:wallet-linear', href: '/admin/payments' },
+        { label: $i18n.t('nav.documents'), icon: 'solar:document-text-linear', href: '/admin/documents' },
+        { label: 'Prestataires', icon: 'solar:buildings-2-linear', href: '/admin/prestataires' },
+        { label: $i18n.t('nav.statistics'), icon: 'solar:chart-linear', href: '/admin/statistics' },
+        { label: $i18n.t('nav.users'), icon: 'solar:user-linear', href: '/admin/users' },
+        { label: 'Paramètres', icon: 'solar:settings-linear', href: '/admin/settings' },
     ];
+
+    function getInitials(name: string | undefined) {
+        if (!name) return 'A';
+        const parts = name.trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return '?';
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+    }
 </script>
 
-<div class="flex min-h-screen bg-[#FAF7F5] font-sans text-slate-900">
-    <aside class="w-72 bg-[#FAF7F5] border-r border-[#291334]/10 flex flex-col sticky top-0 h-screen p-8">
-        <div class="mb-12 px-2">
-            <div class="flex items-center gap-3">
-                <div class="w-11 h-11 flex-shrink-0">
-                    <img src="/logo.svg" alt="Charles" class="w-full h-full object-contain" />
-                </div>
-                <h1 class="text-2xl font-black tracking-tight leading-none text-[#291334]">
-                    Charles
-                </h1>
-            </div>
+<div class="flex h-screen w-full overflow-hidden">
+    <aside class="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-background">
+        <div class="flex items-center gap-3 px-5 pt-8 pb-6">
+            <img class="w-7" src="/logo.svg" alt="Charles" />
+            <span class="text-2xl font-bold font-heading tracking-tight">Charles</span>
         </div>
 
-        <nav class="flex-1 space-y-2">
+        <nav class="flex flex-1 flex-col gap-1 px-3">
             {#each menuItems as item (item.href)}
+                {@const active = $page.url.pathname === item.href}
                 <a
                     href={resolve(item.href)}
-                    class="group relative flex items-center gap-4 px-6 py-3.5 rounded-full transition-all duration-200
-                    {$page.url.pathname === item.href
-                        ? 'bg-[#291334] text-white shadow-lg shadow-[#291334]/20'
-                        : 'text-[#291334]/70 hover:bg-[#291334]/5 hover:text-[#291334]'}"
+                    class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active
+                        ? 'bg-foreground text-background font-medium'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
                 >
-                    <iconify-icon
-                        icon={item.icon}
-                        width="22"
-                        class="transition-all group-hover:scale-110 {$page.url.pathname === item.href ? 'text-[#FEC129]' : ''}"
-                    ></iconify-icon>
-
-                    <span class="font-bold tracking-tight text-[13px]">
-                        {item.label}
-                    </span>
+                    <iconify-icon icon={item.icon} width="16" class="shrink-0"></iconify-icon>
+                    {item.label}
                 </a>
             {/each}
         </nav>
 
-        <div class="mt-auto pt-6 border-t border-[#291334]/10 space-y-3">
-            <div class="relative p-4 bg-white/50 rounded-[20px] border border-[#291334]/10 transition-all duration-300 hover:border-[#FEC129] hover:bg-white/80">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-[#291334] flex items-center justify-center text-white font-black flex-shrink-0">
-                        {$authStore.user?.firstName?.[0] || 'A'}
-                    </div>
-                    <div class="overflow-hidden flex-1">
-                        <p class="text-[13px] font-black text-[#291334] truncate leading-tight">
-                            {$authStore.user?.firstName}
-                        </p>
-                        <p class="text-[11px] font-bold text-[#291334]/50 uppercase tracking-wide">{$i18n.t('backoffice.sidebar.admin')}</p>
-                    </div>
+        <div class="h-px bg-border"></div>
+
+        <div class="flex flex-col gap-2 p-4">
+            <div
+                class="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/40 p-2.5"
+            >
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-sm font-semibold text-background">
+                    {getInitials($authStore.user?.firstName)}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium">{$authStore.user?.firstName || 'Admin'}</p>
+                    <p class="truncate text-xs text-muted-foreground">{$i18n.t('backoffice.sidebar.admin')}</p>
                 </div>
             </div>
-            <Button intent="danger" onclick={() => authStore.logout()} class="w-full">
-                <iconify-icon icon="solar:logout-2-bold" width="18"></iconify-icon>
+            <Button
+                intent="ghost"
+                size="sm"
+                onclick={() => authStore.logout()}
+                class="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+                <iconify-icon icon="solar:logout-2-linear" width="16"></iconify-icon>
                 {$i18n.t('backoffice.sidebar.logout')}
             </Button>
         </div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 overflow-auto">
         <slot />
     </main>
 </div>

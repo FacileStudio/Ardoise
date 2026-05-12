@@ -4,7 +4,6 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { logger } from '@repo/logger';
-	import { fade, fly } from 'svelte/transition';
 	import 'iconify-icon';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
@@ -131,175 +130,170 @@
 </script>
 
 {#if loading}
-	<div class="flex flex-col items-center justify-center h-screen space-y-6">
-		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-			Chargement...
-		</p>
+	<div class="flex flex-col items-center justify-center h-screen space-y-4">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="40" class="text-foreground"></iconify-icon>
+		<p class="text-sm text-muted-foreground">Chargement...</p>
 	</div>
 {:else}
 	<div class="p-8 max-w-[1600px] mx-auto space-y-6">
-		<header class="flex justify-between items-center" in:fade>
+		<header class="flex justify-between items-center">
 			<div>
-				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-					<iconify-icon icon="solar:chart-bold" width="32" class="text-[#291334]"></iconify-icon>
-					Statistiques financières
-				</h1>
-				<p class="text-slate-500 text-sm mt-1">
+				<h1 class="text-2xl font-bold tracking-tight text-foreground">Statistiques financières</h1>
+				<p class="text-sm text-muted-foreground mt-1">
 					Analyse détaillée des paiements et revenus
 				</p>
 			</div>
 			{#if payments.length > 0}
-				<Button onclick={handleExportCSV} class="rounded-full">
+				<Button onclick={handleExportCSV}>
 					<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
 					<span>Exporter CSV</span>
 				</Button>
 			{/if}
 		</header>
 		<div class="grid grid-cols-4 gap-4">
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 100 }}>
+			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-emerald-600 uppercase tracking-tight">
+					<div class="text-xs font-medium text-green-600 uppercase">
 						Revenu total
 					</div>
 					<iconify-icon
 						icon="solar:wallet-money-bold"
-						class="text-emerald-400"
-						width="24"
+						class="text-green-600"
+						width="20"
 					></iconify-icon>
 				</div>
-				<div class="text-3xl font-black text-emerald-600">{formatCurrency(totalRevenue)}</div>
-				<div class="text-xs text-slate-500 mt-1">
+				<div class="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
+				<div class="text-xs text-muted-foreground mt-1">
 					{payments.filter((p) => p.status === 'PAID').length} paiements
 				</div>
 			</div>
 
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 200 }}>
+			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-amber-600 uppercase tracking-tight">
+					<div class="text-xs font-medium text-amber-600 uppercase">
 						En attente
 					</div>
 					<iconify-icon
 						icon="solar:clock-circle-bold"
-						class="text-amber-400"
-						width="24"
+						class="text-amber-600"
+						width="20"
 					></iconify-icon>
 				</div>
-				<div class="text-3xl font-black text-amber-600">{formatCurrency(pendingRevenue)}</div>
-				<div class="text-xs text-slate-500 mt-1">
+				<div class="text-2xl font-bold text-amber-600">{formatCurrency(pendingRevenue)}</div>
+				<div class="text-xs text-muted-foreground mt-1">
 					{payments.filter((p) => p.status === 'PENDING').length} factures
 				</div>
 			</div>
 
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 300 }}>
+			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-slate-600 uppercase tracking-tight">
+					<div class="text-xs font-medium text-muted-foreground uppercase">
 						Ce mois
 					</div>
 					<iconify-icon
 						icon="solar:calendar-mark-bold"
-						class="text-slate-400"
-						width="24"
+						class="text-muted-foreground"
+						width="20"
 					></iconify-icon>
 				</div>
-				<div class="text-3xl font-black text-slate-900">{formatCurrency(thisMonthRevenue())}</div>
-				<div class="text-xs text-slate-500 mt-1">Revenus du mois actuel</div>
+				<div class="text-2xl font-bold text-foreground">{formatCurrency(thisMonthRevenue())}</div>
+				<div class="text-xs text-muted-foreground mt-1">Revenus du mois actuel</div>
 			</div>
 
-			<div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 400 }}>
+			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-indigo-600 uppercase tracking-tight">
+					<div class="text-xs font-medium text-muted-foreground uppercase">
 						Paiement moyen
 					</div>
 					<iconify-icon
 						icon="solar:chart-bold"
-						class="text-indigo-400"
-						width="24"
+						class="text-muted-foreground"
+						width="20"
 					></iconify-icon>
 				</div>
-				<div class="text-3xl font-black text-indigo-600">{formatCurrency(averagePayment)}</div>
-				<div class="text-xs text-slate-500 mt-1">Montant moyen</div>
+				<div class="text-2xl font-bold text-foreground">{formatCurrency(averagePayment)}</div>
+				<div class="text-xs text-muted-foreground mt-1">Montant moyen</div>
 			</div>
 		</div>
 
 		<div class="grid grid-cols-2 gap-6">
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 500 }}>
+			<div class="rounded-xl border border-border p-6">
 				<div class="mb-4">
-					<h2 class="text-lg font-black text-[#291334]">Revenus mensuels</h2>
-					<p class="text-xs text-slate-500">6 derniers mois</p>
+					<h2 class="text-base font-semibold text-foreground">Revenus mensuels</h2>
+					<p class="text-xs text-muted-foreground">6 derniers mois</p>
 				</div>
 				{#if monthlyRevenue().length > 0}
 					<AreaChart
 						data={monthlyRevenue()}
 						x="month"
 						y="revenue"
-						color="#291334"
+						color="currentColor"
 						height={300}
 						formatValue={formatCurrency}
 					/>
 				{:else}
-					<div class="h-[300px] flex items-center justify-center text-slate-400">
+					<div class="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
 						Aucune donnée
 					</div>
 				{/if}
 			</div>
 
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 600 }}>
+			<div class="rounded-xl border border-border p-6">
 				<div class="mb-4">
-					<h2 class="text-lg font-black text-[#291334]">Statut des paiements</h2>
-					<p class="text-xs text-slate-500">Répartition par statut</p>
+					<h2 class="text-base font-semibold text-foreground">Statut des paiements</h2>
+					<p class="text-xs text-muted-foreground">Répartition par statut</p>
 				</div>
 				{#if paymentStatusDistribution().some((d) => d.value > 0)}
 					<PieChart
 						data={paymentStatusDistribution()}
 						value="value"
 						label="label"
-						colors={['#10b981', '#FEC129', '#ef4444', '#94a3b8']}
+						colors={['#16a34a', '#d97706', '#dc2626', '#6b7280']}
 						height={300}
 					/>
 				{:else}
-					<div class="h-[300px] flex items-center justify-center text-slate-400">
+					<div class="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
 						Aucune donnée
 					</div>
 				{/if}
 			</div>
 
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 700 }}>
+			<div class="rounded-xl border border-border p-6">
 				<div class="mb-4">
-					<h2 class="text-lg font-black text-[#291334]">Tendance des paiements</h2>
-					<p class="text-xs text-slate-500">Nombre de paiements créés</p>
+					<h2 class="text-base font-semibold text-foreground">Tendance des paiements</h2>
+					<p class="text-xs text-muted-foreground">Nombre de paiements créés</p>
 				</div>
 				{#if paymentTrend().length > 0}
 					<LineChart
 						data={paymentTrend()}
 						x="month"
 						y="count"
-						color="#FEC129"
+						color="currentColor"
 						height={300}
 					/>
 				{:else}
-					<div class="h-[300px] flex items-center justify-center text-slate-400">
+					<div class="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
 						Aucune donnée
 					</div>
 				{/if}
 			</div>
 
-			<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" in:fly={{ y: 20, delay: 800 }}>
+			<div class="rounded-xl border border-border p-6">
 				<div class="mb-4">
-					<h2 class="text-lg font-black text-[#291334]">Revenus par mois (barres)</h2>
-					<p class="text-xs text-slate-500">Comparaison mensuelle</p>
+					<h2 class="text-base font-semibold text-foreground">Revenus par mois (barres)</h2>
+					<p class="text-xs text-muted-foreground">Comparaison mensuelle</p>
 				</div>
 				{#if monthlyRevenue().length > 0}
 					<BarChart
 						data={monthlyRevenue()}
 						x="month"
 						y="revenue"
-						color="#291334"
+						color="currentColor"
 						height={300}
 						formatValue={formatCurrency}
 					/>
 				{:else}
-					<div class="h-[300px] flex items-center justify-center text-slate-400">
+					<div class="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
 						Aucune donnée
 					</div>
 				{/if}

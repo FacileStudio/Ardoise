@@ -72,12 +72,12 @@
 </script>
 
 <div class="flex flex-col gap-2 w-full max-w-md">
-    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
+    <span class="text-xs font-medium text-muted-foreground ml-1">
         {label}
     </span>
 
     <div
-        class="relative h-48 w-full rounded-[32px] border-2 border-dashed border-slate-100 bg-slate-50/50 overflow-hidden group hover:border-indigo-200 transition-all"
+        class="relative h-48 w-full rounded-xl border-2 border-dashed border-border bg-muted/50 overflow-hidden group hover:border-foreground/50 transition-all"
     >
         {#if previewUrl}
             <img
@@ -86,15 +86,15 @@
                 class="w-full h-full object-contain {uploading ? 'opacity-40 blur-sm' : ''}"
             />
         {:else}
-            <div class="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
+            <div class="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
                 <iconify-icon icon="solar:cloud-upload-bold-duotone" width="40"></iconify-icon>
-                <p class="text-[10px] font-black uppercase">Cliquez pour uploader</p>
+                <p class="text-xs font-medium">Cliquez pour uploader</p>
             </div>
         {/if}
 
         {#if uploading}
-            <div class="absolute inset-0 flex items-center justify-center bg-white/20 backdrop-blur-sm">
-                <iconify-icon icon="line-md:loading-twotone-loop" width="32" class="text-indigo-600"></iconify-icon>
+            <div class="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+                <iconify-icon icon="line-md:loading-twotone-loop" width="32" class="text-foreground"></iconify-icon>
             </div>
         {/if}
 
@@ -102,10 +102,10 @@
             <button
                 type="button"
                 onclick={(e) => { e.preventDefault(); value = ""; previewUrl = ""; }}
-                class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full text-rose-500 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                class="absolute top-3 right-3 bg-background/90 backdrop-blur-sm p-2 rounded-lg border border-border text-destructive shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                 aria-label="Remove image"
             >
-                <iconify-icon icon="solar:trash-bin-trash-bold" width="20"></iconify-icon>
+                <iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
             </button>
         {/if}
 

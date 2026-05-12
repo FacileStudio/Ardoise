@@ -16,31 +16,31 @@
 <div class="relative inline-block" use:clickOutside={() => isOpen = false}>
     <button
         on:click={() => isOpen = !isOpen}
-        class="w-12 h-12 bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white rounded-2xl transition-all flex items-center justify-center"
+        class="w-9 h-9 bg-muted text-muted-foreground hover:bg-foreground hover:text-background rounded-lg transition-colors flex items-center justify-center"
         aria-label="Ouvrir le menu utilisateur"
     >
-        <iconify-icon icon="solar:menu-dots-bold" width="20"></iconify-icon>
+        <iconify-icon icon="solar:menu-dots-bold" width="18"></iconify-icon>
     </button>
 
     {#if isOpen}
         <div
-            class="absolute right-0 top-14 w-56 bg-white border border-slate-100 shadow-2xl rounded-[24px] p-2 z-50"
+            class="absolute right-0 top-11 w-56 rounded-lg border border-border bg-background shadow-lg p-1 z-50"
         >
-            <div class="p-3 text-[10px] font-black text-slate-300 uppercase tracking-widest">Actions rapides</div>
+            <div class="px-3 py-2 text-xs font-medium text-muted-foreground">Actions rapides</div>
 
             <button
                 on:click={() => { onChangeRole(user.role === 'admin' ? 'user' : 'admin'); isOpen = false; }}
-                class="w-full flex items-center gap-3 p-3 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors"
+                class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
             >
-                <iconify-icon icon="solar:crown-bold" class="text-rose-500"></iconify-icon>
+                <iconify-icon icon="solar:crown-bold" class="text-foreground"></iconify-icon>
                 {user.role === 'admin' ? 'Passer Utilisateur' : 'Passer Admin'}
             </button>
 
-            <div class="h-px bg-slate-50 my-1"></div>
+            <div class="h-px bg-border my-1"></div>
 
             <button
                 on:click={() => { onDelete(); isOpen = false; }}
-                class="w-full flex items-center gap-3 p-3 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
             >
                 <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
                 Supprimer définitivement

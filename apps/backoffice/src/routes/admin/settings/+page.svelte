@@ -100,7 +100,7 @@
       formData.webhookSecret = '';
       message = { type: 'success', text: 'Paramètres enregistrés' };
     } catch {
-      message = { type: 'error', text: 'Impossible d’enregistrer les paramètres' };
+      message = { type: 'error', text: 'Impossible d\'enregistrer les paramètres' };
     } finally {
       saving = false;
     }
@@ -124,16 +124,16 @@
   }
 </script>
 
-<div class="min-h-screen p-8 lg:p-12 bg-[#FAF7F5]">
+<div class="p-8 lg:p-12">
   <div class="max-w-5xl mx-auto space-y-8">
     <header class="flex items-center justify-between">
       <div>
-        <p class="text-xs font-black uppercase tracking-[0.25em] text-[#291334]/40">Administration</p>
-        <h1 class="text-4xl font-black tracking-tight text-[#291334]">Paramètres</h1>
+        <h1 class="text-2xl font-bold tracking-tight text-foreground">Paramètres</h1>
+        <p class="text-sm text-muted-foreground mt-1">Administration</p>
       </div>
-      <Button onclick={saveSettings} disabled={saving || loading} class="bg-[#291334] text-white">
+      <Button onclick={saveSettings} disabled={saving || loading} class="bg-primary text-primary-foreground">
         {#if saving}
-          <Spinner size="sm" class="text-white" />
+          <Spinner size="sm" />
         {:else}
           <iconify-icon icon="solar:diskette-bold" width="18"></iconify-icon>
         {/if}
@@ -152,9 +152,9 @@
         <Spinner size="lg" />
       </div>
     {:else}
-      <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">
-        <h2 class="text-xl font-black text-[#291334]">Entreprise</h2>
-        <div class="grid md:grid-cols-2 gap-5">
+      <section class="rounded-xl border border-border p-6 space-y-4">
+        <h2 class="text-base font-semibold text-foreground">Entreprise</h2>
+        <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.companyName} placeholder="Nom commercial" />
           <Input bind:value={formData.companyLegal} placeholder="Raison sociale" />
           <Input bind:value={formData.companyAddress} placeholder="Adresse" />
@@ -172,18 +172,18 @@
         />
       </section>
 
-      <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">
-        <h2 class="text-xl font-black text-[#291334]">Stripe</h2>
-        <div class="grid md:grid-cols-2 gap-5">
+      <section class="rounded-xl border border-border p-6 space-y-4">
+        <h2 class="text-base font-semibold text-foreground">Stripe</h2>
+        <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.stripePublishableKey} placeholder="Clé publique pk_..." />
           <Input bind:value={formData.stripeSecretKey} type="password" placeholder="Nouvelle clé secrète sk_..." />
           <Input bind:value={formData.stripeWebhookSecret} type="password" placeholder="Nouveau secret webhook whsec_..." class="md:col-span-2" />
         </div>
       </section>
 
-      <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">
-        <h2 class="text-xl font-black text-[#291334]">SMTP</h2>
-        <div class="grid md:grid-cols-2 gap-5">
+      <section class="rounded-xl border border-border p-6 space-y-4">
+        <h2 class="text-base font-semibold text-foreground">SMTP</h2>
+        <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.smtpHost} placeholder="Serveur SMTP" />
           <Input bind:value={formData.smtpPort} type="number" placeholder="Port" />
           <Input bind:value={formData.smtpUser} placeholder="Utilisateur" />
@@ -192,42 +192,42 @@
         </div>
       </section>
 
-      <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">
-        <h2 class="text-xl font-black text-[#291334]">DocuSeal</h2>
-        <div class="grid md:grid-cols-2 gap-5">
+      <section class="rounded-xl border border-border p-6 space-y-4">
+        <h2 class="text-base font-semibold text-foreground">DocuSeal</h2>
+        <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.docusealApiUrl} placeholder="https://docuseal.example.com/api" />
           <Input bind:value={formData.docusealApiKey} type="password" placeholder="Nouvelle clé API" />
         </div>
       </section>
 
-      <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">
-        <div class="space-y-2">
-          <h2 class="text-xl font-black text-[#291334]">Webhooks</h2>
-          <p class="text-sm text-[#291334]/65">
-            Charles envoie des `POST` avec `X-Charles-Event`, `X-Charles-Delivery` et
-            `X-Charles-Signature-256` si un secret est défini.
+      <section class="rounded-xl border border-border p-6 space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">Webhooks</h2>
+          <p class="text-sm text-muted-foreground">
+            Charles envoie des POST avec X-Charles-Event, X-Charles-Delivery et
+            X-Charles-Signature-256 si un secret est défini.
           </p>
         </div>
-        <div class="grid md:grid-cols-2 gap-5">
+        <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.webhookUrl} placeholder="https://example.com/webhooks/charles" class="md:col-span-2" />
           <Input bind:value={formData.webhookSecret} type="password" placeholder="Secret de signature optionnel" class="md:col-span-2" />
           <div class="md:col-span-2 space-y-2">
-            <label class="text-sm font-bold text-[#291334]" for="webhook-events">Événements</label>
+            <label class="text-sm font-medium text-foreground" for="webhook-events">Événements</label>
             <textarea
               id="webhook-events"
               bind:value={webhookEventsText}
               rows="5"
               placeholder={"admin.user.created\nadmin.user.updated\nsettings.updated\nsettings.*"}
-              class="w-full rounded-[24px] border border-[#291334]/15 bg-white px-5 py-4 text-sm text-[#291334] outline-none transition focus:border-[#291334]/40 focus:ring-2 focus:ring-[#291334]/10"
+              class="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-foreground outline-none transition focus:border-foreground"
             ></textarea>
-            <p class="text-xs text-[#291334]/55">Un événement par ligne ou séparé par des virgules. Laisse vide pour tout envoyer.</p>
+            <p class="text-xs text-muted-foreground">Un événement par ligne ou séparé par des virgules. Laisse vide pour tout envoyer.</p>
           </div>
         </div>
       </section>
 
-      <section class="bg-white border border-[#291334]/10 rounded-[28px] p-8 space-y-6">
-        <h2 class="text-xl font-black text-[#291334]">Facturation</h2>
-        <div class="grid md:grid-cols-2 gap-5">
+      <section class="rounded-xl border border-border p-6 space-y-4">
+        <h2 class="text-base font-semibold text-foreground">Facturation</h2>
+        <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.bankName} placeholder="Banque" />
           <Input bind:value={formData.tvaRate} type="number" placeholder="TVA" />
           <Input bind:value={formData.iban} placeholder="IBAN" />

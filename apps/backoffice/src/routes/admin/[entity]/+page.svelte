@@ -184,16 +184,16 @@
   }
 </script>
 
-<div class="p-8 max-w-[1400px] mx-auto space-y-6">
+<div class="p-6 max-w-5xl mx-auto space-y-6">
   <div class="flex justify-between items-center">
     <div>
-      <h1 class="text-3xl font-black text-slate-900 tracking-tighter">{config?.displayName || entity} Administration</h1>
-      <p class="text-slate-500 text-sm mt-1">Manage {config?.displayName || entity} entries</p>
+      <h1 class="text-2xl font-bold tracking-tight text-foreground">{config?.displayName || entity} Administration</h1>
+      <p class="text-sm text-muted-foreground mt-1">Manage {config?.displayName || entity} entries</p>
     </div>
     {#if permissions.canCreate}
       <Button intent="primary" onclick={() => (showCreateModal = true)}>
-        <iconify-icon icon="mdi:plus" width="20" class="mr-2"></iconify-icon>
-        <span>Create {config?.displayName}</span>
+        <iconify-icon icon="mdi:plus" width="16" class="mr-1"></iconify-icon>
+        Create {config?.displayName}
       </Button>
     {/if}
   </div>
@@ -207,7 +207,7 @@
       <Spinner size="xl" />
     </div>
   {:else if config && data}
-    <div class="bg-white rounded-2xl border border-slate-100 p-4">
+    <div class="rounded-xl border border-border p-4">
       <Input
         type="text"
         placeholder="Search..."
@@ -258,34 +258,32 @@
     <div class="grid gap-4 p-6">
       {#each config.fields as field (field.name)}
         <div class="grid grid-cols-[150px_1fr] gap-4">
-          <strong class="text-slate-700">{field.label}:</strong>
-          <span class="text-slate-900">{selectedItem[field.name] ?? '-'}</span>
+          <strong class="text-sm font-medium text-muted-foreground">{field.label}:</strong>
+          <span class="text-sm text-foreground">{selectedItem[field.name] ?? '-'}</span>
         </div>
       {/each}
     </div>
-    <div class="flex justify-end p-6 border-t border-slate-100">
+    <div class="flex justify-end p-6 border-t border-border">
       <Button intent="secondary" onclick={handleCancel}>Close</Button>
     </div>
   {/if}
 </Drawer>
 
 <Drawer open={showDeleteConfirm} title="Confirm Delete" onClose={cancelDelete}>
-  <div class="text-center p-4">
-    <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-danger-light flex items-center justify-center">
-      <iconify-icon icon="solar:danger-triangle-bold" width="36" class="text-danger"></iconify-icon>
+  <div class="text-center p-6">
+    <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
+      <iconify-icon icon="solar:danger-triangle-bold" width="24" class="text-red-600"></iconify-icon>
     </div>
-    <h3 class="text-2xl font-black text-slate-900 mb-2">Delete {config?.displayName}?</h3>
-    <p class="text-slate-500 mb-6">
+    <h3 class="text-lg font-bold text-foreground mb-2">Delete {config?.displayName}?</h3>
+    <p class="text-sm text-muted-foreground mb-6">
       This action cannot be undone. This will permanently delete the {config?.displayName.toLowerCase()} from the database.
     </p>
     <div class="flex gap-3 justify-center">
       <Button intent="secondary" onclick={cancelDelete}>
-        <iconify-icon icon="heroicons:x-mark" width="20"></iconify-icon>
-        <span>Cancel</span>
+        Cancel
       </Button>
       <Button intent="danger" onclick={confirmDelete}>
-        <iconify-icon icon="heroicons:trash" width="20"></iconify-icon>
-        <span>Delete</span>
+        Delete
       </Button>
     </div>
   </div>

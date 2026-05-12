@@ -2,7 +2,7 @@
     import { cva, type VariantProps } from 'class-variance-authority';
 
     const avatarClass = cva(
-        "rounded-full bg-gradient-to-br flex items-center justify-center font-black text-white overflow-hidden",
+        "rounded-full border border-border bg-muted flex items-center justify-center font-semibold text-muted-foreground overflow-hidden",
         {
             variants: {
                 size: {
@@ -12,17 +12,9 @@
                     lg: "w-16 h-16 text-lg",
                     xl: "w-24 h-24 text-2xl",
                 },
-                color: {
-                    blue: "from-blue-500 to-indigo-600",
-                    purple: "from-purple-500 to-pink-600",
-                    green: "from-green-500 to-teal-600",
-                    orange: "from-orange-500 to-red-600",
-                    slate: "from-slate-500 to-slate-700",
-                }
             },
             defaultVariants: {
                 size: "md",
-                color: "blue",
             }
         }
     );
@@ -31,12 +23,11 @@
     export let alt = '';
     export let initials = '';
     export let size: VariantProps<typeof avatarClass>['size'] = 'md';
-    export let color: VariantProps<typeof avatarClass>['color'] = 'blue';
     let className = "";
     export { className as class };
 </script>
 
-<div class={avatarClass({ size, color, class: className })}>
+<div class={avatarClass({ size, class: className })}>
     {#if src}
         <img {src} {alt} class="w-full h-full object-cover" />
     {:else}

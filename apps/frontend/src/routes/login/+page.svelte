@@ -1,15 +1,14 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { fly, fade } from 'svelte/transition';
   import { trpc } from '$lib/trpc';
   import authStore from '$lib/auth-store';
   import 'iconify-icon';
 
-  let loading = false;
-  let error = '';
-  let email = '';
-  let password = '';
+  let loading = $state(false);
+  let error = $state('');
+  let email = $state('');
+  let password = $state('');
 
   async function handleLogin() {
     loading = true;
@@ -19,110 +18,92 @@
       authStore.setAuth({ token }, user);
       await goto(resolve('/app/profile'));
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Échec de l\'authentification.';
+      error = err instanceof Error ? err.message : "Échec de l'authentification.";
+    } finally {
       loading = false;
     }
   }
-
-  const inputClass =
-    'text-xl md:text-2xl font-bold bg-transparent border-b-2 border-[#291334]/20 focus:border-[#FEC129] outline-none py-4 transition-all placeholder:text-[#291334]/30 focus:placeholder:text-[#291334]/20 w-full text-[#291334]';
-  const btnClass =
-    'px-12 py-5 bg-[#291334] text-[#FAF7F5] font-black uppercase tracking-widest rounded-2xl disabled:opacity-20 transition-all hover:enabled:scale-105 active:enabled:scale-95 shadow-xl shadow-[#291334]/10 flex items-center justify-center gap-3';
 </script>
 
-<main
-  class="min-h-screen w-full bg-[#FAF7F5] text-[#291334] font-sans flex flex-col selection:bg-[#FEC129] selection:text-[#291334]"
->
-  <nav class="p-8 flex justify-between items-center relative z-10">
-    <a
-      href={resolve('/')}
-      class="group flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-50 transition"
-    >
-      <iconify-icon
-        icon="solar:arrow-left-bold"
-        width="16"
-        class="group-hover:-translate-x-1 transition-transform"
-      ></iconify-icon>
-      Retour
+<svelte:head>
+  <title>Connexion — Charles</title>
+</svelte:head>
+
+<div class="flex min-h-screen">
+  <div class="hidden lg:flex lg:w-1/2 flex-col bg-foreground px-12 py-10">
+    <a href={resolve('/')} class="flex items-center gap-3 mb-auto">
+      <img class="w-7 invert" src="/logo.svg" alt="Charles" />
+      <span class="text-xl font-bold font-heading tracking-tight text-background">Charles</span>
     </a>
-    <div class="flex items-center gap-3">
-      <img src="/logo.svg" alt="Charles" class="h-6" />
-      <span class="text-xl font-black tracking-tighter text-[#291334]">Charles</span>
-    </div>
-  </nav>
 
-  <div class="flex-1 flex items-center justify-center px-6 py-12 relative">
-    <form
-      on:submit|preventDefault={handleLogin}
-      in:fly={{ y: 20, duration: 600 }}
-      class="max-w-xl w-full"
-    >
-      <span
-        class="inline-block px-4 py-1.5 mb-8 text-[10px] font-black uppercase tracking-[0.2em] bg-[#FEC129]/20 text-[#291334] rounded-full"
-        >Espace de connexion</span
-      >
-
-      <h2 class="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-none mb-12">
-        Connexion <br /> <span class="text-[#FEC129]">client.</span>
+    <div class="mb-auto">
+      <h2 class="text-4xl font-bold font-heading text-background leading-tight tracking-tight">
+        Facturation.<br />Paiement.
       </h2>
+      <p class="mt-4 text-sm text-background/50 max-w-xs leading-relaxed">
+        Plateforme de facturation et de paiement pour Facile Studio.
+      </p>
+    </div>
 
-      <div class="space-y-8">
-        <input
-          type="email"
-          bind:value={email}
-          placeholder="Adresse email"
-          class={inputClass}
-          required
-        />
-        <input
-          type="password"
-          bind:value={password}
-          placeholder="Mot de passe"
-          class={inputClass}
-          required
-        />
-      </div>
-
-      {#if error}
-        <div class="mt-6 p-4 bg-[#291334] text-[#FAF7F5] rounded-xl flex items-center gap-3" in:fade>
-          <iconify-icon icon="solar:danger-triangle-bold" width="20"></iconify-icon>
-          <span class="text-[10px] font-black uppercase tracking-widest">{error}</span>
-        </div>
-      {/if}
-
-      <div class="flex flex-col md:flex-row items-center gap-6 mt-12">
-        <button type="submit" disabled={loading || !email || !password} class={btnClass}>
-          {#if loading}
-            <iconify-icon icon="svg-spinners:18-dots-revolve" width="24"></iconify-icon>
-            Connexion...
-          {:else}
-            <iconify-icon icon="solar:login-3-bold" width="22"></iconify-icon>
-            Se connecter
-          {/if}
-        </button>
-      </div>
-    </form>
+    <p class="text-xs text-background/30">
+      © {new Date().getFullYear()} Charles par Facile.
+    </p>
   </div>
 
-  <div class="fixed bottom-0 right-0 p-12 pointer-events-none overflow-hidden hidden md:block">
-    <div
-      class="text-[20vh] font-black uppercase tracking-tighter leading-none opacity-[0.03] select-none translate-y-1/4 text-[#291334]"
-    >
-      Login.
+  <div class="flex w-full lg:w-1/2 flex-col items-center justify-center px-8 py-12 bg-background">
+    <div class="w-full max-w-sm">
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold font-heading tracking-tight text-foreground">
+          Bienvenue
+        </h1>
+        <p class="mt-1.5 text-sm text-muted-foreground">
+          Connectez-vous à votre espace client.
+        </p>
+      </div>
+
+      <form
+        onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
+        class="space-y-4"
+      >
+        <div class="space-y-1.5">
+          <label for="email" class="text-sm font-medium">Email</label>
+          <input
+            id="email"
+            type="email"
+            bind:value={email}
+            placeholder="vous@exemple.com"
+            required
+            class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
+          />
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="password" class="text-sm font-medium">Mot de passe</label>
+          <input
+            id="password"
+            type="password"
+            bind:value={password}
+            placeholder="••••••••"
+            required
+            class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
+          />
+        </div>
+
+        {#if error}
+          <p class="text-sm text-destructive">{error}</p>
+        {/if}
+
+        <button
+          type="submit"
+          disabled={loading || !email || !password}
+          class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          {#if loading}
+            <iconify-icon icon="svg-spinners:ring-resize" width="16"></iconify-icon>
+          {/if}
+          Se connecter
+        </button>
+      </form>
     </div>
   </div>
-</main>
-
-<style>
-  :global(html) {
-    scroll-behavior: smooth;
-    overflow-y: auto !important;
-  }
-  :global(body) {
-    overflow: auto !important;
-    height: auto !important;
-  }
-  input::placeholder {
-    opacity: 1;
-  }
-</style>
+</div>

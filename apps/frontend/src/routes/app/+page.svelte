@@ -4,7 +4,6 @@
   import { Badge, Card, Button } from '@repo/ui';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { fade, fly } from 'svelte/transition';
   import 'iconify-icon';
 
   interface PaymentSummary {
@@ -73,178 +72,149 @@
   $: otherPayments = Array.isArray(payments) ? payments.filter(p => !['PENDING', 'PAID'].includes(p.status)) : [];
 </script>
 
-<div class="min-h-screen bg-[#FAF7F5] p-8">
-  <div class="max-w-7xl mx-auto">
-    <div class="mb-8" in:fade>
-      <h1 class="text-4xl font-black tracking-tight text-[#291334] mb-2 flex items-center gap-3">
-        <iconify-icon icon="solar:document-text-bold" width="40" class="text-[#291334]"></iconify-icon>
-        Mes factures
-      </h1>
-      <p class="text-[#291334]/60 font-bold">
-        Consultez et payez vos factures en toute simplicité
+<div class="flex flex-col gap-6 p-6">
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-foreground">Mes factures</h1>
+    <p class="text-sm text-muted-foreground">
+      Consultez et payez vos factures en toute simplicité
+    </p>
+  </div>
+
+  {#if loading}
+    <div class="flex items-center justify-center py-32">
+      <iconify-icon icon="svg-spinners:ring-resize" width="24" class="text-muted-foreground"></iconify-icon>
+    </div>
+  {:else if error}
+    <div class="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-destructive">
+      <div class="flex items-center gap-3">
+        <iconify-icon icon="solar:danger-circle-linear" width="20"></iconify-icon>
+        <span class="text-sm font-medium">{error}</span>
+      </div>
+    </div>
+  {:else if payments.length === 0}
+    <div class="flex flex-col items-center justify-center py-16">
+      <div class="size-12 rounded-lg border border-border flex items-center justify-center mb-4">
+        <iconify-icon icon="solar:document-text-linear" width="24" class="text-muted-foreground"></iconify-icon>
+      </div>
+      <h3 class="text-lg font-semibold text-foreground mb-1">Aucune facture</h3>
+      <p class="text-sm text-muted-foreground max-w-md text-center">
+        Vous n'avez aucune facture pour le moment. Elles apparaîtront ici dès qu'elles seront créées.
       </p>
     </div>
-
-    {#if loading}
-      <div class="flex flex-col items-center justify-center h-[80vh] space-y-6">
-        <iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-        <p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-          Chargement...
-        </p>
-      </div>
-    {:else if error}
-      <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-800">
-        <div class="flex items-center gap-3">
-          <iconify-icon icon="solar:danger-circle-bold" width="24"></iconify-icon>
-          <span class="font-bold">{error}</span>
+  {:else}
+    {#if pendingPayments.length > 0}
+      <div class="space-y-4">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-semibold text-foreground">Factures à payer</h2>
+          <Badge variant="amber">{pendingPayments.length}</Badge>
         </div>
-      </div>
-    {:else if payments.length === 0}
-      <div class="text-center py-16" in:fade>
-        <div class="flex flex-col items-center gap-4">
-          <div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
-            <iconify-icon icon="solar:document-text-bold" width="40"></iconify-icon>
-          </div>
-          <h3 class="text-2xl font-black text-[#291334]">Aucune facture</h3>
-          <p class="text-[#291334]/60 max-w-md font-bold">
-            Vous n'avez aucune facture pour le moment. Elles apparaîtront ici dès qu'elles seront créées.
-          </p>
-        </div>
-      </div>
-    {:else}
-      {#if pendingPayments.length > 0}
-        <div class="mb-12" in:fly={{ y: 20, delay: 100 }}>
-          <div class="flex items-center gap-3 mb-6">
-            <iconify-icon icon="solar:clock-circle-bold" width="28" class="text-[#FEC129]"></iconify-icon>
-            <h2 class="text-2xl font-black tracking-tight text-[#291334]">
-              Factures à payer
-            </h2>
-            <Badge variant="amber">{pendingPayments.length}</Badge>
-          </div>
-          <div class="grid grid-cols-1 gap-6">
-            {#each pendingPayments as payment (payment.id)}
-              <div in:fly={{ y: 20, delay: 200 }}>
-                <Card class="border-2 border-[#FEC129]/30 hover:border-[#FEC129] transition-all group">
-                  <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                      <h3 class="font-black text-lg text-[#291334]">
-                        {payment.description}
-                      </h3>
-                      <Badge variant={getStatusBadge(payment.status).variant}>
-                        {getStatusBadge(payment.status).label}
-                      </Badge>
-                    </div>
-                    <p class="text-sm text-[#291334]/60">
-                      Échéance : {formatDate(payment.dueDate)}
-                    </p>
+        <div class="grid grid-cols-1 gap-4">
+          {#each pendingPayments as payment (payment.id)}
+            <div class="rounded-xl border border-border p-4">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <h3 class="font-bold text-foreground">
+                      {payment.description}
+                    </h3>
+                    <Badge variant={getStatusBadge(payment.status).variant}>
+                      {getStatusBadge(payment.status).label}
+                    </Badge>
                   </div>
-
-                  <div class="flex items-center gap-6">
-                    <div class="text-3xl font-black text-[#291334]">
-                      {formatAmount(payment.amount)}
-                    </div>
-
-                    <Button
-                      variant="primary"
-                      class="bg-[#291334] hover:bg-[#291334]/90 text-[#FAF7F5] whitespace-nowrap"
-                      onclick={() => handlePayNow(payment.id)}
-                    >
-                      <iconify-icon icon="solar:card-bold" width="20"></iconify-icon>
-                      Payer maintenant
-                    </Button>
-                  </div>
+                  <p class="text-sm text-muted-foreground">
+                    Échéance : {formatDate(payment.dueDate)}
+                  </p>
                 </div>
-                </Card>
-              </div>
-            {/each}
-          </div>
-        </div>
-      {/if}
 
-      {#if paidPayments.length > 0}
-        <div class="mb-12" in:fly={{ y: 20, delay: 300 }}>
-          <div class="flex items-center gap-3 mb-6">
-            <iconify-icon icon="solar:check-circle-bold" width="28" class="text-green-500"></iconify-icon>
-            <h2 class="text-2xl font-black tracking-tight text-[#291334]">
-              Factures payées
-            </h2>
-            <Badge variant="emerald">{paidPayments.length}</Badge>
-          </div>
-          <div class="grid grid-cols-1 gap-4">
-            {#each paidPayments as payment (payment.id)}
-              <div in:fly={{ y: 20, delay: 400 }}>
-                <Card class="border border-[#291334]/10 hover:border-[#291334]/30 transition-all">
-                  <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                      <h3 class="font-black text-lg text-[#291334]">
-                        {payment.description}
-                      </h3>
-                      <Badge variant="success">
-                        {getStatusBadge(payment.status).label}
-                      </Badge>
-                    </div>
-                    <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 text-sm text-[#291334]/60">
-                      <span>Payée le {formatDate(payment.paidAt)}</span>
-                      <span class="hidden md:inline">•</span>
-                      <span>Montant : {formatAmount(payment.amount)}</span>
-                    </div>
+                <div class="flex items-center gap-4">
+                  <div class="text-xl font-bold text-foreground">
+                    {formatAmount(payment.amount)}
                   </div>
 
-                  {#if payment.receiptUrl}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onclick={() => window.open(payment.receiptUrl, '_blank')}
-                    >
-                      <iconify-icon icon="solar:download-bold" width="18"></iconify-icon>
-                      Télécharger le reçu
-                    </Button>
-                  {/if}
+                  <button
+                    class="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+                    onclick={() => handlePayNow(payment.id)}
+                  >
+                    Payer maintenant
+                  </button>
                 </div>
-                </Card>
               </div>
-            {/each}
-          </div>
+            </div>
+          {/each}
         </div>
-      {/if}
-
-      {#if otherPayments.length > 0}
-        <div in:fly={{ y: 20, delay: 500 }}>
-          <div class="flex items-center gap-3 mb-6">
-            <iconify-icon icon="solar:archive-bold" width="28" class="text-[#291334]/40"></iconify-icon>
-            <h2 class="text-2xl font-black tracking-tight text-[#291334]">
-              Autres factures
-            </h2>
-          </div>
-          <div class="grid grid-cols-1 gap-4">
-            {#each otherPayments as payment (payment.id)}
-              <div in:fly={{ y: 20, delay: 600 }}>
-                <Card class="border border-[#291334]/10">
-                  <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                      <h3 class="font-black text-lg text-[#291334]">
-                        {payment.description}
-                      </h3>
-                      <Badge variant={getStatusBadge(payment.status).variant}>
-                        {getStatusBadge(payment.status).label}
-                      </Badge>
-                    </div>
-                    <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 text-sm text-[#291334]/60">
-                      <span>Créée le {formatDate(payment.createdAt)}</span>
-                      <span class="hidden md:inline">•</span>
-                      <span>Montant : {formatAmount(payment.amount)}</span>
-                    </div>
-                  </div>
-                </div>
-                </Card>
-              </div>
-            {/each}
-          </div>
-        </div>
-      {/if}
+      </div>
     {/if}
-  </div>
+
+    {#if paidPayments.length > 0}
+      <div class="space-y-4">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-semibold text-foreground">Factures payées</h2>
+          <Badge variant="emerald">{paidPayments.length}</Badge>
+        </div>
+        <div class="grid grid-cols-1 gap-3">
+          {#each paidPayments as payment (payment.id)}
+            <div class="rounded-xl border border-border p-4">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <h3 class="font-bold text-foreground">
+                      {payment.description}
+                    </h3>
+                    <Badge variant="success">
+                      {getStatusBadge(payment.status).label}
+                    </Badge>
+                  </div>
+                  <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-sm text-muted-foreground">
+                    <span>Payée le {formatDate(payment.paidAt)}</span>
+                    <span class="hidden md:inline">·</span>
+                    <span>Montant : {formatAmount(payment.amount)}</span>
+                  </div>
+                </div>
+
+                {#if payment.receiptUrl}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => window.open(payment.receiptUrl, '_blank')}
+                  >
+                    <iconify-icon icon="solar:download-linear" width="16"></iconify-icon>
+                    Télécharger le reçu
+                  </Button>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
+    {#if otherPayments.length > 0}
+      <div class="space-y-4">
+        <h2 class="text-lg font-semibold text-foreground">Autres factures</h2>
+        <div class="grid grid-cols-1 gap-3">
+          {#each otherPayments as payment (payment.id)}
+            <div class="rounded-xl border border-border p-4">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <h3 class="font-bold text-foreground">
+                      {payment.description}
+                    </h3>
+                    <Badge variant={getStatusBadge(payment.status).variant}>
+                      {getStatusBadge(payment.status).label}
+                    </Badge>
+                  </div>
+                  <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-sm text-muted-foreground">
+                    <span>Créée le {formatDate(payment.createdAt)}</span>
+                    <span class="hidden md:inline">·</span>
+                    <span>Montant : {formatAmount(payment.amount)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+  {/if}
 </div>

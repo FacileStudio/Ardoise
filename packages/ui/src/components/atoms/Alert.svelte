@@ -2,14 +2,14 @@
     import { cva, type VariantProps } from 'class-variance-authority';
 
     const alertClass = cva(
-        "p-4 rounded-2xl font-medium flex items-start gap-3 border",
+        "rounded-lg border p-4 text-sm flex items-start gap-3",
         {
             variants: {
                 variant: {
-                    info: "bg-blue-50 text-blue-700 border-blue-100",
-                    success: "bg-green-50 text-green-700 border-green-100",
-                    warning: "bg-amber-50 text-amber-700 border-amber-100",
-                    danger: "bg-rose-50 text-rose-700 border-rose-100",
+                    info: "border-border bg-muted text-foreground",
+                    success: "border-green-200 bg-green-50 text-green-800",
+                    warning: "border-amber-200 bg-amber-50 text-amber-800",
+                    danger: "border-red-200 bg-red-50 text-red-800",
                 }
             },
             defaultVariants: {

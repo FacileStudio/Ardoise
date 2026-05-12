@@ -43,7 +43,7 @@
     aria-label="Previous page"
     disabled={currentPage === 1}
     onclick={() => goToPage(currentPage - 1)}
-    class="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-all hover:bg-neutral-100 hover:text-black disabled:opacity-30 disabled:hover:bg-transparent"
+    class="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
   >
     <iconify-icon icon="solar:alt-arrow-left-linear" width="20"></iconify-icon>
   </button>
@@ -51,7 +51,7 @@
   <div class="flex items-center gap-1">
     {#each pages as pageNum, idx (idx)}
       {#if pageNum === '...'}
-        <span class="flex h-9 w-9 items-center justify-center text-neutral-400">
+        <span class="flex h-9 w-9 items-center justify-center text-muted-foreground">
           <iconify-icon icon="solar:menu-dots-bold" width="14"></iconify-icon>
         </span>
       {:else}
@@ -60,10 +60,10 @@
           onclick={() => goToPage(pageNum)}
           aria-current={currentPage === pageNum ? 'page' : undefined}
           class={cn(
-            'h-9 min-w-[36px] px-2 rounded-xl text-sm font-bold transition-all duration-200',
+            'h-9 min-w-[36px] px-2 rounded-md text-sm font-medium transition-all duration-200',
             currentPage === pageNum
-              ? 'bg-black text-white shadow-md shadow-black/10 scale-105'
-              : 'text-neutral-500 hover:bg-neutral-100 hover:text-black'
+              ? 'bg-foreground text-background'
+              : 'border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
           )}
         >
           {pageNum}
@@ -77,7 +77,7 @@
     aria-label="Next page"
     disabled={currentPage === totalPages}
     onclick={() => goToPage(currentPage + 1)}
-    class="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-all hover:bg-neutral-100 hover:text-black disabled:opacity-30 disabled:hover:bg-transparent"
+    class="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
   >
     <iconify-icon icon="solar:alt-arrow-right-linear" width="20"></iconify-icon>
   </button>

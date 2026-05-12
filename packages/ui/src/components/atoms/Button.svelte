@@ -3,19 +3,19 @@
     import type { Snippet } from 'svelte';
 
     const buttonClass = cva(
-        "inline-flex items-center justify-center gap-2 transition-all font-black uppercase tracking-tight active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer rounded-full",
+        "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
         {
             variants: {
                 intent: {
-                    primary: "bg-slate-900 text-white hover:bg-indigo-600 shadow-lg shadow-slate-200",
-                    secondary: "bg-white border-2 border-slate-100 text-slate-600 hover:border-indigo-100 hover:text-indigo-600",
-                    danger: "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-200",
-                    ghost: "bg-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-900"
+                    primary: "bg-primary text-primary-foreground hover:bg-primary/90",
+                    secondary: "border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+                    danger: "bg-danger text-danger-foreground hover:bg-danger/90",
+                    ghost: "text-muted-foreground hover:bg-accent hover:text-foreground"
                 },
                 size: {
-                    sm: "px-4 py-2 text-[10px]",
-                    md: "px-6 py-3 text-xs",
-                    lg: "px-8 py-4 text-sm"
+                    sm: "h-8 px-3 text-xs",
+                    md: "h-9 px-4",
+                    lg: "h-10 px-6"
                 }
             },
             defaultVariants: {

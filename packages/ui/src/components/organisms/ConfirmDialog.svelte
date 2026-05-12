@@ -24,17 +24,17 @@
 
 <Modal bind:open={isOpen}>
     <div class="text-center space-y-6">
-        <div class="w-16 h-16 rounded-2xl bg-{variant === 'danger' ? 'rose' : 'indigo'}-50 flex items-center justify-center mx-auto">
+        <div class="w-14 h-14 rounded-xl {variant === 'danger' ? 'bg-red-50' : 'bg-muted'} flex items-center justify-center mx-auto">
             <iconify-icon
                 icon={variant === 'danger' ? 'solar:danger-triangle-bold' : 'solar:question-circle-bold'}
-                width="32"
-                class="text-{variant === 'danger' ? 'rose' : 'indigo'}-600"
+                width="28"
+                class={variant === 'danger' ? 'text-red-600' : 'text-muted-foreground'}
             ></iconify-icon>
         </div>
 
         <div>
-            <h2 class="text-2xl font-black text-slate-900 mb-2">{title}</h2>
-            <p class="text-slate-500 font-medium">{description}</p>
+            <h2 class="text-lg font-semibold text-foreground mb-2">{title}</h2>
+            <p class="text-sm text-muted-foreground">{description}</p>
         </div>
 
         <div class="flex gap-3">

@@ -10,9 +10,9 @@
     export { className as class };
 
     const trendColors = {
-        up: 'text-green-600 bg-green-50',
-        down: 'text-rose-600 bg-rose-50',
-        neutral: 'text-slate-600 bg-slate-50',
+        up: 'text-green-700 bg-green-50',
+        down: 'text-red-700 bg-red-50',
+        neutral: 'text-muted-foreground bg-muted',
     };
 
     const trendIcons = {
@@ -22,24 +22,24 @@
     };
 </script>
 
-<div class={cn("bg-white p-6 rounded-2xl border border-slate-100 shadow-sm", className)}>
-    <div class="flex items-start justify-between mb-4">
-        <div class="text-sm font-black uppercase tracking-wider text-slate-400">
+<div class={cn("rounded-xl border border-border p-4", className)}>
+    <div class="flex items-start justify-between mb-3">
+        <div class="text-xs font-medium text-muted-foreground">
             {label}
         </div>
         {#if icon}
-            <div class="p-2 bg-indigo-50 rounded-xl">
-                <iconify-icon {icon} width="20" class="text-indigo-600"></iconify-icon>
+            <div class="p-2 bg-muted rounded-lg">
+                <iconify-icon {icon} width="18" class="text-muted-foreground"></iconify-icon>
             </div>
         {/if}
     </div>
 
-    <div class="text-3xl font-black text-slate-900 mb-2">
+    <div class="text-2xl font-bold text-foreground mb-1">
         {value}
     </div>
 
     {#if trendValue}
-        <div class={cn("inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold", trendColors[trend])}>
+        <div class={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium", trendColors[trend])}>
             <iconify-icon icon={trendIcons[trend]} width="14"></iconify-icon>
             {trendValue}
         </div>

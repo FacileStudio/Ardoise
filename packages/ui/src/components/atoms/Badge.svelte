@@ -3,19 +3,21 @@
     import type { Snippet } from 'svelte';
 
     const badgeClass = cva(
-        "inline-flex items-center justify-center px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wide",
+        "inline-flex items-center justify-center rounded-md border px-2.5 py-0.5 text-xs font-medium",
         {
             variants: {
                 variant: {
-                    indigo: "bg-indigo-100 text-indigo-700",
-                    rose: "bg-rose-100 text-rose-700",
-                    amber: "bg-amber-100 text-amber-800",
-                    emerald: "bg-emerald-100 text-emerald-800",
-                    slate: "bg-slate-100 text-slate-700",
-                    warning: "bg-amber-100 text-amber-800",
-                    success: "bg-emerald-100 text-emerald-800",
-                    error: "bg-rose-100 text-rose-700",
-                    default: "bg-slate-100 text-slate-700"
+                    default: "border-transparent bg-primary text-primary-foreground",
+                    secondary: "border-transparent bg-secondary text-secondary-foreground",
+                    outline: "border-border text-foreground",
+                    success: "border-transparent bg-success text-success-foreground",
+                    warning: "border-transparent bg-warning text-warning-foreground",
+                    error: "border-transparent bg-danger text-danger-foreground",
+                    indigo: "border-transparent bg-primary text-primary-foreground",
+                    rose: "border-transparent bg-danger text-danger-foreground",
+                    amber: "border-transparent bg-warning text-warning-foreground",
+                    emerald: "border-transparent bg-success text-success-foreground",
+                    slate: "border-transparent bg-secondary text-secondary-foreground"
                 }
             },
             defaultVariants: {

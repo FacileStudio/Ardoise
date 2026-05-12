@@ -37,9 +37,6 @@
   const shape = schema.shape as Record<string, z.ZodTypeAny>;
   const fields = Object.keys(shape);
 
-  /**
-   * Identifie le type d'input à afficher selon le schéma Zod
-   */
   function getFieldType(fieldName: string) {
     const fieldSchema = shape[fieldName];
     const typeName = fieldSchema?._def?.typeName;
@@ -47,15 +44,11 @@
     if (fieldName.toLowerCase().includes('image')) return 'image';
     if (typeName === 'ZodNumber') return 'number';
     if (typeName === 'ZodBoolean') return 'checkbox';
-    // Support des Enums classiques et Native Enums (Prisma)
     if (typeName === 'ZodEnum' || typeName === 'ZodNativeEnum') return 'select';
 
     return 'text';
   }
 
-  /**
-   * Extrait les options d'un ZodEnum ou ZodNativeEnum
-   */
   function getEnumOptions(fieldName: string): string[] {
     const fieldSchema = shape[fieldName];
     const def = fieldSchema._def;
@@ -66,12 +59,12 @@
   }
 </script>
 
-<form use:enhance class="space-y-6 bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm">
+<form use:enhance class="space-y-6 rounded-xl border border-border bg-background p-6">
   <div class="grid grid-cols-1 gap-5">
     {#each fields as field (field)}
       {#if field !== 'id' && field !== 'createdAt' && field !== 'updatedAt'}
         <div class="flex flex-col gap-2">
-          <label for={field} class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
+          <label for={field} class="text-xs font-medium text-muted-foreground ml-1">
             {field}
           </label>
 
@@ -83,14 +76,14 @@
               <select
                 id={field}
                 bind:value={$form[field]}
-                class="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 appearance-none"
+                class="w-full h-9 px-3 rounded-lg border border-border bg-transparent text-sm font-medium text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all"
               >
                 <option value="" disabled selected>Sélectionner une option</option>
                 {#each getEnumOptions(field) as option (option)}
                   <option value={option}>{option}</option>
                 {/each}
               </select>
-              <div class="absolute right-5 pointer-events-none text-slate-400">
+              <div class="absolute right-3 pointer-events-none text-muted-foreground">
                 <iconify-icon icon="solar:alt-arrow-down-bold" width="16"></iconify-icon>
               </div>
             </div>
@@ -101,9 +94,9 @@
                 type="checkbox"
                 id={field}
                 bind:checked={$form[field]}
-                class="w-6 h-6 rounded-lg border-2 border-slate-200 text-indigo-600 focus:ring-indigo-500 transition-all"
+                class="w-5 h-5 rounded border-border text-foreground focus:ring-ring transition-all"
               />
-              <span class="text-xs font-bold text-slate-500 uppercase">Activer {field}</span>
+              <span class="text-sm font-medium text-muted-foreground">Activer {field}</span>
             </label>
 
           {:else if getFieldType(field) === 'number'}
@@ -111,7 +104,7 @@
               type="number"
               id={field}
               bind:value={$form[field]}
-              class="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 {$errors[field] ? 'border-rose-200' : 'border-transparent'} focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+              class="h-9 w-full px-3 rounded-lg border {$errors[field] ? 'border-destructive' : 'border-border'} bg-transparent text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all"
               {...$constraints[field]}
             />
 
@@ -120,13 +113,13 @@
               type="text"
               id={field}
               bind:value={$form[field]}
-              class="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 {$errors[field] ? 'border-rose-200' : 'border-transparent'} focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+              class="h-9 w-full px-3 rounded-lg border {$errors[field] ? 'border-destructive' : 'border-border'} bg-transparent text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all"
               {...$constraints[field]}
             />
           {/if}
 
           {#if $errors[field]}
-            <span class="text-[10px] font-bold text-rose-500 ml-2">{$errors[field]}</span>
+            <span class="text-xs font-medium text-destructive ml-1">{$errors[field]}</span>
           {/if}
         </div>
       {/if}
@@ -144,7 +137,6 @@
 </form>
 
 <style>
-  /* Petit hack pour styliser proprement le select sur certains navigateurs */
   select {
     background-image: none;
   }

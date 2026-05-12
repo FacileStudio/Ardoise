@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { fly } from 'svelte/transition';
     import { isAdmin } from '@repo/auth-shared';
     import { Badge } from '@repo/ui';
     import UserMenu from './UserMenu.svelte';
@@ -22,44 +21,43 @@
 </script>
 
 <div
-    in:fly={{ y: 20, duration: 400 }}
-    class="bg-white rounded-[35px] border border-slate-100 p-6 shadow-sm hover:shadow-xl transition-all group relative"
+    class="rounded-xl border border-border bg-background p-4 hover:bg-muted/50 transition-colors group relative"
 >
-    <div class="flex items-center gap-4 mb-4">
+    <div class="flex items-center gap-3 mb-3">
         <div class="relative flex-shrink-0">
             {#if user.avatar?.url}
-                <img src={user.avatar.url} alt={user.firstName} class="w-16 h-16 rounded-[22px] object-cover" />
+                <img src={user.avatar.url} alt={user.firstName} class="w-12 h-12 rounded-lg object-cover" />
             {:else}
-                <div class="w-16 h-16 rounded-[22px] bg-slate-50 flex items-center justify-center text-slate-400 font-black text-2xl border border-slate-200">
+                <div class="w-12 h-12 rounded-lg bg-foreground text-background flex items-center justify-center font-medium text-lg">
                     {user.firstName[0]}
                 </div>
             {/if}
 
             {#if isAdmin(user)}
-                <div class="absolute -top-2 -right-2 w-7 h-7 bg-rose-500 text-white rounded-full shadow-lg border-2 border-white flex items-center justify-center z-10">
-                    <iconify-icon icon="solar:crown-bold" width="16"></iconify-icon>
+                <div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                    <iconify-icon icon="solar:crown-bold" width="12"></iconify-icon>
                 </div>
             {/if}
         </div>
 
         <div class="overflow-hidden flex-1">
-            <div class="flex items-center gap-2 mb-1">
-                <h3 class="font-black text-slate-800 truncate text-lg tracking-tight">{user.firstName}</h3>
-                <Badge variant={getStatusColor(user.status || 'ACTIVE')} class="text-[8px]">
+            <div class="flex items-center gap-2 mb-0.5">
+                <h3 class="font-medium text-sm text-foreground truncate">{user.firstName}</h3>
+                <Badge variant={getStatusColor(user.status || 'ACTIVE')} class="text-[10px]">
                     {user.status || 'ACTIVE'}
                 </Badge>
             </div>
-            <p class="text-xs text-slate-400 truncate font-bold">{user.email}</p>
+            <p class="text-xs text-muted-foreground truncate">{user.email}</p>
         </div>
     </div>
 
     <div class="flex gap-2">
         <button
             on:click={() => onViewDetails(user.id)}
-            class="flex-1 bg-slate-50 px-4 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-50 transition-colors group/btn"
+            class="flex-1 bg-muted px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-muted/80 transition-colors text-sm"
         >
-            <iconify-icon icon="solar:eye-bold" class="text-slate-300 group-hover/btn:text-indigo-500"></iconify-icon>
-            <span class="font-black text-slate-700 text-sm group-hover/btn:text-indigo-700">View</span>
+            <iconify-icon icon="solar:eye-bold" class="text-muted-foreground"></iconify-icon>
+            <span class="font-medium text-foreground text-sm">View</span>
         </button>
 
         <UserMenu

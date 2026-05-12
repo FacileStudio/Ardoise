@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import {
 		Badge,
@@ -143,139 +142,134 @@
 </script>
 
 {#if pageLoading}
-	<div class="flex flex-col items-center justify-center h-screen space-y-6">
-		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="48" class="text-[#291334]"></iconify-icon>
-		<p class="text-xs font-black uppercase tracking-[0.3em] text-[#291334]/40">
-			Chargement...
-		</p>
+	<div class="flex flex-col items-center justify-center h-screen space-y-4">
+		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="40" class="text-foreground"></iconify-icon>
+		<p class="text-sm text-muted-foreground">Chargement...</p>
 	</div>
 {:else}
 	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
-		<header class="flex justify-between items-center" in:fade>
+		<header class="flex justify-between items-center">
 			<div>
-				<h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-					<iconify-icon icon="solar:buildings-2-bold" width="32" class="text-[#291334]"></iconify-icon>
-					{$i18n.t('backoffice.clients.title')}
-				</h1>
-				<p class="text-slate-500 text-sm mt-1">{$i18n.t('backoffice.clients.subtitle')}</p>
+				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('backoffice.clients.title')}</h1>
+				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('backoffice.clients.subtitle')}</p>
 			</div>
 			<div class="flex gap-3">
 				{#if clients.length > 0}
-					<Button onclick={handleExportCSV} class="rounded-full">
+					<Button onclick={handleExportCSV}>
 						<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
 						<span>Exporter CSV</span>
 					</Button>
 				{/if}
 				<button
 					onclick={() => goto('/admin/clients/create')}
-					class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
+					class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
 				>
-					<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+					<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
 					{$i18n.t('backoffice.clients.newClient')}
 				</button>
 			</div>
 		</header>
 
 		<div class="grid grid-cols-3 gap-4">
-			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 100 }}>
+			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-slate-400 uppercase">{$i18n.t('backoffice.clients.totalClients')}</div>
-					<iconify-icon icon="solar:buildings-2-bold" class="text-slate-400" width="20"></iconify-icon>
+					<div class="text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.totalClients')}</div>
+					<iconify-icon icon="solar:buildings-2-bold" class="text-muted-foreground" width="18"></iconify-icon>
 				</div>
-				<div class="text-2xl font-black text-slate-900">{total}</div>
+				<div class="text-2xl font-bold text-foreground">{total}</div>
 			</div>
-			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 200 }}>
+			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-emerald-600 uppercase">{$i18n.t('backoffice.clients.activeClients')}</div>
-					<iconify-icon icon="solar:verified-check-bold" class="text-emerald-600" width="20"></iconify-icon>
+					<div class="text-xs font-medium text-green-600 uppercase">{$i18n.t('backoffice.clients.activeClients')}</div>
+					<iconify-icon icon="solar:verified-check-bold" class="text-green-600" width="18"></iconify-icon>
 				</div>
-				<div class="text-2xl font-black text-emerald-600">
+				<div class="text-2xl font-bold text-green-600">
 					{clients.filter(c => c.user?.status === 'ACTIVE').length}
 				</div>
 			</div>
-			<div class="bg-white rounded-2xl p-4 border border-slate-100" in:fly={{ y: 20, delay: 300 }}>
+			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-bold text-[#FEC129] uppercase">{$i18n.t('backoffice.clients.thisPage')}</div>
-					<iconify-icon icon="solar:document-bold" class="text-[#FEC129]" width="20"></iconify-icon>
+					<div class="text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.thisPage')}</div>
+					<iconify-icon icon="solar:document-bold" class="text-muted-foreground" width="18"></iconify-icon>
 				</div>
-				<div class="text-2xl font-black text-[#FEC129]">{clients.length}</div>
+				<div class="text-2xl font-bold text-foreground">{clients.length}</div>
 			</div>
 		</div>
 
-		<div class="relative" in:fly={{ y: 20, delay: 400 }}>
+		<div class="relative">
 			<iconify-icon
 				icon="solar:magnifer-linear"
-				width="20"
-				class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+				width="18"
+				class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
 			></iconify-icon>
 			<input
 				type="text"
 				placeholder={$i18n.t('backoffice.clients.searchPlaceholder')}
-				class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#FEC129] transition-all"
+				class="h-9 w-full rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm outline-none focus:border-foreground transition-colors"
 				oninput={(e: any) => handleSearchInput(e.target.value)}
 			/>
 		</div>
 
 		{#if clients.length > 0}
-		<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden" in:fade>
+		<div class="rounded-xl border border-border overflow-hidden">
 			<div class="overflow-x-auto">
 				<table class="w-full">
-					<thead class="bg-slate-50 border-b border-slate-100">
+					<thead class="border-b border-border">
 						<tr>
-							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.company')}</th>
-							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.contact')}</th>
-							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.location')}</th>
-							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.siret')}</th>
-							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.status')}</th>
-							<th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.joined')}</th>
-							<th class="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider">{$i18n.t('backoffice.clients.table.actions')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.company')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.contact')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.location')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.siret')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.status')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.joined')}</th>
+							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.actions')}</th>
 						</tr>
 					</thead>
-					<tbody class="divide-y divide-slate-100">
+					<tbody class="divide-y divide-border">
 						{#each clients as client (client.id)}
 							<tr
-								class="hover:bg-[#FAF7F5] transition-colors cursor-pointer"
+								class="hover:bg-muted/50 transition-colors cursor-pointer"
 								onclick={(e) => {
 									if (!(e.target as HTMLElement).closest('button')) {
 										goto(`/admin/clients/${client.id}`);
 									}
 								}}
 							>
-								<td class="px-6 py-4">
-									<div class="font-bold text-[#291334]">{client.companyName}</div>
-									<div class="text-xs text-slate-500 mt-1">
+								<td class="px-4 py-3">
+									<div class="font-medium text-foreground">{client.companyName}</div>
+									<div class="text-xs text-muted-foreground mt-0.5">
 										{#if client.payments?.length > 0}
 											<span class="flex items-center gap-1">
 												<iconify-icon icon="solar:wallet-bold" width="12"></iconify-icon>
 												{client.payments.length} {client.payments.length !== 1 ? $i18n.t('backoffice.clients.payments') : $i18n.t('backoffice.clients.payment')}
 											</span>
 										{:else}
-											<span class="text-slate-400">{$i18n.t('backoffice.clients.noPaymentsYet')}</span>
+											<span>{$i18n.t('backoffice.clients.noPaymentsYet')}</span>
 										{/if}
 									</div>
 								</td>
-								<td class="px-6 py-4">
-									<div class="font-bold text-slate-900 flex items-center gap-2">
+								<td class="px-4 py-3">
+									<div class="font-medium text-foreground flex items-center gap-2">
 										{client.contactFirstName} {client.contactLastName}
 										{#if client.user?.emailVerified}
-											<iconify-icon icon="solar:verified-check-bold" class="text-emerald-500" width="14"></iconify-icon>
+											<iconify-icon icon="solar:verified-check-bold" class="text-green-600" width="14"></iconify-icon>
 										{/if}
 									</div>
-									<div class="text-sm text-slate-500">{client.contactEmail || 'Aucun email de contact'}</div>
+									<div class="text-sm text-muted-foreground">{client.contactEmail || 'Aucun email de contact'}</div>
 									{#if client.user?.email}
-										<div class="text-xs text-slate-400">Accès client: {client.user.email}</div>
+										<div class="text-xs text-muted-foreground">Accès client: {client.user.email}</div>
 									{/if}
 								</td>
-								<td class="px-6 py-4">
-									<div class="text-sm text-slate-700">{client.billingCity}</div>
-									<div class="text-xs text-slate-500">{client.billingCountry}</div>
+								<td class="px-4 py-3">
+									<div class="text-sm text-foreground">{client.billingCity}</div>
+									<div class="text-xs text-muted-foreground">{client.billingCountry}</div>
 								</td>
-								<td class="px-6 py-4">
-									<div class="text-sm text-slate-700 font-mono">
+								<td class="px-4 py-3">
+									<div class="text-sm text-foreground font-mono">
 										{client.siret || '-'}
 									</div>
 								</td>
-								<td class="px-6 py-4">
+								<td class="px-4 py-3">
 									{#if client.user}
 										<Badge variant={getStatusColor(client.user.status)}>
 											{getStatusLabel(client.user.status)}
@@ -284,25 +278,25 @@
 										<Badge variant="slate">Aucun accès</Badge>
 									{/if}
 								</td>
-								<td class="px-6 py-4 text-sm text-slate-600">
+								<td class="px-4 py-3 text-sm text-muted-foreground">
 									{formatDate(client.createdAt)}
 								</td>
-								<td class="px-6 py-4">
-									<div class="flex items-center justify-end gap-2">
+								<td class="px-4 py-3">
+									<div class="flex items-center justify-end gap-1">
 										<button
 											onclick={() => goto(`/admin/clients/${client.id}`)}
-											class="p-2 text-[#291334] hover:bg-[#291334]/10 rounded-lg transition-colors"
+											class="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
 											title={$i18n.t('backoffice.clients.editClient')}
 										>
-											<iconify-icon icon="solar:pen-bold" width="18"></iconify-icon>
+											<iconify-icon icon="solar:pen-bold" width="16"></iconify-icon>
 										</button>
 
 										<button
 											onclick={() => { confirmDeleteClient = client; showDeleteDialog = true; }}
-											class="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500"
+											class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md transition-colors"
 											title={$i18n.t('backoffice.clients.deleteClient')}
 										>
-											<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
+											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 										</button>
 									</div>
 								</td>
@@ -323,25 +317,25 @@
 			</div>
 		{/if}
 
-		<div class="text-sm text-slate-500 text-center">
+		<div class="text-sm text-muted-foreground text-center">
 			{total !== 1
 				? $i18n.t('backoffice.clients.showingPlural', { count: clients.length, total })
 				: $i18n.t('backoffice.clients.showing', { count: clients.length, total })}
 		</div>
 	{:else}
-			<div class="text-center py-16" in:fade>
+			<div class="text-center py-16">
 				<div class="flex flex-col items-center gap-4">
-					<div class="w-20 h-20 bg-[#FEC129]/20 text-[#291334] rounded-2xl flex items-center justify-center">
-						<iconify-icon icon="solar:buildings-2-bold" width="40"></iconify-icon>
+					<div class="w-16 h-16 rounded-xl border border-border flex items-center justify-center text-muted-foreground">
+						<iconify-icon icon="solar:buildings-2-bold" width="32"></iconify-icon>
 					</div>
-					<h3 class="text-2xl font-black text-[#291334]">{$i18n.t('backoffice.clients.noClientsFound')}</h3>
-					<p class="text-[#291334]/60 max-w-md">{searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}</p>
+					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('backoffice.clients.noClientsFound')}</h3>
+					<p class="text-sm text-muted-foreground max-w-md">{searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}</p>
 					{#if !searchQuery}
 						<button
 							onclick={() => goto('/admin/clients/create')}
-							class="px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer mt-2"
+							class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity mt-2"
 						>
-							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
+							<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
 							<span>{$i18n.t('backoffice.clients.newClient')}</span>
 						</button>
 					{/if}

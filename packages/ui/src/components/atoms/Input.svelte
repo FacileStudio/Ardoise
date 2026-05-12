@@ -16,8 +16,9 @@
     {type}
     {placeholder}
     bind:value
-    class="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 transition-all font-bold text-slate-700 outline-none
-    {error ? 'border-rose-200 focus:border-rose-500' : 'border-transparent focus:border-indigo-500'}
+    class="h-9 w-full rounded-lg border bg-transparent px-3 text-sm transition-colors outline-none
+    focus:ring-2 focus:ring-ring/50
+    {error ? 'border-danger focus:border-danger' : 'border-input focus:border-foreground'}
     {className}"
     {...$$restProps}
     on:input

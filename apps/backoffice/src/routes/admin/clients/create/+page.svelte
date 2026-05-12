@@ -117,168 +117,143 @@
 	}
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-	<div class="max-w-[1200px] mx-auto">
-		<div class="mb-8">
-			<button
-				onclick={() => goto('/admin/clients')}
-				class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors mb-4"
-			>
-				<iconify-icon icon="solar:arrow-left-bold" width="20"></iconify-icon>
-				<span class="font-bold">Retour aux clients</span>
-			</button>
-			<h1 class="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-				<iconify-icon icon="solar:user-plus-bold" width="40" class="text-[#291334]"></iconify-icon>
-				{$i18n.t('backoffice.clients.newClient')}
-			</h1>
-			<p class="text-slate-500 mt-2">Créez une fiche client, avec ou sans accès à Charles</p>
-		</div>
+<div class="max-w-2xl mx-auto p-6 space-y-6">
+	<div>
+		<button
+			onclick={() => goto('/admin/clients')}
+			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
+		>
+			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
+			Retour aux clients
+		</button>
+		<h1 class="text-2xl font-bold tracking-tight text-foreground">
+			{$i18n.t('backoffice.clients.newClient')}
+		</h1>
+		<p class="text-sm text-muted-foreground mt-1">Créez une fiche client, avec ou sans accès à Charles</p>
+	</div>
 
-		<div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-8">
-			{#if formMessage}
-				<div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
-					{formMessage}
-				</div>
-			{/if}
-
-			<div>
-				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
-					<iconify-icon icon="solar:user-bold" width="24" class="text-[#FEC129]"></iconify-icon>
-					Contact client
-				</h2>
-				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2">Prénom <span class="text-rose-500">*</span></div>
-							<Input bind:value={formData.contactFirstName} placeholder="Jean" error={!!getFieldError('contactFirstName')} />
-							{#if getFieldError('contactFirstName')}
-								<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('contactFirstName')}</p>
-							{/if}
-						</div>
-
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2">Nom <span class="text-rose-500">*</span></div>
-							<Input bind:value={formData.contactLastName} placeholder="Dupont" error={!!getFieldError('contactLastName')} />
-							{#if getFieldError('contactLastName')}
-								<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('contactLastName')}</p>
-							{/if}
-						</div>
-					</div>
-
-					<div>
-						<div class="block text-sm font-black text-slate-700 mb-2">Email de contact</div>
-						<Input bind:value={formData.contactEmail} type="email" placeholder="contact@entreprise.fr" error={!!getFieldError('contactEmail')} />
-						{#if getFieldError('contactEmail')}
-							<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('contactEmail')}</p>
-						{:else}
-							<p class="mt-2 text-xs text-slate-500">Utilisé pour le suivi commercial et les paiements Stripe.</p>
-						{/if}
-					</div>
-				</div>
+	<div class="space-y-6">
+		{#if formMessage}
+			<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+				{formMessage}
 			</div>
+		{/if}
 
-			<div>
-				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
-					<iconify-icon icon="solar:buildings-2-bold" width="24" class="text-[#FEC129]"></iconify-icon>
-					Informations entreprise
-				</h2>
-				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
-					<div>
-						<div class="block text-sm font-black text-slate-700 mb-2">Nom de l'entreprise <span class="text-rose-500">*</span></div>
-						<Input bind:value={formData.companyName} placeholder="Entreprise SAS" error={!!getFieldError('companyName')} />
-						{#if getFieldError('companyName')}
-							<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('companyName')}</p>
-						{/if}
-					</div>
-
-					<div>
-						<div class="block text-sm font-black text-slate-700 mb-2">SIRET</div>
-						<Input bind:value={formData.siret} placeholder="12345678901234" />
-					</div>
+		<div class="rounded-xl border border-border p-6 space-y-4">
+			<h2 class="text-base font-semibold text-foreground">Contact client</h2>
+			<div class="grid grid-cols-2 gap-4">
+				<div>
+					<div class="text-sm font-medium mb-2">Prénom <span class="text-red-500">*</span></div>
+					<Input bind:value={formData.contactFirstName} placeholder="Jean" error={!!getFieldError('contactFirstName')} />
+					{#if getFieldError('contactFirstName')}
+						<p class="mt-1 text-xs text-red-600">{getFieldError('contactFirstName')}</p>
+					{/if}
 				</div>
-			</div>
 
-			<div>
-				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
-					<iconify-icon icon="solar:map-point-bold" width="24" class="text-[#FEC129]"></iconify-icon>
-					Adresse de facturation
-				</h2>
-				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
-					<div>
-						<div class="block text-sm font-black text-slate-700 mb-2">Adresse</div>
-						<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
-					</div>
-
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2">Ville</div>
-							<Input bind:value={formData.billingCity} placeholder="Paris" />
-						</div>
-
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2">Pays</div>
-							<Input bind:value={formData.billingCountry} placeholder="France" />
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div>
-				<h2 class="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
-					<iconify-icon icon="solar:lock-password-bold" width="24" class="text-[#FEC129]"></iconify-icon>
-					Accès client à Charles
-				</h2>
-				<div class="bg-slate-50 rounded-xl p-6 space-y-4">
-					<label class="flex items-start gap-3 cursor-pointer">
-						<input
-							type="checkbox"
-							bind:checked={formData.createCredentials}
-							class="mt-1 h-4 w-4 rounded border-slate-300 text-[#291334] focus:ring-[#FEC129]"
-						/>
-						<div>
-							<div class="font-black text-slate-900">Créer des identifiants de connexion</div>
-							<p class="text-sm text-slate-500">Activez seulement si ce client doit se connecter à Charles.</p>
-						</div>
-					</label>
-
-					{#if formData.createCredentials}
-						<div class="grid grid-cols-2 gap-4">
-							<div>
-								<div class="block text-sm font-black text-slate-700 mb-2">Email de connexion <span class="text-rose-500">*</span></div>
-								<Input bind:value={formData.credentialEmail} type="email" placeholder="login@entreprise.fr" error={!!getFieldError('credentialEmail')} />
-								{#if getFieldError('credentialEmail')}
-									<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('credentialEmail')}</p>
-								{/if}
-							</div>
-
-							<div>
-								<div class="block text-sm font-black text-slate-700 mb-2">Mot de passe <span class="text-rose-500">*</span></div>
-								<Input bind:value={formData.credentialPassword} type="password" placeholder="••••••••" error={!!getFieldError('credentialPassword')} />
-								{#if getFieldError('credentialPassword')}
-									<p class="mt-2 text-xs font-bold text-rose-600">{getFieldError('credentialPassword')}</p>
-								{:else}
-									<p class="mt-2 text-xs text-slate-500">Minimum 8 caractères.</p>
-								{/if}
-							</div>
-						</div>
+				<div>
+					<div class="text-sm font-medium mb-2">Nom <span class="text-red-500">*</span></div>
+					<Input bind:value={formData.contactLastName} placeholder="Dupont" error={!!getFieldError('contactLastName')} />
+					{#if getFieldError('contactLastName')}
+						<p class="mt-1 text-xs text-red-600">{getFieldError('contactLastName')}</p>
 					{/if}
 				</div>
 			</div>
 
-			<div class="flex gap-4 pt-4">
-				<Button onclick={() => goto('/admin/clients')} intent="secondary" class="flex-1" disabled={submitting}>
-					<iconify-icon icon="solar:close-circle-bold" width="20"></iconify-icon>
-					<span>Annuler</span>
-				</Button>
-				<button
-					onclick={handleCreate}
-					disabled={submitting}
-					class="flex-1 px-6 py-3 bg-[#FEC129] text-[#291334] rounded-xl font-bold text-sm hover:bg-[#FEC129]/90 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					<iconify-icon icon="solar:user-plus-bold" width="20"></iconify-icon>
-					<span>{submitting ? 'Création...' : 'Créer le client'}</span>
-				</button>
+			<div>
+				<div class="text-sm font-medium mb-2">Email de contact</div>
+				<Input bind:value={formData.contactEmail} type="email" placeholder="contact@entreprise.fr" error={!!getFieldError('contactEmail')} />
+				{#if getFieldError('contactEmail')}
+					<p class="mt-1 text-xs text-red-600">{getFieldError('contactEmail')}</p>
+				{:else}
+					<p class="mt-1 text-xs text-muted-foreground">Utilisé pour le suivi commercial et les paiements Stripe.</p>
+				{/if}
 			</div>
+		</div>
+
+		<div class="rounded-xl border border-border p-6 space-y-4">
+			<h2 class="text-base font-semibold text-foreground">Informations entreprise</h2>
+			<div>
+				<div class="text-sm font-medium mb-2">Nom de l'entreprise <span class="text-red-500">*</span></div>
+				<Input bind:value={formData.companyName} placeholder="Entreprise SAS" error={!!getFieldError('companyName')} />
+				{#if getFieldError('companyName')}
+					<p class="mt-1 text-xs text-red-600">{getFieldError('companyName')}</p>
+				{/if}
+			</div>
+
+			<div>
+				<div class="text-sm font-medium mb-2">SIRET</div>
+				<Input bind:value={formData.siret} placeholder="12345678901234" />
+			</div>
+		</div>
+
+		<div class="rounded-xl border border-border p-6 space-y-4">
+			<h2 class="text-base font-semibold text-foreground">Adresse de facturation</h2>
+			<div>
+				<div class="text-sm font-medium mb-2">Adresse</div>
+				<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
+			</div>
+
+			<div class="grid grid-cols-2 gap-4">
+				<div>
+					<div class="text-sm font-medium mb-2">Ville</div>
+					<Input bind:value={formData.billingCity} placeholder="Paris" />
+				</div>
+
+				<div>
+					<div class="text-sm font-medium mb-2">Pays</div>
+					<Input bind:value={formData.billingCountry} placeholder="France" />
+				</div>
+			</div>
+		</div>
+
+		<div class="rounded-xl border border-border p-6 space-y-4">
+			<h2 class="text-base font-semibold text-foreground">Accès client à Charles</h2>
+			<label class="flex items-start gap-3 cursor-pointer">
+				<input
+					type="checkbox"
+					bind:checked={formData.createCredentials}
+					class="mt-1 h-4 w-4 rounded border-border"
+				/>
+				<div>
+					<div class="text-sm font-semibold text-foreground">Créer des identifiants de connexion</div>
+					<p class="text-xs text-muted-foreground">Activez seulement si ce client doit se connecter à Charles.</p>
+				</div>
+			</label>
+
+			{#if formData.createCredentials}
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<div class="text-sm font-medium mb-2">Email de connexion <span class="text-red-500">*</span></div>
+						<Input bind:value={formData.credentialEmail} type="email" placeholder="login@entreprise.fr" error={!!getFieldError('credentialEmail')} />
+						{#if getFieldError('credentialEmail')}
+							<p class="mt-1 text-xs text-red-600">{getFieldError('credentialEmail')}</p>
+						{/if}
+					</div>
+
+					<div>
+						<div class="text-sm font-medium mb-2">Mot de passe <span class="text-red-500">*</span></div>
+						<Input bind:value={formData.credentialPassword} type="password" placeholder="••••••••" error={!!getFieldError('credentialPassword')} />
+						{#if getFieldError('credentialPassword')}
+							<p class="mt-1 text-xs text-red-600">{getFieldError('credentialPassword')}</p>
+						{:else}
+							<p class="mt-1 text-xs text-muted-foreground">Minimum 8 caractères.</p>
+						{/if}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex gap-3 pt-2">
+			<Button onclick={() => goto('/admin/clients')} intent="secondary" class="flex-1" disabled={submitting}>
+				Annuler
+			</Button>
+			<button
+				onclick={handleCreate}
+				disabled={submitting}
+				class="flex-1 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+			>
+				{submitting ? 'Création...' : 'Créer le client'}
+			</button>
 		</div>
 	</div>
 </div>

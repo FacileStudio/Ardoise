@@ -2,7 +2,6 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { fade, fly } from 'svelte/transition';
 	import { Spinner, Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -575,852 +574,526 @@
 	const total = $derived(totalWithRailway + tva);
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-	<div class="max-w-[1200px] mx-auto">
-		<!-- Header -->
-		<div class="mb-8">
-			<button
-				onclick={() => goto('/admin/documents')}
-				class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors mb-4"
-			>
-				<iconify-icon icon="solar:arrow-left-bold" width="20"></iconify-icon>
-				<span class="font-bold">Retour aux documents</span>
-			</button>
-			<h1 class="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-				<iconify-icon icon="solar:document-add-bold" width="40" class="text-[#291334]"
-				></iconify-icon>
-				Créer un document
-			</h1>
-			<p class="text-slate-500 mt-2">Générez une facture, un devis ou un contrat</p>
-		</div>
+<div class="max-w-3xl mx-auto p-6 space-y-6">
+	<div>
+		<button
+			onclick={() => goto('/admin/documents')}
+			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
+		>
+			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
+			Retour aux documents
+		</button>
+		<h1 class="text-2xl font-bold tracking-tight text-foreground">Créer un document</h1>
+		<p class="text-sm text-muted-foreground mt-1">Générez une facture, un devis ou un contrat</p>
+	</div>
 
-		<!-- Main Form -->
-		<div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-8">
-			{#if formMessage}
-				<div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
-					{formMessage}
-				</div>
-			{/if}
-
-			<!-- Type de document -->
-			<div class="space-y-4">
-				<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-					<iconify-icon icon="solar:document-text-bold" width="24" class="text-[#291334]"
-					></iconify-icon>
-					Type de document
-				</h2>
-				<select
-					bind:value={formData.type}
-					class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] font-bold transition-all text-lg"
-				>
-					{#each docTypes as type (type.value)}
-						<option value={type.value}>{type.label}</option>
-					{/each}
-				</select>
-
-				<div class="grid grid-cols-3 gap-4">
-					{#if formData.type === 'prestation'}
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								N° Facture
-							</div>
-							<Input bind:value={formData.invoice_number} />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								Date Facture
-							</div>
-							<Input type="date" bind:value={formData.invoice_date} />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:alarm-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Date Échéance
-							</div>
-							<Input type="date" bind:value={formData.due_date} />
-						</div>
-					{:else if formData.type === 'maintenance'}
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								N° Devis
-							</div>
-							<Input bind:value={formData.quote_number} />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								Date Devis
-							</div>
-							<Input type="date" bind:value={formData.quote_date} />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:alarm-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Validité
-							</div>
-							<Input type="date" bind:value={formData.validity_date} />
-						</div>
-					{:else if formData.type === 'back_contractuel'}
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								Référence Contrat
-							</div>
-							<Input bind:value={formData.contract_reference} />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								Date Contrat
-							</div>
-							<Input type="date" bind:value={formData.contract_date} />
-						</div>
-					{:else if formData.type === 'appel_de_fonds'}
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								Date Facture
-							</div>
-							<Input type="date" bind:value={formData.invoice_date} />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:alarm-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Date Échéance
-							</div>
-							<Input type="date" bind:value={formData.due_date} />
-						</div>
-					{:else}
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								Référence Contrat
-							</div>
-							<Input bind:value={formData.contract_reference} />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"
-								></iconify-icon>
-								Date Contrat
-							</div>
-							<Input type="date" bind:value={formData.contract_date} />
-						</div>
-					{/if}
-				</div>
+	<div class="space-y-6">
+		{#if formMessage}
+			<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+				{formMessage}
 			</div>
+		{/if}
 
-			<div class="border-t border-slate-200"></div>
+		<div class="rounded-xl border border-border p-6 space-y-4">
+			<h2 class="text-base font-semibold text-foreground">Type de document</h2>
+			<select
+				bind:value={formData.type}
+				class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+			>
+				{#each docTypes as type (type.value)}
+					<option value={type.value}>{type.label}</option>
+				{/each}
+			</select>
 
-			<!-- Client Section -->
-			<div class="space-y-4">
-				<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-					<iconify-icon icon="solar:user-bold" width="24" class="text-[#291334]"></iconify-icon>
-					Client
-				</h2>
-				<select
-					bind:value={selectedClientId}
-					class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] font-bold transition-all text-lg"
-				>
-					<option value="">-- Sélectionner un client --</option>
-					{#each clients as client (client.id)}
-						<option value={client.id}>{client.companyName}</option>
-					{/each}
-				</select>
-				{#if selectedClientId}
-					<div
-						transition:fly={{ y: -10, duration: 200 }}
-						class="p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-center gap-3"
-					>
-						<iconify-icon icon="solar:check-circle-bold" width="24" class="text-green-600"
-						></iconify-icon>
-						<div>
-							<div class="font-black text-green-900">{formData.client_name}</div>
-							<div class="text-sm text-green-700">
-								{formData.client_address}, {formData.client_city}
-							</div>
-						</div>
+			<div class="grid grid-cols-3 gap-4">
+				{#if formData.type === 'prestation'}
+					<div>
+						<div class="text-sm font-medium mb-2">N° Facture</div>
+						<Input bind:value={formData.invoice_number} />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Date Facture</div>
+						<Input type="date" bind:value={formData.invoice_date} />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Date Échéance</div>
+						<Input type="date" bind:value={formData.due_date} />
+					</div>
+				{:else if formData.type === 'maintenance'}
+					<div>
+						<div class="text-sm font-medium mb-2">N° Devis</div>
+						<Input bind:value={formData.quote_number} />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Date Devis</div>
+						<Input type="date" bind:value={formData.quote_date} />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Validité</div>
+						<Input type="date" bind:value={formData.validity_date} />
+					</div>
+				{:else if formData.type === 'back_contractuel'}
+					<div>
+						<div class="text-sm font-medium mb-2">Référence Contrat</div>
+						<Input bind:value={formData.contract_reference} />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Date Contrat</div>
+						<Input type="date" bind:value={formData.contract_date} />
+					</div>
+				{:else if formData.type === 'appel_de_fonds'}
+					<div>
+						<div class="text-sm font-medium mb-2">Date Facture</div>
+						<Input type="date" bind:value={formData.invoice_date} />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Date Échéance</div>
+						<Input type="date" bind:value={formData.due_date} />
+					</div>
+				{:else}
+					<div>
+						<div class="text-sm font-medium mb-2">Référence Contrat</div>
+						<Input bind:value={formData.contract_reference} />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Date Contrat</div>
+						<Input type="date" bind:value={formData.contract_date} />
 					</div>
 				{/if}
 			</div>
+		</div>
 
-			{#if formData.type !== 'back_contractuel' && formData.type !== 'appel_de_fonds'}
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Provider Section -->
-				<div class="space-y-4">
-					<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-						<iconify-icon icon="solar:buildings-2-bold" width="24" class="text-[#291334]"
-						></iconify-icon>
-						Prestataire
-					</h2>
-					<select
-						bind:value={selectedProviderId}
-						class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] font-bold transition-all text-lg"
-					>
-						<option value="">-- Sélectionner un prestataire --</option>
-						{#each providers as provider (provider.id)}
-							<option value={provider.id}>{provider.name}</option>
-						{/each}
-					</select>
-					{#if selectedProviderId}
-						<div
-							transition:fly={{ y: -10, duration: 200 }}
-							class="p-4 rounded-xl border-2 flex items-start gap-3 {selectedProviderMissingFields.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-purple-50 border-purple-200'}"
-						>
-							<iconify-icon
-								icon={selectedProviderMissingFields.length > 0 ? 'solar:danger-triangle-bold' : 'solar:check-circle-bold'}
-								width="24"
-								class={selectedProviderMissingFields.length > 0 ? 'text-amber-600' : 'text-purple-600'}
-							></iconify-icon>
-							<div class="min-w-0">
-								<div class={selectedProviderMissingFields.length > 0 ? 'font-black text-amber-900' : 'font-black text-purple-900'}>
-									{formData.provider_name}
-								</div>
-								<div class={selectedProviderMissingFields.length > 0 ? 'text-sm text-amber-700' : 'text-sm text-purple-700'}>
-									TVA: {tvaRate}% • {formData.provider_email || 'email manquant'}
-								</div>
-								{#if selectedProviderMissingFields.length > 0}
-									<p class="mt-2 text-sm font-bold text-amber-800">
-										Champs manquants: {selectedProviderMissingFields.map((field) => providerFieldLabels[field]).join(', ')}
-									</p>
-								{/if}
-							</div>
+		<div class="rounded-xl border border-border p-6 space-y-4">
+			<h2 class="text-base font-semibold text-foreground">Client</h2>
+			<select
+				bind:value={selectedClientId}
+				class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+			>
+				<option value="">-- Sélectionner un client --</option>
+				{#each clients as client (client.id)}
+					<option value={client.id}>{client.companyName}</option>
+				{/each}
+			</select>
+			{#if selectedClientId}
+				<div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
+					<iconify-icon icon="solar:check-circle-bold" width="16" class="text-emerald-600"></iconify-icon>
+					<div>
+						<div class="text-sm font-medium text-emerald-900">{formData.client_name}</div>
+						<div class="text-xs text-emerald-700">
+							{formData.client_address}, {formData.client_city}
 						</div>
-					{/if}
+					</div>
 				</div>
 			{/if}
+		</div>
 
-			{#if formData.type === 'back_contractuel'}
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Back Contractuel Specific Fields -->
-				<div class="space-y-6">
-					<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-						<iconify-icon icon="solar:case-round-bold" width="24" class="text-[#291334]"></iconify-icon>
-						Informations du projet
-					</h2>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Nom du projet
-							</div>
-							<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:calendar-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Date de validité
-							</div>
-							<Input type="date" bind:value={formData.valid_until} />
-						</div>
-					</div>
-				</div>
-
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Prestataires Co-traitance -->
-				<div class="space-y-6">
-					<div class="flex justify-between items-center">
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-							<iconify-icon icon="solar:users-group-two-rounded-bold" width="24" class="text-[#291334]"></iconify-icon>
-							Prestataires (Co-traitance)
-						</h2>
-					</div>
-
-					<!-- Add Provider Form -->
-					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
-						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
-							Ajouter un prestataire
-						</h3>
-
-						<!-- Select Provider -->
-						<div>
-							<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
-								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Prestataire *
-							</div>
-							<select
-								bind:value={newProvider.id}
-								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
-							>
-								<option value="">-- Choisir un prestataire --</option>
-								{#each providers as provider (provider.id)}
-									<option value={provider.id}>{provider.name}</option>
-								{/each}
-							</select>
-						</div>
-
-						<div class="grid grid-cols-2 gap-4">
-							<div>
-								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Rôle *</div>
-								<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
-							</div>
-							<div>
-								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant HT (€) *</div>
-								<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
-							</div>
-						</div>
-						<Button intent="primary" onclick={addProvider} class="w-full">
-							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-							Ajouter ce prestataire
-						</Button>
-					</div>
-
-					<!-- Providers List -->
-					{#if formData.providers.length === 0}
-						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-							<iconify-icon icon="solar:users-group-two-rounded-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
-							<p class="text-sm text-slate-500 font-bold">Aucun prestataire ajouté</p>
-						</div>
-					{:else}
-						<div class="space-y-3">
-							{#each formData.providers as provider, i}
-								{@const providerInfo = providers.find(p => p.id === provider.id)}
-								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
-									<div class="flex-1 min-w-0">
-										<div class="font-black text-base text-slate-900 mb-2">{providerInfo?.name || provider.id} - {provider.role}</div>
-										<div class="text-sm text-slate-500 space-y-1">
-											<div class="font-black text-[#291334]">Montant: {formatCurrency(provider.amount)} HT</div>
-										</div>
-									</div>
-									<button
-										onclick={() => removeProvider(i)}
-										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
-										aria-label="Supprimer le prestataire"
-									>
-										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Features (Périmètre de mission) -->
-				<div class="space-y-6">
-					<div class="flex justify-between items-center">
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-							<iconify-icon icon="solar:checklist-bold" width="24" class="text-[#291334]"></iconify-icon>
-							Périmètre de la mission (Features)
-						</h2>
-					</div>
-
-					<!-- Add Feature Form -->
-					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
-						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
-							Ajouter une feature
-						</h3>
-						<div class="space-y-4">
-							<div>
-								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Titre</div>
-								<Input bind:value={newFeature.title} placeholder="Ex: Design UI/UX" />
-							</div>
-							<div>
-								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</div>
-								<textarea
-									bind:value={newFeature.desc}
-									rows="3"
-									placeholder="Ex: Création d'une identité visuelle moderne et responsive..."
-									class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-medium resize-none"
-								></textarea>
-							</div>
-						</div>
-						<Button intent="primary" onclick={addFeature} class="w-full">
-							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-							Ajouter cette feature
-						</Button>
-					</div>
-
-					<!-- Features List -->
-					{#if formData.features.length === 0}
-						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-							<iconify-icon icon="solar:checklist-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
-							<p class="text-sm text-slate-500 font-bold">Aucune feature ajoutée</p>
-						</div>
-					{:else}
-						<div class="space-y-3">
-							{#each formData.features as feature, i}
-								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
-									<div class="flex-1 min-w-0">
-										<div class="font-black text-base text-slate-900 mb-2">{feature.title}</div>
-										<div class="text-sm text-slate-600">{feature.desc}</div>
-									</div>
-									<button
-										onclick={() => removeFeature(i)}
-										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
-										aria-label="Supprimer la feature"
-									>
-										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Items Section for back_contractuel -->
-				<div class="space-y-6">
-					<div class="flex justify-between items-center">
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-							<iconify-icon icon="solar:list-bold" width="24" class="text-[#291334]"></iconify-icon>
-							Items de facturation (Prestations)
-						</h2>
-					</div>
-
-					<!-- Add Item Form -->
-					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
-						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
-							Ajouter un item
-						</h3>
-						<div class="space-y-4">
-							<div>
-								<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Description</div>
-								<textarea
-									placeholder="Ex: Développement d'un site web vitrine responsive..."
-									bind:value={newItem.description}
-									rows="3"
-									class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-medium resize-none"
-								></textarea>
-							</div>
-							<div class="grid grid-cols-3 gap-4">
-								<div>
-									<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Quantité</div>
-									<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
-								</div>
-								<div>
-									<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Unité</div>
-									<Input placeholder="jour" bind:value={newItem.unit} />
-								</div>
-								<div>
-									<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Prix HT (€)</div>
-									<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
-								</div>
-							</div>
-						</div>
-						<Button intent="primary" onclick={addItem} class="w-full">
-							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-							Ajouter cet item
-						</Button>
-					</div>
-
-					<!-- Items List -->
-					{#if formData.items.length === 0}
-						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-							<iconify-icon icon="solar:document-add-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
-							<p class="text-sm text-slate-500 font-bold">Aucun item ajouté</p>
-						</div>
-					{:else}
-						<div class="space-y-3">
-							{#each formData.items as item, i}
-								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
-									<div class="flex-1 min-w-0">
-										<div class="font-black text-base text-slate-900 mb-2">{item.description}</div>
-										<div class="flex items-center gap-4 text-sm text-slate-500">
-											<span>{item.quantity} {item.unit}</span>
-											<span>{formatCurrency(item.price)} / {item.unit}</span>
-											<span class="font-black text-[#291334]">{formatCurrency(item.quantity * item.price)} HT</span>
-										</div>
-									</div>
-									<button
-										onclick={() => removeItem(i)}
-										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
-										aria-label="Supprimer l'item"
-									>
-										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{:else if formData.type === 'appel_de_fonds'}
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Appel de Fonds Specific Fields -->
-				<div class="space-y-6">
-					<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-						<iconify-icon icon="solar:bill-list-bold" width="24" class="text-[#291334]"></iconify-icon>
-						Informations de l'appel de fonds
-					</h2>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:hashtag-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Référence globale
-							</div>
-							<Input bind:value={formData.global_invoice_ref} placeholder="Ex: ADF-001" />
-						</div>
-						<div>
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Étape du projet
-							</div>
-							<Input bind:value={formData.project_step} placeholder="Ex: Acompte 30%" />
-						</div>
-						<div class="col-span-2">
-							<div class="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
-								<iconify-icon icon="solar:document-text-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Nom du projet
-							</div>
-							<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
-						</div>
-					</div>
-				</div>
-
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Payment Providers (Appel de Fonds) -->
-				<div class="space-y-6">
-					<div class="flex justify-between items-center">
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-							<iconify-icon icon="solar:card-bold" width="24" class="text-[#291334]"></iconify-icon>
-							Prestataires à payer (IBAN/BIC)
-						</h2>
-					</div>
-
-					<!-- Add Payment Provider Form -->
-					<div class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl">
-						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
-							Ajouter un prestataire
-						</h3>
-
-						<!-- Select Provider -->
-						<div>
-							<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2">
-								<iconify-icon icon="solar:user-bold" width="16" class="text-[#FEC129]"></iconify-icon>
-								Prestataire *
-							</div>
-							<select
-								bind:value={newPaymentProvider.id}
-								class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-bold text-base"
-							>
-								<option value="">-- Choisir un prestataire --</option>
-								{#each providers as provider (provider.id)}
-									<option value={provider.id}>{provider.name}</option>
-								{/each}
-							</select>
-						</div>
-
-						<div>
-							<div class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide">Montant à verser (€ HT) *</div>
-							<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
-						</div>
-						<Button intent="primary" onclick={addPaymentProvider} class="w-full">
-							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-							Ajouter ce prestataire
-						</Button>
-					</div>
-
-					<!-- Payment Providers List -->
-					{#if formData.payment_providers.length === 0}
-						<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-							<iconify-icon icon="solar:card-bold" width="64" class="text-slate-300 mx-auto mb-4"></iconify-icon>
-							<p class="text-sm text-slate-500 font-bold">Aucun prestataire ajouté</p>
-						</div>
-					{:else}
-						<div class="space-y-3">
-							{#each formData.payment_providers as provider, i}
-								{@const providerInfo = providers.find(p => p.id === provider.id)}
-								<div class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all">
-									<div class="flex-1 min-w-0">
-										<div class="font-black text-base text-slate-900 mb-2">{providerInfo?.name || provider.id}</div>
-										<div class="font-black text-[#291334] mt-2">Montant: {formatCurrency(provider.amount_to_pay)} HT</div>
-									</div>
-									<button
-										onclick={() => removePaymentProvider(i)}
-										class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
-										aria-label="Supprimer le prestataire"
-									>
-										<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-									</button>
-								</div>
-							{/each}
-						</div>
-
-						<!-- Total Section -->
-						<div class="p-6 bg-slate-50 rounded-xl">
-							<div class="flex justify-between items-center">
-								<div class="text-sm font-black text-slate-700">TOTAL DE L'APPEL DE FONDS HT</div>
-								<div class="text-2xl font-black text-[#291334]">
-									{formatCurrency(formData.payment_providers.reduce((sum: number, p: any) => sum + p.amount_to_pay, 0))}
-								</div>
-							</div>
-						</div>
-					{/if}
-				</div>
-			{:else if formData.type === 'prestation' || formData.type === 'maintenance'}
-				<div class="border-t border-slate-200"></div>
-
-				<!-- Items Section -->
-				<div class="space-y-6">
-					<div class="flex justify-between items-center">
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-							<iconify-icon icon="solar:list-bold" width="24" class="text-[#291334]"></iconify-icon>
-							Items de facturation
-						</h2>
-						{#if formData.items.length > 0}
-							<div
-								transition:fly={{ x: 10, duration: 200 }}
-								class="px-4 py-2 bg-[#291334] text-white rounded-lg text-sm font-black"
-							>
-								Total: {formatCurrency(total)} TTC
-							</div>
-						{/if}
-					</div>
-
-					<!-- Add Item Form -->
+		{#if formData.type !== 'back_contractuel' && formData.type !== 'appel_de_fonds'}
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<h2 class="text-base font-semibold text-foreground">Prestataire</h2>
+				<select
+					bind:value={selectedProviderId}
+					class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+				>
+					<option value="">-- Sélectionner un prestataire --</option>
+					{#each providers as provider (provider.id)}
+						<option value={provider.id}>{provider.name}</option>
+					{/each}
+				</select>
+				{#if selectedProviderId}
 					<div
-						class="space-y-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl"
+						class="p-3 rounded-lg border flex items-start gap-2 {selectedProviderMissingFields.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-muted border-border'}"
 					>
-						<h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-							<iconify-icon icon="mdi:plus-circle" width="20" class="text-[#FEC129]"></iconify-icon>
-							Ajouter un item
-						</h3>
-						<div class="space-y-4">
-							<div>
-								<div
-									class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
-								>
-									<iconify-icon icon="solar:pen-bold" width="14" class="text-[#FEC129]"
-									></iconify-icon>
-									Que facturez-vous ?
-								</div>
-								<textarea
-									placeholder="Ex: Développement d'un site web vitrine responsive avec système de gestion de contenu..."
-									bind:value={newItem.description}
-									rows="3"
-									class="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-[#FEC129] focus:ring-2 focus:ring-[#FEC129]/20 transition-all font-medium resize-none"
-								></textarea>
+						<iconify-icon
+							icon={selectedProviderMissingFields.length > 0 ? 'solar:danger-triangle-bold' : 'solar:check-circle-bold'}
+							width="16"
+							class={selectedProviderMissingFields.length > 0 ? 'text-amber-600' : 'text-emerald-600'}
+						></iconify-icon>
+						<div class="min-w-0">
+							<div class="text-sm font-medium {selectedProviderMissingFields.length > 0 ? 'text-amber-900' : 'text-foreground'}">
+								{formData.provider_name}
 							</div>
-							<div class="grid grid-cols-3 gap-4">
-								<div>
-									<div
-										class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
-									>
-										<iconify-icon icon="solar:calculator-bold" width="14" class="text-[#FEC129]"
-										></iconify-icon>
-										Quantité
-									</div>
-									<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
-								</div>
-								<div>
-									<div
-										class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
-									>
-										<iconify-icon icon="solar:tag-bold" width="14" class="text-[#FEC129]"
-										></iconify-icon>
-										Unité
-									</div>
-									<Input placeholder="jour" bind:value={newItem.unit} />
-								</div>
-								<div>
-									<div
-										class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-2"
-									>
-										<iconify-icon icon="solar:euro-bold" width="14" class="text-[#FEC129]"
-										></iconify-icon>
-										Prix HT (€)
-									</div>
-									<Input
-										type="number"
-										placeholder="500"
-										bind:value={newItem.price}
-										min="0"
-										step="0.01"
-									/>
-								</div>
+							<div class="text-xs {selectedProviderMissingFields.length > 0 ? 'text-amber-700' : 'text-muted-foreground'}">
+								TVA: {tvaRate}% - {formData.provider_email || 'email manquant'}
 							</div>
-							{#if newItem.description && newItem.quantity > 0 && newItem.price > 0}
-								<div transition:fly={{ y: -10, duration: 200 }} class="p-3 bg-white rounded-lg border border-slate-200">
-									<div class="text-xs text-slate-500 mb-1 flex items-center gap-1">
-										<iconify-icon icon="solar:eye-bold" width="14"></iconify-icon>
-										Aperçu de l'item
-									</div>
-									<div class="space-y-1">
-										<div class="font-black text-sm text-slate-900">
-											{newItem.quantity}
-											{newItem.unit} × {formatCurrency(newItem.price)} = {formatCurrency(
-												newItem.quantity * newItem.price
-											)} HT
-										</div>
-										<div class="text-xs text-slate-600">
-											Prix TTC ({tvaRate}%): {formatCurrency(
-												newItem.quantity * newItem.price * (1 + tvaRate / 100)
-											)}
-										</div>
-									</div>
-								</div>
+							{#if selectedProviderMissingFields.length > 0}
+								<p class="mt-1 text-xs font-medium text-amber-800">
+									Champs manquants: {selectedProviderMissingFields.map((field) => providerFieldLabels[field]).join(', ')}
+								</p>
 							{/if}
 						</div>
-						<Button intent="primary" onclick={addItem} class="w-full">
-							<iconify-icon icon="mdi:plus" width="20"></iconify-icon>
-							Ajouter cet item à la facture
-						</Button>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		{#if formData.type === 'back_contractuel'}
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<h2 class="text-base font-semibold text-foreground">Informations du projet</h2>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<div class="text-sm font-medium mb-2">Nom du projet</div>
+						<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Date de validité</div>
+						<Input type="date" bind:value={formData.valid_until} />
+					</div>
+				</div>
+			</div>
+
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<h2 class="text-base font-semibold text-foreground">Prestataires (Co-traitance)</h2>
+				<div class="space-y-3 p-4 bg-muted rounded-lg">
+					<div class="text-sm font-medium">Ajouter un prestataire</div>
+					<div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prestataire *</div>
+						<select
+							bind:value={newProvider.id}
+							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+						>
+							<option value="">-- Choisir un prestataire --</option>
+							{#each providers as provider (provider.id)}
+								<option value={provider.id}>{provider.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Rôle *</div>
+							<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
+						</div>
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Montant HT (EUR) *</div>
+							<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
+						</div>
+					</div>
+					<Button intent="primary" onclick={addProvider} class="w-full">Ajouter ce prestataire</Button>
+				</div>
+
+				{#if formData.providers.length === 0}
+					<div class="text-center py-8 text-muted-foreground">
+						<p class="text-xs">Aucun prestataire ajouté</p>
+					</div>
+				{:else}
+					<div class="space-y-2">
+						{#each formData.providers as provider, i}
+							{@const providerInfo = providers.find(p => p.id === provider.id)}
+							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium text-foreground">{providerInfo?.name || provider.id} - {provider.role}</div>
+									<div class="text-xs text-muted-foreground">{formatCurrency(provider.amount)} HT</div>
+								</div>
+								<button onclick={() => removeProvider(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<h2 class="text-base font-semibold text-foreground">Périmètre de la mission (Features)</h2>
+				<div class="space-y-3 p-4 bg-muted rounded-lg">
+					<div class="text-sm font-medium">Ajouter une feature</div>
+					<div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Titre</div>
+						<Input bind:value={newFeature.title} placeholder="Ex: Design UI/UX" />
+					</div>
+					<div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</div>
+						<textarea
+							bind:value={newFeature.desc}
+							rows="2"
+							placeholder="Ex: Création d'une identité visuelle moderne et responsive..."
+							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+						></textarea>
+					</div>
+					<Button intent="primary" onclick={addFeature} class="w-full">Ajouter cette feature</Button>
+				</div>
+
+				{#if formData.features.length === 0}
+					<div class="text-center py-8 text-muted-foreground">
+						<p class="text-xs">Aucune feature ajoutée</p>
+					</div>
+				{:else}
+					<div class="space-y-2">
+						{#each formData.features as feature, i}
+							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium text-foreground">{feature.title}</div>
+									<div class="text-xs text-muted-foreground">{feature.desc}</div>
+								</div>
+								<button onclick={() => removeFeature(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<h2 class="text-base font-semibold text-foreground">Items de facturation (Prestations)</h2>
+				<div class="space-y-3 p-4 bg-muted rounded-lg">
+					<div class="text-sm font-medium">Ajouter un item</div>
+					<div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</div>
+						<textarea
+							placeholder="Ex: Développement d'un site web vitrine responsive..."
+							bind:value={newItem.description}
+							rows="2"
+							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+						></textarea>
+					</div>
+					<div class="grid grid-cols-3 gap-3">
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Quantité</div>
+							<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
+						</div>
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Unité</div>
+							<Input placeholder="jour" bind:value={newItem.unit} />
+						</div>
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prix HT (EUR)</div>
+							<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
+						</div>
+					</div>
+					<Button intent="primary" onclick={addItem} class="w-full">Ajouter cet item</Button>
+				</div>
+
+				{#if formData.items.length === 0}
+					<div class="text-center py-8 text-muted-foreground">
+						<p class="text-xs">Aucun item ajouté</p>
+					</div>
+				{:else}
+					<div class="space-y-2">
+						{#each formData.items as item, i}
+							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium text-foreground">{item.description}</div>
+									<div class="text-xs text-muted-foreground">
+										{item.quantity} {item.unit} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)} HT
+									</div>
+								</div>
+								<button onclick={() => removeItem(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{:else if formData.type === 'appel_de_fonds'}
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<h2 class="text-base font-semibold text-foreground">Informations de l'appel de fonds</h2>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<div class="text-sm font-medium mb-2">Référence globale</div>
+						<Input bind:value={formData.global_invoice_ref} placeholder="Ex: ADF-001" />
+					</div>
+					<div>
+						<div class="text-sm font-medium mb-2">Étape du projet</div>
+						<Input bind:value={formData.project_step} placeholder="Ex: Acompte 30%" />
+					</div>
+					<div class="col-span-2">
+						<div class="text-sm font-medium mb-2">Nom du projet</div>
+						<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
+					</div>
+				</div>
+			</div>
+
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<h2 class="text-base font-semibold text-foreground">Prestataires à payer (IBAN/BIC)</h2>
+				<div class="space-y-3 p-4 bg-muted rounded-lg">
+					<div class="text-sm font-medium">Ajouter un prestataire</div>
+					<div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prestataire *</div>
+						<select
+							bind:value={newPaymentProvider.id}
+							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+						>
+							<option value="">-- Choisir un prestataire --</option>
+							{#each providers as provider (provider.id)}
+								<option value={provider.id}>{provider.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Montant à verser (EUR HT) *</div>
+						<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
+					</div>
+					<Button intent="primary" onclick={addPaymentProvider} class="w-full">Ajouter ce prestataire</Button>
+				</div>
+
+				{#if formData.payment_providers.length === 0}
+					<div class="text-center py-8 text-muted-foreground">
+						<p class="text-xs">Aucun prestataire ajouté</p>
+					</div>
+				{:else}
+					<div class="space-y-2">
+						{#each formData.payment_providers as provider, i}
+							{@const providerInfo = providers.find(p => p.id === provider.id)}
+							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium text-foreground">{providerInfo?.name || provider.id}</div>
+									<div class="text-xs text-muted-foreground">Montant: {formatCurrency(provider.amount_to_pay)} HT</div>
+								</div>
+								<button onclick={() => removePaymentProvider(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
+								</button>
+							</div>
+						{/each}
 					</div>
 
-					<!-- Items List -->
-					{#if formData.items.length === 0}
-						<div
-							class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200"
-						>
-							<iconify-icon
-								icon="solar:document-add-bold"
-								width="64"
-								class="text-slate-300 mx-auto mb-4"
-							></iconify-icon>
-							<p class="text-sm text-slate-500 font-bold">Aucun item ajouté</p>
-							<p class="text-xs text-slate-400 mt-1">
-								Utilisez le formulaire ci-dessus pour ajouter des items
-							</p>
+					<div class="p-4 bg-muted rounded-lg flex justify-between items-center">
+						<div class="text-sm font-medium text-muted-foreground">TOTAL HT</div>
+						<div class="text-lg font-bold text-foreground">
+							{formatCurrency(formData.payment_providers.reduce((sum: number, p: any) => sum + p.amount_to_pay, 0))}
 						</div>
-					{:else}
-						<div class="space-y-4">
-							<h3 class="text-base font-black text-slate-700 uppercase tracking-wide">
-								Items ajoutés ({formData.items.length})
-							</h3>
-							<div class="space-y-3">
-								{#each formData.items as item, i}
-									<div
-										transition:fly={{ x: -20, duration: 200 }}
-										class="group flex items-start gap-4 p-5 bg-white border-2 border-slate-100 rounded-xl hover:border-[#FEC129] hover:shadow-lg transition-all"
-									>
-										<div class="flex-1 min-w-0">
-											<div class="font-black text-base text-slate-900 mb-2">
-												{item.description}
-											</div>
-											<div class="flex items-center gap-4 text-sm text-slate-500">
-												<span class="flex items-center gap-1">
-													<iconify-icon icon="solar:calculator-bold" width="16"></iconify-icon>
-													{item.quantity}
-													{item.unit}
-												</span>
-												<span class="flex items-center gap-1">
-													<iconify-icon icon="solar:tag-price-bold" width="16"></iconify-icon>
-													{formatCurrency(item.price)} / {item.unit}
-												</span>
-												<span class="flex items-center gap-1 font-black text-[#291334]">
-													<iconify-icon icon="solar:wallet-bold" width="16"></iconify-icon>
-													{formatCurrency(item.quantity * item.price)} HT
-												</span>
-											</div>
-										</div>
-										<button
-											onclick={() => removeItem(i)}
-											class="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100"
-											aria-label="Supprimer l'item"
-										>
-											<iconify-icon icon="solar:trash-bin-trash-bold" width="18"></iconify-icon>
-										</button>
-									</div>
-								{/each}
-							</div>
-
-							<div class="grid grid-cols-3 gap-4 p-6 bg-slate-50 rounded-xl">
-								<div class="text-xs text-slate-600">
-									<div class="font-black mb-2">Sous-total HT</div>
-									<div class="text-lg font-black text-slate-900">{formatCurrency(subtotal)}</div>
-								</div>
-								<div class="text-xs text-slate-600">
-									<div class="font-black mb-2">TVA ({tvaRate}%)</div>
-									<div class="text-lg font-black text-slate-900">{formatCurrency(tva)}</div>
-								</div>
-								<div class="text-xs text-slate-600">
-									<div class="font-black mb-2">Total TTC</div>
-									<div class="text-lg font-black text-[#291334]">{formatCurrency(total)}</div>
-								</div>
-							</div>
-						</div>
+					</div>
+				{/if}
+			</div>
+		{:else if formData.type === 'prestation' || formData.type === 'maintenance'}
+			<div class="rounded-xl border border-border p-6 space-y-4">
+				<div class="flex justify-between items-center">
+					<h2 class="text-base font-semibold text-foreground">Items de facturation</h2>
+					{#if formData.items.length > 0}
+						<span class="text-sm font-medium text-foreground">
+							Total: {formatCurrency(total)} TTC
+						</span>
 					{/if}
 				</div>
-			{/if}
-		</div>
 
-		<!-- Actions -->
-		<div class="mt-8 flex gap-4">
-			<Button
-				intent="secondary"
-				onclick={() => goto('/admin/documents')}
-				class="flex-1"
-				disabled={generating}
-			>
-				<iconify-icon icon="solar:close-circle-bold" width="20"></iconify-icon>
-				Annuler
-			</Button>
-			<Button intent="secondary" onclick={handlePreview} disabled={generating} class="flex-1">
-				{#if generating && !showPreview}
-					<Spinner size="sm" />
+				<div class="space-y-3 p-4 bg-muted rounded-lg">
+					<div class="text-sm font-medium">Ajouter un item</div>
+					<div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</div>
+						<textarea
+							placeholder="Ex: Développement d'un site web vitrine responsive..."
+							bind:value={newItem.description}
+							rows="2"
+							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+						></textarea>
+					</div>
+					<div class="grid grid-cols-3 gap-3">
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Quantité</div>
+							<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
+						</div>
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Unité</div>
+							<Input placeholder="jour" bind:value={newItem.unit} />
+						</div>
+						<div>
+							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prix HT (EUR)</div>
+							<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
+						</div>
+					</div>
+					{#if newItem.description && newItem.quantity > 0 && newItem.price > 0}
+						<div class="p-2 bg-background rounded border border-border text-xs text-muted-foreground">
+							{newItem.quantity} {newItem.unit} x {formatCurrency(newItem.price)} = {formatCurrency(newItem.quantity * newItem.price)} HT
+							(TTC: {formatCurrency(newItem.quantity * newItem.price * (1 + tvaRate / 100))})
+						</div>
+					{/if}
+					<Button intent="primary" onclick={addItem} class="w-full">Ajouter cet item</Button>
+				</div>
+
+				{#if formData.items.length === 0}
+					<div class="text-center py-8 text-muted-foreground">
+						<p class="text-xs">Aucun item ajouté</p>
+					</div>
 				{:else}
-					<iconify-icon icon="solar:eye-bold" width="20"></iconify-icon>
+					<div class="space-y-2">
+						{#each formData.items as item, i}
+							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium text-foreground">{item.description}</div>
+									<div class="text-xs text-muted-foreground">
+										{item.quantity} {item.unit} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)} HT
+									</div>
+								</div>
+								<button onclick={() => removeItem(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
+								</button>
+							</div>
+						{/each}
+					</div>
+
+					<div class="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg text-sm">
+						<div>
+							<div class="text-xs font-medium text-muted-foreground mb-1">Sous-total HT</div>
+							<div class="font-bold text-foreground">{formatCurrency(subtotal)}</div>
+						</div>
+						<div>
+							<div class="text-xs font-medium text-muted-foreground mb-1">TVA ({tvaRate}%)</div>
+							<div class="font-bold text-foreground">{formatCurrency(tva)}</div>
+						</div>
+						<div>
+							<div class="text-xs font-medium text-muted-foreground mb-1">Total TTC</div>
+							<div class="font-bold text-foreground">{formatCurrency(total)}</div>
+						</div>
+					</div>
 				{/if}
-				Prévisualiser
-			</Button>
-			<Button intent="primary" onclick={handleCreate} disabled={generating} class="flex-1">
-				{#if generating}
-					<Spinner size="sm" />
-				{:else}
-					<iconify-icon icon="solar:download-bold" width="20"></iconify-icon>
-				{/if}
-				Créer et télécharger
-			</Button>
-		</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class="flex gap-3 pt-2">
+		<Button
+			intent="secondary"
+			onclick={() => goto('/admin/documents')}
+			class="flex-1"
+			disabled={generating}
+		>
+			Annuler
+		</Button>
+		<Button intent="secondary" onclick={handlePreview} disabled={generating} class="flex-1">
+			{#if generating && !showPreview}
+				<Spinner size="sm" />
+			{:else}
+				<iconify-icon icon="solar:eye-bold" width="16"></iconify-icon>
+			{/if}
+			Prévisualiser
+		</Button>
+		<Button intent="primary" onclick={handleCreate} disabled={generating} class="flex-1">
+			{#if generating}
+				<Spinner size="sm" />
+			{:else}
+				<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
+			{/if}
+			Créer et télécharger
+		</Button>
 	</div>
 </div>
 
-<!-- Preview Sidebar -->
 {#if showPreview}
 	<div
-		transition:fade={{ duration: 200 }}
 		class="fixed inset-0 bg-black/50 z-50"
 		onclick={() => (showPreview = false)}
 		role="presentation"
 	></div>
 	<div
-		transition:fly={{ x: 800, duration: 300, opacity: 1 }}
-		class="fixed top-0 right-0 h-full w-[800px] bg-white shadow-2xl z-50 flex flex-col"
+		class="fixed top-0 right-0 h-full w-[800px] bg-background shadow-2xl z-50 flex flex-col"
 	>
-		<div class="flex items-center justify-between p-6 border-b border-slate-200 bg-slate-50">
-			<div class="flex items-center gap-3">
-				<div class="p-2 bg-[#291334] rounded-lg">
-					<iconify-icon icon="solar:document-bold" width="24" class="text-white"></iconify-icon>
-				</div>
-				<div>
-					<h3 class="text-lg font-black text-slate-900">Aperçu du document</h3>
-					<p class="text-xs text-slate-500">Vérifiez les détails avant de créer</p>
-				</div>
+		<div class="flex items-center justify-between p-4 border-b border-border">
+			<div>
+				<h3 class="text-base font-semibold text-foreground">Aperçu du document</h3>
+				<p class="text-xs text-muted-foreground">Vérifiez les détails avant de créer</p>
 			</div>
 			<button
 				onclick={() => (showPreview = false)}
-				class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 hover:text-slate-900 transition-colors"
+				class="p-1.5 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground"
 				aria-label="Fermer l'aperçu"
 			>
-				<iconify-icon icon="solar:close-circle-bold" width="28"></iconify-icon>
+				<iconify-icon icon="solar:close-circle-bold" width="20"></iconify-icon>
 			</button>
 		</div>
-		<div class="flex-1 overflow-hidden p-6 bg-slate-100">
+		<div class="flex-1 overflow-hidden p-4 bg-muted">
 			<iframe
 				src="data:application/pdf;base64,{previewPdf}"
-				class="w-full h-full rounded-lg shadow-lg border-2 border-slate-300"
+				class="w-full h-full rounded-lg border border-border"
 				title="Aperçu du document PDF"
 			></iframe>
 		</div>

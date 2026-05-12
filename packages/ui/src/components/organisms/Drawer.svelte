@@ -33,35 +33,33 @@
 
 {#if open}
   <div
-    class="fixed inset-0 bg-black/50 backdrop-blur-md z-[100] flex items-end"
+    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex justify-end"
     transition:fade={{ duration: 200 }}
     onclick={handleBackdropClick}
     role="presentation"
   >
     <div
-      class="w-full bg-white rounded-t-[40px] shadow-2xl h-[50vh] flex flex-col"
-      transition:fly={{ y: '100%', duration: 300 }}
+      class="w-full max-w-md border-l border-border bg-background shadow-lg h-full flex flex-col"
+      transition:fly={{ x: '100%', duration: 300 }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-title"
     >
-      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-slate-300 mt-4 mb-2"></div>
-
-      <header class="px-6 py-4 flex justify-between items-center border-b border-slate-100 bg-white">
-        <h2 id="drawer-title" class="font-bold uppercase tracking-tighter text-xl text-slate-900">
+      <header class="px-6 py-4 flex justify-between items-center border-b border-border">
+        <h2 id="drawer-title" class="font-semibold text-lg text-foreground">
           {title}
         </h2>
         <button
           onclick={close}
           type="button"
-          class="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+          class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           aria-label="Close drawer"
         >
-          <iconify-icon icon="solar:close-circle-bold" width="28"></iconify-icon>
+          <iconify-icon icon="solar:close-circle-bold" width="24"></iconify-icon>
         </button>
       </header>
 
-      <div class="flex-1 overflow-y-auto px-6 py-6 bg-white">
+      <div class="flex-1 overflow-y-auto px-6 py-6">
         {#if children}
           {@render children()}
         {/if}
