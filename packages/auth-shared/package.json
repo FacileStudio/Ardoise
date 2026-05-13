@@ -11,8 +11,6 @@
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
-    "@types/js-cookie": "^3.0.6",
-    "js-cookie": "^3.0.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {

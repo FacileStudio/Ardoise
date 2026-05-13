@@ -24,7 +24,7 @@
     }
 
     try {
-      const { token, user } = await trpc.auth.login.mutate({ email, password });
+      const { user } = await trpc.auth.login.mutate({ email, password });
 
       if (!isAdmin(user as SessionUser)) {
         error = "Accès refusé : espace réservé aux administrateurs.";
@@ -32,7 +32,7 @@
         return;
       }
 
-      authStore.setAuth({ token }, user as SessionUser);
+      authStore.setAuth(user as SessionUser);
       await goto(resolve('/admin/clients'));
     } catch (err) {
       logger.error({ err }, 'Login error');

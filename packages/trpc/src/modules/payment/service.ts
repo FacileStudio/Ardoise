@@ -376,6 +376,70 @@ export const paymentService = {
     });
   },
 
+  sendReminder: async (
+    db: PrismaClient,
+    smtpClient: SMTPClient,
+    env: ServerEnv,
+    appOrigin: string,
+    paymentId: string
+  ): Promise<void> => {
+    const payment = await db.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        client: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Payment not found',
+      });
+    }
+
+    if (payment.status !== 'PENDING') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Can only send reminders for pending payments',
+      });
+    }
+
+    const clientEmail = payment.client.contactEmail || payment.client.user?.email;
+    if (!clientEmail) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Client has no email address configured',
+      });
+    }
+
+    const clientName = `${payment.client.contactFirstName} ${payment.client.contactLastName}`.trim();
+    const daysUntilDue = Math.ceil(
+      (new Date(payment.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+
+    const emailTemplates = new EmailTemplates(smtpClient);
+    await emailTemplates.sendPaymentReminder({
+      clientEmail,
+      paymentLink: `${appOrigin}/app/payment/${payment.id}`,
+      amount: Number(payment.totalWithFees || payment.amount),
+      dueDate: payment.dueDate,
+      clientName,
+      invoiceNumber: payment.id,
+      daysUntilDue: Math.max(0, daysUntilDue),
+    });
+  },
+
   markExpiredPayments: async (db: PrismaClient) => {
     const now = new Date();
 
@@ -500,6 +564,34 @@ export const paymentService = {
   },
 
   handleWebhook: async (
+    db: PrismaClient,
+    storage: StorageService,
+    smtpClient: SMTPClient,
+    env: ServerEnv,
+    event: Stripe.Event
+  ) => {
+    try {
+      await db.webhookEvent.create({
+        data: { id: event.id, type: event.type },
+      });
+    } catch {
+      return;
+    }
+
+    try {
+      await paymentService.processWebhookEvent(db, storage, smtpClient, env, event);
+    } catch (error) {
+      await db.webhookEvent.delete({ where: { id: event.id } }).catch(() => {});
+      throw error;
+    }
+
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await db.webhookEvent.deleteMany({
+      where: { processedAt: { lt: cutoff } },
+    }).catch(() => {});
+  },
+
+  processWebhookEvent: async (
     db: PrismaClient,
     storage: StorageService,
     smtpClient: SMTPClient,

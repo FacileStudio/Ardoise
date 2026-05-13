@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
+		Alert,
 		Badge,
 		ConfirmDialog,
 		Pagination,
@@ -24,6 +25,7 @@
 
 	let confirmDeleteClient: any = $state(null);
 	let showDeleteDialog = $state(false);
+	let deleteError = $state('');
 
 	let isInitialMount = true;
 
@@ -77,12 +79,13 @@
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to delete client');
 			if (err?.message?.includes('existing payments')) {
-				alert('Impossible de supprimer un client avec des paiements existants. Veuillez d\'abord supprimer les paiements.');
+				deleteError = 'Impossible de supprimer un client avec des paiements existants. Veuillez d\'abord supprimer les paiements.';
 			} else {
-				alert('Échec de la suppression du client: ' + (err?.message || 'Erreur inconnue'));
+				deleteError = 'Echec de la suppression du client: ' + (err?.message || 'Erreur inconnue');
 			}
 			confirmDeleteClient = null;
 			showDeleteDialog = false;
+			setTimeout(() => { deleteError = ''; }, 6000);
 		}
 	}
 
@@ -148,6 +151,10 @@
 	</div>
 {:else}
 	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
+		{#if deleteError}
+			<Alert variant="danger" dismissible>{deleteError}</Alert>
+		{/if}
+
 		<header class="flex justify-between items-center">
 			<div>
 				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('backoffice.clients.title')}</h1>

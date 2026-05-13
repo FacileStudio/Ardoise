@@ -13,7 +13,7 @@ export interface SessionUser {
 
 export interface AuthState {
   user: SessionUser | null;
-  session: { token: string } | null;
+  session: { active: boolean } | null;
   loading: boolean;
 }
 

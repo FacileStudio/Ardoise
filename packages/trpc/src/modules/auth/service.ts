@@ -28,8 +28,36 @@ const userSelection = {
   },
 };
 
+const createSessionWithTokens = async (
+  db: PrismaClient,
+  auth: AuthManager,
+  sessionUser: SessionUser,
+  meta?: { ipAddress?: string; userAgent?: string }
+) => {
+  const token = await auth.createToken(sessionUser);
+  const refresh = await auth.createRefreshToken(sessionUser.id);
+
+  await db.session.create({
+    data: {
+      id: crypto.randomUUID(),
+      userId: sessionUser.id,
+      token: refresh.token,
+      expiresAt: refresh.expiresAt,
+      ipAddress: meta?.ipAddress,
+      userAgent: meta?.userAgent,
+    },
+  });
+
+  return { token, refreshToken: refresh.token, user: sessionUser };
+};
+
 export const authService = {
-  login: async (db: PrismaClient, auth: AuthManager, input: LoginInput) => {
+  login: async (
+    db: PrismaClient,
+    auth: AuthManager,
+    input: LoginInput,
+    meta?: { ipAddress?: string; userAgent?: string }
+  ) => {
     const user = await db.user.findUnique({
       where: { email: input.email },
       select: userSelection,
@@ -40,12 +68,15 @@ export const authService = {
     }
 
     const sessionUser = mapToSessionUser(user);
-    const token = await auth.createToken(sessionUser);
-
-    return { token, user: sessionUser };
+    return createSessionWithTokens(db, auth, sessionUser, meta);
   },
 
-  register: async (db: PrismaClient, auth: AuthManager, input: RegisterInput) => {
+  register: async (
+    db: PrismaClient,
+    auth: AuthManager,
+    input: RegisterInput,
+    meta?: { ipAddress?: string; userAgent?: string }
+  ) => {
     const exists = await db.user.findUnique({ where: { email: input.email } });
     if (exists) {
       throw new TRPCError({ code: 'CONFLICT', message: 'This email is already in use' });
@@ -68,9 +99,61 @@ export const authService = {
     });
 
     const sessionUser = mapToSessionUser(user);
-    const token = await auth.createToken(sessionUser);
+    return createSessionWithTokens(db, auth, sessionUser, meta);
+  },
 
-    return { token, user: sessionUser };
+  refresh: async (db: PrismaClient, auth: AuthManager, refreshToken: string) => {
+    const payload = await auth.verifyRefreshToken(refreshToken);
+    if (!payload) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid refresh token' });
+    }
+
+    const session = await db.session.findUnique({
+      where: { token: refreshToken },
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      if (session) {
+        await db.session.deleteMany({ where: { userId: session.userId } });
+      }
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Refresh token expired or revoked' });
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        avatar: { select: { url: true } },
+        coverImage: { select: { url: true } },
+      },
+    });
+
+    if (!user) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+    }
+
+    const sessionUser = mapToSessionUser(user);
+    const newAccessToken = await auth.createToken(sessionUser);
+    const newRefresh = await auth.createRefreshToken(sessionUser.id);
+
+    await db.session.update({
+      where: { id: session.id },
+      data: {
+        token: newRefresh.token,
+        expiresAt: newRefresh.expiresAt,
+        updatedAt: new Date(),
+      },
+    });
+
+    return {
+      token: newAccessToken,
+      refreshToken: newRefresh.token,
+      user: sessionUser,
+    };
   },
 };
 

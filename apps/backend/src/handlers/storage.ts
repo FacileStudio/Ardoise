@@ -14,9 +14,17 @@ function getStorageKey(c: Context): string {
   return c.req.path.replace(/^\/storage\/?/, '').replace(/^\/+/, '');
 }
 
+function extractTokenFromCookies(cookieHeader: string | undefined): string | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)auth_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function requireUser(c: Context, authManager: AuthManager) {
+  const cookieToken = extractTokenFromCookies(c.req.header('cookie'));
   const authHeader = c.req.header('authorization');
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = cookieToken || bearerToken;
   return token ? await authManager.verifyToken(token) : null;
 }
 

@@ -14,8 +14,8 @@
     loading = true;
     error = '';
     try {
-      const { token, user } = await trpc.auth.login.mutate({ email, password });
-      authStore.setAuth({ token }, user);
+      const { user } = await trpc.auth.login.mutate({ email, password });
+      authStore.setAuth(user);
       await goto(resolve('/app/profile'));
     } catch (err) {
       error = err instanceof Error ? err.message : "Échec de l'authentification.";

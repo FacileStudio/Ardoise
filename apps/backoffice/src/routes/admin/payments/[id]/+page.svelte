@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Spinner, Badge, Card, Button, ConfirmDialog } from '@repo/ui';
+	import { Spinner, Badge, Card, Button, ConfirmDialog, Alert } from '@repo/ui';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
@@ -55,6 +55,10 @@
 	let actionLoading = $state(false);
 	let payment: Payment | null = $state(null);
 	let showCancelDialog = $state(false);
+	let reminderLoading = $state(false);
+	let reminderSent = $state(false);
+	let reminderError = $state('');
+	let cancelError = $state('');
 
 	onMount(async () => {
 		await fetchPayment();
@@ -63,11 +67,28 @@
 	async function fetchPayment() {
 		pageLoading = true;
 		try {
-			payment = (await trpc.payment.getById.query({ id: paymentId })) as Payment;
+			payment = (await trpc.payment.getById.query({ id: paymentId })) as unknown as Payment;
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch payment');
 		} finally {
 			pageLoading = false;
+		}
+	}
+
+	async function handleSendReminder() {
+		if (!payment) return;
+		reminderLoading = true;
+		reminderError = '';
+		reminderSent = false;
+		try {
+			await trpc.payment.sendReminder.mutate({ id: payment.id });
+			reminderSent = true;
+			setTimeout(() => { reminderSent = false; }, 4000);
+		} catch (err: any) {
+			reminderError = err?.message || 'Echec de l\'envoi du rappel';
+			setTimeout(() => { reminderError = ''; }, 5000);
+		} finally {
+			reminderLoading = false;
 		}
 	}
 
@@ -79,9 +100,11 @@
 			await trpc.payment.cancel.mutate({ id: payment.id });
 			await fetchPayment();
 			showCancelDialog = false;
-		} catch (err) {
+		} catch (err: any) {
 			logger.error({ err }, 'Failed to cancel payment');
-			alert('Failed to cancel payment');
+			cancelError = err?.message || 'Echec de l\'annulation du paiement';
+			showCancelDialog = false;
+			setTimeout(() => { cancelError = ''; }, 5000);
 		} finally {
 			actionLoading = false;
 		}
@@ -154,6 +177,7 @@
 				<button
 					onclick={() => goto('/admin/payments')}
 					class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+					aria-label="Retour aux paiements"
 				>
 					<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
 				</button>
@@ -169,6 +193,10 @@
 				{payment.status}
 			</Badge>
 		</header>
+
+		{#if cancelError}
+			<Alert variant="danger" dismissible>{cancelError}</Alert>
+		{/if}
 
 		<div class="grid grid-cols-3 gap-6">
 			<div class="col-span-2 space-y-6">
@@ -347,11 +375,22 @@
 					<div class="rounded-xl border border-border p-6 space-y-4">
 						<h2 class="text-base font-semibold text-foreground">Actions</h2>
 						<div class="space-y-2">
+							{#if reminderSent}
+								<Alert variant="success">Rappel envoye avec succes.</Alert>
+							{/if}
+							{#if reminderError}
+								<Alert variant="danger">{reminderError}</Alert>
+							{/if}
 							<button
-								onclick={() => alert('Send reminder feature coming soon')}
-								class="w-full px-3 py-2 border border-border rounded-md text-sm font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2"
+								onclick={handleSendReminder}
+								disabled={reminderLoading}
+								class="w-full px-3 py-2 border border-border rounded-md text-sm font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								<iconify-icon icon="solar:letter-bold" width="16"></iconify-icon>
+								{#if reminderLoading}
+									<iconify-icon icon="line-md:loading-twotone-loop" width="16"></iconify-icon>
+								{:else}
+									<iconify-icon icon="solar:letter-bold" width="16"></iconify-icon>
+								{/if}
 								Envoyer un rappel
 							</button>
 

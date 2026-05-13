@@ -103,6 +103,8 @@ export const UserScalarFieldEnumSchema = z.enum(['id','email','firstName','lastN
 
 export const VerificationScalarFieldEnumSchema = z.enum(['id','hashedIdentifier','hashedValue','expiresAt','createdAt','updatedAt']);
 
+export const WebhookEventScalarFieldEnumSchema = z.enum(['id','type','processedAt']);
+
 export const SortOrderSchema = z.enum(['asc','desc']);
 
 export const NullableJsonNullValueInputSchema = z.enum(['DbNull','JsonNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value) as unknown as z.ZodType<Prisma.NullableJsonNullValueInput>;
@@ -627,6 +629,18 @@ export const VerificationSchema = z.object({
 export type Verification = z.infer<typeof VerificationSchema>
 
 /////////////////////////////////////////
+// WEBHOOK EVENT SCHEMA
+/////////////////////////////////////////
+
+export const WebhookEventSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  processedAt: z.coerce.date(),
+})
+
+export type WebhookEvent = z.infer<typeof WebhookEventSchema>
+
+/////////////////////////////////////////
 // SELECT & INCLUDE
 /////////////////////////////////////////
 
@@ -1085,6 +1099,15 @@ export const VerificationSelectSchema: z.ZodType<Prisma.VerificationSelect> = z.
   expiresAt: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
+}).strict()
+
+// WEBHOOK EVENT
+//------------------------------------------------------
+
+export const WebhookEventSelectSchema: z.ZodType<Prisma.WebhookEventSelect> = z.object({
+  id: z.boolean().optional(),
+  type: z.boolean().optional(),
+  processedAt: z.boolean().optional(),
 }).strict()
 
 
@@ -1880,17 +1903,34 @@ export const PaymentWhereUniqueInputSchema: z.ZodType<Prisma.PaymentWhereUniqueI
   z.object({
     id: z.string(),
     stripePaymentIntentId: z.string(),
+    stripeSubscriptionId: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    stripePaymentIntentId: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    stripeSubscriptionId: z.string(),
   }),
   z.object({
     id: z.string(),
   }),
   z.object({
     stripePaymentIntentId: z.string(),
+    stripeSubscriptionId: z.string(),
+  }),
+  z.object({
+    stripePaymentIntentId: z.string(),
+  }),
+  z.object({
+    stripeSubscriptionId: z.string(),
   }),
 ])
 .and(z.object({
   id: z.string().optional(),
   stripePaymentIntentId: z.string().optional(),
+  stripeSubscriptionId: z.string().optional(),
   AND: z.union([ z.lazy(() => PaymentWhereInputSchema), z.lazy(() => PaymentWhereInputSchema).array() ]).optional(),
   OR: z.lazy(() => PaymentWhereInputSchema).array().optional(),
   NOT: z.union([ z.lazy(() => PaymentWhereInputSchema), z.lazy(() => PaymentWhereInputSchema).array() ]).optional(),
@@ -1905,7 +1945,6 @@ export const PaymentWhereUniqueInputSchema: z.ZodType<Prisma.PaymentWhereUniqueI
   reference: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   dueDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
-  stripeSubscriptionId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   attachedFiles: z.lazy(() => StringNullableListFilterSchema).optional(),
   receiptUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -2660,6 +2699,51 @@ export const VerificationScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.
   expiresAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const WebhookEventWhereInputSchema: z.ZodType<Prisma.WebhookEventWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => WebhookEventWhereInputSchema), z.lazy(() => WebhookEventWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => WebhookEventWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => WebhookEventWhereInputSchema), z.lazy(() => WebhookEventWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  type: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  processedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const WebhookEventOrderByWithRelationInputSchema: z.ZodType<Prisma.WebhookEventOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  type: z.lazy(() => SortOrderSchema).optional(),
+  processedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const WebhookEventWhereUniqueInputSchema: z.ZodType<Prisma.WebhookEventWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => WebhookEventWhereInputSchema), z.lazy(() => WebhookEventWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => WebhookEventWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => WebhookEventWhereInputSchema), z.lazy(() => WebhookEventWhereInputSchema).array() ]).optional(),
+  type: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  processedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict());
+
+export const WebhookEventOrderByWithAggregationInputSchema: z.ZodType<Prisma.WebhookEventOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  type: z.lazy(() => SortOrderSchema).optional(),
+  processedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => WebhookEventCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => WebhookEventMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => WebhookEventMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const WebhookEventScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.WebhookEventScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => WebhookEventScalarWhereWithAggregatesInputSchema), z.lazy(() => WebhookEventScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => WebhookEventScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => WebhookEventScalarWhereWithAggregatesInputSchema), z.lazy(() => WebhookEventScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  type: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  processedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
 export const AccountCreateInputSchema: z.ZodType<Prisma.AccountCreateInput> = z.object({
@@ -4294,6 +4378,48 @@ export const VerificationUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Verifi
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
+export const WebhookEventCreateInputSchema: z.ZodType<Prisma.WebhookEventCreateInput> = z.object({
+  id: z.string(),
+  type: z.string(),
+  processedAt: z.coerce.date().optional(),
+}).strict();
+
+export const WebhookEventUncheckedCreateInputSchema: z.ZodType<Prisma.WebhookEventUncheckedCreateInput> = z.object({
+  id: z.string(),
+  type: z.string(),
+  processedAt: z.coerce.date().optional(),
+}).strict();
+
+export const WebhookEventUpdateInputSchema: z.ZodType<Prisma.WebhookEventUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  processedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const WebhookEventUncheckedUpdateInputSchema: z.ZodType<Prisma.WebhookEventUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  processedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const WebhookEventCreateManyInputSchema: z.ZodType<Prisma.WebhookEventCreateManyInput> = z.object({
+  id: z.string(),
+  type: z.string(),
+  processedAt: z.coerce.date().optional(),
+}).strict();
+
+export const WebhookEventUpdateManyMutationInputSchema: z.ZodType<Prisma.WebhookEventUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  processedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const WebhookEventUncheckedUpdateManyInputSchema: z.ZodType<Prisma.WebhookEventUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  processedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
 export const StringFilterSchema: z.ZodType<Prisma.StringFilter> = z.object({
   equals: z.string().optional(),
   in: z.string().array().optional(),
@@ -5601,6 +5727,24 @@ export const VerificationMinOrderByAggregateInputSchema: z.ZodType<Prisma.Verifi
   expiresAt: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const WebhookEventCountOrderByAggregateInputSchema: z.ZodType<Prisma.WebhookEventCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  type: z.lazy(() => SortOrderSchema).optional(),
+  processedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const WebhookEventMaxOrderByAggregateInputSchema: z.ZodType<Prisma.WebhookEventMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  type: z.lazy(() => SortOrderSchema).optional(),
+  processedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const WebhookEventMinOrderByAggregateInputSchema: z.ZodType<Prisma.WebhookEventMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  type: z.lazy(() => SortOrderSchema).optional(),
+  processedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const UserCreateNestedOneWithoutAccountsInputSchema: z.ZodType<Prisma.UserCreateNestedOneWithoutAccountsInput> = z.object({
@@ -10481,6 +10625,63 @@ export const VerificationFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Verificat
   where: VerificationWhereUniqueInputSchema, 
 }).strict();
 
+export const WebhookEventFindFirstArgsSchema: z.ZodType<Prisma.WebhookEventFindFirstArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  where: WebhookEventWhereInputSchema.optional(), 
+  orderBy: z.union([ WebhookEventOrderByWithRelationInputSchema.array(), WebhookEventOrderByWithRelationInputSchema ]).optional(),
+  cursor: WebhookEventWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ WebhookEventScalarFieldEnumSchema, WebhookEventScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const WebhookEventFindFirstOrThrowArgsSchema: z.ZodType<Prisma.WebhookEventFindFirstOrThrowArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  where: WebhookEventWhereInputSchema.optional(), 
+  orderBy: z.union([ WebhookEventOrderByWithRelationInputSchema.array(), WebhookEventOrderByWithRelationInputSchema ]).optional(),
+  cursor: WebhookEventWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ WebhookEventScalarFieldEnumSchema, WebhookEventScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const WebhookEventFindManyArgsSchema: z.ZodType<Prisma.WebhookEventFindManyArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  where: WebhookEventWhereInputSchema.optional(), 
+  orderBy: z.union([ WebhookEventOrderByWithRelationInputSchema.array(), WebhookEventOrderByWithRelationInputSchema ]).optional(),
+  cursor: WebhookEventWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ WebhookEventScalarFieldEnumSchema, WebhookEventScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const WebhookEventAggregateArgsSchema: z.ZodType<Prisma.WebhookEventAggregateArgs> = z.object({
+  where: WebhookEventWhereInputSchema.optional(), 
+  orderBy: z.union([ WebhookEventOrderByWithRelationInputSchema.array(), WebhookEventOrderByWithRelationInputSchema ]).optional(),
+  cursor: WebhookEventWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const WebhookEventGroupByArgsSchema: z.ZodType<Prisma.WebhookEventGroupByArgs> = z.object({
+  where: WebhookEventWhereInputSchema.optional(), 
+  orderBy: z.union([ WebhookEventOrderByWithAggregationInputSchema.array(), WebhookEventOrderByWithAggregationInputSchema ]).optional(),
+  by: WebhookEventScalarFieldEnumSchema.array(), 
+  having: WebhookEventScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const WebhookEventFindUniqueArgsSchema: z.ZodType<Prisma.WebhookEventFindUniqueArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  where: WebhookEventWhereUniqueInputSchema, 
+}).strict();
+
+export const WebhookEventFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.WebhookEventFindUniqueOrThrowArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  where: WebhookEventWhereUniqueInputSchema, 
+}).strict();
+
 export const AccountCreateArgsSchema: z.ZodType<Prisma.AccountCreateArgs> = z.object({
   select: AccountSelectSchema.optional(),
   include: AccountIncludeSchema.optional(),
@@ -11172,5 +11373,55 @@ export const VerificationUpdateManyAndReturnArgsSchema: z.ZodType<Prisma.Verific
 
 export const VerificationDeleteManyArgsSchema: z.ZodType<Prisma.VerificationDeleteManyArgs> = z.object({
   where: VerificationWhereInputSchema.optional(), 
+  limit: z.number().optional(),
+}).strict();
+
+export const WebhookEventCreateArgsSchema: z.ZodType<Prisma.WebhookEventCreateArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  data: z.union([ WebhookEventCreateInputSchema, WebhookEventUncheckedCreateInputSchema ]),
+}).strict();
+
+export const WebhookEventUpsertArgsSchema: z.ZodType<Prisma.WebhookEventUpsertArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  where: WebhookEventWhereUniqueInputSchema, 
+  create: z.union([ WebhookEventCreateInputSchema, WebhookEventUncheckedCreateInputSchema ]),
+  update: z.union([ WebhookEventUpdateInputSchema, WebhookEventUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const WebhookEventCreateManyArgsSchema: z.ZodType<Prisma.WebhookEventCreateManyArgs> = z.object({
+  data: z.union([ WebhookEventCreateManyInputSchema, WebhookEventCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const WebhookEventCreateManyAndReturnArgsSchema: z.ZodType<Prisma.WebhookEventCreateManyAndReturnArgs> = z.object({
+  data: z.union([ WebhookEventCreateManyInputSchema, WebhookEventCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const WebhookEventDeleteArgsSchema: z.ZodType<Prisma.WebhookEventDeleteArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  where: WebhookEventWhereUniqueInputSchema, 
+}).strict();
+
+export const WebhookEventUpdateArgsSchema: z.ZodType<Prisma.WebhookEventUpdateArgs> = z.object({
+  select: WebhookEventSelectSchema.optional(),
+  data: z.union([ WebhookEventUpdateInputSchema, WebhookEventUncheckedUpdateInputSchema ]),
+  where: WebhookEventWhereUniqueInputSchema, 
+}).strict();
+
+export const WebhookEventUpdateManyArgsSchema: z.ZodType<Prisma.WebhookEventUpdateManyArgs> = z.object({
+  data: z.union([ WebhookEventUpdateManyMutationInputSchema, WebhookEventUncheckedUpdateManyInputSchema ]),
+  where: WebhookEventWhereInputSchema.optional(), 
+  limit: z.number().optional(),
+}).strict();
+
+export const WebhookEventUpdateManyAndReturnArgsSchema: z.ZodType<Prisma.WebhookEventUpdateManyAndReturnArgs> = z.object({
+  data: z.union([ WebhookEventUpdateManyMutationInputSchema, WebhookEventUncheckedUpdateManyInputSchema ]),
+  where: WebhookEventWhereInputSchema.optional(), 
+  limit: z.number().optional(),
+}).strict();
+
+export const WebhookEventDeleteManyArgsSchema: z.ZodType<Prisma.WebhookEventDeleteManyArgs> = z.object({
+  where: WebhookEventWhereInputSchema.optional(), 
   limit: z.number().optional(),
 }).strict();

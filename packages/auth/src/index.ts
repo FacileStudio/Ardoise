@@ -8,6 +8,7 @@ export interface AuthConfig {
   issuer?: string;
   audience?: string;
   tokenExpiration?: string;
+  refreshTokenExpiration?: string;
 }
 
 export class AuthManager {
@@ -16,6 +17,7 @@ export class AuthManager {
   private readonly issuer: string;
   private readonly audience: string;
   private readonly tokenExpiration: string;
+  private readonly refreshTokenExpiration: string;
 
   constructor(config: AuthConfig) {
     this.secret = new TextEncoder().encode(config.encryptionSecret);
@@ -24,7 +26,8 @@ export class AuthManager {
 
     this.issuer = config.issuer ?? 'maxi-boilerplate-api';
     this.audience = config.audience ?? 'maxi-boilerplate-client';
-    this.tokenExpiration = config.tokenExpiration ?? '7d';
+    this.tokenExpiration = config.tokenExpiration ?? '15m';
+    this.refreshTokenExpiration = config.refreshTokenExpiration ?? '7d';
   }
 
   async createToken(user: SessionUser): Promise<string> {
@@ -43,6 +46,41 @@ export class AuthManager {
       .setAudience(this.audience)
       .setExpirationTime(this.tokenExpiration)
       .sign(this.secret);
+  }
+
+  async createRefreshToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const token = await new SignJWT({
+      sub: userId,
+      type: 'refresh',
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setIssuer(this.issuer)
+      .setAudience(this.audience)
+      .setExpirationTime(this.refreshTokenExpiration)
+      .sign(this.secret);
+
+    return { token, expiresAt };
+  }
+
+  async verifyRefreshToken(token: string): Promise<{ userId: string } | null> {
+    try {
+      const { payload } = await jwtVerify(token, this.secret, {
+        issuer: this.issuer,
+        audience: this.audience,
+      });
+
+      if (payload.type !== 'refresh' || !payload.sub) {
+        return null;
+      }
+
+      return { userId: payload.sub };
+    } catch {
+      return null;
+    }
   }
 
   async verifyToken(token: string): Promise<SessionUser | null> {

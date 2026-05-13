@@ -1,5 +1,4 @@
 import type { AuthState, SessionUser } from './';
-import Cookies from 'js-cookie';
 import { logger } from '@repo/logger';
 
 type Listener<AuthState> = (value: AuthState) => void;
@@ -15,7 +14,6 @@ export class UniversalAuthStore {
   private listeners = new Set<Listener<AuthState>>();
   private storage: StorageProvider;
   private key = 'auth-storage';
-  private cookieName = 'auth_token';
   private onSignOut?: () => Promise<any>;
 
   constructor(initialState: AuthState, storage: StorageProvider, onSignOut?: () => Promise<any>) {
@@ -36,7 +34,12 @@ export class UniversalAuthStore {
     try {
       const saved = await this.storage.getItem(this.key);
       if (saved) {
-        this.state = { ...JSON.parse(saved), loading: false };
+        const parsed = JSON.parse(saved);
+        this.state = {
+          user: parsed.user || null,
+          session: parsed.user ? { active: true } : null,
+          loading: false,
+        };
       } else {
         this.state = { ...this.state, loading: false };
       }
@@ -51,10 +54,9 @@ export class UniversalAuthStore {
   update(patch: Partial<AuthState>) {
     this.state = { ...this.state, ...patch };
 
-    if (this.state.session) {
+    if (this.state.user) {
       const dataToSave = JSON.stringify({
         user: this.state.user,
-        session: this.state.session,
       });
       this.storage.setItem(this.key, dataToSave);
     } else if (!this.state.loading) {
@@ -64,17 +66,8 @@ export class UniversalAuthStore {
     this.notify();
   }
 
-  setAuth(session: { token: string }, user: SessionUser) {
-    if (typeof document !== 'undefined') {
-      Cookies.set(this.cookieName, session.token, {
-        expires: 7,
-        path: '/',
-        sameSite: 'strict',
-        secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
-      });
-    }
-
-    this.update({ session, user: user as SessionUser, loading: false });
+  setAuth(user: SessionUser) {
+    this.update({ session: { active: true }, user, loading: false });
   }
 
   async logout() {
@@ -90,13 +83,7 @@ export class UniversalAuthStore {
 
   async clear() {
     this.state = { user: null, session: null, loading: false };
-
     await this.storage.removeItem(this.key);
-
-    if (typeof document !== 'undefined') {
-      Cookies.remove(this.cookieName, { path: '/' });
-    }
-
     this.notify();
   }
 

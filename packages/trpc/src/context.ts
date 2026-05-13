@@ -6,6 +6,15 @@ import { StorageService } from '@repo/storage';
 import type { Logger } from '@repo/logger';
 import { getDocuSealService, getSmtpClient, getStripeService } from './modules/settings/service';
 
+export const AUTH_COOKIE_NAME = 'auth_token';
+export const REFRESH_COOKIE_NAME = 'refresh_token';
+
+export function extractCookie(cookieHeader: string | null, name: string): string | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export interface CreateContextOptions extends FetchCreateContextFnOptions {
   authManager: AuthManager;
   storage: StorageService;
@@ -15,13 +24,16 @@ export interface CreateContextOptions extends FetchCreateContextFnOptions {
 
 export const createContext = async ({
   req,
+  resHeaders,
   authManager,
   storage,
   env,
   logger,
 }: CreateContextOptions) => {
+  const cookieToken = extractCookie(req.headers.get('cookie'), AUTH_COOKIE_NAME);
   const authHeader = req.headers.get('authorization');
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = cookieToken || bearerToken;
   const user = token ? await authManager.verifyToken(token) : null;
   const contextLogger = user ? logger.child({ userId: user.id, email: user.email }) : logger;
   const ipAddress =
@@ -34,10 +46,12 @@ export const createContext = async ({
   const appOrigin = origin || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : '');
 
   return {
+    req,
     user,
     db: prisma,
     auth: authManager,
     storage,
+    resHeaders,
     getStripe: () => getStripeService(prisma),
     getSmtp: () => getSmtpClient(prisma),
     docuseal: await getDocuSealService(prisma),

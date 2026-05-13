@@ -50,6 +50,14 @@ export const paymentRouter = router({
       return paymentService.cancelPayment(ctx.db, await ctx.getStripe(), input.id);
     }),
 
+  sendReminder: adminProcedure
+    .input(GetPaymentByIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const smtp = await ctx.getSmtp();
+      await paymentService.sendReminder(ctx.db, smtp, ctx.env, ctx.appOrigin, input.id);
+      return { success: true };
+    }),
+
   markExpired: adminProcedure.mutation(async ({ ctx }) => {
     return paymentService.markExpiredPayments(ctx.db);
   }),

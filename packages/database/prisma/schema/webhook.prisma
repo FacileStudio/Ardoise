@@ -1,0 +1,7 @@
+model WebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
+}
