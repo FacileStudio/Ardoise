@@ -9,6 +9,7 @@ import { createStripeWebhookHandler } from './handlers/stripe';
 import trpcHandler from './handlers/trpc';
 import { openApiHandler } from './handlers/openapi';
 import { createStorageDownloadHandler, createStorageUploadHandler } from './handlers/storage';
+import { createOIDCRoutes } from './handlers/oidc';
 import {
   createHealthCheckHandler,
   createLivenessHandler,
@@ -73,6 +74,8 @@ app.get('/health/ready', createReadinessHandler());
 
 app.put('/storage/*', createStorageUploadHandler({ authManager, storage, env }));
 app.get('/storage/*', createStorageDownloadHandler({ authManager, storage, env }));
+
+createOIDCRoutes(app, { authManager, env });
 
 app.all(
   '/trpc/*',

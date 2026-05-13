@@ -102,6 +102,35 @@ export const authService = {
     return createSessionWithTokens(db, auth, sessionUser, meta);
   },
 
+  oidcUpsert: async (
+    db: PrismaClient,
+    auth: AuthManager,
+    claims: { email: string; firstName: string; lastName: string },
+    meta?: { ipAddress?: string; userAgent?: string }
+  ) => {
+    let user = await db.user.findUnique({
+      where: { email: claims.email },
+      select: userSelection,
+    });
+
+    if (!user) {
+      const passwordHash = await auth.hashPassword(crypto.randomUUID());
+      user = await db.user.create({
+        data: {
+          email: claims.email,
+          firstName: claims.firstName,
+          lastName: claims.lastName,
+          password: passwordHash,
+          role: UserRole.CLIENT,
+        },
+        select: userSelection,
+      });
+    }
+
+    const sessionUser = mapToSessionUser(user);
+    return createSessionWithTokens(db, auth, sessionUser, meta);
+  },
+
   refresh: async (db: PrismaClient, auth: AuthManager, refreshToken: string) => {
     const payload = await auth.verifyRefreshToken(refreshToken);
     if (!payload) {

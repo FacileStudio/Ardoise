@@ -1,16 +1,64 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { onMount } from 'svelte';
   import authStore from '$lib/auth-store';
   import { trpc } from '$lib/trpc';
+  import env from '$lib/env';
   import { isAdmin, loginSchema, type SessionUser } from '@repo/auth-shared';
   import { logger } from '@repo/logger';
   import 'iconify-icon';
 
+  const apiUrl = env.API_URL?.replace(/\/trpc\/?$/, '').replace(/\/$/, '') ?? '';
+
   let loading = $state(false);
+  let oidcLoading = $state(false);
   let error = $state('');
   let email = $state('');
   let password = $state('');
+  let oidcEnabled = $state(false);
+  let ssoOnly = $state(false);
+  let configLoaded = $state(false);
+
+  onMount(async () => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('oidc') && params.get('oidc') === 'success') {
+      oidcLoading = true;
+      try {
+        const user = await trpc.auth.me.query({});
+        if (!isAdmin(user as SessionUser)) {
+          error = "Accès refusé : espace réservé aux administrateurs.";
+          window.history.replaceState({}, '', window.location.pathname);
+          oidcLoading = false;
+          return;
+        }
+        authStore.setAuth(user as SessionUser);
+        window.history.replaceState({}, '', window.location.pathname);
+        await goto(resolve('/admin/clients'));
+        return;
+      } catch (err) {
+        error = "Échec de la récupération du profil après connexion SSO.";
+        window.history.replaceState({}, '', window.location.pathname);
+      } finally {
+        oidcLoading = false;
+      }
+    }
+
+    if (params.has('error') && params.get('error') === 'oidc_failed') {
+      error = "Échec de l'authentification SSO.";
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    try {
+      const res = await fetch(`${apiUrl}/auth/config`);
+      const config = await res.json();
+      oidcEnabled = config.oidc_enabled ?? false;
+      ssoOnly = config.sso_only ?? false;
+    } catch {}
+
+    configLoaded = true;
+  });
 
   async function handleLogin() {
     loading = true;
@@ -78,49 +126,83 @@
         </p>
       </div>
 
-      <form
-        onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
-        class="space-y-4"
-      >
-        <div class="space-y-1.5">
-          <label for="email" class="text-sm font-medium">Email</label>
-          <input
-            id="email"
-            type="email"
-            bind:value={email}
-            placeholder="admin@facile.studio"
-            required
-            class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
-          />
+      {#if oidcLoading}
+        <div class="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <iconify-icon icon="svg-spinners:ring-resize" width="16"></iconify-icon>
+          Connexion en cours…
         </div>
+      {:else}
+        {#if !ssoOnly}
+          <form
+            onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
+            class="space-y-4"
+          >
+            <div class="space-y-1.5">
+              <label for="email" class="text-sm font-medium">Email</label>
+              <input
+                id="email"
+                type="email"
+                bind:value={email}
+                placeholder="admin@facile.studio"
+                required
+                class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
+              />
+            </div>
 
-        <div class="space-y-1.5">
-          <label for="password" class="text-sm font-medium">Mot de passe</label>
-          <input
-            id="password"
-            type="password"
-            bind:value={password}
-            placeholder="••••••••"
-            required
-            class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
-          />
-        </div>
+            <div class="space-y-1.5">
+              <label for="password" class="text-sm font-medium">Mot de passe</label>
+              <input
+                id="password"
+                type="password"
+                bind:value={password}
+                placeholder="••••••••"
+                required
+                class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
+              />
+            </div>
 
-        {#if error}
-          <p class="text-sm text-destructive">{error}</p>
+            {#if error}
+              <p class="text-sm text-destructive">{error}</p>
+            {/if}
+
+            <button
+              type="submit"
+              disabled={loading || !email || !password}
+              class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {#if loading}
+                <iconify-icon icon="svg-spinners:ring-resize" width="16"></iconify-icon>
+              {/if}
+              Accès admin
+            </button>
+          </form>
         {/if}
 
-        <button
-          type="submit"
-          disabled={loading || !email || !password}
-          class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
-        >
-          {#if loading}
-            <iconify-icon icon="svg-spinners:ring-resize" width="16"></iconify-icon>
-          {/if}
-          Accès admin
-        </button>
-      </form>
+        {#if ssoOnly && error}
+          <p class="text-sm text-destructive mb-4">{error}</p>
+        {/if}
+
+        {#if oidcEnabled && !ssoOnly}
+          <div class="relative my-4">
+            <div class="absolute inset-0 flex items-center">
+              <span class="w-full border-t"></span>
+            </div>
+            <div class="relative flex justify-center text-xs">
+              <span class="bg-background px-2 text-muted-foreground">ou</span>
+            </div>
+          </div>
+        {/if}
+
+        {#if oidcEnabled}
+          <a
+            href="{apiUrl}/auth/oidc?redirect={encodeURIComponent(window.location.origin)}"
+            class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            <iconify-icon icon="solar:shield-keyhole-bold" width="16"></iconify-icon>
+            Connexion SSO
+          </a>
+        {/if}
+      {/if}
     </div>
   </div>
 </div>

@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./modules/docuseal/service": "./src/modules/docuseal/service.ts",
-    "./settings": "./src/modules/settings/service.ts"
+    "./settings": "./src/modules/settings/service.ts",
+    "./context": "./src/context.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
