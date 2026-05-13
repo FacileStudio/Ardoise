@@ -35,7 +35,7 @@ model Payment {
   paidAt DateTime?
 
   stripePaymentIntentId String? @unique
-  stripeSubscriptionId String?
+  stripeSubscriptionId String? @unique
 
   attachedFiles String[]
 

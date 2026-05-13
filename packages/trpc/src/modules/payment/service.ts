@@ -274,6 +274,7 @@ export const paymentService = {
           invoiceNumber: payment.id,
         });
       } catch (emailError) {
+        console.error('[payment] Failed to send payment notification email:', emailError);
       }
     }
 
@@ -361,6 +362,7 @@ export const paymentService = {
         await stripe.client.subscriptions.cancel(payment.stripeSubscriptionId);
       }
     } catch (error) {
+      console.error('[payment] Failed to cancel Stripe resource:', error);
     }
 
     return db.payment.update({
@@ -438,9 +440,9 @@ export const paymentService = {
         : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date()),
       paymentMethod: 'Carte bancaire',
       clientName: payment.client.companyName,
-      clientAddress: payment.client.billingAddress,
-      clientCity: payment.client.billingCity,
-      clientCountry: payment.client.billingCountry,
+      clientAddress: payment.client.billingAddress || '',
+      clientCity: payment.client.billingCity || '',
+      clientCountry: payment.client.billingCountry || '',
       clientSiret: payment.client.siret || '',
       providerName: settings.companyName || '',
       providerAddress: settings.companyAddress || '',
@@ -530,14 +532,16 @@ export const paymentService = {
               payment.id
             );
           } catch (error) {
+            console.error('[webhook] Failed to generate receipt for payment_intent.succeeded:', error);
           }
         }
         break;
       }
 
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as any;
-        const subscriptionId = invoice.subscription;
+        const invoice = event.data.object as Stripe.Invoice;
+        const sub = invoice.parent?.subscription_details?.subscription;
+        const subscriptionId = typeof sub === 'string' ? sub : sub?.id;
 
         if (subscriptionId && typeof subscriptionId === 'string') {
           const payment = await db.payment.findFirst({
@@ -562,6 +566,7 @@ export const paymentService = {
                 payment.id
               );
             } catch (error) {
+              console.error('[webhook] Failed to generate receipt for invoice.payment_succeeded:', error);
             }
           }
         }

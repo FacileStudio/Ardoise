@@ -208,13 +208,6 @@ export const clientService = {
       userUpdateData.email = data.contactEmail;
     }
 
-    if (existingClient.userId && Object.keys(userUpdateData).length > 0) {
-      await db.user.update({
-        where: { id: existingClient.userId },
-        data: userUpdateData,
-      });
-    }
-
     const clientUpdateData: any = {};
     if (data.contactFirstName !== undefined) clientUpdateData.contactFirstName = data.contactFirstName;
     if (data.contactLastName !== undefined) clientUpdateData.contactLastName = data.contactLastName;
@@ -225,22 +218,31 @@ export const clientService = {
     if (data.billingCountry !== undefined) clientUpdateData.billingCountry = data.billingCountry;
     if (data.siret !== undefined) clientUpdateData.siret = data.siret;
 
-    const client = await db.client.update({
-      where: { id },
-      data: clientUpdateData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            emailVerified: true,
-            status: true,
-            createdAt: true,
+    const client = await db.$transaction(async (tx) => {
+      if (existingClient.userId && Object.keys(userUpdateData).length > 0) {
+        await tx.user.update({
+          where: { id: existingClient.userId },
+          data: userUpdateData,
+        });
+      }
+
+      return tx.client.update({
+        where: { id },
+        data: clientUpdateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              emailVerified: true,
+              status: true,
+              createdAt: true,
+            },
           },
         },
-      },
+      });
     });
 
     return client;

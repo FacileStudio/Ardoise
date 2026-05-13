@@ -1,5 +1,14 @@
 import type { SMTPClient, EmailAttachment } from './client';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface PaymentNotificationData {
   clientEmail: string;
   paymentLink: string;
@@ -71,20 +80,20 @@ export class EmailTemplates {
       <h1>Nouveau paiement à régler</h1>
     </div>
     <div class="content">
-      <p>Bonjour ${clientName},</p>
+      <p>Bonjour ${escapeHtml(clientName)},</p>
 
       <p>Vous avez un nouveau paiement à régler.</p>
 
       <div class="info">
-        <p><strong>Facture :</strong> ${invoiceNumber}</p>
-        <p><strong>Montant :</strong> ${formattedAmount}</p>
-        <p><strong>Date d'échéance :</strong> ${formattedDueDate}</p>
+        <p><strong>Facture :</strong> ${escapeHtml(invoiceNumber)}</p>
+        <p><strong>Montant :</strong> ${escapeHtml(formattedAmount)}</p>
+        <p><strong>Date d'échéance :</strong> ${escapeHtml(formattedDueDate)}</p>
       </div>
 
       <p>Pour régler ce paiement, veuillez cliquer sur le bouton ci-dessous :</p>
 
       <div style="text-align: center;">
-        <a href="${paymentLink}" class="button">Régler maintenant</a>
+        <a href="${escapeHtml(paymentLink)}" class="button">Régler maintenant</a>
       </div>
 
       <p>Merci de votre confiance.</p>
@@ -149,7 +158,7 @@ export class EmailTemplates {
       <h1>✓ Paiement confirmé</h1>
     </div>
     <div class="content">
-      <p>Bonjour ${clientName},</p>
+      <p>Bonjour ${escapeHtml(clientName)},</p>
 
       <div class="success">
         <h2 style="margin: 0;">Votre paiement a été reçu avec succès</h2>
@@ -158,9 +167,9 @@ export class EmailTemplates {
       <p>Nous vous confirmons la réception de votre paiement.</p>
 
       <div class="info">
-        <p><strong>Facture :</strong> ${invoiceNumber}</p>
-        <p><strong>Montant payé :</strong> ${formattedAmount}</p>
-        <p><strong>Date de paiement :</strong> ${formattedPaymentDate}</p>
+        <p><strong>Facture :</strong> ${escapeHtml(invoiceNumber)}</p>
+        <p><strong>Montant payé :</strong> ${escapeHtml(formattedAmount)}</p>
+        <p><strong>Date de paiement :</strong> ${escapeHtml(formattedPaymentDate)}</p>
       </div>
 
       <p>Vous trouverez votre reçu en pièce jointe de cet email.</p>
@@ -240,10 +249,10 @@ export class EmailTemplates {
 <body>
   <div class="container">
     <div class="header">
-      <h1>${urgencyText}</h1>
+      <h1>${escapeHtml(urgencyText)}</h1>
     </div>
     <div class="content">
-      <p>Bonjour ${clientName},</p>
+      <p>Bonjour ${escapeHtml(clientName)},</p>
 
       <div class="warning">
         <p><strong>⚠️ Ce paiement arrive à échéance ${
@@ -260,15 +269,15 @@ export class EmailTemplates {
       <p>Nous vous rappelons qu'un paiement est en attente de règlement.</p>
 
       <div class="info">
-        <p><strong>Facture :</strong> ${invoiceNumber}</p>
-        <p><strong>Montant :</strong> ${formattedAmount}</p>
-        <p><strong>Date d'échéance :</strong> ${formattedDueDate}</p>
+        <p><strong>Facture :</strong> ${escapeHtml(invoiceNumber)}</p>
+        <p><strong>Montant :</strong> ${escapeHtml(formattedAmount)}</p>
+        <p><strong>Date d'échéance :</strong> ${escapeHtml(formattedDueDate)}</p>
       </div>
 
       <p>Pour éviter tout retard, veuillez régler ce paiement dès que possible :</p>
 
       <div style="text-align: center;">
-        <a href="${paymentLink}" class="button">Régler maintenant</a>
+        <a href="${escapeHtml(paymentLink)}" class="button">Régler maintenant</a>
       </div>
 
       <p>Si vous avez déjà effectué ce paiement, veuillez ignorer ce message.</p>

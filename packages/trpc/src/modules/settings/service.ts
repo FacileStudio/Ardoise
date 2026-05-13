@@ -232,5 +232,7 @@ export function cleanupTempFile(filePath: string | undefined) {
   try {
     const tempDir = filePath.substring(0, filePath.lastIndexOf('/'));
     rmSync(tempDir, { recursive: true, force: true });
-  } catch {}
+  } catch (error) {
+    console.error('[settings] Failed to cleanup temp file:', error);
+  }
 }

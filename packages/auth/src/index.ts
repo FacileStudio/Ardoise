@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { type SessionUser } from '@repo/auth-shared';
 import { CryptoService } from '@repo/crypto';
+import { UserRole } from '@repo/types';
 
 export interface AuthConfig {
   encryptionSecret: string;
@@ -51,12 +52,17 @@ export class AuthManager {
         audience: this.audience,
       });
 
+      const role = payload.role as string;
+      if (!Object.values(UserRole).includes(role as UserRole)) {
+        return null;
+      }
+
       return {
         id: payload.id as string,
         email: payload.email as string,
         firstName: payload.firstName as string,
         lastName: payload.lastName as string,
-        role: payload.role as any,
+        role: role as UserRole,
         avatarUrl: payload.avatarUrl as string | null | undefined,
         coverImageUrl: payload.coverImageUrl as string | null | undefined,
       };

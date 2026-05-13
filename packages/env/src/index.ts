@@ -21,7 +21,7 @@ export const serverEnvSchema = baseSchema.extend({
   FRONTEND_URL: urlSchema('http://localhost:3000'),
   BACKOFFICE_URL: urlSchema('http://localhost:3002'),
 
-  ENCRYPTION_SECRET: z.string().min(1),
+  ENCRYPTION_SECRET: z.string().min(32, 'ENCRYPTION_SECRET must be at least 32 characters'),
 
   STORAGE_PATH: z.string().min(1).default('./data/uploads'),
 

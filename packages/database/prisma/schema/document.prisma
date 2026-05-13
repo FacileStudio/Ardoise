@@ -64,4 +64,5 @@ model Document {
   @@index([type])
   @@index([createdAt])
   @@index([providerId])
+  @@index([clientName])
 }
