@@ -1,7 +1,12 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { type SessionUser } from '@repo/auth-shared';
 import { CryptoService } from '@repo/crypto';
 import { UserRole } from '@repo/types';
+
+export interface TokenUser {
+  id: string;
+  email: string;
+  role: UserRole;
+}
 
 export interface AuthConfig {
   encryptionSecret: string;
@@ -30,15 +35,11 @@ export class AuthManager {
     this.refreshTokenExpiration = config.refreshTokenExpiration ?? '7d';
   }
 
-  async createToken(user: SessionUser): Promise<string> {
+  async createToken(user: TokenUser): Promise<string> {
     return await new SignJWT({
       id: user.id,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
       role: user.role,
-      avatarUrl: user.avatarUrl,
-      coverImageUrl: user.coverImageUrl,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -83,7 +84,7 @@ export class AuthManager {
     }
   }
 
-  async verifyToken(token: string): Promise<SessionUser | null> {
+  async verifyToken(token: string): Promise<TokenUser | null> {
     try {
       const { payload } = await jwtVerify(token, this.secret, {
         issuer: this.issuer,
@@ -98,11 +99,7 @@ export class AuthManager {
       return {
         id: payload.id as string,
         email: payload.email as string,
-        firstName: payload.firstName as string,
-        lastName: payload.lastName as string,
         role: role as UserRole,
-        avatarUrl: payload.avatarUrl as string | null | undefined,
-        coverImageUrl: payload.coverImageUrl as string | null | undefined,
       };
     } catch (error) {
       return null;

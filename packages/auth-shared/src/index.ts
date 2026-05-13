@@ -42,13 +42,13 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 };
 
 export const hasAccess = (
-  user: SessionUser | null | undefined,
+  user: { role: UserRole } | null | undefined,
   requiredRole: UserRole
 ): boolean => {
   if (!user) return false;
   return ROLE_HIERARCHY[user.role] >= ROLE_HIERARCHY[requiredRole];
 };
 
-export const isAdmin = (user: SessionUser | null | undefined) => user?.role === UserRole.ADMIN;
+export const isAdmin = (user: { role: UserRole } | null | undefined) => user?.role === UserRole.ADMIN;
 
 export * from './store';

@@ -24,7 +24,7 @@ function setAuthCookies(
 
   const refreshCookie = [
     `${REFRESH_COOKIE_NAME}=${encodeURIComponent(refreshToken)}`,
-    'Path=/',
+    'Path=/trpc/auth.refresh',
     'HttpOnly',
     'SameSite=Lax',
     `Max-Age=${7 * 24 * 60 * 60}`,
@@ -35,10 +35,14 @@ function setAuthCookies(
 
 function clearAuthCookies(resHeaders: Headers, env: { NODE_ENV?: string }) {
   const isProduction = env.NODE_ENV === 'production';
+  const cookiePaths: Record<string, string> = {
+    [AUTH_COOKIE_NAME]: '/',
+    [REFRESH_COOKIE_NAME]: '/trpc/auth.refresh',
+  };
   for (const name of [AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME]) {
     const cookie = [
       `${name}=`,
-      'Path=/',
+      `Path=${cookiePaths[name]}`,
       'HttpOnly',
       'SameSite=Lax',
       'Max-Age=0',
@@ -88,6 +92,11 @@ export const authRouter = router({
   }),
 
   logout: protectedProcedure.input(z.object({})).mutation(async ({ ctx }) => {
+    const cookieHeader = ctx.req?.headers.get('cookie') ?? null;
+    const refreshToken = extractCookie(cookieHeader, REFRESH_COOKIE_NAME);
+    if (refreshToken) {
+      await ctx.db.session.deleteMany({ where: { token: refreshToken } });
+    }
     clearAuthCookies(ctx.resHeaders, ctx.env);
     return { success: true };
   }),

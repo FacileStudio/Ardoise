@@ -423,20 +423,45 @@ export const paymentService = {
       });
     }
 
+    if (payment.lastReminderSentAt) {
+      const hoursSinceLastReminder = (Date.now() - new Date(payment.lastReminderSentAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSinceLastReminder < 24) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: `Un rappel a déjà été envoyé il y a moins de 24h. Prochain envoi possible dans ${Math.ceil(24 - hoursSinceLastReminder)}h.`,
+        });
+      }
+    }
+
     const clientName = `${payment.client.contactFirstName} ${payment.client.contactLastName}`.trim();
     const daysUntilDue = Math.ceil(
       (new Date(payment.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     );
 
-    const emailTemplates = new EmailTemplates(smtpClient);
-    await emailTemplates.sendPaymentReminder({
-      clientEmail,
-      paymentLink: `${appOrigin}/app/payment/${payment.id}`,
-      amount: Number(payment.totalWithFees || payment.amount),
-      dueDate: payment.dueDate,
-      clientName,
-      invoiceNumber: payment.id,
-      daysUntilDue: Math.max(0, daysUntilDue),
+    try {
+      const emailTemplates = new EmailTemplates(smtpClient);
+      await emailTemplates.sendPaymentReminder({
+        clientEmail,
+        paymentLink: `${appOrigin}/app/payment/${payment.id}`,
+        amount: Number(payment.totalWithFees || payment.amount),
+        dueDate: payment.dueDate,
+        clientName,
+        invoiceNumber: payment.id,
+        daysUntilDue: Math.max(0, daysUntilDue),
+      });
+    } catch (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Échec de l'envoi SMTP: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
+      });
+    }
+
+    await db.payment.update({
+      where: { id: paymentId },
+      data: {
+        lastReminderSentAt: new Date(),
+        reminderCount: { increment: 1 },
+      },
     });
   },
 
@@ -578,17 +603,14 @@ export const paymentService = {
       return;
     }
 
-    try {
-      await paymentService.processWebhookEvent(db, storage, smtpClient, env, event);
-    } catch (error) {
-      await db.webhookEvent.delete({ where: { id: event.id } }).catch(() => {});
-      throw error;
-    }
+    await paymentService.processWebhookEvent(db, storage, smtpClient, env, event);
 
-    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    await db.webhookEvent.deleteMany({
-      where: { processedAt: { lt: cutoff } },
-    }).catch(() => {});
+    if (Math.random() < 0.01) {
+      const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      await db.webhookEvent.deleteMany({
+        where: { processedAt: { lt: cutoff } },
+      }).catch(() => {});
+    }
   },
 
   processWebhookEvent: async (
@@ -606,26 +628,25 @@ export const paymentService = {
           where: { stripePaymentIntentId: paymentIntent.id },
         });
 
-        if (payment && payment.status === 'PENDING') {
-          await db.payment.update({
-            where: { id: payment.id },
-            data: {
-              status: 'PAID',
-              paidAt: new Date(),
-            },
-          });
+        if (!payment) break;
 
-          try {
-            await paymentService.generateAndSendReceipt(
-              db,
-              storage,
-              smtpClient,
-              env,
-              payment.id
-            );
-          } catch (error) {
-            console.error('[webhook] Failed to generate receipt for payment_intent.succeeded:', error);
-          }
+        const updated = await db.payment.updateMany({
+          where: { id: payment.id, status: 'PENDING' },
+          data: { status: 'PAID', paidAt: new Date() },
+        });
+
+        if (updated.count === 0) break;
+
+        try {
+          await paymentService.generateAndSendReceipt(
+            db,
+            storage,
+            smtpClient,
+            env,
+            payment.id
+          );
+        } catch (error) {
+          console.error('[webhook] Failed to generate receipt for payment_intent.succeeded:', error);
         }
         break;
       }
@@ -635,32 +656,31 @@ export const paymentService = {
         const sub = invoice.parent?.subscription_details?.subscription;
         const subscriptionId = typeof sub === 'string' ? sub : sub?.id;
 
-        if (subscriptionId && typeof subscriptionId === 'string') {
-          const payment = await db.payment.findFirst({
-            where: { stripeSubscriptionId: subscriptionId, status: 'PENDING' },
-          });
+        if (!subscriptionId || typeof subscriptionId !== 'string') break;
 
-          if (payment) {
-            await db.payment.update({
-              where: { id: payment.id },
-              data: {
-                status: 'PAID',
-                paidAt: new Date(),
-              },
-            });
+        const payment = await db.payment.findFirst({
+          where: { stripeSubscriptionId: subscriptionId, status: 'PENDING' },
+        });
 
-            try {
-              await paymentService.generateAndSendReceipt(
-                db,
-                storage,
-                smtpClient,
-                env,
-                payment.id
-              );
-            } catch (error) {
-              console.error('[webhook] Failed to generate receipt for invoice.payment_succeeded:', error);
-            }
-          }
+        if (!payment) break;
+
+        const updated = await db.payment.updateMany({
+          where: { id: payment.id, status: 'PENDING' },
+          data: { status: 'PAID', paidAt: new Date() },
+        });
+
+        if (updated.count === 0) break;
+
+        try {
+          await paymentService.generateAndSendReceipt(
+            db,
+            storage,
+            smtpClient,
+            env,
+            payment.id
+          );
+        } catch (error) {
+          console.error('[webhook] Failed to generate receipt for invoice.payment_succeeded:', error);
         }
         break;
       }

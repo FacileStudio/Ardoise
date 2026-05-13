@@ -48,6 +48,8 @@
 		stripePaymentIntentId: string | null;
 		stripeSubscriptionId: string | null;
 		receiptUrl: string | null;
+		lastReminderSentAt: Date | null;
+		reminderCount: number;
 	}
 
 	let paymentId = $derived($page.params.id);
@@ -83,6 +85,7 @@
 		try {
 			await trpc.payment.sendReminder.mutate({ id: payment.id });
 			reminderSent = true;
+			await fetchPayment();
 			setTimeout(() => { reminderSent = false; }, 4000);
 		} catch (err: any) {
 			reminderError = err?.message || 'Echec de l\'envoi du rappel';
@@ -393,6 +396,11 @@
 								{/if}
 								Envoyer un rappel
 							</button>
+							{#if payment.lastReminderSentAt}
+								<p class="text-xs text-muted-foreground text-center">
+									Dernier rappel : {formatDateShort(payment.lastReminderSentAt)}
+								</p>
+							{/if}
 
 							<button
 								onclick={() => showCancelDialog = true}

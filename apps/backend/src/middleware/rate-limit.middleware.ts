@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import { getConnInfo } from "hono/bun";
 
 interface RateLimitConfig {
   windowMs: number;
@@ -13,8 +14,10 @@ interface RateLimitEntry {
 class RateLimiter {
   private store = new Map<string, RateLimitEntry>();
   private cleanupInterval: ReturnType<typeof setInterval>;
+  private maxEntries: number;
 
-  constructor() {
+  constructor(maxEntries = 10_000) {
+    this.maxEntries = maxEntries;
     this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
   }
 
@@ -23,6 +26,12 @@ class RateLimiter {
     const entry = this.store.get(key);
 
     if (!entry || now >= entry.resetAt) {
+      if (!this.store.has(key) && this.store.size >= this.maxEntries) {
+        const oldest = this.store.keys().next().value;
+        if (oldest !== undefined) {
+          this.store.delete(oldest);
+        }
+      }
       const resetAt = now + config.windowMs;
       this.store.set(key, { count: 1, resetAt });
       return { allowed: true, remaining: config.maxRequests - 1, resetAt };
@@ -46,6 +55,12 @@ class RateLimiter {
 const limiter = new RateLimiter();
 
 function getClientIp(c: Context): string {
+  try {
+    const connInfo = getConnInfo(c);
+    if (connInfo?.remote?.address) {
+      return connInfo.remote.address;
+    }
+  } catch {}
   return (
     c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
     c.req.header("x-real-ip") ||
@@ -55,6 +70,11 @@ function getClientIp(c: Context): string {
 
 function createRateLimitMiddleware(config: RateLimitConfig) {
   return async (c: Context, next: Next) => {
+    if (c.req.method === "OPTIONS") {
+      await next();
+      return;
+    }
+
     const ip = getClientIp(c);
     const path = new URL(c.req.url).pathname;
     const key = `${ip}:${path}`;

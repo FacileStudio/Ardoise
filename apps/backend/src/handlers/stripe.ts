@@ -5,6 +5,26 @@ import { prisma } from '@repo/database';
 import { logger } from '../lib/logger';
 import type { ServerEnv } from '@repo/env';
 import { getSmtpClient, getStripeService } from '@repo/trpc/settings';
+import { Prisma } from '@prisma/client';
+
+const isTransientError = (error: unknown): boolean => {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return ['P1001', 'P1002', 'P1008', 'P1017', 'P2024'].includes(error.code);
+  }
+  if (error instanceof Prisma.PrismaClientInitializationError) return true;
+  if (error instanceof Prisma.PrismaClientRustPanicError) return true;
+
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return msg.includes('econnrefused') ||
+      msg.includes('econnreset') ||
+      msg.includes('etimedout') ||
+      msg.includes('connection') ||
+      msg.includes('timeout');
+  }
+
+  return false;
+};
 
 export const createStripeWebhookHandler = (
   storage: StorageService,
@@ -36,7 +56,11 @@ export const createStripeWebhookHandler = (
         type: 'stripe-webhook',
       });
 
-      return c.json({ error: 'Webhook processing failed' }, 500);
+      if (isTransientError(error)) {
+        return c.json({ error: 'Webhook processing failed' }, 500);
+      }
+
+      return c.json({ error: 'Webhook processing failed', permanent: true }, 200);
     }
   };
 };

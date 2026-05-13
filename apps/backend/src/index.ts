@@ -49,7 +49,13 @@ app.use('*', loggerMiddleware);
 
 app.use('/trpc/auth.*', authRateLimit);
 app.use('/trpc/payment.*', paymentRateLimit);
-app.use('/trpc/*', generalRateLimit);
+app.use('/trpc/*', async (c, next) => {
+  const path = c.req.path;
+  if (path.startsWith('/trpc/auth.') || path.startsWith('/trpc/payment.')) {
+    return next();
+  }
+  return generalRateLimit(c, next);
+});
 
 app.options('/trpc/*', (c) => c.body(null, 204));
 app.options('/storage/*', (c) => c.body(null, 204));
