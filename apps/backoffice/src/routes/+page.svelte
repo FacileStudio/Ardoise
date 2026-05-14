@@ -97,7 +97,7 @@
 <div class="flex min-h-screen">
   <div class="hidden lg:flex lg:w-1/2 flex-col bg-foreground px-12 py-10">
     <div class="flex items-center gap-3 mb-auto">
-      <img class="w-7 invert" src="/logo.svg" alt="Charles" />
+      <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-white"></iconify-icon>
       <span class="text-xl font-bold font-heading tracking-tight text-background">Charles</span>
     </div>
 

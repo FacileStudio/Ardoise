@@ -16,8 +16,8 @@
 <div class="flex h-screen w-full overflow-hidden">
   <aside class="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-background">
     <div class="flex items-center gap-3 px-5 pt-8 pb-6">
-      <div class="w-8 h-8 flex-shrink-0">
-        <img src="/logo.svg" alt="Charles" class="w-full h-full object-contain" />
+      <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center">
+        <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-foreground"></iconify-icon>
       </div>
       <h1 class="text-2xl font-bold font-heading tracking-tight text-foreground">
         Charles
