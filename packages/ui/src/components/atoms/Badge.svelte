@@ -3,7 +3,7 @@
     import type { Snippet } from 'svelte';
 
     const badgeClass = cva(
-        "inline-flex items-center justify-center rounded-md border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-medium",
         {
             variants: {
                 variant: {
