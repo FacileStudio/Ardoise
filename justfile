@@ -7,14 +7,14 @@ init:
     bun install
     cd packages/database && bun run db:generate
     createdb charles || echo "Database 'charles' already exists"
-    cd packages/database && DATABASE_URL="postgresql://fangafunk@localhost:5432/charles" bun run db:push --accept-data-loss
+    cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/charles" bun run db:push --accept-data-loss
     @echo "✅ Project initialized!"
     @echo "📝 Next: Run 'just create-admin' to create admin user, then 'just dev'"
 
-# Create admin user (yann@facile.studio / testcaca123) for local dev
+# Create admin user (admin@example.com / admin123456789) for local dev
 # Note: Backend automatically creates admin on startup from env vars
 create-admin:
-    DATABASE_URL="postgresql://fangafunk@localhost:5432/charles" bun run scripts/create-admin.ts
+    DATABASE_URL="postgresql://user@localhost:5432/charles" bun run scripts/create-admin.ts
 
 # Generate Prisma client
 generate:
@@ -22,11 +22,11 @@ generate:
 
 # Push schema to database
 push:
-    cd packages/database && DATABASE_URL="postgresql://fangafunk@localhost:5432/charles" bun run db:push
+    cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/charles" bun run db:push
 
 # Open Prisma Studio
 studio:
-    cd packages/database && DATABASE_URL="postgresql://fangafunk@localhost:5432/charles" bun run db:studio
+    cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/charles" bun run db:studio
 
 # Run development monorepo
 dev:

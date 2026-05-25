@@ -1,15 +1,18 @@
 import { prisma } from '@repo/database';
 import { AuthManager } from '@repo/auth';
 
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://fangafunk@localhost:5432/charles';
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://user@localhost:5432/charles';
 
 async function createAdmin() {
-  const email = 'yann@facile.studio';
-  const password = 'testcaca123';
+  const email = 'admin@example.com';
+  const password = 'admin123456789';
   const firstName = 'Yann';
   const lastName = 'Admin';
 
-  const encryptionSecret = process.env.ENCRYPTION_SECRET || 'fjdsklfjsdlkjfosdjfklj34kkjkfsd09980f';
+  if (!process.env.ENCRYPTION_SECRET) {
+    throw new Error('ENCRYPTION_SECRET environment variable is required');
+  }
+  const encryptionSecret = process.env.ENCRYPTION_SECRET;
   const auth = new AuthManager({ encryptionSecret });
 
   const existingUser = await prisma.user.findUnique({ where: { email } });

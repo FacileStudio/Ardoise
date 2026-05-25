@@ -100,7 +100,7 @@ cp apps/frontend/.env.example apps/frontend/.env
 Edit `apps/backend/.env` with your credentials:
 
 ```env
-DATABASE_URL=postgresql://fangafunk@localhost:5432/charles
+DATABASE_URL=postgresql://user@localhost:5432/charles
 ENCRYPTION_SECRET=your-secret-key-min-32-chars
 MINIO_ENDPOINT=http://127.0.0.1:9000
 MINIO_ROOT_USER=minioadmin
@@ -118,7 +118,7 @@ Using Just (recommended):
 
 ```bash
 just init              # Complete setup: install, generate, createdb, push schema
-just create-admin      # Create admin account (yann@facile.studio / testcaca123)
+just create-admin      # Create admin account (admin@example.com / admin123456789)
 ```
 
 Or manually:
@@ -271,8 +271,8 @@ Custom JWT-based authentication system:
 6. Protected procedures check `ctx.user`
 
 Default admin account (development):
-- Email: `yann@facile.studio`
-- Password: `testcaca123`
+- Email: `admin@example.com`
+- Password: `admin123456789`
 
 ### Database
 
@@ -335,7 +335,7 @@ S3-compatible storage with MinIO:
 ```bash
 createdb charles
 cd packages/database
-DATABASE_URL="postgresql://fangafunk@localhost:5432/charles" bun run db:push
+DATABASE_URL="postgresql://user@localhost:5432/charles" bun run db:push
 ```
 
 ### Prisma Client Not Found

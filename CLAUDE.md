@@ -35,7 +35,7 @@ The project includes a `justfile` for common tasks:
 
 ```bash
 just init              # Complete setup: install, generate, createdb, push schema
-just create-admin      # Create admin account (yann@facile.studio / testcaca123) for local dev
+just create-admin      # Create admin account (admin@example.com / admin123456789) for local dev
 just dev               # Run all apps (backend + frontend + backoffice)
 just backend           # Run backend only (port 3001)
 just frontend          # Run frontend only (port 5173)
@@ -259,7 +259,7 @@ All schemas are automatically merged by Prisma.
 - Run `bun run dev:db` or `just init` to start and configure a local PostgreSQL instance
 - Database name: `charles`
 - Database URL is configured via `DATABASE_URL` environment variable
-- Default: `postgresql://fangafunk@localhost:5432/charles`
+- Default: `postgresql://user@localhost:5432/charles`
 
 **Production database:**
 - Set `DATABASE_URL` in production environment to your PostgreSQL connection string
@@ -597,7 +597,7 @@ Never use `bcrypt` directly as it's incompatible with the backend's `CryptoServi
 just init              # Creates database and pushes schema
 # Or manually:
 createdb charles
-cd packages/database && DATABASE_URL="postgresql://fangafunk@localhost:5432/charles" bun run db:push
+cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/charles" bun run db:push
 ```
 
 ### Frontend Can't Connect to Backend
