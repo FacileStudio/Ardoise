@@ -51,17 +51,29 @@ function publicSettings<T extends Record<string, unknown>>(settings: T) {
 }
 
 export async function getSettingsRecord(db: PrismaClient) {
-  let settings = await db.settings.findUnique({
-    where: { id: SETTINGS_ID },
-  });
-
-  if (!settings) {
-    settings = await db.settings.create({
-      data: { id: SETTINGS_ID },
+  try {
+    let settings = await db.settings.findUnique({
+      where: { id: SETTINGS_ID },
     });
-  }
 
-  return settings;
+    if (!settings) {
+      settings = await db.settings.create({
+        data: { id: SETTINGS_ID },
+      });
+    }
+
+    return settings;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('does not exist') || message.includes('column')) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Database schema is out of date. Please run migrations.',
+        cause: error,
+      });
+    }
+    throw error;
+  }
 }
 
 export async function getSettings(db: PrismaClient) {

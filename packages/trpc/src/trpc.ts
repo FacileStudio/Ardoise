@@ -20,6 +20,17 @@ const t = initTRPC.context<Context>().meta<OpenApiMeta>().create({
 
     const isProduction = process.env.NODE_ENV === 'production';
 
+    if (isProduction && error.code === 'INTERNAL_SERVER_ERROR') {
+      return {
+        ...shape,
+        message: 'An internal error occurred. Please try again later.',
+        data: {
+          ...shape.data,
+          stack: undefined,
+        },
+      };
+    }
+
     return {
       ...shape,
       data: {
