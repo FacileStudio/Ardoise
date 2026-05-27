@@ -157,8 +157,8 @@
 
 		<header class="flex justify-between items-center">
 			<div>
-				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('backoffice.clients.title')}</h1>
-				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('backoffice.clients.subtitle')}</p>
+				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('admin.clients.title')}</h1>
+				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('admin.clients.subtitle')}</p>
 			</div>
 			<div class="flex gap-3">
 				{#if clients.length > 0}
@@ -172,7 +172,7 @@
 					class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
 				>
 					<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-					{$i18n.t('backoffice.clients.newClient')}
+					{$i18n.t('admin.clients.newClient')}
 				</button>
 			</div>
 		</header>
@@ -180,14 +180,14 @@
 		<div class="grid grid-cols-3 gap-4">
 			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.totalClients')}</div>
+					<div class="text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.totalClients')}</div>
 					<iconify-icon icon="solar:buildings-2-bold" class="text-muted-foreground" width="18"></iconify-icon>
 				</div>
 				<div class="text-2xl font-bold text-foreground">{total}</div>
 			</div>
 			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-medium text-green-600 uppercase">{$i18n.t('backoffice.clients.activeClients')}</div>
+					<div class="text-xs font-medium text-green-600 uppercase">{$i18n.t('admin.clients.activeClients')}</div>
 					<iconify-icon icon="solar:verified-check-bold" class="text-green-600" width="18"></iconify-icon>
 				</div>
 				<div class="text-2xl font-bold text-green-600">
@@ -196,7 +196,7 @@
 			</div>
 			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.thisPage')}</div>
+					<div class="text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.thisPage')}</div>
 					<iconify-icon icon="solar:document-bold" class="text-muted-foreground" width="18"></iconify-icon>
 				</div>
 				<div class="text-2xl font-bold text-foreground">{clients.length}</div>
@@ -211,7 +211,7 @@
 			></iconify-icon>
 			<input
 				type="text"
-				placeholder={$i18n.t('backoffice.clients.searchPlaceholder')}
+				placeholder={$i18n.t('admin.clients.searchPlaceholder')}
 				class="h-9 w-full rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm outline-none focus:border-foreground transition-colors"
 				oninput={(e: any) => handleSearchInput(e.target.value)}
 			/>
@@ -223,13 +223,13 @@
 				<table class="w-full">
 					<thead class="border-b border-border">
 						<tr>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.company')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.contact')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.location')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.siret')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.status')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.joined')}</th>
-							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.clients.table.actions')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.table.company')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.table.contact')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.table.location')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.table.siret')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.table.status')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.table.joined')}</th>
+							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.clients.table.actions')}</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-border">
@@ -248,10 +248,10 @@
 										{#if client.payments?.length > 0}
 											<span class="flex items-center gap-1">
 												<iconify-icon icon="solar:wallet-bold" width="12"></iconify-icon>
-												{client.payments.length} {client.payments.length !== 1 ? $i18n.t('backoffice.clients.payments') : $i18n.t('backoffice.clients.payment')}
+												{client.payments.length} {client.payments.length !== 1 ? $i18n.t('admin.clients.payments') : $i18n.t('admin.clients.payment')}
 											</span>
 										{:else}
-											<span>{$i18n.t('backoffice.clients.noPaymentsYet')}</span>
+											<span>{$i18n.t('admin.clients.noPaymentsYet')}</span>
 										{/if}
 									</div>
 								</td>
@@ -293,7 +293,7 @@
 										<button
 											onclick={() => goto(`/admin/clients/${client.id}`)}
 											class="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-											title={$i18n.t('backoffice.clients.editClient')}
+											title={$i18n.t('admin.clients.editClient')}
 										>
 											<iconify-icon icon="solar:pen-bold" width="16"></iconify-icon>
 										</button>
@@ -301,7 +301,7 @@
 										<button
 											onclick={() => { confirmDeleteClient = client; showDeleteDialog = true; }}
 											class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md transition-colors"
-											title={$i18n.t('backoffice.clients.deleteClient')}
+											title={$i18n.t('admin.clients.deleteClient')}
 										>
 											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 										</button>
@@ -326,8 +326,8 @@
 
 		<div class="text-sm text-muted-foreground text-center">
 			{total !== 1
-				? $i18n.t('backoffice.clients.showingPlural', { count: clients.length, total })
-				: $i18n.t('backoffice.clients.showing', { count: clients.length, total })}
+				? $i18n.t('admin.clients.showingPlural', { count: clients.length, total })
+				: $i18n.t('admin.clients.showing', { count: clients.length, total })}
 		</div>
 	{:else}
 			<div class="text-center py-16">
@@ -335,15 +335,15 @@
 					<div class="w-16 h-16 rounded-xl border border-border flex items-center justify-center text-muted-foreground">
 						<iconify-icon icon="solar:buildings-2-bold" width="32"></iconify-icon>
 					</div>
-					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('backoffice.clients.noClientsFound')}</h3>
-					<p class="text-sm text-muted-foreground max-w-md">{searchQuery ? $i18n.t('backoffice.clients.tryAdjustingSearch') : $i18n.t('backoffice.clients.getStarted')}</p>
+					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('admin.clients.noClientsFound')}</h3>
+					<p class="text-sm text-muted-foreground max-w-md">{searchQuery ? $i18n.t('admin.clients.tryAdjustingSearch') : $i18n.t('admin.clients.getStarted')}</p>
 					{#if !searchQuery}
 						<button
 							onclick={() => goto('/admin/clients/create')}
 							class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity mt-2"
 						>
 							<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-							<span>{$i18n.t('backoffice.clients.newClient')}</span>
+							<span>{$i18n.t('admin.clients.newClient')}</span>
 						</button>
 					{/if}
 				</div>
@@ -354,9 +354,9 @@
 
 <ConfirmDialog
 	bind:isOpen={showDeleteDialog}
-	title={$i18n.t('backoffice.clients.deleteConfirm.title')}
-	description={$i18n.t('backoffice.clients.deleteConfirm.description', { companyName: confirmDeleteClient?.companyName || '' })}
-	confirmText={$i18n.t('backoffice.clients.deleteClient')}
+	title={$i18n.t('admin.clients.deleteConfirm.title')}
+	description={$i18n.t('admin.clients.deleteConfirm.description', { companyName: confirmDeleteClient?.companyName || '' })}
+	confirmText={$i18n.t('admin.clients.deleteClient')}
 	cancelText={$i18n.t('common.buttons.cancel')}
 	variant="danger"
 	onConfirm={handleDeleteClient}

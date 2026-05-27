@@ -131,11 +131,11 @@
 	function getFrequencyLabel(frequency: PaymentFrequency) {
 		switch (frequency) {
 			case 'ONE_TIME':
-				return $i18n.t('backoffice.payments.oneTime');
+				return $i18n.t('admin.payments.oneTime');
 			case 'MONTHLY':
-				return $i18n.t('backoffice.payments.monthly');
+				return $i18n.t('admin.payments.monthly');
 			case 'YEARLY':
-				return $i18n.t('backoffice.payments.yearly');
+				return $i18n.t('admin.payments.yearly');
 			default:
 				return frequency;
 		}

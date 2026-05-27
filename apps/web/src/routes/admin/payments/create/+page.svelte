@@ -192,7 +192,7 @@
 			Retour aux paiements
 		</button>
 		<h1 class="text-2xl font-bold tracking-tight text-foreground">
-			{$i18n.t('backoffice.payments.createPayment')}
+			{$i18n.t('admin.payments.createPayment')}
 		</h1>
 		<p class="text-sm text-muted-foreground mt-1">Créez une demande de paiement pour un client</p>
 	</div>
@@ -407,10 +407,10 @@
 				></iconify-icon>
 				<div class="flex-1">
 					<h3 class="text-sm font-semibold text-amber-900 mb-1">
-						{$i18n.t('backoffice.payments.create.emailNotice')}
+						{$i18n.t('admin.payments.create.emailNotice')}
 					</h3>
 					<p class="text-xs text-amber-800">
-						{$i18n.t('backoffice.payments.create.emailDescription')}
+						{$i18n.t('admin.payments.create.emailDescription')}
 					</p>
 				</div>
 			</div>

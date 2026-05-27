@@ -123,7 +123,7 @@ export const en = {
     statistics: 'Statistics',
     users: 'Users',
   },
-  backoffice: {
+  admin: {
     dashboard: {
       title: 'Admin Dashboard',
       subtitle: 'Select an entity to manage',

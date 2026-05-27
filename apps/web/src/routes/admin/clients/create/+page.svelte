@@ -127,7 +127,7 @@
 			Retour aux clients
 		</button>
 		<h1 class="text-2xl font-bold tracking-tight text-foreground">
-			{$i18n.t('backoffice.clients.newClient')}
+			{$i18n.t('admin.clients.newClient')}
 		</h1>
 		<p class="text-sm text-muted-foreground mt-1">Créez une fiche client, avec ou sans accès à Ardoise</p>
 	</div>

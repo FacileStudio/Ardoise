@@ -47,8 +47,7 @@ Ardoise is an internal payment and invoicing platform for Facile Studio, built w
 .
 ├── apps/
 │   ├── backend/          # Hono + tRPC API server (port 3001)
-│   ├── frontend/         # SvelteKit client portal (port 3000)
-│   └── backoffice/       # SvelteKit admin panel (port 3002)
+│   └── web/              # SvelteKit unified app — client portal + admin panel (port 3000)
 │
 └── packages/
     ├── admin/            # Admin engine for AutoTable/AutoForm
@@ -94,7 +93,7 @@ Copy environment examples and configure:
 
 ```bash
 cp apps/backend/.env.example apps/backend/.env
-cp apps/frontend/.env.example apps/frontend/.env
+cp apps/web/.env.example apps/web/.env
 ```
 
 Edit `apps/backend/.env` with your credentials:
@@ -108,9 +107,8 @@ MINIO_ROOT_PASSWORD=minioadminpassword
 MINIO_BUCKET_NAME=ardoise-uploads
 ```
 
-Configure Stripe, SMTP, and company details in the backoffice settings screen.
-`BACKEND_URL` is passed to frontend and backoffice as `VITE_API_URL` during Docker builds so browser API calls target the backend domain.
-on the current origin.
+Configure Stripe, SMTP, and company details in the admin settings screen.
+`BACKEND_URL` is passed to the web app as `VITE_API_URL` during Docker builds so browser API calls target the backend domain.
 
 ### Database Setup
 
@@ -143,14 +141,12 @@ Start individual services:
 
 ```bash
 just backend          # Backend only (port 3001)
-just frontend         # Frontend only (port 3000)
-just backoffice       # Backoffice only (port 3002)
+just web              # Web app only (port 3000)
 ```
 
 Access the applications:
-- Frontend (client portal): http://localhost:3000
+- Web app: http://localhost:3000 (client portal at `/app`, admin panel at `/admin`)
 - Backend (API): http://localhost:3001
-- Backoffice (admin): http://localhost:3002
 
 ## Available Commands
 
@@ -161,8 +157,7 @@ just init              # Complete setup: install, generate, createdb, push schem
 just create-admin      # Create admin account
 just dev               # Run all apps
 just backend           # Run backend only
-just frontend          # Run frontend only
-just backoffice        # Run backoffice only
+just web               # Run web app only
 just generate          # Generate Prisma client
 just push              # Push schema to database (dev)
 just studio            # Open Prisma Studio
@@ -202,21 +197,18 @@ docker-compose up -d
 ```
 
 3. Access services:
-- Frontend: http://localhost:3000
+- Web app: http://localhost:3000
 - Backend: http://localhost:3001
-- Backoffice: http://localhost:3002
-- MinIO Console: http://localhost:9001
 
 The base `docker-compose.yml` exposes app ports only inside Docker so Dokploy can
 route them without binding host ports. `docker-compose.override.yml` publishes
-`3000`, `3001`, and `3002` for local runs.
+`3000` and `3001` for local runs.
 
 4. View logs:
 
 ```bash
 docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f backoffice
+docker-compose logs -f web
 ```
 
 5. Stop services:
@@ -245,12 +237,11 @@ Required environment variables:
 - `MINIO_*` variables
 - `BACKEND_URL`
 - `FRONTEND_URL`
-- `BACKOFFICE_URL`
 
-#### Frontend & Backoffice
+#### Web App
 
 ```bash
-cd apps/frontend  # or apps/backoffice
+cd apps/web
 bun run build
 node build
 ```
@@ -298,7 +289,7 @@ bun run db:studio            # Browse data with Prisma Studio
 
 ### Payments Flow
 
-1. Admin creates payment in backoffice
+1. Admin creates payment in admin panel
 2. Backend automatically sends payment email to client
 3. Client receives email with payment link
 4. Client enters payment page and clicks "Payer maintenant"

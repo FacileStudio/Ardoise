@@ -209,7 +209,7 @@
 				<div class="flex-1">
 					<h3 class="text-sm font-semibold text-blue-900 mb-1">Permissions administrateur</h3>
 					<p class="text-xs text-blue-800">
-						Les administrateurs ont accès à toutes les fonctionnalités du backoffice, incluant la gestion des clients, paiements, documents et utilisateurs.
+						Les administrateurs ont accès à toutes les fonctionnalités d'administration, incluant la gestion des clients, paiements, documents et utilisateurs.
 					</p>
 				</div>
 			</div>

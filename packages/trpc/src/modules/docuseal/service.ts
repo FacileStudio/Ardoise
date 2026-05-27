@@ -21,7 +21,7 @@ export class DocuSealService {
 
   private ensureConfigured(): DocuSealClient {
     if (!this.client) {
-      throw new Error('DocuSeal is not configured. Please configure DocuSeal in the backoffice settings.');
+      throw new Error('DocuSeal is not configured. Please configure DocuSeal in the admin settings.');
     }
     return this.client;
   }

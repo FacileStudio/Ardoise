@@ -45,7 +45,7 @@
 	});
 
 	const handleDelete = async (id: string, name: string) => {
-		if (!confirm($i18n.t('backoffice.users.deleteConfirm', { name }))) return;
+		if (!confirm($i18n.t('admin.users.deleteConfirm', { name }))) return;
 		try {
 			await trpc.user.delete.mutate({ id });
 			users = users.filter(u => u.id !== id);
@@ -97,8 +97,8 @@
 	<div class="p-6 max-w-5xl mx-auto space-y-6">
 		<header class="flex items-center justify-between">
 			<div>
-				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('backoffice.users.title')}</h1>
-				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('backoffice.users.subtitle')}</p>
+				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('admin.users.title')}</h1>
+				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('admin.users.subtitle')}</p>
 			</div>
 			<button
 				onclick={() => goto('/admin/users/create')}
@@ -113,14 +113,14 @@
 			<div class="grid grid-cols-2 gap-4">
 				<div class="rounded-xl border border-border p-4">
 					<div class="flex items-center justify-between mb-1">
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('backoffice.users.total')}</div>
+						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('admin.users.total')}</div>
 						<iconify-icon icon="solar:users-group-two-rounded-bold" class="text-muted-foreground" width="16"></iconify-icon>
 					</div>
 					<div class="text-xl font-bold text-foreground">{stats.totalUsers}</div>
 				</div>
 				<div class="rounded-xl border border-border p-4">
 					<div class="flex items-center justify-between mb-1">
-						<div class="text-xs font-medium text-red-600 uppercase tracking-wide">{$i18n.t('backoffice.users.admin')}</div>
+						<div class="text-xs font-medium text-red-600 uppercase tracking-wide">{$i18n.t('admin.users.admin')}</div>
 						<iconify-icon icon="solar:crown-bold" class="text-red-600" width="16"></iconify-icon>
 					</div>
 					<div class="text-xl font-bold text-red-600">{stats.adminUsers}</div>
@@ -137,7 +137,7 @@
 				></iconify-icon>
 				<input
 					type="text"
-					placeholder={$i18n.t('backoffice.users.searchPlaceholder')}
+					placeholder={$i18n.t('admin.users.searchPlaceholder')}
 					class="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
 					bind:value={searchQuery}
 				/>
@@ -150,7 +150,7 @@
 						? 'bg-primary text-primary-foreground'
 						: 'bg-background text-foreground border border-border hover:bg-muted'}"
 				>
-					{$i18n.t('backoffice.users.allRoles')}
+					{$i18n.t('admin.users.allRoles')}
 				</button>
 				<button
 					onclick={() => filters.role = 'admin'}
@@ -158,7 +158,7 @@
 						? 'bg-primary text-primary-foreground'
 						: 'bg-background text-foreground border border-border hover:bg-muted'}"
 				>
-					{$i18n.t('backoffice.users.admin')}
+					{$i18n.t('admin.users.admin')}
 				</button>
 				<button
 					onclick={() => filters.role = 'user'}
@@ -166,7 +166,7 @@
 						? 'bg-primary text-primary-foreground'
 						: 'bg-background text-foreground border border-border hover:bg-muted'}"
 				>
-					{$i18n.t('backoffice.users.user')}
+					{$i18n.t('admin.users.user')}
 				</button>
 			</div>
 		</div>
@@ -177,11 +177,11 @@
 				<table class="w-full">
 					<thead class="bg-muted border-b border-border">
 						<tr>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('backoffice.users.table.user')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('backoffice.users.table.status')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('backoffice.users.table.role')}</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('backoffice.users.table.joined')}</th>
-							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('backoffice.users.table.actions')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('admin.users.table.user')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('admin.users.table.status')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('admin.users.table.role')}</th>
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('admin.users.table.joined')}</th>
+							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">{$i18n.t('admin.users.table.actions')}</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-border">
@@ -235,7 +235,7 @@
 												handleDelete(user.id, `${user.firstName} ${user.lastName}`);
 											}}
 											class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
-											title={$i18n.t('backoffice.users.deleteUser')}
+											title={$i18n.t('admin.users.deleteUser')}
 										>
 											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 										</button>
@@ -249,14 +249,14 @@
 		</div>
 
 			<div class="text-xs text-muted-foreground text-center">
-				{$i18n.t('backoffice.users.showing', { count: filteredUsers.length, total: users.length })}
+				{$i18n.t('admin.users.showing', { count: filteredUsers.length, total: users.length })}
 			</div>
 		{:else}
 			<div class="text-center py-16">
 				<div class="flex flex-col items-center gap-3">
 					<iconify-icon icon="solar:users-group-two-rounded-bold" width="40" class="text-muted-foreground"></iconify-icon>
-					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('backoffice.users.noUsersFound')}</h3>
-					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('backoffice.users.tryAdjustingFilters')}</p>
+					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('admin.users.noUsersFound')}</h3>
+					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('admin.users.tryAdjustingFilters')}</p>
 					{#if !searchQuery && filters.role === 'all'}
 						<button
 							onclick={() => goto('/admin/users/create')}

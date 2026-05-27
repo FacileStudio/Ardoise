@@ -3,7 +3,7 @@
 ## Critiques (À faire rapidement)
 
 ### Sécurité & Architecture
-- [ ] **URGENT** : Retirer `@repo/trpc` des dépendances de frontend/backoffice/mobile (violation server/client boundary)
+- [ ] **URGENT** : Retirer `@repo/trpc` des dépendances de web/mobile (violation server/client boundary)
 - [x] **FIXED** : Custom auth system implemented, better-auth removed
 - [ ] Uniformiser les versions de Svelte sur 5.x partout (actuellement mélange 4.x et 5.x)
 - [ ] Uniformiser les versions de Zod sur 3.x partout (actuellement ^3.23.8, ^3.24.0, et ^4.3.6 invalide)
@@ -31,7 +31,7 @@
 ### Encryption
 - [ ] Chiffrer données sensibles au repos (utiliser `@repo/crypto`)
 
-### Backoffice
+### Admin
 - [ ] Modération utilisateurs (ban/unban, delete account)
 - [ ] Export données utilisateur (GDPR Article 15)
 - [ ] Delete account cascade (GDPR "Right to be forgotten")

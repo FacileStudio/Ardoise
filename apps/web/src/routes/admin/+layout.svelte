@@ -58,7 +58,7 @@
                 </div>
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium">{$authStore.user?.firstName || 'Admin'}</p>
-                    <p class="truncate text-xs text-muted-foreground">{$i18n.t('backoffice.sidebar.admin')}</p>
+                    <p class="truncate text-xs text-muted-foreground">{$i18n.t('admin.sidebar.admin')}</p>
                 </div>
             </div>
             <Button
@@ -68,7 +68,7 @@
                 class="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             >
                 <iconify-icon icon="solar:logout-2-linear" width="16"></iconify-icon>
-                {$i18n.t('backoffice.sidebar.logout')}
+                {$i18n.t('admin.sidebar.logout')}
             </Button>
         </div>
     </aside>

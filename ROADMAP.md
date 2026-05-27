@@ -133,7 +133,7 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 - [ ] Garder `Payment.status` pour le statut paiement Stripe (orthogonal)
 - [ ] Table `DocumentStatusHistory` (timestamp, statut, source, raw payload PA)
 - [ ] Webhook handler pour statuts venant de la PA
-- [ ] UI backoffice: timeline visuelle du cycle de vie facture
+- [ ] UI admin: timeline visuelle du cycle de vie facture
 
 ### 1.8 E-reporting (B2C + international)
 
@@ -145,7 +145,7 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 - [ ] Générer fichier e-reporting au format DGFiP (XML propriétaire, voir spécifications externes DGFiP v3.1)
 - [ ] Périodicité: mensuelle (régime réel normal) ou trimestrielle (RSI)
 - [ ] Soumission via PA ou PPF
-- [ ] Dashboard backoffice: vue "e-reporting à transmettre"
+- [ ] Dashboard admin: vue "e-reporting à transmettre"
 
 ### 1.9 Annuaire SIRET / validation acheteur
 
@@ -168,7 +168,7 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 
 ### 2.2 Observabilité
 
-- [ ] Sentry pour error tracking (backend + frontend + backoffice)
+- [ ] Sentry pour error tracking (backend + web)
 - [ ] OpenTelemetry: traces distribuées backend ↔ tRPC ↔ Prisma ↔ Stripe ↔ PA
 - [ ] Métriques Prometheus: latence tRPC, taux erreur Stripe, statuts factures
 - [ ] Logs structurés avec correlation IDs (request → user → trace)
@@ -229,13 +229,13 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 - [ ] `document.completed` → marquer devis accepté → générer facture automatiquement
 - [ ] `signer.signed` → audit log + notification
 - [ ] `signer.declined` → notification admin + statut document à `REFUSED`
-- [ ] Rejouer / debug webhooks dans le backoffice (table `PlumeWebhookEvent`)
+- [ ] Rejouer / debug webhooks dans l'admin (table `PlumeWebhookEvent`)
 
 ### 3.3 Auth & identité partagée
 
 - [ ] Plume supporte OIDC → Ardoise peut devenir IdP (ou les deux derrière un IdP commun: Keycloak, Zitadel, Authentik)
 - [ ] Sync clients Ardoise ↔ users Plume (même email = même identité)
-- [ ] SSO entre les deux backoffices
+- [ ] SSO entre Ardoise et Plume
 
 ### 3.4 Signature qualifiée pour conformité légale
 
@@ -244,7 +244,7 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 
 ### 3.5 UI unifiée
 
-- [ ] Dans le backoffice Ardoise, page client → onglet "Documents Plume" (liste signatures en cours/complétées)
+- [ ] Dans l'admin Ardoise, page client → onglet "Documents Plume" (liste signatures en cours/complétées)
 - [ ] Dans Plume, lien vers facture Ardoise correspondante
 
 ---
@@ -335,7 +335,7 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 - [ ] OCR factures fournisseurs entrantes (Mistral OCR, Tesseract, ou API spécialisée)
 - [ ] Extraction auto des champs Factur-X depuis PDFs scannés
 - [ ] Catégorisation comptable assistée
-- [ ] Assistant IA dans le backoffice (Claude / GPT) pour rédaction relances, analyse cash flow
+- [ ] Assistant IA dans l'admin (Claude / GPT) pour rédaction relances, analyse cash flow
 
 ### 5.3 Open Banking
 

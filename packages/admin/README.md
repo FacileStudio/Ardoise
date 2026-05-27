@@ -109,7 +109,7 @@ private registerEntities() {
 
 ### Frontend: Using Admin Routes
 
-Access the admin interface at `/admin` in the backoffice app:
+Access the admin interface at `/admin` in the web app:
 
 - `/admin` - Dashboard showing all registered entities
 - `/admin/user` - User management interface

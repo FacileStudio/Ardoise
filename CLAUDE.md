@@ -115,7 +115,7 @@ Pre-signed URL flow: client requests URL via tRPC -> server generates it -> clie
 
 Schemas defined in `packages/env/src/index.ts`. Each app validates on startup via `check-env`.
 
-Backend requires: `DATABASE_URL`, `ENCRYPTION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `BACKEND_URL`, `FRONTEND_URL`. `BACKOFFICE_URL` is optional (legacy, no longer needed). Stripe/SMTP/company settings are configured in the admin UI, not env vars.
+Backend requires: `DATABASE_URL`, `ENCRYPTION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `BACKEND_URL`, `FRONTEND_URL`. Stripe/SMTP/company settings are configured in the admin UI, not env vars.
 
 Web app: `PORT`, `VITE_API_URL` (set from `BACKEND_URL` by Docker Compose).
 
@@ -136,5 +136,5 @@ See `apps/backend/.env.example` for reference.
 - Prisma client must be generated before build/dev/typecheck (Turbo handles this, but manual runs need `just generate` first)
 - Browser imports of `@repo/database` get a null stub for `prisma` -- add `@repo/database`, `@prisma/client`, `pg` to Vite `optimizeDeps.exclude`
 - `BACKEND_URL` is passed as `VITE_API_URL` at Docker build time to the web app
-- CORS origins are derived from `FRONTEND_URL` env var (and optional `BACKOFFICE_URL` for legacy)
+- CORS origins are derived from `FRONTEND_URL` env var
 - Default dev admin: `admin@example.com` / `admin123456789`

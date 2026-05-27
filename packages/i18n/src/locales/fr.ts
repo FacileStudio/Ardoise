@@ -125,7 +125,7 @@ export const fr: EnTranslations = {
     statistics: 'Statistiques',
     users: 'Utilisateurs',
   },
-  backoffice: {
+  admin: {
     dashboard: {
       title: 'Tableau de bord Admin',
       subtitle: 'Sélectionnez une entité à gérer',

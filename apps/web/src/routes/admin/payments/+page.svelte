@@ -125,7 +125,7 @@
 
 
 	async function handleCancelPayment(id: string, description: string) {
-		if (!confirm($i18n.t('backoffice.payments.cancelConfirm', { description })))
+		if (!confirm($i18n.t('admin.payments.cancelConfirm', { description })))
 			return;
 
 		try {
@@ -173,11 +173,11 @@
 	function getFrequencyLabel(frequency: PaymentFrequency) {
 		switch (frequency) {
 			case 'ONE_TIME':
-				return $i18n.t('backoffice.payments.oneTime');
+				return $i18n.t('admin.payments.oneTime');
 			case 'MONTHLY':
-				return $i18n.t('backoffice.payments.monthly');
+				return $i18n.t('admin.payments.monthly');
 			case 'YEARLY':
-				return $i18n.t('backoffice.payments.yearly');
+				return $i18n.t('admin.payments.yearly');
 			default:
 				return frequency;
 		}
@@ -234,8 +234,8 @@
 	<div class="p-8 max-w-[1600px] mx-auto space-y-6">
 		<header class="flex items-center justify-between">
 			<div>
-				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('backoffice.payments.title')}</h1>
-				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('backoffice.payments.subtitle')}</p>
+				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('admin.payments.title')}</h1>
+				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('admin.payments.subtitle')}</p>
 			</div>
 		<div class="flex gap-3">
 			{#if payments.length > 0}
@@ -249,7 +249,7 @@
 				class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
 			>
 				<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-				{$i18n.t('backoffice.payments.createPayment')}
+				{$i18n.t('admin.payments.createPayment')}
 			</button>
 		</div>
 	</header>
@@ -258,7 +258,7 @@
 		<div class="rounded-xl border border-border p-4">
 			<div class="flex items-center justify-between mb-2">
 				<div class="text-xs font-medium text-amber-600 uppercase">
-					{$i18n.t('backoffice.payments.pendingAmount')}
+					{$i18n.t('admin.payments.pendingAmount')}
 				</div>
 				<iconify-icon
 					icon="solar:clock-circle-bold"
@@ -267,13 +267,13 @@
 				></iconify-icon>
 			</div>
 			<div class="text-2xl font-bold text-amber-600">{formatCurrency(stats.totalPending)}</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('backoffice.payments.pendingInvoices', { count: stats.countPending })}</div>
+			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.pendingInvoices', { count: stats.countPending })}</div>
 		</div>
 
 		<div class="rounded-xl border border-border p-4">
 			<div class="flex items-center justify-between mb-2">
 				<div class="text-xs font-medium text-green-600 uppercase">
-					{$i18n.t('backoffice.payments.paidThisMonth')}
+					{$i18n.t('admin.payments.paidThisMonth')}
 				</div>
 				<iconify-icon
 					icon="solar:check-circle-bold"
@@ -284,13 +284,13 @@
 			<div class="text-2xl font-bold text-green-600">
 				{formatCurrency(stats.totalPaidThisMonth)}
 			</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('backoffice.payments.currentMonthRevenue')}</div>
+			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.currentMonthRevenue')}</div>
 		</div>
 
 		<div class="rounded-xl border border-border p-4">
 			<div class="flex items-center justify-between mb-2">
 				<div class="text-xs font-medium text-muted-foreground uppercase">
-					{$i18n.t('backoffice.payments.pendingCount')}
+					{$i18n.t('admin.payments.pendingCount')}
 				</div>
 				<iconify-icon
 					icon="solar:document-bold"
@@ -299,12 +299,12 @@
 				></iconify-icon>
 			</div>
 			<div class="text-2xl font-bold text-foreground">{stats.countPending}</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('backoffice.payments.awaitingPayment')}</div>
+			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.awaitingPayment')}</div>
 		</div>
 
 		<div class="rounded-xl border border-border p-4">
 			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-red-600 uppercase">{$i18n.t('backoffice.payments.expired')}</div>
+				<div class="text-xs font-medium text-red-600 uppercase">{$i18n.t('admin.payments.expired')}</div>
 				<iconify-icon
 					icon="solar:hourglass-bold-duotone"
 					class="text-red-600"
@@ -312,7 +312,7 @@
 				></iconify-icon>
 			</div>
 			<div class="text-2xl font-bold text-red-600">{stats.countExpired}</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('backoffice.payments.overdueInvoices')}</div>
+			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.overdueInvoices')}</div>
 		</div>
 	</div>
 
@@ -325,7 +325,7 @@
 			></iconify-icon>
 			<input
 				type="text"
-				placeholder={$i18n.t('backoffice.payments.searchPlaceholder')}
+				placeholder={$i18n.t('admin.payments.searchPlaceholder')}
 				class="h-9 w-full rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm outline-none focus:border-foreground transition-colors"
 				bind:value={searchQuery}
 			/>
@@ -338,7 +338,7 @@
 					? 'bg-foreground text-background'
 					: 'border border-border text-muted-foreground hover:bg-muted'}"
 			>
-				{$i18n.t('backoffice.payments.allStatus')}
+				{$i18n.t('admin.payments.allStatus')}
 			</button>
 			<button
 				onclick={() => filters.status = 'PENDING'}
@@ -382,24 +382,24 @@
 					<thead class="border-b border-border">
 						<tr>
 							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('backoffice.payments.table.payment')}</th
+								>{$i18n.t('admin.payments.table.payment')}</th
 							>
 							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('backoffice.payments.table.client')}</th
+								>{$i18n.t('admin.payments.table.client')}</th
 							>
 							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('backoffice.payments.table.amount')}</th
+								>{$i18n.t('admin.payments.table.amount')}</th
 							>
 							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('backoffice.payments.table.status')}</th
+								>{$i18n.t('admin.payments.table.status')}</th
 							>
 							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('backoffice.payments.table.frequency')}</th
+								>{$i18n.t('admin.payments.table.frequency')}</th
 							>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('backoffice.payments.table.date')}</th
+							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.payments.table.date')}</th
 							>
 							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('backoffice.payments.table.actions')}</th
+								>{$i18n.t('admin.payments.table.actions')}</th
 							>
 						</tr>
 					</thead>
@@ -424,8 +424,8 @@
 											<div class="flex items-center gap-1 text-xs text-muted-foreground">
 												<iconify-icon icon="solar:paperclip-bold" width="14"></iconify-icon>
 												{payment.attachedFiles.length} {payment.attachedFiles.length > 1
-													? $i18n.t('backoffice.payments.files')
-													: $i18n.t('backoffice.payments.file')}
+													? $i18n.t('admin.payments.files')
+													: $i18n.t('admin.payments.file')}
 											</div>
 										{/if}
 									</div>
@@ -449,7 +449,7 @@
 												<span>{formatCurrency(Number(payment.amount))}</span>
 												<span>+</span>
 												<span class="text-amber-600 font-medium">
-													{formatCurrency(Number(payment.stripeFee))} {$i18n.t('backoffice.payments.table.fees')}
+													{formatCurrency(Number(payment.stripeFee))} {$i18n.t('admin.payments.table.fees')}
 												</span>
 											</div>
 										{/if}
@@ -477,7 +477,7 @@
 													width="14"
 													class="text-green-600"
 												></iconify-icon>
-												{$i18n.t('backoffice.payments.table.paid')}: {formatDate(payment.paidAt)}
+												{$i18n.t('admin.payments.table.paid')}: {formatDate(payment.paidAt)}
 											</div>
 										{:else if payment.status === 'PENDING'}
 											<div class="text-sm text-muted-foreground flex items-center gap-1">
@@ -486,7 +486,7 @@
 													width="14"
 													class="text-amber-600"
 												></iconify-icon>
-												{$i18n.t('backoffice.payments.table.due')}: {formatDate(payment.dueDate)}
+												{$i18n.t('admin.payments.table.due')}: {formatDate(payment.dueDate)}
 											</div>
 										{:else}
 											<div class="text-sm text-muted-foreground">{formatDate(payment.createdAt)}</div>
@@ -503,7 +503,7 @@
 												}}
 												disabled={actionLoading === payment.id}
 												class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-												title={$i18n.t('backoffice.payments.cancelPayment')}
+												title={$i18n.t('admin.payments.cancelPayment')}
 											>
 												{#if actionLoading === payment.id}
 													<iconify-icon icon="line-md:loading-twotone-loop" width="16"></iconify-icon>
@@ -522,7 +522,7 @@
 		</div>
 
 			<div class="text-sm text-muted-foreground text-center">
-				{$i18n.t('backoffice.payments.showing', { count: filteredPayments.length, total: total })}
+				{$i18n.t('admin.payments.showing', { count: filteredPayments.length, total: total })}
 			</div>
 		{:else}
 			<div class="text-center py-16">
@@ -530,15 +530,15 @@
 					<div class="w-16 h-16 rounded-xl border border-border flex items-center justify-center text-muted-foreground">
 						<iconify-icon icon="solar:wallet-money-bold" width="32"></iconify-icon>
 					</div>
-					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('backoffice.payments.noPaymentsFound')}</h3>
-					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('backoffice.payments.tryAdjustingFilters')}</p>
+					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('admin.payments.noPaymentsFound')}</h3>
+					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('admin.payments.tryAdjustingFilters')}</p>
 					{#if !searchQuery && !filters.status}
 						<button
 							onclick={() => goto('/admin/payments/create')}
 							class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity mt-2"
 						>
 							<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-							<span>{$i18n.t('backoffice.payments.createPayment')}</span>
+							<span>{$i18n.t('admin.payments.createPayment')}</span>
 						</button>
 					{/if}
 				</div>

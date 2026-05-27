@@ -178,7 +178,7 @@
 				<div>
 					<h3 class="text-sm font-semibold text-amber-900 mb-1">DocuSeal non configuré</h3>
 					<p class="text-xs text-amber-800">
-						Pour utiliser la signature de documents, configurez DocuSeal dans les paramètres du backoffice.
+						Pour utiliser la signature de documents, configurez DocuSeal dans les paramètres.
 					</p>
 				</div>
 			</div>

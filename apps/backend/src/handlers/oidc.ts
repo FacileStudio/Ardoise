@@ -106,7 +106,7 @@ export function createOIDCRoutes(
     });
   });
 
-  const allowedOrigins = [env.FRONTEND_URL, env.BACKOFFICE_URL].filter(Boolean) as string[];
+  const allowedOrigins = [env.FRONTEND_URL];
 
   app.get('/auth/oidc', async (c) => {
     const oidc = getOIDCConfig(env);

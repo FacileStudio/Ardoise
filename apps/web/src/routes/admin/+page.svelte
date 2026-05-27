@@ -32,8 +32,8 @@
 {:else}
   <div class="p-8 max-w-[1400px] mx-auto space-y-8">
     <div>
-      <h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('backoffice.dashboard.title')}</h1>
-      <p class="text-sm text-muted-foreground mt-1">{$i18n.t('backoffice.dashboard.subtitle')}</p>
+      <h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('admin.dashboard.title')}</h1>
+      <p class="text-sm text-muted-foreground mt-1">{$i18n.t('admin.dashboard.subtitle')}</p>
     </div>
     <div class="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
       {#each entities as entity (entity)}
