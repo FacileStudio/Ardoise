@@ -4,7 +4,7 @@
 
 <div class="min-h-screen bg-background text-foreground">
   <nav class="fixed top-0 w-full flex items-center justify-between px-6 py-4 z-[100] bg-background/80 backdrop-blur-md border-b border-border">
-    <a href={resolve('/')} class="text-xl font-bold tracking-tight">Charles</a>
+    <a href={resolve('/')} class="text-xl font-bold tracking-tight">Ardoise</a>
     <a href={resolve('/')} class="text-sm font-medium text-muted-foreground hover:text-foreground transition">← Retour</a>
   </nav>
 
@@ -16,7 +16,7 @@
       <section>
         <h2 class="text-xl font-semibold">1. Agreement to Terms</h2>
         <p class="mt-3 text-sm text-muted-foreground leading-relaxed">
-          By accessing Charles Template, you agree to be bound by these Terms of Service and all
+          By accessing Ardoise Template, you agree to be bound by these Terms of Service and all
           applicable laws and regulations.
         </p>
       </section>
@@ -33,7 +33,7 @@
       <section>
         <h2 class="text-xl font-semibold">3. Disclaimer</h2>
         <p class="mt-3 text-sm text-muted-foreground leading-relaxed">
-          The materials on Charles Template are provided on an 'as is' basis. We make no
+          The materials on Ardoise Template are provided on an 'as is' basis. We make no
           warranties, expressed or implied, and hereby disclaim and negate all other warranties
           including, without limitation, implied warranties or conditions of merchantability.
         </p>

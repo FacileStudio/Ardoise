@@ -20,7 +20,7 @@
         <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-foreground"></iconify-icon>
       </div>
       <h1 class="text-2xl font-bold font-heading tracking-tight text-foreground">
-        Charles
+        Ardoise
       </h1>
     </div>
 

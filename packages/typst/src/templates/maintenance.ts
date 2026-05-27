@@ -1,3 +1,5 @@
+import { legalLetDeclarations, legalContractFooter } from './_legal';
+
 export const maintenance: string = `#set document(
   title: "Devis – Maintenance applicative",
   author: "{{provider_name}}"
@@ -40,6 +42,7 @@ export const maintenance: string = `#set document(
 #let railway_estimate = {{railway_estimate}}
 #let items = ({{items}})
 #let tva_rate = {{tva_rate}}
+${legalLetDeclarations}
 
 // Header
 #grid(
@@ -233,10 +236,5 @@ export const maintenance: string = `#set document(
 
 #v(1fr)
 
-// Footer
-#line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
-#v(0.6cm)
-#text(size: 8pt, fill: rgb("#888888"))[
-  #provider_name – Développeur Freelance \
-  TVA non applicable, article 293 B du CGI
-]`;
+${legalContractFooter}
+`;

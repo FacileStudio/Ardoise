@@ -7,8 +7,10 @@ export const CreateClientSchema = z.object({
   companyName: z.string().min(1),
   billingAddress: z.string().optional(),
   billingCity: z.string().optional(),
+  billingPostalCode: z.string().optional(),
   billingCountry: z.string().optional(),
   siret: z.string().optional(),
+  tvaIntracom: z.string().optional(),
   createCredentials: z.boolean().default(false),
   credentialEmail: z.string().email().optional().or(z.literal('')),
   credentialPassword: z.string().min(8).optional().or(z.literal('')),
@@ -22,8 +24,10 @@ export const UpdateClientSchema = z.object({
   companyName: z.string().min(1).optional(),
   billingAddress: z.string().optional().nullable(),
   billingCity: z.string().optional().nullable(),
+  billingPostalCode: z.string().optional().nullable(),
   billingCountry: z.string().optional().nullable(),
   siret: z.string().optional(),
+  tvaIntracom: z.string().optional().nullable(),
 });
 
 export const ListClientsSchema = z.object({

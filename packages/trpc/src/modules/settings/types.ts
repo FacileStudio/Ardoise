@@ -9,6 +9,11 @@ export const UpdateSettingsSchema = z.object({
   companySiret: z.string().optional(),
   companyEmail: z.string().email().optional().or(z.literal('')),
   companyPhone: z.string().optional(),
+  companyTvaIntracom: z.string().optional(),
+  companyLegalForm: z.string().optional(),
+  companyShareCapital: z.number().nonnegative().optional().nullable(),
+  companyRcsCity: z.string().optional(),
+  companyApeCode: z.string().optional(),
   stripeSecretKey: z.string().startsWith('sk_').optional().or(z.literal('')),
   stripeWebhookSecret: z.string().startsWith('whsec_').optional().or(z.literal('')),
   stripePublishableKey: z.string().startsWith('pk_').optional().or(z.literal('')),
@@ -26,6 +31,10 @@ export const UpdateSettingsSchema = z.object({
   iban: z.string().optional(),
   bic: z.string().optional(),
   tvaRate: z.number().min(0).max(100).optional(),
+  defaultPaymentTermsDays: z.number().int().min(0).max(365).optional().nullable(),
+  defaultLateFeeRate: z.string().optional().nullable(),
+  defaultRecoveryFeeAmount: z.number().nonnegative().optional().nullable(),
+  defaultVatExemptionMention: z.string().optional().nullable(),
 });
 
 export const UploadLogoSchema = z.object({

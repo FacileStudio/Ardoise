@@ -27,8 +27,10 @@ model Document {
 
   clientName       String
   clientSiret      String?
+  clientTvaIntracom String?
   clientAddress    String?
   clientCity       String?
+  clientPostalCode String?
   clientCountry    String?
 
   providerId       String?
@@ -37,8 +39,14 @@ model Document {
   providerName     String
   providerLegal    String?
   providerSiret    String?
+  providerTvaIntracom String?
+  providerLegalForm String?
+  providerShareCapital Decimal? @db.Decimal(15, 2)
+  providerRcsCity  String?
+  providerApeCode  String?
   providerAddress  String?
   providerCity     String?
+  providerPostalCode String?
   providerEmail    String?
   providerPhone    String?
 
@@ -48,11 +56,18 @@ model Document {
   total            Decimal  @db.Decimal(10, 2)
   tvaRate          Int      @default(20)
 
+  deliveryDate     DateTime?
+  paymentTermsDays Int      @default(30)
+  lateFeeRate      String   @default("3 fois le taux d'intérêt légal en vigueur")
+  recoveryFeeAmount Decimal @db.Decimal(10, 2) @default(40)
+  vatExemptionMention String?
+
   railwayEstimate  Decimal? @db.Decimal(10, 2)
 
   serviceData      Json?
 
   pdfUrl           String?
+  pdfHash          String?
   fileSize         Int?
 
   createdBy        String

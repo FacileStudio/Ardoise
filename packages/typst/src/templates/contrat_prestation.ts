@@ -1,3 +1,5 @@
+import { legalLetDeclarations, legalContractFooter } from './_legal';
+
 export const contratPrestation: string = `#set document(
   title: "Contrat de Prestation",
   author: "{{provider_name}}"
@@ -28,6 +30,7 @@ export const contratPrestation: string = `#set document(
 #let provider_siret = "{{provider_siret}}"
 #let provider_email = "{{provider_email}}"
 #let provider_phone = "{{provider_phone}}"
+${legalLetDeclarations}
 
 // Header section - Left-aligned logo + provider name
 #box(height: 26pt, baseline: 20%, image("logo.png", height: 26pt))
@@ -254,12 +257,5 @@ export const contratPrestation: string = `#set document(
 
 #v(1fr)
 
-// Footer - Left-aligned
-#line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
-#v(0.5cm)
-#text(size: 8.5pt, fill: rgb("#888888"))[
-  #provider_name – Développeur Freelance \
-  #provider_address – #provider_city \
-  SIRET: #provider_siret
-]
+${legalContractFooter}
 `;

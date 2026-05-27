@@ -109,7 +109,7 @@ type ReceiptItem = {
 
 ## Template
 
-Le template de reçu est basé sur celui de Charles (prestation.ts) avec les modifications suivantes :
+Le template de reçu est basé sur celui de Ardoise (prestation.ts) avec les modifications suivantes :
 
 - Titre "REÇU" au lieu de "FACTURE"
 - Affichage de la date de paiement au lieu de la date d'échéance

@@ -59,20 +59,20 @@ export async function dispatchConfiguredWebhook({
     id: deliveryId,
     event,
     createdAt: new Date().toISOString(),
-    source: 'charles',
+    source: 'ardoise',
     actor,
     data,
   };
   const body = JSON.stringify(payload);
   const headers = new Headers({
     'content-type': 'application/json',
-    'user-agent': 'Charles-Webhooks/1.0',
-    'x-charles-delivery': deliveryId,
-    'x-charles-event': event,
+    'user-agent': 'Ardoise-Webhooks/1.0',
+    'x-ardoise-delivery': deliveryId,
+    'x-ardoise-event': event,
   });
 
   if (settings.webhookSecret) {
-    headers.set('x-charles-signature-256', createSignature(settings.webhookSecret, body));
+    headers.set('x-ardoise-signature-256', createSignature(settings.webhookSecret, body));
   }
 
   try {

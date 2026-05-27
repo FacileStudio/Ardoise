@@ -4,7 +4,7 @@
 
 <div class="min-h-screen bg-background text-foreground">
   <nav class="fixed top-0 w-full flex items-center justify-between px-6 py-4 z-[100] bg-background/80 backdrop-blur-md border-b border-border">
-    <a href={resolve('/')} class="text-xl font-bold tracking-tight">Charles</a>
+    <a href={resolve('/')} class="text-xl font-bold tracking-tight">Ardoise</a>
     <a href={resolve('/')} class="text-sm font-medium text-muted-foreground hover:text-foreground transition">← Retour</a>
   </nav>
 

@@ -149,8 +149,10 @@ export const clientService = {
         companyName: data.companyName,
         billingAddress: normalizeOptional(data.billingAddress),
         billingCity: normalizeOptional(data.billingCity),
+        billingPostalCode: normalizeOptional(data.billingPostalCode),
         billingCountry: normalizeOptional(data.billingCountry),
         siret: data.siret,
+        tvaIntracom: normalizeOptional(data.tvaIntracom),
         user: userData,
       },
       include: {
@@ -215,8 +217,10 @@ export const clientService = {
     if (data.companyName !== undefined) clientUpdateData.companyName = data.companyName;
     if (data.billingAddress !== undefined) clientUpdateData.billingAddress = data.billingAddress;
     if (data.billingCity !== undefined) clientUpdateData.billingCity = data.billingCity;
+    if (data.billingPostalCode !== undefined) clientUpdateData.billingPostalCode = data.billingPostalCode;
     if (data.billingCountry !== undefined) clientUpdateData.billingCountry = data.billingCountry;
     if (data.siret !== undefined) clientUpdateData.siret = data.siret;
+    if (data.tvaIntracom !== undefined) clientUpdateData.tvaIntracom = data.tvaIntracom;
 
     const client = await db.$transaction(async (tx) => {
       if (existingClient.userId && Object.keys(userUpdateData).length > 0) {

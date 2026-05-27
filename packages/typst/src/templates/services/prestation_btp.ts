@@ -1,3 +1,5 @@
+import { legalLetDeclarations, legalInvoiceFooter } from '../_legal';
+
 export const prestation_btp: string = `#set document(
   title: "Prestation BTP/Construction",
   author: "{{provider_name}}"
@@ -43,6 +45,7 @@ export const prestation_btp: string = `#set document(
 #let bank_name = "{{bank_name}}"
 #let iban = "{{iban}}"
 #let bic = "{{bic}}"
+${legalLetDeclarations}
 
 // Header
 #grid(
@@ -222,12 +225,5 @@ export const prestation_btp: string = `#set document(
 
 #v(1fr)
 
-// Footer
-#line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
-#v(0.6cm)
-#text(size: 8pt, fill: rgb("#888888"))[
-  #provider_name – Prestation BTP/Construction \
-  TVA non applicable, article 293 B du CGI \
-  En cas de retard, pénalités au taux de 3 fois le taux d'intérêt légal applicables.
-]
+${legalInvoiceFooter}
 `;

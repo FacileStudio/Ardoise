@@ -26,7 +26,7 @@ COPY packages/utils/package.json ./packages/utils/package.json
 
 RUN cat <<'EOF' > package.json
 {
-  "name": "charles-backend-deploy",
+  "name": "ardoise-backend-deploy",
   "private": true,
   "workspaces": [
     "apps/backend",

@@ -86,7 +86,7 @@ app.all(
   })
 );
 
-app.get('/', (c) => c.json({ message: 'Charles API', version: '1.0.3' }));
+app.get('/', (c) => c.json({ message: 'Ardoise API', version: '1.0.3' }));
 
 const port = Number(env.PORT);
 

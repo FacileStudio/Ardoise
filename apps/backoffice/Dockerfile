@@ -26,7 +26,7 @@ COPY packages/utils/package.json ./packages/utils/package.json
 
 RUN cat <<'EOF' > package.json
 {
-  "name": "charles-backoffice-deploy",
+  "name": "ardoise-backoffice-deploy",
   "private": true,
   "workspaces": [
     "apps/backoffice",

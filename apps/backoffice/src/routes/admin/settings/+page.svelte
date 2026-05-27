@@ -18,6 +18,11 @@
     companySiret: '',
     companyEmail: '',
     companyPhone: '',
+    companyTvaIntracom: '',
+    companyLegalForm: '',
+    companyShareCapital: null as number | null,
+    companyRcsCity: '',
+    companyApeCode: '',
     stripeSecretKey: '',
     stripeWebhookSecret: '',
     stripePublishableKey: '',
@@ -36,10 +41,16 @@
     bic: '',
     logoUrl: '',
     tvaRate: 20,
+    defaultPaymentTermsDays: 30,
+    defaultLateFeeRate: "3 fois le taux d'intérêt légal en vigueur",
+    defaultRecoveryFeeAmount: 40,
+    defaultVatExemptionMention: 'TVA non applicable, article 293 B du CGI',
   });
 
   type AdminSettings = typeof formData & {
     tvaRate?: number | string;
+    companyShareCapital?: number | string | null;
+    defaultRecoveryFeeAmount?: number | string;
   };
 
   onMount(loadSettings);
@@ -57,6 +68,11 @@
         companySiret: settings.companySiret || '',
         companyEmail: settings.companyEmail || '',
         companyPhone: settings.companyPhone || '',
+        companyTvaIntracom: settings.companyTvaIntracom || '',
+        companyLegalForm: settings.companyLegalForm || '',
+        companyShareCapital: settings.companyShareCapital != null ? Number(settings.companyShareCapital) : null,
+        companyRcsCity: settings.companyRcsCity || '',
+        companyApeCode: settings.companyApeCode || '',
         stripeSecretKey: settings.stripeSecretKey || '',
         stripeWebhookSecret: settings.stripeWebhookSecret || '',
         stripePublishableKey: settings.stripePublishableKey || '',
@@ -75,6 +91,10 @@
         bic: settings.bic || '',
         logoUrl: settings.logoUrl || '',
         tvaRate: Number(settings.tvaRate || 20),
+        defaultPaymentTermsDays: Number(settings.defaultPaymentTermsDays ?? 30),
+        defaultLateFeeRate: settings.defaultLateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
+        defaultRecoveryFeeAmount: Number(settings.defaultRecoveryFeeAmount ?? 40),
+        defaultVatExemptionMention: settings.defaultVatExemptionMention || '',
       };
       webhookEventsText = formData.webhookEvents.join('\n');
     } catch {
@@ -173,6 +193,38 @@
       </section>
 
       <section class="rounded-xl border border-border p-6 space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">Mentions légales obligatoires</h2>
+          <p class="text-sm text-muted-foreground">
+            Requises sur toute facture émise (Art. 242 nonies A CGI, L441-9 Code commerce).
+            Sans ces champs, la facture n'est pas conforme.
+          </p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <Input bind:value={formData.companyLegalForm} placeholder="Forme juridique (SAS, SARL, EI...)" />
+          <Input bind:value={formData.companyShareCapital} type="number" step="0.01" placeholder="Capital social (€)" />
+          <Input bind:value={formData.companyRcsCity} placeholder="RCS — ville d'immatriculation" />
+          <Input bind:value={formData.companyApeCode} placeholder="Code APE/NAF (ex: 6201Z)" />
+          <Input bind:value={formData.companyTvaIntracom} placeholder="N° TVA intracommunautaire (FR...)" class="md:col-span-2" />
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-border p-6 space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">Facturation — valeurs par défaut</h2>
+          <p class="text-sm text-muted-foreground">
+            Délai de paiement, pénalités et indemnité forfaitaire 40 € (Art. L441-10 Code commerce).
+          </p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <Input bind:value={formData.defaultPaymentTermsDays} type="number" placeholder="Délai paiement (jours)" />
+          <Input bind:value={formData.defaultRecoveryFeeAmount} type="number" step="0.01" placeholder="Indemnité forfaitaire (€)" />
+          <Input bind:value={formData.defaultLateFeeRate} placeholder="Taux pénalités retard" class="md:col-span-2" />
+          <Input bind:value={formData.defaultVatExemptionMention} placeholder="Mention exonération TVA (ex: Art. 293 B CGI)" class="md:col-span-2" />
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-border p-6 space-y-4">
         <h2 class="text-base font-semibold text-foreground">Stripe</h2>
         <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.stripePublishableKey} placeholder="Clé publique pk_..." />
@@ -204,12 +256,12 @@
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">Webhooks</h2>
           <p class="text-sm text-muted-foreground">
-            Charles envoie des POST avec X-Charles-Event, X-Charles-Delivery et
-            X-Charles-Signature-256 si un secret est défini.
+            Ardoise envoie des POST avec X-Ardoise-Event, X-Ardoise-Delivery et
+            X-Ardoise-Signature-256 si un secret est défini.
           </p>
         </div>
         <div class="grid md:grid-cols-2 gap-4">
-          <Input bind:value={formData.webhookUrl} placeholder="https://example.com/webhooks/charles" class="md:col-span-2" />
+          <Input bind:value={formData.webhookUrl} placeholder="https://example.com/webhooks/ardoise" class="md:col-span-2" />
           <Input bind:value={formData.webhookSecret} type="password" placeholder="Secret de signature optionnel" class="md:col-span-2" />
           <div class="md:col-span-2 space-y-2">
             <label class="text-sm font-medium text-foreground" for="webhook-events">Événements</label>
@@ -226,10 +278,10 @@
       </section>
 
       <section class="rounded-xl border border-border p-6 space-y-4">
-        <h2 class="text-base font-semibold text-foreground">Facturation</h2>
+        <h2 class="text-base font-semibold text-foreground">Coordonnées bancaires &amp; TVA</h2>
         <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.bankName} placeholder="Banque" />
-          <Input bind:value={formData.tvaRate} type="number" placeholder="TVA" />
+          <Input bind:value={formData.tvaRate} type="number" placeholder="Taux TVA par défaut (%)" />
           <Input bind:value={formData.iban} placeholder="IBAN" />
           <Input bind:value={formData.bic} placeholder="BIC" />
         </div>

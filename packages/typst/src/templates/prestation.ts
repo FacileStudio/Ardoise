@@ -1,3 +1,5 @@
+import { legalLetDeclarations, legalInvoiceFooter } from './_legal';
+
 export const prestation: string = `#set document(
   title: "Facture",
   author: "{{provider_name}}"
@@ -18,6 +20,7 @@ export const prestation: string = `#set document(
 #let invoice_number = "{{invoice_number}}"
 #let invoice_date = "{{invoice_date}}"
 #let due_date = "{{due_date}}"
+#let delivery_date = "{{delivery_date}}"
 
 #let client_name = "{{client_name}}"
 #let client_address = "{{client_address}}"
@@ -38,6 +41,7 @@ export const prestation: string = `#set document(
 #let bank_name = "{{bank_name}}"
 #let iban = "{{iban}}"
 #let bic = "{{bic}}"
+${legalLetDeclarations}
 
 // Header
 #grid(
@@ -50,8 +54,12 @@ export const prestation: string = `#set document(
     #v(0.7cm)
     #text(size: 9.5pt, fill: rgb("#555555"))[
       #provider_address \
-      #provider_city \
-      SIRET: #provider_siret
+      #if provider_postal_code != "" [#provider_postal_code #h(0.2cm)]#provider_city \
+      SIRET: #provider_siret #if provider_ape_code != "" [\u{00A0}\u{00B7}\u{00A0}APE: #provider_ape_code] \
+      #if provider_tva_intracom != "" [TVA intracom: #provider_tva_intracom \ ]
+      #if provider_legal_form != "" or provider_share_capital != "" [
+        #if provider_legal_form != "" [#provider_legal_form ]#if provider_share_capital != "" [au capital de #provider_share_capital\u{00A0}€ ]#if provider_rcs_city != "" [\u{00B7} RCS #provider_rcs_city] \
+      ]
     ]
     #v(0.3cm)
     #text(size: 9.5pt, fill: rgb("#555555"))[
@@ -72,6 +80,8 @@ export const prestation: string = `#set document(
       text(weight: "bold", size: 10pt)[#invoice_number],
       text(weight: "medium", fill: rgb("#666666"), size: 9pt)[DATE],
       text(size: 10pt)[#invoice_date],
+      text(weight: "medium", fill: rgb("#666666"), size: 9pt)[LIVRAISON],
+      text(size: 10pt)[#if delivery_date != "" [#delivery_date] else [#invoice_date]],
       text(weight: "medium", fill: rgb("#666666"), size: 9pt)[ÉCHÉANCE],
       text(size: 10pt)[#due_date],
     )
@@ -94,9 +104,10 @@ export const prestation: string = `#set document(
   #v(0.3cm)
   #text(size: 9.5pt, fill: rgb("#333333"))[
     #client_address \
-    #client_city \
+    #if client_postal_code != "" [#client_postal_code #h(0.2cm)]#client_city \
     #client_country \
-    #if client_siret != "" and client_siret != "0" [SIRET: #client_siret]
+    #if client_siret != "" and client_siret != "0" [SIRET: #client_siret \ ]
+    #if client_tva_intracom != "" [TVA intracom: #client_tva_intracom]
   ]
 ]
 
@@ -184,18 +195,11 @@ export const prestation: string = `#set document(
   )
   #v(0.5cm)
   #text(size: 9pt, style: "italic", fill: rgb("#666666"))[
-    Paiement à effectuer avant le #due_date
+    Paiement à effectuer avant le #due_date (délai #payment_terms_days jours).
   ]
 ]
 
 #v(1fr)
 
-// Footer
-#line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
-#v(0.6cm)
-#text(size: 8pt, fill: rgb("#888888"))[
-  #provider_name – Développeur Freelance \
-  TVA non applicable, article 293 B du CGI \
-  En cas de retard, pénalités au taux de 3 fois le taux d'intérêt légal applicables.
-]
+${legalInvoiceFooter}
 `;

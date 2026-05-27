@@ -14,11 +14,11 @@
     <div class="flex items-center gap-2">
       {#if showLogo}
         <div class="w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] max-w-[2.5rem] max-h-[2.5rem] flex-shrink-0 overflow-hidden">
-          <img src={logoPath} alt="Charles Logo" class="w-full h-full object-contain" />
+          <img src={logoPath} alt="Ardoise Logo" class="w-full h-full object-contain" />
         </div>
       {/if}
       <h1 class="text-2xl font-bold tracking-tight leading-none text-foreground">
-        Charles
+        Ardoise
       </h1>
     </div>
   </div>

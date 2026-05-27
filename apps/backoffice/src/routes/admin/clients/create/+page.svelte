@@ -129,7 +129,7 @@
 		<h1 class="text-2xl font-bold tracking-tight text-foreground">
 			{$i18n.t('backoffice.clients.newClient')}
 		</h1>
-		<p class="text-sm text-muted-foreground mt-1">Créez une fiche client, avec ou sans accès à Charles</p>
+		<p class="text-sm text-muted-foreground mt-1">Créez une fiche client, avec ou sans accès à Ardoise</p>
 	</div>
 
 	<div class="space-y-6">
@@ -207,7 +207,7 @@
 		</div>
 
 		<div class="rounded-xl border border-border p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Accès client à Charles</h2>
+			<h2 class="text-base font-semibold text-foreground">Accès client à Ardoise</h2>
 			<label class="flex items-start gap-3 cursor-pointer">
 				<input
 					type="checkbox"
@@ -216,7 +216,7 @@
 				/>
 				<div>
 					<div class="text-sm font-semibold text-foreground">Créer des identifiants de connexion</div>
-					<p class="text-xs text-muted-foreground">Activez seulement si ce client doit se connecter à Charles.</p>
+					<p class="text-xs text-muted-foreground">Activez seulement si ce client doit se connecter à Ardoise.</p>
 				</div>
 			</label>
 

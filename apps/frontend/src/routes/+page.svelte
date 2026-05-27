@@ -9,7 +9,7 @@
     <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
       <div class="flex h-14 items-center gap-3">
         <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-foreground"></iconify-icon>
-        <span class="text-2xl font-bold font-heading tracking-tight">Charles</span>
+        <span class="text-2xl font-bold font-heading tracking-tight">Ardoise</span>
       </div>
       <div class="flex items-center gap-2">
         {#if !$authStore.session}
@@ -113,7 +113,7 @@
 
   <footer class="border-t border-border text-center">
     <div class="mx-auto max-w-5xl px-6 py-6 text-sm text-muted-foreground">
-      © {new Date().getFullYear()} Charles par <a href="https://facile.studio" class="font-semibold underline hover:cursor-pointer">Facile.</a>
+      © {new Date().getFullYear()} Ardoise par <a href="https://facile.studio" class="font-semibold underline hover:cursor-pointer">Facile.</a>
     </div>
   </footer>
 </div>

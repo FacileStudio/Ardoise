@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Charles** is a payment and invoicing platform for Facile Studio. This is an internal tool (not for public use) that allows Facile Studio to:
+**Ardoise** is a payment and invoicing platform for Facile Studio. This is an internal tool (not for public use) that allows Facile Studio to:
 - Send payment requests to clients
 - Track payment status (pending, paid, expired, cancelled)
 - Manage client information and company settings
@@ -68,7 +68,7 @@ cd packages/database && bun run db:push  # Push schema to database
 
 **Note**: The `dev:db` script automatically:
 - Starts PostgreSQL (via Docker or Homebrew)
-- Creates the `charles` database if it doesn't exist
+- Creates the `ardoise` database if it doesn't exist
 - Updates `DATABASE_URL` in `apps/backend/.env` and `packages/database/.env`
 
 ### Running Applications
@@ -250,16 +250,16 @@ Prisma schema is split into multiple files in `packages/database/prisma/schema/`
 
 All schemas are automatically merged by Prisma.
 
-**Charles-specific Prisma models:**
+**Ardoise-specific Prisma models:**
 - `Client`: Client information (companyName, SIRET, billing address, etc.)
 - `Payment`: Payment requests with Stripe integration (amount, status, dueDate, frequency)
 - `Settings`: Company configuration (singleton model for logo, bank details, TVA rate)
 
 **Development database:**
 - Run `bun run dev:db` or `just init` to start and configure a local PostgreSQL instance
-- Database name: `charles`
+- Database name: `ardoise`
 - Database URL is configured via `DATABASE_URL` environment variable
-- Default: `postgresql://user@localhost:5432/charles`
+- Default: `postgresql://user@localhost:5432/ardoise`
 
 **Production database:**
 - Set `DATABASE_URL` in production environment to your PostgreSQL connection string
@@ -308,7 +308,7 @@ Authorization uses role-based access control via `@repo/auth-shared/hasAccess`.
 
 ### Stripe Integration
 
-Stripe is integrated for client payments in Charles:
+Stripe is integrated for client payments in Ardoise:
 - `packages/stripe`: Service wrapper around Stripe SDK
 - `packages/trpc/src/modules/payment`: Payment creation, status tracking, Stripe checkout
 - `apps/backend/src/handlers/stripe.ts`: Webhook handler for payment status updates
@@ -435,7 +435,7 @@ This prevents "Buffer is not defined" and other Node.js module errors in the bro
 - Internal tool presentation (no public signup)
 - Login button redirects to `/login`
 - Color scheme: #FAF7F5 (beige), #291334 (purple), #FEC129 (yellow)
-- Logo: `/logo.svg` (LogoCharles.svg) + "Charles" text
+- Logo: `/logo.svg` (LogoArdoise.svg) + "Ardoise" text
 
 **Client dashboard** (`apps/frontend/src/routes/app/+page.svelte`):
 - Lists all client payments grouped by status (PENDING, PAID, EXPIRED, CANCELLED)
@@ -596,8 +596,8 @@ Never use `bcrypt` directly as it's incompatible with the backend's `CryptoServi
 ```bash
 just init              # Creates database and pushes schema
 # Or manually:
-createdb charles
-cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/charles" bun run db:push
+createdb ardoise
+cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/ardoise" bun run db:push
 ```
 
 ### Frontend Can't Connect to Backend

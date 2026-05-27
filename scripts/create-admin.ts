@@ -1,7 +1,7 @@
 import { prisma } from '@repo/database';
 import { AuthManager } from '@repo/auth';
 
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://user@localhost:5432/charles';
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://user@localhost:5432/ardoise';
 
 async function createAdmin() {
   const email = 'admin@example.com';

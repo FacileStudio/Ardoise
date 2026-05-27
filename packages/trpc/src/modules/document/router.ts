@@ -2,6 +2,11 @@ import { router, adminProcedure } from '../../trpc';
 import {
   generateDocument,
   generateTypstContent,
+  buildPartyAndLegalData,
+  buildDocumentLegalPersistence,
+  buildDocumentPersistenceBase,
+  loadDocumentContext,
+  computeInvoiceTotals,
   ContratPrestationInputSchema,
   ContratMaintenanceInputSchema,
   BackContractuelInputSchema,
@@ -48,6 +53,146 @@ async function generateDocumentWithLogo(
   } finally {
     cleanupTempFile(logoPath);
   }
+}
+
+async function fetchProvidersByIds(db: any, ids: string[]) {
+  const providers = await db.provider.findMany({ where: { id: { in: ids } } });
+  if (providers.length !== ids.length) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more providers not found' });
+  }
+  return providers as Array<{ id: string; name: string; address: string | null; city: string | null; siret: string | null; email: string | null; iban: string | null; bic: string | null }>;
+}
+
+async function resolveSubProvidersForBack(
+  db: any,
+  inputs: Array<{ id: string; role: string; amount: number }>
+) {
+  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
+  return inputs.map(inputProvider => {
+    const dbProvider = providers.find(p => p.id === inputProvider.id)!;
+    return {
+      name: dbProvider.name,
+      role: inputProvider.role,
+      address: dbProvider.address || '',
+      city: dbProvider.city || '',
+      siret: dbProvider.siret || '',
+      email: dbProvider.email || '',
+      amount: inputProvider.amount,
+    };
+  });
+}
+
+type SpecializedInput = {
+  clientId: string;
+  providerId: string;
+  items: Array<{ description?: string; quantity?: number; unit?: string; price?: number }>;
+  invoice_date: string;
+  due_date: string;
+};
+
+async function previewSpecializedPrestation(
+  type: any,
+  fileNamePrefix: string,
+  input: SpecializedInput,
+  typeSpecificData: Record<string, unknown>,
+  ctx: any
+) {
+  const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
+  const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+
+  const documentData = {
+    type,
+    invoice_number: invoiceNumber,
+    invoice_date: input.invoice_date,
+    due_date: input.due_date,
+    clientId: input.clientId,
+    providerId: input.providerId,
+    ...buildPartyAndLegalData(client, provider, settings),
+    items: input.items,
+    tva_rate: tvaRate,
+    railway_estimate: 0,
+    providers: [],
+    features: [],
+    payment_providers: [],
+    ...typeSpecificData,
+  };
+
+  const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
+  return {
+    pdf: pdfBuffer.toString('base64'),
+    fileName: `${fileNamePrefix}_${invoiceNumber}.pdf`,
+    typstContent: generateTypstContent(documentData),
+  };
+}
+
+async function createSpecializedPrestation(
+  type: any,
+  fileNamePrefix: string,
+  input: SpecializedInput,
+  typeSpecificData: Record<string, unknown>,
+  ctx: any
+) {
+  const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
+  const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+
+  const documentData = {
+    type,
+    invoice_number: invoiceNumber,
+    invoice_date: input.invoice_date,
+    due_date: input.due_date,
+    clientId: input.clientId,
+    providerId: input.providerId,
+    ...buildPartyAndLegalData(client, provider, settings),
+    items: input.items,
+    tva_rate: tvaRate,
+    railway_estimate: 0,
+    providers: [],
+    features: [],
+    payment_providers: [],
+    ...typeSpecificData,
+  };
+
+  const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
+  const fileName = `${fileNamePrefix}_${invoiceNumber}.pdf`;
+  const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate);
+  const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
+
+  const document = await ctx.db.document.create({
+    data: {
+      type,
+      name: fileName,
+      invoiceNumber,
+      ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence),
+      items: input.items,
+      subtotal,
+      tva,
+      total,
+      tvaRate,
+      serviceData: typeSpecificData as any,
+    },
+  });
+
+  return {
+    document,
+    pdf: pdfBuffer.toString('base64'),
+    fileName,
+  };
+}
+
+async function resolveSubProvidersForAppel(
+  db: any,
+  inputs: Array<{ id: string; amount_to_pay: number }>
+) {
+  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
+  return inputs.map(inputProvider => {
+    const dbProvider = providers.find(p => p.id === inputProvider.id)!;
+    return {
+      name: dbProvider.name,
+      iban: dbProvider.iban || '',
+      bic: dbProvider.bic || '',
+      amount_to_pay: inputProvider.amount_to_pay,
+    };
+  });
 }
 
 export const documentRouter = router({
@@ -196,12 +341,20 @@ export const documentRouter = router({
           client_siret: document.clientSiret || '',
           client_address: document.clientAddress || '',
           client_city: document.clientCity || '',
+          client_postal_code: document.clientPostalCode || '',
           client_country: document.clientCountry || '',
+          client_tva_intracom: document.clientTvaIntracom || '',
           provider_name: document.providerName,
           provider_legal: document.providerLegal || '',
+          provider_legal_form: document.providerLegalForm || '',
+          provider_share_capital: document.providerShareCapital != null ? Number(document.providerShareCapital) : '',
+          provider_rcs_city: document.providerRcsCity || '',
+          provider_ape_code: document.providerApeCode || '',
+          provider_tva_intracom: document.providerTvaIntracom || '',
           provider_siret: document.providerSiret || '',
           provider_address: document.providerAddress || '',
           provider_city: document.providerCity || '',
+          provider_postal_code: document.providerPostalCode || '',
           provider_email: document.providerEmail || '',
           provider_phone: document.providerPhone || '',
           bank_name: bankName,
@@ -209,6 +362,11 @@ export const documentRouter = router({
           bic,
           items: document.items as any[],
           tva_rate: Number(document.tvaRate || 20),
+          payment_terms_days: document.paymentTermsDays ?? 30,
+          late_fee_rate: document.lateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
+          recovery_fee_amount: document.recoveryFeeAmount != null ? Number(document.recoveryFeeAmount) : 40,
+          vat_exemption_mention: document.vatExemptionMention || '',
+          delivery_date: document.deliveryDate ? document.deliveryDate.toISOString().split('T')[0] : '',
           railway_estimate: Number(document.railwayEstimate || 0),
           providers: [],
           features: [],
@@ -234,22 +392,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'prestation' as const,
@@ -258,21 +401,7 @@ export const documentRouter = router({
           due_date: input.due_date,
           clientId: input.clientId,
           providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
+          ...buildPartyAndLegalData(client, provider, settings),
           items: input.items,
           tva_rate: tvaRate,
           railway_estimate: input.railway_estimate,
@@ -302,22 +431,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'prestation' as const,
@@ -326,21 +440,7 @@ export const documentRouter = router({
           due_date: input.due_date,
           clientId: input.clientId,
           providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
+          ...buildPartyAndLegalData(client, provider, settings),
           items: input.items,
           tva_rate: tvaRate,
           railway_estimate: input.railway_estimate,
@@ -351,41 +451,21 @@ export const documentRouter = router({
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `prestation_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
-        );
-        const totalWithRailway = subtotal + (input.railway_estimate || 0);
-        const tva = totalWithRailway * (tvaRate / 100);
-        const total = totalWithRailway + tva;
+        const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
+        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
         const document = await ctx.db.document.create({
           data: {
             type: 'prestation',
             name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
+            invoiceNumber,
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence),
             items: input.items,
             subtotal,
             tva,
             total,
-            tvaRate: tvaRate,
+            tvaRate,
             railwayEstimate: input.railway_estimate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
           },
         });
 
@@ -407,22 +487,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const quoteNumber = await previewDocumentNumber(ctx.db, 'quote');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -432,21 +497,7 @@ export const documentRouter = router({
           maintenance_period: input.maintenance_period,
           clientId: input.clientId,
           providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
+          ...buildPartyAndLegalData(client, provider, settings),
           items: input.items,
           tva_rate: tvaRate,
           railway_estimate: input.railway_estimate,
@@ -476,22 +527,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -501,66 +537,32 @@ export const documentRouter = router({
           maintenance_period: input.maintenance_period,
           clientId: input.clientId,
           providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
+          ...buildPartyAndLegalData(client, provider, settings),
           items: input.items,
           tva_rate: tvaRate,
+          railway_estimate: input.railway_estimate,
           providers: [],
           features: [],
           payment_providers: [],
-          railway_estimate: input.railway_estimate,
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `maintenance_${quoteNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
-        );
-        const totalWithRailway = subtotal + (input.railway_estimate || 0);
-        const tva = totalWithRailway * (tvaRate / 100);
-        const total = totalWithRailway + tva;
+        const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
+        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
         const document = await ctx.db.document.create({
           data: {
             type: 'maintenance',
             name: fileName,
-            quoteNumber: quoteNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
+            quoteNumber,
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence),
             items: input.items,
             subtotal,
             tva,
             total,
-            tvaRate: tvaRate,
+            tvaRate,
             railwayEstimate: input.railway_estimate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
           },
         });
 
@@ -581,47 +583,8 @@ export const documentRouter = router({
     .input(BackContractuelInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const subProviderIds = input.providers.map(p => p.id);
-        const subProviders = await ctx.db.provider.findMany({
-          where: { id: { in: subProviderIds } },
-        });
-
-        if (subProviders.length !== subProviderIds.length) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more sub-providers not found' });
-        }
-
-        const providersWithDetails = input.providers.map(inputProvider => {
-          const dbProvider = subProviders.find(p => p.id === inputProvider.id);
-          if (!dbProvider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: `Provider ${inputProvider.id} not found` });
-          }
-          return {
-            name: dbProvider.name,
-            role: inputProvider.role,
-            address: dbProvider.address || '',
-            city: dbProvider.city || '',
-            siret: dbProvider.siret || '',
-            email: dbProvider.email || '',
-            amount: inputProvider.amount,
-          };
-        });
-
-        const tvaRate = Number(provider.tvaRate || 20);
-        const logoUrl = provider.logoUrl || undefined;
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -631,33 +594,19 @@ export const documentRouter = router({
           valid_until: input.valid_until,
           clientId: input.clientId,
           providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
           providers: providersWithDetails,
           features: input.features,
           items: input.items,
           tva_rate: tvaRate,
           railway_estimate: 0,
           payment_providers: [],
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         return {
           pdf: pdfBuffer.toString('base64'),
-          typstContent: generateTypstContent(documentData)
+          typstContent: generateTypstContent(documentData),
         };
       } catch (error: any) {
         throw new TRPCError({
@@ -671,47 +620,8 @@ export const documentRouter = router({
     .input(BackContractuelInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const subProviderIds = input.providers.map(p => p.id);
-        const subProviders = await ctx.db.provider.findMany({
-          where: { id: { in: subProviderIds } },
-        });
-
-        if (subProviders.length !== subProviderIds.length) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more sub-providers not found' });
-        }
-
-        const providersWithDetails = input.providers.map(inputProvider => {
-          const dbProvider = subProviders.find(p => p.id === inputProvider.id);
-          if (!dbProvider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: `Provider ${inputProvider.id} not found` });
-          }
-          return {
-            name: dbProvider.name,
-            role: inputProvider.role,
-            address: dbProvider.address || '',
-            city: dbProvider.city || '',
-            siret: dbProvider.siret || '',
-            email: dbProvider.email || '',
-            amount: inputProvider.amount,
-          };
-        });
-
-        const tvaRate = Number(provider.tvaRate || 20);
-        const logoUrl = provider.logoUrl || undefined;
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -721,64 +631,31 @@ export const documentRouter = router({
           valid_until: input.valid_until,
           clientId: input.clientId,
           providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
           providers: providersWithDetails,
           features: input.features,
           items: input.items,
           tva_rate: tvaRate,
           railway_estimate: 0,
           payment_providers: [],
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `back_contractuel_${input.contract_reference}.pdf`;
-
-        const subtotal = (input.items || []).reduce(
-          (sum: number, item: any) => sum + item.quantity * item.price,
-          0
-        );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
+        const { subtotal, tva, total } = computeInvoiceTotals(input.items || [], tvaRate);
+        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
         const document = await ctx.db.document.create({
           data: {
             type: 'back_contractuel',
             name: fileName,
             contractRef: input.contract_reference,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId || null,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence),
             items: input.items || [],
             subtotal,
             tva,
             total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
+            tvaRate,
           },
         });
 
@@ -799,44 +676,8 @@ export const documentRouter = router({
     .input(AppelDeFondsInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const paymentProviderIds = input.payment_providers.map(p => p.id);
-        const paymentProviders = await ctx.db.provider.findMany({
-          where: { id: { in: paymentProviderIds } },
-        });
-
-        if (paymentProviders.length !== paymentProviderIds.length) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more payment providers not found' });
-        }
-
-        const paymentProvidersWithDetails = input.payment_providers.map(inputProvider => {
-          const dbProvider = paymentProviders.find(p => p.id === inputProvider.id);
-          if (!dbProvider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: `Payment provider ${inputProvider.id} not found` });
-          }
-          return {
-            name: dbProvider.name,
-            iban: dbProvider.iban || '',
-            bic: dbProvider.bic || '',
-            amount_to_pay: inputProvider.amount_to_pay,
-          };
-        });
-
-        const tvaRate = Number(provider.tvaRate || 20);
-        const logoUrl = provider.logoUrl || undefined;
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -847,33 +688,19 @@ export const documentRouter = router({
           project_name: input.project_name,
           clientId: input.clientId,
           providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
           payment_providers: paymentProvidersWithDetails,
           tva_rate: tvaRate,
           items: input.items || [],
           railway_estimate: 0,
           providers: [],
           features: [],
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         return {
           pdf: pdfBuffer.toString('base64'),
-          typstContent: generateTypstContent(documentData)
+          typstContent: generateTypstContent(documentData),
         };
       } catch (error: any) {
         throw new TRPCError({
@@ -887,44 +714,8 @@ export const documentRouter = router({
     .input(AppelDeFondsInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const paymentProviderIds = input.payment_providers.map(p => p.id);
-        const paymentProviders = await ctx.db.provider.findMany({
-          where: { id: { in: paymentProviderIds } },
-        });
-
-        if (paymentProviders.length !== paymentProviderIds.length) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more payment providers not found' });
-        }
-
-        const paymentProvidersWithDetails = input.payment_providers.map(inputProvider => {
-          const dbProvider = paymentProviders.find(p => p.id === inputProvider.id);
-          if (!dbProvider) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: `Payment provider ${inputProvider.id} not found` });
-          }
-          return {
-            name: dbProvider.name,
-            iban: dbProvider.iban || '',
-            bic: dbProvider.bic || '',
-            amount_to_pay: inputProvider.amount_to_pay,
-          };
-        });
-
-        const tvaRate = Number(provider.tvaRate || 20);
-        const logoUrl = provider.logoUrl || undefined;
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -933,66 +724,36 @@ export const documentRouter = router({
           due_date: input.due_date,
           project_step: input.project_step,
           project_name: input.project_name,
+          clientId: input.clientId,
+          providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
+          payment_providers: paymentProvidersWithDetails,
+          tva_rate: tvaRate,
           items: input.items || [],
           railway_estimate: 0,
           providers: [],
           features: [],
-          clientId: input.clientId,
-          providerId: input.providerId,
-          payment_providers: paymentProvidersWithDetails,
-          tva_rate: tvaRate,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
-        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
+        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `appel_de_fonds_${input.global_invoice_ref}.pdf`;
 
-        const subtotal = input.payment_providers.reduce(
-          (sum: number, provider: any) => sum + provider.amount_to_pay,
-          0
-        );
+        const subtotal = input.payment_providers.reduce((sum, p) => sum + p.amount_to_pay, 0);
         const tva = subtotal * (tvaRate / 100);
         const total = subtotal + tva;
+        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
         const document = await ctx.db.document.create({
           data: {
             type: 'appel_de_fonds',
             name: fileName,
             invoiceNumber: input.global_invoice_ref,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence),
             items: input.items || [],
             subtotal,
             tva,
             total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
+            tvaRate,
           },
         });
 
@@ -1013,21 +774,7 @@ export const documentRouter = router({
     .input(ContratPrestationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -1036,27 +783,13 @@ export const documentRouter = router({
           quote_number: input.quote_number,
           clientId: input.clientId,
           providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
           items: [],
           tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
           payment_providers: [],
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
@@ -1077,21 +810,7 @@ export const documentRouter = router({
     .input(ContratPrestationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -1100,61 +819,30 @@ export const documentRouter = router({
           quote_number: input.quote_number,
           clientId: input.clientId,
           providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
           items: [],
           tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
           payment_providers: [],
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `contrat_prestation_${input.contract_reference}.pdf`;
-
-        const subtotal = 0;
-        const tva = 0;
-        const total = 0;
+        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
         const document = await ctx.db.document.create({
           data: {
             type: 'contrat_prestation',
             name: fileName,
             contractRef: input.contract_reference,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence),
             items: [],
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
+            subtotal: 0,
+            tva: 0,
+            total: 0,
+            tvaRate,
           },
         });
 
@@ -1175,21 +863,7 @@ export const documentRouter = router({
     .input(ContratMaintenanceInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_maintenance' as const,
@@ -1198,27 +872,13 @@ export const documentRouter = router({
           maintenance_period: input.maintenance_period,
           clientId: input.clientId,
           providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
           items: [],
           tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
           payment_providers: [],
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
@@ -1239,21 +899,7 @@ export const documentRouter = router({
     .input(ContratMaintenanceInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_maintenance' as const,
@@ -1262,61 +908,30 @@ export const documentRouter = router({
           maintenance_period: input.maintenance_period,
           clientId: input.clientId,
           providerId: input.providerId,
+          ...buildPartyAndLegalData(client, provider, settings),
           items: [],
           tva_rate: tvaRate,
           railway_estimate: 0,
           providers: [],
           features: [],
           payment_providers: [],
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
         const fileName = `contrat_maintenance_${input.contract_reference}.pdf`;
-
-        const subtotal = 0;
-        const tva = 0;
-        const total = 0;
+        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
         const document = await ctx.db.document.create({
           data: {
             type: 'contrat_maintenance',
             name: fileName,
             contractRef: input.contract_reference,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence),
             items: [],
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
+            subtotal: 0,
+            tva: 0,
+            total: 0,
+            tvaRate,
           },
         });
 
@@ -1337,67 +952,14 @@ export const documentRouter = router({
     .input(PrestationBarmanInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_barman' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-          event_date: input.event_date,
-          event_time: input.event_time,
-          event_location: input.event_location,
-          service_duration: input.service_duration,
-          bar_setup_type: input.bar_setup_type,
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_barman_${invoiceNumber}.pdf`;
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-          typstContent: generateTypstContent(documentData),
-        };
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await previewSpecializedPrestation(
+          'prestation_barman',
+          'prestation_barman',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
+        );
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1410,109 +972,14 @@ export const documentRouter = router({
     .input(PrestationBarmanInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_barman' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-          event_date: input.event_date,
-          event_time: input.event_time,
-          event_location: input.event_location,
-          service_duration: input.service_duration,
-          bar_setup_type: input.bar_setup_type,
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_barman_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await createSpecializedPrestation(
+          'prestation_barman',
+          'prestation_barman',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
         );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'prestation_barman',
-            name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
-            items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
-            serviceData: {
-              event_date: input.event_date,
-              event_time: input.event_time,
-              event_location: input.event_location,
-              service_duration: input.service_duration,
-              bar_setup_type: input.bar_setup_type,
-            },
-          },
-        });
-
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1525,62 +992,14 @@ export const documentRouter = router({
     .input(PrestationPhotoInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_photo' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_photo_${invoiceNumber}.pdf`;
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-          typstContent: generateTypstContent(documentData),
-        };
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await previewSpecializedPrestation(
+          'prestation_photo',
+          'prestation_photo',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
+        );
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1593,104 +1012,14 @@ export const documentRouter = router({
     .input(PrestationPhotoInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_photo' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_photo_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await createSpecializedPrestation(
+          'prestation_photo',
+          'prestation_photo',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
         );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'prestation_photo',
-            name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
-            items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
-            serviceData: {
-              shoot_date: input.shoot_date,
-              shoot_time: input.shoot_time,
-              shoot_location: input.shoot_location,
-              shoot_duration: input.shoot_duration,
-              shoot_type: input.shoot_type,
-            },
-          },
-        });
-
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1703,62 +1032,14 @@ export const documentRouter = router({
     .input(PrestationVideoInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_video' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_video_${invoiceNumber}.pdf`;
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-          typstContent: generateTypstContent(documentData),
-        };
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await previewSpecializedPrestation(
+          'prestation_video',
+          'prestation_video',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
+        );
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1771,104 +1052,14 @@ export const documentRouter = router({
     .input(PrestationVideoInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_video' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_video_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await createSpecializedPrestation(
+          'prestation_video',
+          'prestation_video',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
         );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'prestation_video',
-            name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
-            items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
-            serviceData: {
-              shoot_date: input.shoot_date,
-              shoot_time: input.shoot_time,
-              shoot_location: input.shoot_location,
-              shoot_duration: input.shoot_duration,
-              video_type: input.video_type,
-            },
-          },
-        });
-
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1881,65 +1072,14 @@ export const documentRouter = router({
     .input(PrestationDesignInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_design' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          project_name: input.project_name,
-          project_type: input.project_type,
-          delivery_date: input.delivery_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_design_${invoiceNumber}.pdf`;
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-          typstContent: generateTypstContent(documentData),
-        };
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await previewSpecializedPrestation(
+          'prestation_design',
+          'prestation_design',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
+        );
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1952,105 +1092,14 @@ export const documentRouter = router({
     .input(PrestationDesignInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_design' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          project_name: input.project_name,
-          project_type: input.project_type,
-          delivery_date: input.delivery_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_design_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await createSpecializedPrestation(
+          'prestation_design',
+          'prestation_design',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
         );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'prestation_design',
-            name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
-            items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
-            serviceData: {
-              project_name: input.project_name,
-              project_type: input.project_type,
-              delivery_date: input.delivery_date,
-            },
-          },
-        });
-
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2063,65 +1112,14 @@ export const documentRouter = router({
     .input(PrestationDevInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_dev' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          project_name: input.project_name,
-          tech_stack: input.tech_stack,
-          delivery_date: input.delivery_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_dev_${invoiceNumber}.pdf`;
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-          typstContent: generateTypstContent(documentData),
-        };
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await previewSpecializedPrestation(
+          'prestation_dev',
+          'prestation_dev',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
+        );
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2134,105 +1132,14 @@ export const documentRouter = router({
     .input(PrestationDevInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_dev' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          project_name: input.project_name,
-          tech_stack: input.tech_stack,
-          delivery_date: input.delivery_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_dev_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await createSpecializedPrestation(
+          'prestation_dev',
+          'prestation_dev',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
         );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'prestation_dev',
-            name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
-            items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
-            serviceData: {
-              project_name: input.project_name,
-              tech_stack: input.tech_stack,
-              delivery_date: input.delivery_date,
-            },
-          },
-        });
-
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2245,67 +1152,14 @@ export const documentRouter = router({
     .input(PrestationFormationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_formation' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          training_date: input.training_date,
-          training_time: input.training_time,
-          training_location: input.training_location,
-          training_duration: input.training_duration,
-          training_topic: input.training_topic,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_formation_${invoiceNumber}.pdf`;
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-          typstContent: generateTypstContent(documentData),
-        };
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await previewSpecializedPrestation(
+          'prestation_formation',
+          'prestation_formation',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
+        );
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2318,109 +1172,14 @@ export const documentRouter = router({
     .input(PrestationFormationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_formation' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          training_date: input.training_date,
-          training_time: input.training_time,
-          training_location: input.training_location,
-          training_duration: input.training_duration,
-          training_topic: input.training_topic,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_formation_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await createSpecializedPrestation(
+          'prestation_formation',
+          'prestation_formation',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
         );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'prestation_formation',
-            name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
-            items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
-            serviceData: {
-              training_date: input.training_date,
-              training_time: input.training_time,
-              training_location: input.training_location,
-              training_duration: input.training_duration,
-              training_topic: input.training_topic,
-            },
-          },
-        });
-
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2433,66 +1192,14 @@ export const documentRouter = router({
     .input(PrestationBtpInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_btp' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          site_address: input.site_address,
-          site_name: input.site_name,
-          work_start_date: input.work_start_date,
-          work_type: input.work_type,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_btp_${invoiceNumber}.pdf`;
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-          typstContent: generateTypstContent(documentData),
-        };
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await previewSpecializedPrestation(
+          'prestation_btp',
+          'prestation_btp',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
+        );
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2505,107 +1212,14 @@ export const documentRouter = router({
     .input(PrestationBtpInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const client = await ctx.db.client.findUnique({
-          where: { id: input.clientId },
-        });
-        if (!client) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-        }
-
-        const provider = await ctx.db.provider.findUnique({
-          where: { id: input.providerId },
-        });
-        if (!provider) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-        }
-
-        const tvaRate = Number(provider.tvaRate || 20);
-
-        const documentData = {
-          type: 'prestation_btp' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          site_address: input.site_address,
-          site_name: input.site_name,
-          work_start_date: input.work_start_date,
-          work_type: input.work_type,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          client_name: client.companyName,
-          client_address: client.billingAddress || '',
-          client_city: client.billingCity || '',
-          client_country: client.billingCountry || '',
-          client_siret: client.siret || '',
-          provider_name: provider.name,
-          provider_legal: provider.legalName || '',
-          provider_address: provider.address || '',
-          provider_city: provider.city || '',
-          provider_siret: provider.siret || '',
-          provider_email: provider.email || '',
-          provider_phone: provider.phone || '',
-          bank_name: provider.bankName || '',
-          iban: provider.iban || '',
-          bic: provider.bic || '',
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: 0,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_btp_${invoiceNumber}.pdf`;
-
-        const subtotal = input.items.reduce(
-          (sum, item) => sum + item.quantity * item.price,
-          0
+        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        return await createSpecializedPrestation(
+          'prestation_btp',
+          'prestation_btp',
+          { invoice_date, due_date, clientId, providerId, items },
+          typeSpecific,
+          ctx
         );
-        const tva = subtotal * (tvaRate / 100);
-        const total = subtotal + tva;
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'prestation_btp',
-            name: fileName,
-            invoiceNumber: invoiceNumber,
-            clientName: documentData.client_name,
-            clientSiret: documentData.client_siret,
-            clientAddress: documentData.client_address,
-            clientCity: documentData.client_city,
-            clientCountry: documentData.client_country,
-            providerId: input.providerId,
-            providerName: documentData.provider_name,
-            providerLegal: documentData.provider_legal,
-            providerSiret: documentData.provider_siret,
-            providerAddress: documentData.provider_address,
-            providerCity: documentData.provider_city,
-            providerEmail: documentData.provider_email,
-            providerPhone: documentData.provider_phone,
-            items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate: tvaRate,
-            fileSize: pdfBuffer.length,
-            createdBy: ctx.user!.id,
-            serviceData: {
-              site_address: input.site_address,
-              site_name: input.site_name,
-              work_start_date: input.work_start_date,
-              work_type: input.work_type,
-            },
-          },
-        });
-
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

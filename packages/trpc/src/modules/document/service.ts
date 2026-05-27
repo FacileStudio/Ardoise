@@ -15,6 +15,9 @@ import {
   prestation_btp,
 } from '@repo/typst';
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import type { PrismaClient } from '@repo/database';
+import { getSettingsRecord } from '../settings/service';
 
 export const DocTypeSchema = z.enum([
   'prestation',
@@ -80,6 +83,7 @@ export type DocumentData = {
   invoice_number?: string;
   invoice_date?: string;
   due_date?: string;
+  delivery_date?: string;
   quote_number?: string;
   quote_date?: string;
   validity_date?: string;
@@ -91,20 +95,32 @@ export type DocumentData = {
   client_name?: string;
   client_address?: string;
   client_city?: string;
+  client_postal_code?: string;
   client_country?: string;
   client_siret?: string;
+  client_tva_intracom?: string;
   provider_name?: string;
   provider_legal?: string;
+  provider_legal_form?: string;
+  provider_share_capital?: number | string;
+  provider_rcs_city?: string;
+  provider_ape_code?: string;
+  provider_tva_intracom?: string;
   provider_address?: string;
   provider_city?: string;
+  provider_postal_code?: string;
   provider_siret?: string;
   provider_email?: string;
   provider_phone?: string;
   bank_name?: string;
   iban?: string;
   bic?: string;
-  items?: Array<{description: string; quantity: number; unit: string; price: number}>;
+  items?: Array<{description?: string; quantity?: number; unit?: string; price?: number}>;
   tva_rate: number;
+  payment_terms_days?: number;
+  late_fee_rate?: string;
+  recovery_fee_amount?: number;
+  vat_exemption_mention?: string;
   railway_estimate?: number;
   project_name?: string;
   valid_until?: string;
@@ -433,7 +449,7 @@ const TEMPLATES: Record<DocType, string> = {
   prestation_btp,
 };
 
-export function formatItems(items: Array<{ description: string; quantity: number; unit: string; price: number }>): string {
+export function formatItems(items: Array<{ description?: string; quantity?: number; unit?: string; price?: number }>): string {
   if (!items || items.length === 0) return '';
   return items.map((item) => {
     const safePrice = parseFloat(String(item.price)) || 0;
@@ -559,10 +575,13 @@ export async function generateDocument(
     );
   }
 
+  const v = validated as DocumentData;
   const templateData: Record<string, any> = {
+    ...(validated as Record<string, any>),
     invoice_number: validated.invoice_number || '',
     invoice_date: validated.invoice_date || '',
     due_date: validated.due_date || '',
+    delivery_date: v.delivery_date || '',
     quote_number: validated.quote_number || '',
     quote_date: validated.quote_date || '',
     validity_date: validated.validity_date || '',
@@ -577,13 +596,21 @@ export async function generateDocument(
     client_name: validated.client_name,
     client_address: validated.client_address,
     client_city: validated.client_city,
+    client_postal_code: v.client_postal_code || '',
     client_country: validated.client_country,
     client_siret: validated.client_siret,
+    client_tva_intracom: v.client_tva_intracom || '',
 
     provider_name: validated.provider_name,
     provider_legal: validated.provider_legal || validated.provider_name,
+    provider_legal_form: v.provider_legal_form || '',
+    provider_share_capital: v.provider_share_capital ?? '',
+    provider_rcs_city: v.provider_rcs_city || '',
+    provider_ape_code: v.provider_ape_code || '',
+    provider_tva_intracom: v.provider_tva_intracom || '',
     provider_address: validated.provider_address,
     provider_city: validated.provider_city,
+    provider_postal_code: v.provider_postal_code || '',
     provider_siret: validated.provider_siret,
     provider_email: validated.provider_email,
     provider_phone: validated.provider_phone,
@@ -594,6 +621,10 @@ export async function generateDocument(
 
     items: formatItems(validated.items || []),
     tva_rate: validated.tva_rate,
+    payment_terms_days: v.payment_terms_days ?? 30,
+    late_fee_rate: v.late_fee_rate || "3 fois le taux d'intérêt légal en vigueur",
+    recovery_fee_amount: v.recovery_fee_amount ?? 40,
+    vat_exemption_mention: v.vat_exemption_mention || '',
     railway_estimate: validated.railway_estimate,
 
     // For back_contractuel
@@ -626,9 +657,165 @@ export async function generateDocument(
     providerSiret: templateData.provider_siret,
     providerEmail: templateData.provider_email,
     providerPhone: templateData.provider_phone,
-    items: validated.items || [],
+    items: (validated.items || []) as Array<{ description: string; quantity: number; unit: string; price: number }>,
     tvaRate: templateData.tva_rate,
   });
+}
+
+export async function loadDocumentContext(
+  db: PrismaClient,
+  clientId: string,
+  providerId: string
+) {
+  const client = await db.client.findUnique({ where: { id: clientId } });
+  if (!client) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+  }
+
+  const provider = await db.provider.findUnique({ where: { id: providerId } });
+  if (!provider) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+  }
+
+  const settings = await getSettingsRecord(db);
+  const tvaRate = Number(provider.tvaRate || 20);
+
+  return { client, provider, settings, tvaRate };
+}
+
+export function computeInvoiceTotals(
+  items: Array<{ quantity?: number; price?: number }>,
+  tvaRate: number,
+  railwayEstimate: number = 0
+) {
+  const subtotal = items.reduce(
+    (sum, item) => sum + (Number(item.quantity ?? 0) * Number(item.price ?? 0)),
+    0
+  );
+  const totalWithRailway = subtotal + (railwayEstimate || 0);
+  const tva = totalWithRailway * (tvaRate / 100);
+  const total = totalWithRailway + tva;
+  return { subtotal, totalWithRailway, tva, total };
+}
+
+export function buildDocumentPersistenceBase(
+  documentData: DocumentData,
+  providerId: string,
+  fileSize: number,
+  createdBy: string,
+  legalPersistence: ReturnType<typeof buildDocumentLegalPersistence>
+) {
+  return {
+    clientName: documentData.client_name ?? '',
+    clientSiret: documentData.client_siret,
+    clientAddress: documentData.client_address,
+    clientCity: documentData.client_city,
+    clientCountry: documentData.client_country,
+    providerId,
+    providerName: documentData.provider_name ?? '',
+    providerLegal: documentData.provider_legal,
+    providerSiret: documentData.provider_siret,
+    providerAddress: documentData.provider_address,
+    providerCity: documentData.provider_city,
+    providerEmail: documentData.provider_email,
+    providerPhone: documentData.provider_phone,
+    ...legalPersistence,
+    fileSize,
+    createdBy,
+  };
+}
+
+type ClientLike = {
+  companyName: string;
+  siret?: string | null;
+  tvaIntracom?: string | null;
+  billingAddress?: string | null;
+  billingCity?: string | null;
+  billingPostalCode?: string | null;
+  billingCountry?: string | null;
+};
+
+type ProviderLike = {
+  name: string;
+  legalName?: string | null;
+  legalForm?: string | null;
+  shareCapital?: unknown;
+  rcsCity?: string | null;
+  apeCode?: string | null;
+  tvaIntracom?: string | null;
+  address?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  siret?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  bankName?: string | null;
+  iban?: string | null;
+  bic?: string | null;
+};
+
+type SettingsLike = {
+  defaultPaymentTermsDays?: number | null;
+  defaultLateFeeRate?: string | null;
+  defaultRecoveryFeeAmount?: unknown;
+  defaultVatExemptionMention?: string | null;
+};
+
+export function buildPartyAndLegalData(
+  client: ClientLike,
+  provider: ProviderLike,
+  settings: SettingsLike | null | undefined
+) {
+  return {
+    client_name: client.companyName,
+    client_address: client.billingAddress || '',
+    client_city: client.billingCity || '',
+    client_postal_code: client.billingPostalCode || '',
+    client_country: client.billingCountry || '',
+    client_siret: client.siret || '',
+    client_tva_intracom: client.tvaIntracom || '',
+    provider_name: provider.name,
+    provider_legal: provider.legalName || provider.name,
+    provider_legal_form: provider.legalForm || '',
+    provider_share_capital: provider.shareCapital != null ? Number(provider.shareCapital) : '',
+    provider_rcs_city: provider.rcsCity || '',
+    provider_ape_code: provider.apeCode || '',
+    provider_tva_intracom: provider.tvaIntracom || '',
+    provider_address: provider.address || '',
+    provider_city: provider.city || '',
+    provider_postal_code: provider.postalCode || '',
+    provider_siret: provider.siret || '',
+    provider_email: provider.email || '',
+    provider_phone: provider.phone || '',
+    bank_name: provider.bankName || '',
+    iban: provider.iban || '',
+    bic: provider.bic || '',
+    payment_terms_days: settings?.defaultPaymentTermsDays ?? 30,
+    late_fee_rate: settings?.defaultLateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
+    recovery_fee_amount: settings?.defaultRecoveryFeeAmount != null ? Number(settings.defaultRecoveryFeeAmount) : 40,
+    vat_exemption_mention: settings?.defaultVatExemptionMention || '',
+  };
+}
+
+export function buildDocumentLegalPersistence(
+  client: ClientLike,
+  provider: ProviderLike,
+  settings: SettingsLike | null | undefined
+) {
+  return {
+    clientPostalCode: client.billingPostalCode || null,
+    clientTvaIntracom: client.tvaIntracom || null,
+    providerPostalCode: provider.postalCode || null,
+    providerTvaIntracom: provider.tvaIntracom || null,
+    providerLegalForm: provider.legalForm || null,
+    providerShareCapital: provider.shareCapital != null ? provider.shareCapital as never : null,
+    providerRcsCity: provider.rcsCity || null,
+    providerApeCode: provider.apeCode || null,
+    paymentTermsDays: settings?.defaultPaymentTermsDays ?? 30,
+    lateFeeRate: settings?.defaultLateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
+    recoveryFeeAmount: settings?.defaultRecoveryFeeAmount != null ? settings.defaultRecoveryFeeAmount as never : 40 as never,
+    vatExemptionMention: settings?.defaultVatExemptionMention || null,
+  };
 }
 
 export function generateTypstContent(data: DocumentData): string {
@@ -640,9 +827,11 @@ export function generateTypstContent(data: DocumentData): string {
   }
 
   const templateData: Record<string, any> = {
+    ...(data as Record<string, any>),
     invoice_number: data.invoice_number || '',
     invoice_date: data.invoice_date || '',
     due_date: data.due_date || '',
+    delivery_date: data.delivery_date || '',
     quote_number: data.quote_number || '',
     quote_date: data.quote_date || '',
     validity_date: data.validity_date || '',
@@ -657,13 +846,21 @@ export function generateTypstContent(data: DocumentData): string {
     client_name: data.client_name,
     client_address: data.client_address,
     client_city: data.client_city,
+    client_postal_code: data.client_postal_code || '',
     client_country: data.client_country,
     client_siret: data.client_siret,
+    client_tva_intracom: data.client_tva_intracom || '',
 
     provider_name: data.provider_name,
     provider_legal: data.provider_legal || data.provider_name,
+    provider_legal_form: data.provider_legal_form || '',
+    provider_share_capital: data.provider_share_capital ?? '',
+    provider_rcs_city: data.provider_rcs_city || '',
+    provider_ape_code: data.provider_ape_code || '',
+    provider_tva_intracom: data.provider_tva_intracom || '',
     provider_address: data.provider_address,
     provider_city: data.provider_city,
+    provider_postal_code: data.provider_postal_code || '',
     provider_siret: data.provider_siret,
     provider_email: data.provider_email,
     provider_phone: data.provider_phone,
@@ -674,6 +871,10 @@ export function generateTypstContent(data: DocumentData): string {
 
     items: formatItems(data.items || []),
     tva_rate: data.tva_rate,
+    payment_terms_days: data.payment_terms_days ?? 30,
+    late_fee_rate: data.late_fee_rate || "3 fois le taux d'intérêt légal en vigueur",
+    recovery_fee_amount: data.recovery_fee_amount ?? 40,
+    vat_exemption_mention: data.vat_exemption_mention || '',
     railway_estimate: data.railway_estimate,
 
     // For back_contractuel

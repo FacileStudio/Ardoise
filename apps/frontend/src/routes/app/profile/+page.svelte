@@ -64,7 +64,7 @@
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-foreground">Informations client</h1>
       <p class="text-sm text-muted-foreground">
-        Consultez les informations de votre société enregistrées dans Charles
+        Consultez les informations de votre société enregistrées dans Ardoise
       </p>
     </div>
 

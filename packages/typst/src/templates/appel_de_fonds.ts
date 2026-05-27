@@ -1,3 +1,5 @@
+import { legalLetDeclarations, legalInvoiceFooter } from './_legal';
+
 export const appel_de_fonds: string = `#set document(
   title: "Appel de Fonds Global",
   author: "Collectif Web"
@@ -24,6 +26,10 @@ export const appel_de_fonds: string = `#set document(
 #let client_name = "{{client_name}}"
 #let total_appel = providers.map(p => p.amount_to_pay).sum()
 #let fmt(n) = str(calc.round(n, digits: 2)) + "\\u{00A0}€"
+
+#let provider_name = "{{provider_name}}"
+#let provider_siret = "{{provider_siret}}"
+${legalLetDeclarations}
 
 // Header
 #grid(
@@ -137,12 +143,11 @@ export const appel_de_fonds: string = `#set document(
 
 #v(1fr)
 
-// Footer
-#line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
+// Note métier
 #v(0.6cm)
 #text(size: 8pt, fill: rgb("#888888"))[
-  *Note comptable:* Ce document est une note de synthèse pour faciliter vos paiements. \
-  Chaque prestataire vous adressera individuellement sa facture acquittée correspondant au montant perçu. \
-  TVA non applicable, article 293 B du CGI.
+  *Note comptable:* Ce document est une note de synthèse pour faciliter vos paiements.
+  Chaque prestataire vous adressera individuellement sa facture acquittée correspondant au montant perçu.
 ]
+${legalInvoiceFooter}
 `;

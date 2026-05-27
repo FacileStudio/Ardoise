@@ -10,8 +10,10 @@ model Client {
   companyName String
   billingAddress String?
   billingCity String?
+  billingPostalCode String?
   billingCountry String?
   siret String?
+  tvaIntracom String?
 
   stripeCustomerId String? @unique
 

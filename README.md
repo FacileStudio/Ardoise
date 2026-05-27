@@ -1,6 +1,6 @@
-# Charles - Payment & Invoicing Platform
+# Ardoise - Payment & Invoicing Platform
 
-Charles is an internal payment and invoicing platform for Facile Studio, built with modern web technologies and full-stack type safety.
+Ardoise is an internal payment and invoicing platform for Facile Studio, built with modern web technologies and full-stack type safety.
 
 ## Features
 
@@ -100,12 +100,12 @@ cp apps/frontend/.env.example apps/frontend/.env
 Edit `apps/backend/.env` with your credentials:
 
 ```env
-DATABASE_URL=postgresql://user@localhost:5432/charles
+DATABASE_URL=postgresql://user@localhost:5432/ardoise
 ENCRYPTION_SECRET=your-secret-key-min-32-chars
 MINIO_ENDPOINT=http://127.0.0.1:9000
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=minioadminpassword
-MINIO_BUCKET_NAME=charles-uploads
+MINIO_BUCKET_NAME=ardoise-uploads
 ```
 
 Configure Stripe, SMTP, and company details in the backoffice settings screen.
@@ -124,7 +124,7 @@ just create-admin      # Create admin account (admin@example.com / admin12345678
 Or manually:
 
 ```bash
-createdb charles
+createdb ardoise
 cd packages/database && bun run db:push
 bun run scripts/create-admin.ts
 ```
@@ -333,9 +333,9 @@ S3-compatible storage with MinIO:
 ### Database Connection Issues
 
 ```bash
-createdb charles
+createdb ardoise
 cd packages/database
-DATABASE_URL="postgresql://user@localhost:5432/charles" bun run db:push
+DATABASE_URL="postgresql://user@localhost:5432/ardoise" bun run db:push
 ```
 
 ### Prisma Client Not Found

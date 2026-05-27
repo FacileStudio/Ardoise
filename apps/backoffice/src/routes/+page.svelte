@@ -91,14 +91,14 @@
 </script>
 
 <svelte:head>
-  <title>Administration — Charles</title>
+  <title>Administration — Ardoise</title>
 </svelte:head>
 
 <div class="flex min-h-screen">
   <div class="hidden lg:flex lg:w-1/2 flex-col bg-foreground px-12 py-10">
     <div class="flex items-center gap-3 mb-auto">
       <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-white"></iconify-icon>
-      <span class="text-xl font-bold font-heading tracking-tight text-background">Charles</span>
+      <span class="text-xl font-bold font-heading tracking-tight text-background">Ardoise</span>
     </div>
 
     <div class="mb-auto">
@@ -111,7 +111,7 @@
     </div>
 
     <p class="text-xs text-background/30">
-      © {new Date().getFullYear()} Charles par Facile.
+      © {new Date().getFullYear()} Ardoise par Facile.
     </p>
   </div>
 

@@ -1,3 +1,5 @@
+import { legalLetDeclarations, legalContractFooter } from './_legal';
+
 export const back_contractuel: string = `#set document(
   title: "Devis & Convention de Co-traitance",
   author: "Collectif Web"
@@ -28,6 +30,10 @@ export const back_contractuel: string = `#set document(
 #let client_address = "{{client_address}}"
 #let client_city = "{{client_city}}"
 #let client_siret = "{{client_siret}}"
+
+#let provider_name = "{{provider_name}}"
+#let provider_siret = "{{provider_siret}}"
+${legalLetDeclarations}
 
 #let mandataire = providers.at(0)
 #let fmt(n) = str(calc.round(n, digits: 2)) + "\u{00A0}€"
@@ -221,4 +227,7 @@ export const back_contractuel: string = `#set document(
     #text(size: 9pt)[Signature :]
   ]
 )
+
+#v(1fr)
+${legalContractFooter}
 `;

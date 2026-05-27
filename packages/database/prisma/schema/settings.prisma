@@ -10,6 +10,12 @@ model Settings {
   companyEmail String?
   companyPhone String?
 
+  companyTvaIntracom String?
+  companyLegalForm String?
+  companyShareCapital Decimal? @db.Decimal(15, 2)
+  companyRcsCity String?
+  companyApeCode String?
+
   stripeSecretKey String?
   stripeWebhookSecret String?
   stripePublishableKey String?
@@ -33,6 +39,11 @@ model Settings {
   logoUrl String?
 
   tvaRate Decimal @default(20) @db.Decimal(5, 2)
+
+  defaultPaymentTermsDays Int? @default(30)
+  defaultLateFeeRate String? @default("3 fois le taux d'intérêt légal en vigueur")
+  defaultRecoveryFeeAmount Decimal? @default(40) @db.Decimal(10, 2)
+  defaultVatExemptionMention String? @default("TVA non applicable, article 293 B du CGI")
 
   nextInvoiceNumber Int @default(1)
   nextQuoteNumber Int @default(1)
