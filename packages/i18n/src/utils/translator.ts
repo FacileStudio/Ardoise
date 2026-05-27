@@ -49,8 +49,7 @@ export function detectBrowserLocale(
     return fallback;
   }
 
-  const browserLang =
-    navigator.language || (navigator as any).userLanguage || fallback;
+  const browserLang = navigator.language || fallback;
 
   const lang = browserLang.split('-')[0].toLowerCase();
 

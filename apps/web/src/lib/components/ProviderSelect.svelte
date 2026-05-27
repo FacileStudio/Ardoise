@@ -60,7 +60,7 @@
 		<option value="">
 			{loading ? 'Chargement...' : 'Sélectionner un prestataire'}
 		</option>
-		{#each providers as provider}
+		{#each providers as provider (provider.id)}
 			<option value={provider.id}>{provider.name}</option>
 		{/each}
 	</select>

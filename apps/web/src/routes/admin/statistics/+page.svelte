@@ -3,6 +3,7 @@
 	import { downloadCSV } from '@repo/utils';
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
 
@@ -77,7 +78,7 @@
 	});
 
 	const monthlyRevenue = $derived(() => {
-		const revenueByMonth = new Map<string, number>();
+		const revenueByMonth = new SvelteMap<string, number>();
 
 		payments
 			.filter((p) => p.status === 'PAID' && p.paidAt)
@@ -98,7 +99,7 @@
 	});
 
 	const paymentTrend = $derived(() => {
-		const paymentsByMonth = new Map<string, number>();
+		const paymentsByMonth = new SvelteMap<string, number>();
 
 		payments.forEach((p) => {
 			const date = new Date(p.createdAt);

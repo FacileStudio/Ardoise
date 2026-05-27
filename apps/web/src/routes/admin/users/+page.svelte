@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, SearchInput, Badge, EmptyState } from '@repo/ui';
 	import { logger } from '@repo/logger';
 	import type { User, UserStats } from '$lib/types';
@@ -101,7 +102,7 @@
 				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('admin.users.subtitle')}</p>
 			</div>
 			<button
-				onclick={() => goto('/admin/users/create')}
+				onclick={() => goto(resolve('/admin/users/create'))}
 				class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2"
 			>
 				<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
@@ -190,7 +191,7 @@
 								class="hover:bg-muted transition-colors cursor-pointer"
 								onclick={(e) => {
 									if (!(e.target as HTMLElement).closest('button')) {
-										goto(`/admin/users/${user.id}`);
+										goto(resolve(`/admin/users/${user.id}`));
 									}
 								}}
 							>
@@ -259,7 +260,7 @@
 					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('admin.users.tryAdjustingFilters')}</p>
 					{#if !searchQuery && filters.role === 'all'}
 						<button
-							onclick={() => goto('/admin/users/create')}
+							onclick={() => goto(resolve('/admin/users/create'))}
 							class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2 mt-2"
 						>
 							<iconify-icon icon="mdi:plus" width="16"></iconify-icon>

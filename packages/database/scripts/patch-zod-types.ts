@@ -43,4 +43,8 @@ for (const { pattern, next } of replacements) {
   contents = contents.replace(pattern, next);
 }
 
+if (!contents.startsWith('// @ts-nocheck')) {
+  contents = '// @ts-nocheck\n' + contents;
+}
+
 writeFileSync(filePath, contents);

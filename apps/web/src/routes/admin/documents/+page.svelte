@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Button } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -60,7 +61,7 @@
 				search: searchQuery || undefined,
 				type: selectedType || undefined,
 			});
-			documents = result.items as any;
+			documents = result.items as unknown as Document[];
 			totalPages = result.totalPages;
 		} catch (err) {
 			logger.error({ err }, 'Failed to load documents');
@@ -154,7 +155,7 @@
 				<p class="text-sm text-muted-foreground mt-1">Gérez vos factures, devis et contrats</p>
 			</div>
 			<button
-				onclick={() => goto('/admin/documents/create')}
+				onclick={() => goto(resolve('/admin/documents/create'))}
 				class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2"
 			>
 				<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
@@ -252,7 +253,7 @@
 
 			{#if totalPages > 1}
 				<div class="flex justify-center gap-1">
-					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pg}
+					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pg (pg)}
 						<button
 							onclick={() => {
 								currentPage = pg;
@@ -275,7 +276,7 @@
 					<p class="text-sm text-muted-foreground max-w-md">{searchQuery || selectedType ? 'Aucun résultat trouvé pour votre recherche' : 'Créez votre premier document pour commencer'}</p>
 					{#if !searchQuery && !selectedType}
 						<button
-							onclick={() => goto('/admin/documents/create')}
+							onclick={() => goto(resolve('/admin/documents/create'))}
 							class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2 mt-2"
 						>
 							<iconify-icon icon="mdi:plus" width="16"></iconify-icon>

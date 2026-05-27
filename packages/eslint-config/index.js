@@ -25,6 +25,12 @@ module.exports = [
         sessionStorage: 'readonly',
         fetch: 'readonly',
         console: 'readonly',
+        crypto: 'readonly',
+        process: 'readonly',
+        atob: 'readonly',
+        btoa: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
       },
     },
     plugins: {

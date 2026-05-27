@@ -34,7 +34,7 @@
         window.history.replaceState({}, '', window.location.pathname);
         await goto(resolve(redirectForRole(user as SessionUser)));
         return;
-      } catch (err) {
+      } catch {
         error = "Échec de la récupération du profil après connexion SSO.";
         window.history.replaceState({}, '', window.location.pathname);
       } finally {
@@ -52,7 +52,7 @@
       const config = await res.json();
       oidcEnabled = config.oidc_enabled ?? false;
       ssoOnly = config.sso_only ?? false;
-    } catch {}
+    } catch { /* noop */ }
 
     configLoaded = true;
   });
@@ -177,7 +177,8 @@
 
         {#if oidcEnabled}
           <a
-            href="{apiUrl}/auth/oidc?redirect={encodeURIComponent(window.location.origin + '/login')}"
+            href="{apiUrl}/auth/oidc?redirect={encodeURIComponent(window.location.origin + resolve('/login'))}"
+            rel="external"
             class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             <iconify-icon icon="solar:shield-keyhole-bold" width="16"></iconify-icon>

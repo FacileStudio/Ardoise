@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, SearchInput, Badge, EmptyState } from '@repo/ui';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
@@ -162,7 +163,7 @@
 			</p>
 		</div>
 		<button
-			onclick={() => goto('/admin/sign/create')}
+			onclick={() => goto(resolve('/admin/sign/create'))}
 			disabled={!isConfigured}
 			class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 		>
@@ -335,7 +336,7 @@
 								<td class="px-4 py-3">
 									<div class="flex items-center gap-1">
 										<button
-											onclick={() => goto(`/admin/sign/${submission.id}`)}
+											onclick={() => goto(resolve(`/admin/sign/${submission.id}`))}
 											class="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
 											title="Voir les détails"
 										>

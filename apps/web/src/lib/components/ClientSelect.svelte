@@ -58,7 +58,7 @@
 		<option value="">
 			{loading ? 'Chargement...' : 'Sélectionner un client'}
 		</option>
-		{#each clients as client}
+		{#each clients as client (client.id)}
 			<option value={client.id}>{client.companyName}</option>
 		{/each}
 	</select>

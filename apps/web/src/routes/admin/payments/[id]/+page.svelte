@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Badge, Card, Button, ConfirmDialog, Alert } from '@repo/ui';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
@@ -178,7 +179,7 @@
 		<header class="flex items-center justify-between">
 			<div class="flex items-center gap-4">
 				<button
-					onclick={() => goto('/admin/payments')}
+					onclick={() => goto(resolve('/admin/payments'))}
 					class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
 					aria-label="Retour aux paiements"
 				>
@@ -280,7 +281,7 @@
 					<div class="rounded-xl border border-border p-6 space-y-4">
 						<h2 class="text-base font-semibold text-foreground">Fichiers joints</h2>
 						<div class="space-y-1">
-							{#each payment.attachedFiles as file}
+							{#each payment.attachedFiles as file (file)}
 								<div class="flex items-center gap-3 p-2 bg-muted rounded-lg">
 									<iconify-icon icon="solar:file-bold" width="16" class="text-muted-foreground"></iconify-icon>
 									<span class="flex-1 text-sm font-medium text-foreground">{file}</span>
@@ -365,7 +366,7 @@
 						{/if}
 
 						<button
-							onclick={() => goto(`/admin/clients`)}
+							onclick={() => goto(resolve('/admin/clients'))}
 							class="w-full px-3 py-2 border border-border rounded-md text-sm font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2"
 						>
 							<iconify-icon icon="solar:eye-bold" width="14"></iconify-icon>
@@ -458,7 +459,7 @@
 			<h2 class="text-xl font-bold text-foreground mt-4">Paiement introuvable</h2>
 			<p class="text-sm text-muted-foreground mt-2">Ce paiement n'existe pas ou a été supprimé.</p>
 			<button
-				onclick={() => goto('/admin/payments')}
+				onclick={() => goto(resolve('/admin/payments'))}
 				class="mt-6 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium"
 			>
 				Retour aux paiements

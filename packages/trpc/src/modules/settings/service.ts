@@ -9,6 +9,7 @@ import { DocuSealService } from '../docuseal/service';
 import { join } from 'path';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
+import { logger } from '@repo/logger';
 
 const SETTINGS_ID = 'global';
 const LOGO_KEY = 'settings/logo.png';
@@ -245,6 +246,6 @@ export function cleanupTempFile(filePath: string | undefined) {
     const tempDir = filePath.substring(0, filePath.lastIndexOf('/'));
     rmSync(tempDir, { recursive: true, force: true });
   } catch (error) {
-    console.error('[settings] Failed to cleanup temp file:', error);
+    logger.error({ err: error }, 'Failed to cleanup temp file');
   }
 }

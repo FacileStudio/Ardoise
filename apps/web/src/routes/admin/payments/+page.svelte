@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, SearchInput, Badge, EmptyState, Button } from '@repo/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -245,7 +246,7 @@
 				</Button>
 			{/if}
 			<button
-				onclick={() => goto('/admin/payments/create')}
+				onclick={() => goto(resolve('/admin/payments/create'))}
 				class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
 			>
 				<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
@@ -407,7 +408,7 @@
 						{#each filteredPayments as payment (payment.id)}
 							<tr
 								class="hover:bg-muted/50 transition-colors cursor-pointer"
-								onclick={() => goto(`/admin/payments/${payment.id}`)}
+								onclick={() => goto(resolve(`/admin/payments/${payment.id}`))}
 							>
 								<td class="px-4 py-3">
 									<div class="space-y-1">
@@ -534,7 +535,7 @@
 					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('admin.payments.tryAdjustingFilters')}</p>
 					{#if !searchQuery && !filters.status}
 						<button
-							onclick={() => goto('/admin/payments/create')}
+							onclick={() => goto(resolve('/admin/payments/create'))}
 							class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity mt-2"
 						>
 							<iconify-icon icon="mdi:plus" width="18"></iconify-icon>

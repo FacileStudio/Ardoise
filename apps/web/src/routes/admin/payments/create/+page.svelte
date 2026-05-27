@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -154,7 +155,7 @@
 					: 'Paiement manuel enregistré avec succès!',
 				'success'
 			);
-			goto('/admin/payments');
+			goto(resolve('/admin/payments'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create payment');
 			const message = err.message || 'Erreur lors de la création';
@@ -185,7 +186,7 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/payments')}
+			onclick={() => goto(resolve('/admin/payments'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -256,7 +257,7 @@
 			<div>
 				<div class="text-sm font-medium mb-2">Mode de paiement *</div>
 				<div class="grid grid-cols-2 gap-2">
-					{#each ['STRIPE', 'MANUAL'] as method}
+					{#each ['STRIPE', 'MANUAL'] as method (method)}
 						<button
 							type="button"
 							onclick={() => (formData.collectionMethod = method as PaymentCollectionMethod)}
@@ -273,7 +274,7 @@
 			<div>
 				<div class="text-sm font-medium mb-2">Fréquence *</div>
 				<div class="grid grid-cols-3 gap-2">
-					{#each ['ONE_TIME', 'MONTHLY', 'YEARLY'] as freq}
+					{#each ['ONE_TIME', 'MONTHLY', 'YEARLY'] as freq (freq)}
 						<button
 							type="button"
 							onclick={() => (formData.frequency = freq as PaymentFrequency)}
@@ -310,7 +311,7 @@
 				<div class="space-y-2">
 					<div class="text-sm font-medium">Documents sélectionnés ({selectedDocumentIds.length})</div>
 					<div class="space-y-1">
-						{#each selectedDocumentIds as docId}
+						{#each selectedDocumentIds as docId (docId)}
 							{@const doc = documents.find(d => d.id === docId)}
 							{#if doc}
 								<div class="rounded-lg p-2 flex items-center justify-between border border-border">
@@ -363,7 +364,7 @@
 						<p class="text-xs">Aucun document trouvé</p>
 					</div>
 				{:else}
-					{#each filteredDocuments as doc}
+					{#each filteredDocuments as doc (doc.id)}
 						<button
 							type="button"
 							onclick={() => toggleDocument(doc.id)}
@@ -418,7 +419,7 @@
 
 		<div class="flex gap-3 pt-2">
 			<Button
-				onclick={() => goto('/admin/payments')}
+				onclick={() => goto(resolve('/admin/payments'))}
 				intent="secondary"
 				class="flex-1"
 				disabled={submitting}

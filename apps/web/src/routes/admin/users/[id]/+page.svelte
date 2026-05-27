@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Button } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -96,7 +97,7 @@
 			await trpc.user.adminUpdate.mutate(updateData);
 
 			toast.push('Utilisateur modifié avec succès!', 'success');
-			goto('/admin/users');
+			goto(resolve('/admin/users'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to update user');
 
@@ -135,7 +136,7 @@
 	{:else if user}
 		<div>
 			<button
-				onclick={() => goto('/admin/users')}
+				onclick={() => goto(resolve('/admin/users'))}
 				class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 			>
 				<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -258,7 +259,7 @@
 			</div>
 
 			<div class="flex gap-3 pt-2">
-				<Button onclick={() => goto('/admin/users')} intent="secondary" class="flex-1" disabled={submitting}>
+				<Button onclick={() => goto(resolve('/admin/users'))} intent="secondary" class="flex-1" disabled={submitting}>
 					Annuler
 				</Button>
 				<button

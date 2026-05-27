@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import { Spinner, Badge, Button } from '@repo/ui';
 	import { logger } from '@repo/logger';
@@ -57,7 +58,7 @@
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch submission');
 			alert('Erreur lors du chargement de la demande de signature');
-			goto('/admin/sign');
+			goto(resolve('/admin/sign'));
 		} finally {
 			pageLoading = false;
 		}
@@ -94,7 +95,7 @@
 <div class="max-w-3xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/sign')}
+			onclick={() => goto(resolve('/admin/sign'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>

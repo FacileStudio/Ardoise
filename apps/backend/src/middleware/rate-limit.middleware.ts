@@ -60,7 +60,7 @@ function getClientIp(c: Context): string {
     if (connInfo?.remote?.address) {
       return connInfo.remote.address;
     }
-  } catch {}
+  } catch { /* getConnInfo unavailable — fall back to headers */ }
   return (
     c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
     c.req.header("x-real-ip") ||

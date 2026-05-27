@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "typecheck": "svelte-kit sync && NODE_OPTIONS='--max-old-space-size=8192' svelte-check --tsconfig ./tsconfig.json",
     "lint": "svelte-kit sync && eslint src"
   },
   "dependencies": {

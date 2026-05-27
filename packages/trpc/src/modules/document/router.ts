@@ -11,6 +11,8 @@ import {
   ContratMaintenanceInputSchema,
   BackContractuelInputSchema,
   AppelDeFondsInputSchema,
+  type DocType,
+  type DocumentData,
 } from './service';
 import { PrestationInputSchema, MaintenanceInputSchema } from './types';
 import {
@@ -27,6 +29,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { StorageService } from '@repo/storage';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
+import { logger } from '@repo/logger';
 
 async function downloadLogoFromS3(logoUrl: string | null | undefined, storage: StorageService): Promise<string | undefined> {
   if (!logoUrl || (!logoUrl.includes('storageapi.dev') && !logoUrl.includes('/storage/'))) {
@@ -36,7 +39,7 @@ async function downloadLogoFromS3(logoUrl: string | null | undefined, storage: S
   try {
     return await downloadStoredFileToTempPath(logoUrl, storage, 'logo');
   } catch (error) {
-    console.error('Failed to download logo from S3:', error);
+    logger.error({ err: error }, 'Failed to download logo from S3');
     return undefined;
   }
 }
@@ -168,7 +171,7 @@ async function createSpecializedPrestation(
       tva,
       total,
       tvaRate,
-      serviceData: typeSpecificData as any,
+      serviceData: typeSpecificData as Record<string, unknown>,
     },
   });
 
@@ -331,7 +334,7 @@ export const documentRouter = router({
         }
 
         const documentData = {
-          type: document.type as any,
+          type: document.type as DocType,
           invoice_number: document.invoiceNumber || '',
           quote_number: document.quoteNumber || '',
           contract_reference: document.contractRef || '',
@@ -360,7 +363,7 @@ export const documentRouter = router({
           bank_name: bankName,
           iban,
           bic,
-          items: document.items as any[],
+          items: document.items as DocumentData['items'],
           tva_rate: Number(document.tvaRate || 20),
           payment_terms_days: document.paymentTermsDays ?? 30,
           late_fee_rate: document.lateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
@@ -379,10 +382,10 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           fileName: document.name,
         };
-      } catch (error: any) {
+      } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to download document',
+          message: error instanceof Error ? error.message : 'Failed to download document',
         });
       }
     }),

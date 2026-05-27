@@ -9,6 +9,7 @@ import {
   WebhookSchema,
 } from './types';
 import { TRPCError } from '@trpc/server';
+import type Stripe from 'stripe';
 
 export const paymentRouter = router({
   list: adminProcedure.input(ListPaymentsSchema).query(async ({ ctx, input }) => {
@@ -150,10 +151,10 @@ export const paymentRouter = router({
       } else if (payment.stripeSubscriptionId) {
         const subscription = await stripe.client.subscriptions.retrieve(
           payment.stripeSubscriptionId,
-          { expand: ['latest_invoice.payment_intent'] }
+          { expand: ['latest_invoice'] }
         );
-        const invoice = subscription.latest_invoice as any;
-        clientSecret = invoice?.payment_intent?.client_secret;
+        const invoice = subscription.latest_invoice as Stripe.Invoice | null;
+        clientSecret = invoice?.confirmation_secret?.client_secret ?? null;
       }
 
       if (!clientSecret) {

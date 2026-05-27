@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Badge, Card, Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -140,7 +141,7 @@
 	{:else if client}
 		<div>
 			<button
-				onclick={() => goto('/admin/clients')}
+				onclick={() => goto(resolve('/admin/clients'))}
 				class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 			>
 				<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -215,7 +216,7 @@
 						</div>
 						<div class="space-y-2">
 							{#each client.payments as payment (payment.id)}
-								<button type="button" class="w-full text-left flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted transition-colors" onclick={() => goto(`/admin/payments/${payment.id}`)}>
+								<button type="button" class="w-full text-left flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted transition-colors" onclick={() => goto(resolve(`/admin/payments/${payment.id}`))}>
 									<iconify-icon
 										icon={payment.status === 'PAID' ? 'solar:check-circle-bold' : payment.status === 'PENDING' ? 'solar:clock-circle-bold' : 'solar:close-circle-bold'}
 										width="20"
@@ -242,7 +243,7 @@
 
 				<div class="flex gap-3 pt-2">
 					<Button
-						onclick={() => goto('/admin/clients')}
+						onclick={() => goto(resolve('/admin/clients'))}
 						intent="secondary"
 						class="flex-1"
 						disabled={submitting}
@@ -327,7 +328,7 @@
 			<h2 class="text-xl font-bold text-foreground mt-4">Client introuvable</h2>
 			<p class="text-sm text-muted-foreground mt-2">Ce client n'existe pas ou a été supprimé.</p>
 			<button
-				onclick={() => goto('/admin/clients')}
+				onclick={() => goto(resolve('/admin/clients'))}
 				class="mt-6 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium"
 			>
 				Retour aux clients

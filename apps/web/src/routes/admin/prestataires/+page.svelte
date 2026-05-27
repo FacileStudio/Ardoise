@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Button, Input, Drawer } from '@repo/ui';
 	import { toast, downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -32,7 +34,7 @@
 	let totalPages = $state(1);
 	let currentPage = $state(1);
 	let searchQuery = $state('');
-	let logoUrls: Map<string, string> = $state(new Map());
+	let logoUrls = new SvelteMap<string, string>();
 
 	let showCreateDrawer = $state(false);
 	let showEditDrawer = $state(false);
@@ -87,7 +89,7 @@
 	}
 
 	async function loadLogos() {
-		const newLogoUrls = new Map();
+		const newLogoUrls = new SvelteMap();
 
 		for (const provider of providers) {
 			if (
@@ -134,11 +136,11 @@
 	}
 
 	function openCreateDrawer() {
-		goto('/admin/prestataires/create');
+		goto(resolve('/admin/prestataires/create'));
 	}
 
 	function openEditDrawer(provider: Provider) {
-		goto(`/admin/prestataires/${provider.id}`);
+		goto(resolve(`/admin/prestataires/${provider.id}`));
 	}
 
 	async function handleCreate() {
@@ -289,7 +291,7 @@
 								class="hover:bg-muted transition-colors cursor-pointer"
 								onclick={(e) => {
 									if (!(e.target as HTMLElement).closest('button')) {
-										goto(`/admin/prestataires/${provider.id}`);
+										goto(resolve(`/admin/prestataires/${provider.id}`));
 									}
 								}}
 							>
@@ -365,7 +367,7 @@
 
 			{#if totalPages > 1}
 				<div class="flex justify-center gap-1">
-					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pg}
+					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pg (pg)}
 						<button
 							onclick={() => {
 								currentPage = pg;

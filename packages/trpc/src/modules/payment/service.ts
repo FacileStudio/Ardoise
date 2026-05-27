@@ -8,6 +8,7 @@ import { TRPCError } from '@trpc/server';
 import type { ServerEnv } from '@repo/env';
 import type Stripe from 'stripe';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
+import { logger } from '@repo/logger';
 import type {
   CreatePaymentInput,
   UpdatePaymentInput,
@@ -274,7 +275,7 @@ export const paymentService = {
           invoiceNumber: payment.id,
         });
       } catch (emailError) {
-        console.error('[payment] Failed to send payment notification email:', emailError);
+        logger.error({ err: emailError }, 'Failed to send payment notification email');
       }
     }
 
@@ -362,7 +363,7 @@ export const paymentService = {
         await stripe.client.subscriptions.cancel(payment.stripeSubscriptionId);
       }
     } catch (error) {
-      console.error('[payment] Failed to cancel Stripe resource:', error);
+      logger.error({ err: error }, 'Failed to cancel Stripe resource');
     }
 
     return db.payment.update({
@@ -646,7 +647,7 @@ export const paymentService = {
             payment.id
           );
         } catch (error) {
-          console.error('[webhook] Failed to generate receipt for payment_intent.succeeded:', error);
+          logger.error({ err: error }, 'Failed to generate receipt for payment_intent.succeeded');
         }
         break;
       }
@@ -680,7 +681,7 @@ export const paymentService = {
             payment.id
           );
         } catch (error) {
-          console.error('[webhook] Failed to generate receipt for invoice.payment_succeeded:', error);
+          logger.error({ err: error }, 'Failed to generate receipt for invoice.payment_succeeded');
         }
         break;
       }

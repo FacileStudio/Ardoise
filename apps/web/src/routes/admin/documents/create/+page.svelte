@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -474,7 +475,7 @@
 			URL.revokeObjectURL(url);
 
 			toast.push('Document créé avec succès!', 'success');
-			goto('/admin/documents');
+			goto(resolve('/admin/documents'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create document');
 			const message = err.message || 'Erreur lors de la création';
@@ -577,7 +578,7 @@
 <div class="max-w-3xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/documents')}
+			onclick={() => goto(resolve('/admin/documents'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -776,7 +777,7 @@
 					</div>
 				{:else}
 					<div class="space-y-2">
-						{#each formData.providers as provider, i}
+						{#each formData.providers as provider, i (i)}
 							{@const providerInfo = providers.find(p => p.id === provider.id)}
 							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
 								<div class="flex-1 min-w-0">
@@ -818,7 +819,7 @@
 					</div>
 				{:else}
 					<div class="space-y-2">
-						{#each formData.features as feature, i}
+						{#each formData.features as feature, i (i)}
 							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
 								<div class="flex-1 min-w-0">
 									<div class="text-sm font-medium text-foreground">{feature.title}</div>
@@ -869,7 +870,7 @@
 					</div>
 				{:else}
 					<div class="space-y-2">
-						{#each formData.items as item, i}
+						{#each formData.items as item, i (i)}
 							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
 								<div class="flex-1 min-w-0">
 									<div class="text-sm font-medium text-foreground">{item.description}</div>
@@ -933,7 +934,7 @@
 					</div>
 				{:else}
 					<div class="space-y-2">
-						{#each formData.payment_providers as provider, i}
+						{#each formData.payment_providers as provider, i (i)}
 							{@const providerInfo = providers.find(p => p.id === provider.id)}
 							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
 								<div class="flex-1 min-w-0">
@@ -1006,7 +1007,7 @@
 					</div>
 				{:else}
 					<div class="space-y-2">
-						{#each formData.items as item, i}
+						{#each formData.items as item, i (i)}
 							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
 								<div class="flex-1 min-w-0">
 									<div class="text-sm font-medium text-foreground">{item.description}</div>
@@ -1043,7 +1044,7 @@
 	<div class="flex gap-3 pt-2">
 		<Button
 			intent="secondary"
-			onclick={() => goto('/admin/documents')}
+			onclick={() => goto(resolve('/admin/documents'))}
 			class="flex-1"
 			disabled={generating}
 		>

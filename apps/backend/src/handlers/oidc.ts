@@ -174,7 +174,7 @@ export function createOIDCRoutes(
         if (decoded.redirect && allowedOrigins.some((o) => decoded.redirect.startsWith(o))) {
           successUrl = decoded.redirect;
         }
-      } catch {}
+      } catch { /* invalid state cookie — use default successUrl */ }
 
       const isProduction = env.NODE_ENV === 'production';
       const clearStateCookie = [
@@ -269,8 +269,8 @@ export function createOIDCRoutes(
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role as unknown as UserRole,
-        avatarUrl: (user as any).avatar?.url || null,
-        coverImageUrl: (user as any).coverImage?.url || null,
+        avatarUrl: user.avatar?.url ?? null,
+        coverImageUrl: user.coverImage?.url ?? null,
       };
 
       const accessToken = await authManager.createToken(sessionUser);

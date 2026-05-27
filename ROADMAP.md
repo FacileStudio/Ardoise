@@ -4,10 +4,13 @@
 
 État actuel: ~35% conforme. Production légale **impossible en l'état après le 1er septembre 2026**.
 
+Fonctionnel: paiements, Stripe checkout, webhooks, Typst receipts, emails, portail client, admin, OIDC/SSO, rate limiting. Bloqué: typecheck OOM, lint cassé, 0 tests, pas de CI.
+
 ---
 
 ## Sommaire
 
+0. [Phase 0 — Hygiène dev (BLOQUANT)](#phase-0--hygiène-dev-bloquant)
 1. [Calendrier légal de référence](#calendrier-légal-de-référence)
 2. [Phase 1 — Conformité légale FR 2026 (BLOQUANT)](#phase-1--conformité-légale-fr-2026-bloquant)
 3. [Phase 2 — Robustesse & Production-grade](#phase-2--robustesse--production-grade)
@@ -15,6 +18,54 @@
 5. [Phase 4 — Features produit](#phase-4--features-produit)
 6. [Phase 5 — Stretch / Long terme](#phase-5--stretch--long-terme)
 7. [Références & documentation](#références--documentation)
+
+---
+
+## Phase 0 — Hygiène dev (BLOQUANT)
+
+> Sans CI fiable ni typecheck fonctionnel, impossible de travailler sereinement sur la Phase 1. À traiter avant tout le reste.
+
+### 0.1 Typecheck OOM sur `apps/web`
+
+`svelte-check` crash systématiquement avec `JavaScript heap out of memory` (SIGABRT, exit 137). Les 18 autres workspaces passent — seul le web app est cassé. Cause probable: récursion de types profonde via AutoForm/AutoTable + Prisma Zod generics.
+
+- [ ] Diagnostiquer la source de l'explosion mémoire (isoler les imports lourds)
+- [ ] Fix: augmenter `--max-old-space-size`, ou `skipLibCheck`, ou simplifier les generics `@repo/ui`
+- [ ] Vérifier que le typecheck passe en CI avec les mêmes contraintes mémoire
+
+### 0.2 Lint backend cassé (5 erreurs, 2 warnings)
+
+`apps/backend` lint (`--max-warnings 0`) échoue:
+
+- `src/handlers/oidc.ts` — `btoa`/`atob` non déclarés (globals Bun manquants dans la config ESLint), catch vide, 2× `as any`
+- `src/middleware/rate-limit.middleware.ts` — catch vide
+
+- [ ] Déclarer les globals Bun/Node dans la config ESLint backend
+- [ ] Remplacer les catch vides par un logging minimal ou un commentaire intentionnel
+- [ ] Typer correctement les 2 casts `any` du handler OIDC
+
+### 0.3 Nettoyage `as any` (~25 instances)
+
+Répartis dans: `packages/trpc` (payment, document, admin), `packages/database/src/zod`, `apps/backend/src/handlers/oidc.ts`, `apps/web` (documents page).
+
+- [ ] Audit complet: `rg 'as any' --type ts --type svelte`
+- [ ] Remplacer par des types corrects ou des assertions typées (`satisfies`, narrowing, generics)
+- [ ] Objectif: 0 `as any` hors fichiers générés
+
+### 0.4 Logging structuré
+
+`console.log`/`console.error` dispersés dans `packages/smtp`, `packages/trpc/src/modules/payment/service.ts`, pages client. `@repo/logger` existe mais n'est pas utilisé partout.
+
+- [ ] Remplacer tous les `console.*` dans les packages serveur par `@repo/logger`
+- [ ] Supprimer les `console.log` de debug dans les composants Svelte
+
+### 0.5 Pipeline CI
+
+Workflows GitHub Actions supprimés (`3c8b2d4`). Aucun check automatique sur push/PR actuellement.
+
+- [ ] GitHub Actions: lint + typecheck + build sur push/PR
+- [ ] Gate: 0 erreurs lint, typecheck pass, build pass
+- [ ] Turbo remote caching si pertinent
 
 ---
 
@@ -413,6 +464,7 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 
 ## Priorisation suggérée (ordre d'attaque)
 
+0. **Immédiat:** Phase 0 (typecheck OOM, lint, `as any`, CI) → dev viable
 1. **Q3 2026:** Phase 1.1 (Factur-X), 1.2 (mentions légales), 1.3 (TVA multi-taux) → permet de générer des factures conformes
 2. **Q4 2026:** Phase 1.4 (PAF), 1.5 (archivage), 1.6 (choisir + brancher PA) → permet de les transmettre légalement
 3. **Q1 2027:** Phase 1.7 (cycle de vie), 1.8 (e-reporting), 1.9 (annuaire) → boucle conformité bouclée

@@ -214,6 +214,7 @@
       "name": "@repo/smtp",
       "version": "0.0.0",
       "dependencies": {
+        "@repo/logger": "workspace:*",
         "nodemailer": "^6.9.8",
       },
       "devDependencies": {

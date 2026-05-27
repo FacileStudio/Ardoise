@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		Alert,
 		Badge,
@@ -168,7 +169,7 @@
 					</Button>
 				{/if}
 				<button
-					onclick={() => goto('/admin/clients/create')}
+					onclick={() => goto(resolve('/admin/clients/create'))}
 					class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
 				>
 					<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
@@ -238,7 +239,7 @@
 								class="hover:bg-muted/50 transition-colors cursor-pointer"
 								onclick={(e) => {
 									if (!(e.target as HTMLElement).closest('button')) {
-										goto(`/admin/clients/${client.id}`);
+										goto(resolve(`/admin/clients/${client.id}`));
 									}
 								}}
 							>
@@ -291,7 +292,7 @@
 								<td class="px-4 py-3">
 									<div class="flex items-center justify-end gap-1">
 										<button
-											onclick={() => goto(`/admin/clients/${client.id}`)}
+											onclick={() => goto(resolve(`/admin/clients/${client.id}`))}
 											class="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
 											title={$i18n.t('admin.clients.editClient')}
 										>
@@ -339,7 +340,7 @@
 					<p class="text-sm text-muted-foreground max-w-md">{searchQuery ? $i18n.t('admin.clients.tryAdjustingSearch') : $i18n.t('admin.clients.getStarted')}</p>
 					{#if !searchQuery}
 						<button
-							onclick={() => goto('/admin/clients/create')}
+							onclick={() => goto(resolve('/admin/clients/create'))}
 							class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity mt-2"
 						>
 							<iconify-icon icon="mdi:plus" width="18"></iconify-icon>

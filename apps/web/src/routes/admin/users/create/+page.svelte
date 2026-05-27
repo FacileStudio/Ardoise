@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -68,7 +69,7 @@
 			});
 
 			toast.push('Utilisateur créé avec succès!', 'success');
-			goto('/admin/users');
+			goto(resolve('/admin/users'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create user');
 
@@ -93,7 +94,7 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/users')}
+			onclick={() => goto(resolve('/admin/users'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -216,7 +217,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-2">
-			<Button onclick={() => goto('/admin/users')} intent="secondary" class="flex-1" disabled={submitting}>
+			<Button onclick={() => goto(resolve('/admin/users'))} intent="secondary" class="flex-1" disabled={submitting}>
 				Annuler
 			</Button>
 			<button

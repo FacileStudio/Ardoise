@@ -2,6 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button, Spinner } from '@repo/ui';
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
@@ -105,7 +106,7 @@
 			});
 
 			alert('Demande de signature créée avec succès !');
-			goto('/admin/sign');
+			goto(resolve('/admin/sign'));
 		} catch (err) {
 			logger.error({ err }, 'Failed to create submission');
 			alert('Erreur lors de la création de la demande de signature');
@@ -134,7 +135,7 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/sign')}
+			onclick={() => goto(resolve('/admin/sign'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -329,7 +330,7 @@
 						{/if}
 						Créer la demande
 					</button>
-					<Button type="button" intent="secondary" onclick={() => goto('/admin/sign')}>
+					<Button type="button" intent="secondary" onclick={() => goto(resolve('/admin/sign'))}>
 						Annuler
 					</Button>
 				</div>

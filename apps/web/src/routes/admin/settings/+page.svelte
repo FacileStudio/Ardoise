@@ -213,7 +213,7 @@
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">Facturation — valeurs par défaut</h2>
           <p class="text-sm text-muted-foreground">
-            Délai de paiement, pénalités et indemnité forfaitaire 40 € (Art. L441-10 Code commerce).
+            Délai de paiement, pénalités et indemnité forfaitaire 40 € (Art. L441-10 Code commerce).
           </p>
         </div>
         <div class="grid md:grid-cols-2 gap-4">
@@ -269,7 +269,10 @@
               id="webhook-events"
               bind:value={webhookEventsText}
               rows="5"
-              placeholder={"admin.user.created\nadmin.user.updated\nsettings.updated\nsettings.*"}
+              placeholder="admin.user.created
+admin.user.updated
+settings.updated
+settings.*"
               class="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-foreground outline-none transition focus:border-foreground"
             ></textarea>
             <p class="text-xs text-muted-foreground">Un événement par ligne ou séparé par des virgules. Laisse vide pour tout envoyer.</p>

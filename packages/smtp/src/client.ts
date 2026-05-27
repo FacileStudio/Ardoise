@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
+import { logger } from '@repo/logger';
 
 export interface SMTPConfig {
   host: string;
@@ -64,7 +65,7 @@ export class SMTPClient {
       await this.transporter.verify();
       return true;
     } catch (error) {
-      console.error('SMTP connection verification failed:', error);
+      logger.error({ err: error }, 'SMTP connection verification failed');
       return false;
     }
   }

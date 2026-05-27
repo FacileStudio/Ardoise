@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Spinner, Button, Input, ImageUpload } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -121,7 +122,7 @@
 			submitting = true;
 			await trpc.provider.create.mutate(normalizePayload());
 			toast.push('Prestataire créé avec succès!', 'success');
-			goto('/admin/prestataires');
+			goto(resolve('/admin/prestataires'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create provider');
 			const message = applyServerErrors(err);
@@ -135,7 +136,7 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/prestataires')}
+			onclick={() => goto(resolve('/admin/prestataires'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -255,7 +256,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-2">
-			<Button onclick={() => goto('/admin/prestataires')} intent="secondary" class="flex-1" disabled={submitting}>
+			<Button onclick={() => goto(resolve('/admin/prestataires'))} intent="secondary" class="flex-1" disabled={submitting}>
 				Annuler
 			</Button>
 			<button

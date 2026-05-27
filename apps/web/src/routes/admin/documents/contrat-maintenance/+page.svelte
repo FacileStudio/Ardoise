@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -64,7 +65,7 @@
 			});
 
 			toast.success('Contrat créé avec succès');
-			goto(`/admin/documents/${result.id}`);
+			goto(resolve(`/admin/documents/${result.id}`));
 		} catch (error: any) {
 			logger.error('Failed to create document', error);
 			toast.error('Échec de la création du contrat');
@@ -77,7 +78,7 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/documents')}
+			onclick={() => goto(resolve('/admin/documents'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -121,7 +122,7 @@
 			>
 				{generating ? 'Création...' : 'Créer le contrat'}
 			</button>
-			<Button onclick={() => goto('/admin/documents')} intent="secondary">
+			<Button onclick={() => goto(resolve('/admin/documents'))} intent="secondary">
 				Annuler
 			</Button>
 		</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
@@ -92,7 +93,7 @@
 				credentialEmail: formData.credentialEmail.trim(),
 			});
 			toast.push('Client créé avec succès!', 'success');
-			goto('/admin/clients');
+			goto(resolve('/admin/clients'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create client');
 			const message = err.message || 'Erreur lors de la création';
@@ -120,7 +121,7 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto('/admin/clients')}
+			onclick={() => goto(resolve('/admin/clients'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
@@ -244,7 +245,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-2">
-			<Button onclick={() => goto('/admin/clients')} intent="secondary" class="flex-1" disabled={submitting}>
+			<Button onclick={() => goto(resolve('/admin/clients'))} intent="secondary" class="flex-1" disabled={submitting}>
 				Annuler
 			</Button>
 			<button
