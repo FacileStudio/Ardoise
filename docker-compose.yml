@@ -1,5 +1,5 @@
 services:
-  postgres:
+  ardoise-postgres:
     image: postgres:16-alpine
     container_name: ardoise-postgres
     environment:
@@ -14,7 +14,7 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  ardoise-backend:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
@@ -23,7 +23,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ardoise}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@ardoise-postgres:5432/${POSTGRES_DB:-ardoise}
       ENCRYPTION_SECRET: ${ENCRYPTION_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
@@ -35,11 +35,11 @@ services:
     expose:
       - "3001"
     depends_on:
-      postgres:
+      ardoise-postgres:
         condition: service_healthy
     restart: unless-stopped
 
-  web:
+  ardoise-web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
@@ -54,7 +54,7 @@ services:
     expose:
       - "3000"
     depends_on:
-      - backend
+      - ardoise-backend
     restart: unless-stopped
 
 volumes:

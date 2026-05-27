@@ -1,12 +1,12 @@
 services:
-  postgres:
+  ardoise-postgres:
     ports:
       - "5432:5432"
 
-  backend:
+  ardoise-backend:
     ports:
       - "3001:3001"
 
-  web:
+  ardoise-web:
     ports:
       - "3000:3000"
