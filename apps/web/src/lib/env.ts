@@ -24,11 +24,11 @@ let env: ReturnType<typeof publicEnvSchema.parse>;
 try {
   env = publicEnvSchema.parse(getEnv());
 } catch (error) {
-  console.error('❌ Backoffice environment validation failed:');
+  console.error('Environment validation failed:');
 
   if (error instanceof ZodError) {
     console.error('\nMissing or invalid environment variables:');
-    error.errors.forEach(err => {
+    error.errors.forEach((err) => {
       console.error(`  - ${err.path.join('.')}: ${err.message}`);
     });
   } else if (error instanceof Error) {

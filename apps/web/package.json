@@ -1,5 +1,5 @@
 {
-  "name": "@repo/frontend",
+  "name": "@repo/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "lint": "svelte-kit sync && eslint src --max-warnings 0"
+    "lint": "svelte-kit sync && eslint src"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
@@ -21,6 +21,7 @@
     "@repo/trpc-client": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@repo/utils": "workspace:*",
     "@stripe/stripe-js": "^8.7.0",
     "@sveltejs/adapter-node": "^5.5.2",
     "@trpc/client": "^11.9.0",

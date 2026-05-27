@@ -8,8 +8,8 @@ init:
     cd packages/database && bun run db:generate
     createdb ardoise || echo "Database 'ardoise' already exists"
     cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/ardoise" bun run db:push --accept-data-loss
-    @echo "✅ Project initialized!"
-    @echo "📝 Next: Run 'just create-admin' to create admin user, then 'just dev'"
+    @echo "Project initialized!"
+    @echo "Next: Run 'just create-admin' to create admin user, then 'just dev'"
 
 # Create admin user (admin@example.com / admin123456789) for local dev
 # Note: Backend automatically creates admin on startup from env vars
@@ -28,9 +28,17 @@ push:
 studio:
     cd packages/database && DATABASE_URL="postgresql://user@localhost:5432/ardoise" bun run db:studio
 
-# Run development monorepo
+# Run development monorepo (backend + web)
 dev:
     bun run dev
+
+# Run backend only (port 3001)
+backend:
+    cd apps/backend && bun run dev
+
+# Run web app only (port 3000)
+web:
+    cd apps/web && bun run dev
 
 # Build the monorepo
 build:
@@ -54,7 +62,7 @@ db:
 
 # Reset Railway database (requires RAILWAY_DATABASE_URL env var)
 reset-railway:
-    @echo "⚠️  WARNING: This will delete ALL data in Railway database!"
+    @echo "WARNING: This will delete ALL data in Railway database!"
     @echo "Make sure RAILWAY_DATABASE_URL is set correctly."
     @read -p "Continue? (yes/no): " confirm; \
     if [ "$$confirm" = "yes" ]; then \

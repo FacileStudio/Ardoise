@@ -43,7 +43,9 @@ const storage = new StorageService({
   publicUrl: env.BACKEND_URL,
 });
 
-const cors = corsHandler([env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL]);
+const cors = corsHandler(
+  [env.FRONTEND_URL, env.BACKOFFICE_URL, env.BACKEND_URL].filter(Boolean) as string[]
+);
 
 app.use('*', cors);
 app.use('*', loggerMiddleware);

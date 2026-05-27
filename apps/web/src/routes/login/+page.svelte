@@ -1,11 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { trpc } from '$lib/trpc';
   import authStore from '$lib/auth-store';
   import env from '$lib/env';
+  import { isAdmin, type SessionUser } from '@repo/auth-shared';
   import 'iconify-icon';
 
   const apiUrl = env.API_URL?.replace(/\/trpc\/?$/, '').replace(/\/$/, '') ?? '';
@@ -19,6 +19,10 @@
   let ssoOnly = $state(false);
   let configLoaded = $state(false);
 
+  function redirectForRole(user: SessionUser) {
+    return isAdmin(user) ? '/admin/clients' : '/app';
+  }
+
   onMount(async () => {
     const params = new URLSearchParams(window.location.search);
 
@@ -26,9 +30,9 @@
       oidcLoading = true;
       try {
         const user = await trpc.auth.me.query({});
-        authStore.setAuth(user);
+        authStore.setAuth(user as SessionUser);
         window.history.replaceState({}, '', window.location.pathname);
-        await goto(resolve('/app/profile'));
+        await goto(resolve(redirectForRole(user as SessionUser)));
         return;
       } catch (err) {
         error = "Échec de la récupération du profil après connexion SSO.";
@@ -58,8 +62,8 @@
     error = '';
     try {
       const { user } = await trpc.auth.login.mutate({ email, password });
-      authStore.setAuth(user);
-      await goto(resolve('/app/profile'));
+      authStore.setAuth(user as SessionUser);
+      await goto(resolve(redirectForRole(user as SessionUser)));
     } catch (err) {
       error = err instanceof Error ? err.message : "Échec de l'authentification.";
     } finally {
@@ -100,7 +104,7 @@
           Bienvenue
         </h1>
         <p class="mt-1.5 text-sm text-muted-foreground">
-          Connectez-vous à votre espace client.
+          Connectez-vous à votre espace.
         </p>
       </div>
 

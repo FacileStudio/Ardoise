@@ -29,7 +29,6 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3001}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      BACKOFFICE_URL: ${BACKOFFICE_URL:-http://localhost:3002}
       STORAGE_PATH: /data/uploads
     volumes:
       - uploads_data:/data/uploads
@@ -40,40 +39,20 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  frontend:
+  web:
     build:
       context: .
-      dockerfile: apps/frontend/Dockerfile
+      dockerfile: apps/web/Dockerfile
       network: host
       args:
         VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
-    container_name: ardoise-frontend
+    container_name: ardoise-web
     environment:
       NODE_ENV: production
       PORT: 3000
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
     expose:
       - "3000"
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-  backoffice:
-    build:
-      context: .
-      dockerfile: apps/backoffice/Dockerfile
-      network: host
-      args:
-        VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
-    container_name: ardoise-backoffice
-    environment:
-      NODE_ENV: production
-      PORT: 3002
-      BACKOFFICE_URL: ${BACKOFFICE_URL:-http://localhost:3002}
-      VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
-    expose:
-      - "3002"
     depends_on:
       - backend
     restart: unless-stopped
