@@ -8,6 +8,7 @@ import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
 import trpcHandler from './handlers/trpc';
 import { openApiHandler } from './handlers/openapi';
+import { apiReference } from '@scalar/hono-api-reference';
 import { createStorageDownloadHandler, createStorageUploadHandler } from './handlers/storage';
 import { createOIDCRoutes } from './handlers/oidc';
 import {
@@ -66,6 +67,7 @@ app.options('*', (c) => c.body(null, 204));
 app.post('/webhook', createStripeWebhookHandler(storage, env));
 
 app.get('/openapi.json', openApiHandler);
+app.get('/docs', apiReference({ url: '/openapi.json', pageTitle: 'Ardoise API' }));
 
 app.get('/version', (c) => c.json({ version: VERSION }));
 app.get('/health', createHealthCheckHandler({ storage }));
