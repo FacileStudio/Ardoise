@@ -31,7 +31,7 @@
 			clients = result.data;
 		} catch (error: any) {
 			logger.error('Failed to load clients', error);
-			toast.error('Failed to load clients');
+			toast.push('Failed to load clients', 'error');
 		} finally {
 			loading = false;
 		}

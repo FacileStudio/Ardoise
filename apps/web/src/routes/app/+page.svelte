@@ -175,7 +175,7 @@
                   <Button
                     variant="outline"
                     size="sm"
-                    onclick={() => window.open(payment.receiptUrl, '_blank')}
+                    onclick={() => void window.open(payment.receiptUrl, '_blank')}
                   >
                     <iconify-icon icon="solar:download-linear" width="16"></iconify-icon>
                     Télécharger le reçu

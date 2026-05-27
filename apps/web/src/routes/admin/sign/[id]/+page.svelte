@@ -141,7 +141,7 @@
 					<div class="mt-6 pt-4 border-t border-border">
 						<Button
 							intent="primary"
-							onclick={() => window.open(submission.combined_document_url!, '_blank')}
+							onclick={() => void window.open(submission.combined_document_url!, '_blank')}
 						>
 							<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
 							Télécharger le document signé
@@ -153,7 +153,7 @@
 					<div class="mt-3">
 						<Button
 							intent="secondary"
-							onclick={() => window.open(submission.audit_log_url!, '_blank')}
+							onclick={() => void window.open(submission.audit_log_url!, '_blank')}
 						>
 							<iconify-icon icon="solar:document-text-bold" width="16"></iconify-icon>
 							Voir le journal d'audit

@@ -22,7 +22,7 @@
     let tooltipX = $state(0);
     let tooltipY = $state(0);
 
-    const total = $derived(data.reduce((sum: number, item) => sum + (Number((item as Record<string, unknown>)[value]) || 0), 0));
+    const total = $derived(data.reduce<number>((sum, item) => sum + (Number((item as Record<string, unknown>)[value]) || 0), 0));
 
     const slices = $derived(() => {
         let currentAngle = -Math.PI / 2;

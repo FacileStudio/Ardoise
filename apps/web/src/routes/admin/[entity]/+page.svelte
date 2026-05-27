@@ -191,7 +191,7 @@
       <p class="text-sm text-muted-foreground mt-1">Manage {config?.displayName || entity} entries</p>
     </div>
     {#if permissions.canCreate}
-      <Button intent="primary" onclick={() => (showCreateModal = true)}>
+      <Button intent="primary" onclick={() => { showCreateModal = true; }}>
         <iconify-icon icon="mdi:plus" width="16" class="mr-1"></iconify-icon>
         Create {config?.displayName}
       </Button>

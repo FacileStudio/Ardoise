@@ -418,7 +418,7 @@
 					<div class="rounded-xl border border-border p-6 space-y-4">
 						<h2 class="text-base font-semibold text-foreground">Reçu</h2>
 						<button
-							onclick={() => window.open(payment.receiptUrl, '_blank')}
+							onclick={() => void window.open(payment.receiptUrl, '_blank')}
 							class="w-full px-3 py-2 border border-border rounded-md text-sm font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2"
 						>
 							<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>

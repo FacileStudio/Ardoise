@@ -81,7 +81,7 @@
 				limit: filters.limit,
 				status: filters.status,
 			});
-			payments = result.payments as Payment[];
+			payments = result.payments as unknown as Payment[];
 			total = result.total;
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch payments');
@@ -98,7 +98,7 @@
 	async function fetchStats() {
 		try {
 			const allPayments = await trpc.payment.list.query({ page: 1, limit: 100 });
-			const paymentsData = allPayments.payments as Payment[];
+			const paymentsData = allPayments.payments as unknown as Payment[];
 
 			const now = new Date();
 			const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);

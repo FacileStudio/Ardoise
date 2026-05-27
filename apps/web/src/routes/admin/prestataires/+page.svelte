@@ -72,7 +72,7 @@
 				limit: 20,
 				search: searchQuery || undefined,
 			});
-			providers = result.providers as Provider[];
+			providers = result.providers as unknown as Provider[];
 			totalPages = result.totalPages;
 
 			await loadLogos();
@@ -89,7 +89,7 @@
 	}
 
 	async function loadLogos() {
-		const newLogoUrls = new SvelteMap();
+		const newLogoUrls = new SvelteMap<string, string>();
 
 		for (const provider of providers) {
 			if (
@@ -461,7 +461,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-4">
-			<Button onclick={() => (showCreateDrawer = false)}>Annuler</Button>
+			<Button onclick={() => { showCreateDrawer = false; }}>Annuler</Button>
 			<Button intent="primary" onclick={handleCreate} disabled={submitting}>
 				{#if submitting}
 					<Spinner size="sm" />
@@ -530,7 +530,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-4">
-			<Button onclick={() => (showEditDrawer = false)}>Annuler</Button>
+			<Button onclick={() => { showEditDrawer = false; }}>Annuler</Button>
 			<Button intent="primary" onclick={handleUpdate} disabled={submitting}>
 				{#if submitting}
 					<Spinner size="sm" />

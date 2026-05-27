@@ -1,7 +1,7 @@
 <script lang="ts">
     export let value: string | number = "";
     export let placeholder = "";
-    export let type: "text" | "email" | "password" | "number" | "tel" | "url" = "text";
+    export let type: "text" | "email" | "password" | "number" | "tel" | "url" | "date" = "text";
     export let error = false;
     export let id = "";
     export let name = "";

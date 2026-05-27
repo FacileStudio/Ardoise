@@ -8,4 +8,4 @@ export type UserDetail = RouterOutput['user']['getById'];
 export type UserStats = RouterOutput['user']['getStats'];
 export type SessionUser = RouterOutput['auth']['me'];
 export type ClientDetail = RouterOutput['client']['getById'];
-export type ProviderDetail = RouterOutput['provider']['getById'];
+export type ProviderDetail = RouterOutput['provider']['get'];

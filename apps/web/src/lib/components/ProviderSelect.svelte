@@ -32,7 +32,7 @@
 			providers = result.data;
 		} catch (error: any) {
 			logger.error('Failed to load providers', error);
-			toast.error('Failed to load providers');
+			toast.push('Failed to load providers', 'error');
 		} finally {
 			loading = false;
 		}

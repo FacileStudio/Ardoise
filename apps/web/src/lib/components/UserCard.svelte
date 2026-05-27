@@ -11,7 +11,7 @@
     export let onChangeRole: (id: string, role: string) => void;
     export let onViewDetails: (id: string) => void;
 
-    function getStatusColor(status: string) {
+    function getStatusColor(status: string): 'emerald' | 'slate' {
         switch (status) {
             case 'ACTIVE': return 'emerald';
             case 'PENDING': return 'slate';
@@ -33,7 +33,7 @@
                 </div>
             {/if}
 
-            {#if isAdmin(user)}
+            {#if isAdmin(user as any)}
                 <div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                     <iconify-icon icon="solar:crown-bold" width="12"></iconify-icon>
                 </div>
@@ -43,7 +43,7 @@
         <div class="overflow-hidden flex-1">
             <div class="flex items-center gap-2 mb-0.5">
                 <h3 class="font-medium text-sm text-foreground truncate">{user.firstName}</h3>
-                <Badge variant={getStatusColor(user.status || 'ACTIVE')} class="text-[10px]">
+                <Badge variant={getStatusColor(user.status || 'ACTIVE')}>
                     {user.status || 'ACTIVE'}
                 </Badge>
             </div>
@@ -61,8 +61,8 @@
         </button>
 
         <UserMenu
-            {user}
-            onDelete={() => onDelete(user.id, user.name)}
+            user={{ role: user.role }}
+            onDelete={() => onDelete(user.id, user.firstName)}
             onChangeRole={(role) => onChangeRole(user.id, role)}
         />
     </div>

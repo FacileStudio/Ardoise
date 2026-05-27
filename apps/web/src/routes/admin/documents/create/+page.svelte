@@ -148,7 +148,7 @@
 	async function loadClients() {
 		try {
 			const result = await trpc.client.list.query({ page: 1, limit: 100 });
-			clients = result.clients as Client[];
+			clients = result.clients as unknown as Client[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch clients');
 		}
@@ -157,7 +157,7 @@
 	async function loadProviders() {
 		try {
 			const result = await trpc.provider.list.query({ page: 1, limit: 100 });
-			providers = result.providers as Provider[];
+			providers = result.providers as unknown as Provider[];
 		} catch (err) {
 			logger.error({ err}, 'Failed to fetch providers');
 		}
