@@ -54,6 +54,9 @@ function clearAuthCookies(resHeaders: Headers, env: { NODE_ENV?: string }) {
 
 export const authRouter = router({
   login: publicProcedure.input(loginSchema).mutation(async ({ ctx, input }) => {
+    if (ctx.env.SSO_ONLY) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Password login is disabled. Use SSO to sign in.' });
+    }
     const result = await authService.login(ctx.db, ctx.auth, input, {
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
@@ -63,6 +66,9 @@ export const authRouter = router({
   }),
 
   register: publicProcedure.input(registerSchema).mutation(async ({ ctx, input }) => {
+    if (ctx.env.SSO_ONLY) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Registration is disabled. Use SSO to sign in.' });
+    }
     const result = await authService.register(ctx.db, ctx.auth, input, {
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
