@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { router, protectedProcedure, adminProcedure } from '../../trpc';
+import { TRPCError } from '@trpc/server';
 import userService from './service';
 
 export const userRouter = router({
@@ -18,6 +19,9 @@ export const userRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (ctx.env.SSO_ONLY) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'User creation is disabled in SSO-only mode.' });
+      }
       return userService.createUser(ctx.db, ctx.auth, input);
     }),
 
