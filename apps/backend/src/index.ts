@@ -77,7 +77,7 @@ app.get('/health/ready', createReadinessHandler());
 app.put('/storage/*', createStorageUploadHandler({ authManager, storage, env }));
 app.get('/storage/*', createStorageDownloadHandler({ authManager, storage, env }));
 
-createOIDCRoutes(app, { authManager, env });
+createOIDCRoutes(app, { authManager, env, storage });
 
 app.all(
   '/trpc/*',

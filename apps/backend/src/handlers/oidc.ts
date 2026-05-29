@@ -3,6 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { prisma } from '@repo/database';
 import type { AuthManager } from '@repo/auth';
 import type { ServerEnv } from '@repo/env';
+import type { StorageService } from '@repo/storage';
 import { UserRole } from '@repo/types';
 import { AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME } from '@repo/trpc/context';
 
@@ -93,11 +94,61 @@ function extractCookie(cookieHeader: string | null, name: string): string | null
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+async function fetchOIDCAvatar(
+  pictureUrl: string,
+  userId: string,
+  storage: StorageService
+): Promise<{ url: string; key: string; size: number; mimeType: string } | null> {
+  try {
+    const parsed = new URL(pictureUrl);
+    if (parsed.protocol !== 'https:') return null;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    const res = await fetch(pictureUrl, {
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return null;
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) return null;
+
+    const buffer = await res.arrayBuffer();
+    if (buffer.byteLength > 5 * 1024 * 1024) return null;
+
+    const ext = contentType.includes('png')
+      ? '.png'
+      : contentType.includes('gif')
+        ? '.gif'
+        : contentType.includes('webp')
+          ? '.webp'
+          : '.jpg';
+    const mimeType = contentType.includes('png')
+      ? 'image/png'
+      : contentType.includes('gif')
+        ? 'image/gif'
+        : contentType.includes('webp')
+          ? 'image/webp'
+          : 'image/jpeg';
+    const key = `uploads/${userId}/oidc-avatar-${Date.now()}${ext}`;
+
+    await storage.upload(key, buffer, mimeType);
+    const url = storage.getFileUrl(key);
+    return { url, key, size: buffer.byteLength, mimeType };
+  } catch {
+    return null;
+  }
+}
+
 export function createOIDCRoutes(
   app: Hono,
-  config: { authManager: AuthManager; env: ServerEnv }
+  config: { authManager: AuthManager; env: ServerEnv; storage: StorageService }
 ) {
-  const { authManager, env } = config;
+  const { authManager, env, storage } = config;
 
   app.get('/auth/config', (c) => {
     return c.json({
@@ -218,6 +269,7 @@ export function createOIDCRoutes(
       });
 
       const email = payload.email as string | undefined;
+      const picture = payload.picture as string | undefined;
       if (!email) {
         return c.redirect(`${successUrl}?error=oidc_failed`);
       }
@@ -261,6 +313,22 @@ export function createOIDCRoutes(
             coverImage: { select: { url: true } },
           },
         });
+      }
+
+      if (picture && !user.avatar) {
+        const avatarData = await fetchOIDCAvatar(picture, user.id, storage);
+        if (avatarData) {
+          await prisma.media.create({
+            data: {
+              url: avatarData.url,
+              key: avatarData.key,
+              mimeType: avatarData.mimeType,
+              size: avatarData.size,
+              avatarUserId: user.id,
+            },
+          });
+          user = { ...user, avatar: { url: avatarData.url } };
+        }
       }
 
       const sessionUser = {
