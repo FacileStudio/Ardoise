@@ -30,6 +30,8 @@ model User {
   client         Client?
   documents      Document[]
 
+  profileSyncedAt DateTime?
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 

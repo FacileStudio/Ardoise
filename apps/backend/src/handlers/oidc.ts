@@ -10,6 +10,7 @@ import { AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME } from '@repo/trpc/context';
 interface OIDCDiscovery {
   authorization_endpoint: string;
   token_endpoint: string;
+  userinfo_endpoint: string;
   jwks_uri: string;
 }
 
@@ -190,7 +191,7 @@ export function createOIDCRoutes(
       response_type: 'code',
       client_id: oidc.clientId,
       redirect_uri: oidc.redirectUrl,
-      scope: 'openid email profile',
+      scope: 'openid email profile offline_access',
       state,
     });
 
@@ -258,7 +259,12 @@ export function createOIDCRoutes(
         return c.redirect(`${successUrl}?error=oidc_failed`);
       }
 
-      const tokenData = (await tokenRes.json()) as { id_token?: string };
+      const tokenData = (await tokenRes.json()) as {
+        id_token?: string;
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+      };
       if (!tokenData.id_token) {
         return c.redirect(`${successUrl}?error=oidc_failed`);
       }
@@ -359,12 +365,182 @@ export function createOIDCRoutes(
         },
       });
 
+      if (tokenData.access_token) {
+        const expiresAt = tokenData.expires_in
+          ? new Date(Date.now() + tokenData.expires_in * 1000)
+          : null;
+        await prisma.account.upsert({
+          where: {
+            providerId_accountId: {
+              providerId: 'oidc',
+              accountId: email,
+            },
+          },
+          update: {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token ?? null,
+            accessTokenExpiresAt: expiresAt,
+            idToken: tokenData.id_token,
+          },
+          create: {
+            id: crypto.randomUUID(),
+            userId: user.id,
+            providerId: 'oidc',
+            accountId: email,
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token ?? null,
+            accessTokenExpiresAt: expiresAt,
+            idToken: tokenData.id_token,
+          },
+        });
+      }
+
       setAuthCookiesOnResponse(c, accessToken, refresh.token, env);
 
       const sep = successUrl.includes('?') ? '&' : '?';
       return c.redirect(`${successUrl}${sep}oidc=success`);
     } catch {
       return c.redirect(`${successUrl}?error=oidc_failed`);
+    }
+  });
+
+  app.post('/auth/sync-profile', async (c) => {
+    try {
+      const oidc = getOIDCConfig(env);
+      if (!oidc) return c.json({ synced: false });
+
+      const cookieHeader = c.req.header('cookie') ?? null;
+      const token = extractCookie(cookieHeader, AUTH_COOKIE_NAME);
+      if (!token) return c.json({ synced: false }, 401);
+
+      const tokenUser = await authManager.verifyToken(token);
+      if (!tokenUser) return c.json({ synced: false }, 401);
+
+      const user = await prisma.user.findUnique({
+        where: { id: tokenUser.id },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          profileSyncedAt: true,
+          avatar: { select: { id: true, url: true, key: true } },
+        },
+      });
+      if (!user) return c.json({ synced: false }, 401);
+
+      if (user.profileSyncedAt && Date.now() - user.profileSyncedAt.getTime() < 5 * 60 * 1000) {
+        return c.json({ synced: false, reason: 'rate_limited' });
+      }
+
+      const account = await prisma.account.findUnique({
+        where: {
+          providerId_accountId: {
+            providerId: 'oidc',
+            accountId: user.email,
+          },
+        },
+      });
+      if (!account?.accessToken) return c.json({ synced: false });
+
+      const discovery = await fetchDiscovery(oidc.issuer);
+
+      let accessToken = account.accessToken;
+      let userInfoRes = await fetch(discovery.userinfo_endpoint, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (userInfoRes.status === 401 && account.refreshToken) {
+        const refreshRes = await fetch(discovery.token_endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: account.refreshToken,
+            client_id: oidc.clientId,
+            client_secret: oidc.clientSecret,
+          }).toString(),
+        });
+
+        if (!refreshRes.ok) return c.json({ synced: false });
+
+        const refreshData = (await refreshRes.json()) as {
+          access_token: string;
+          refresh_token?: string;
+          expires_in?: number;
+        };
+
+        accessToken = refreshData.access_token;
+        const expiresAt = refreshData.expires_in
+          ? new Date(Date.now() + refreshData.expires_in * 1000)
+          : null;
+
+        await prisma.account.update({
+          where: { id: account.id },
+          data: {
+            accessToken: refreshData.access_token,
+            refreshToken: refreshData.refresh_token ?? account.refreshToken,
+            accessTokenExpiresAt: expiresAt,
+          },
+        });
+
+        userInfoRes = await fetch(discovery.userinfo_endpoint, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      }
+
+      if (!userInfoRes.ok) return c.json({ synced: false });
+
+      const userInfo = (await userInfoRes.json()) as {
+        name?: string;
+        given_name?: string;
+        family_name?: string;
+        picture?: string;
+      };
+
+      const firstName = userInfo.given_name || userInfo.name || user.firstName;
+      const lastName = userInfo.family_name || user.lastName;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          firstName,
+          lastName,
+          profileSyncedAt: new Date(),
+        },
+      });
+
+      if (userInfo.picture) {
+        const avatarData = await fetchOIDCAvatar(userInfo.picture, user.id, storage);
+        if (avatarData) {
+          if (user.avatar) {
+            await storage.delete(user.avatar.key).catch(() => {});
+            await prisma.media.update({
+              where: { id: user.avatar.id },
+              data: {
+                url: avatarData.url,
+                key: avatarData.key,
+                mimeType: avatarData.mimeType,
+                size: avatarData.size,
+              },
+            });
+          } else {
+            await prisma.media.create({
+              data: {
+                url: avatarData.url,
+                key: avatarData.key,
+                mimeType: avatarData.mimeType,
+                size: avatarData.size,
+                avatarUserId: user.id,
+              },
+            });
+          }
+        }
+      }
+
+      return c.json({ synced: true });
+    } catch {
+      return c.json({ synced: false });
     }
   });
 }
