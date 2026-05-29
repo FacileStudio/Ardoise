@@ -1,13 +1,26 @@
 <script lang="ts">
   import authStore from '$lib/auth-store';
   import { trpc } from '$lib/trpc';
-  import { Button, Input, Spinner, Alert, LanguageSwitcher } from '@repo/ui';
+  import { Button, Input, Spinner, Alert, LanguageSwitcher, Avatar } from '@repo/ui';
   import 'iconify-icon';
   import type { SessionUser } from '@repo/auth-shared';
+  import { onMount } from 'svelte';
 
   let saving = $state(false);
   let message = $state<{ type: 'success' | 'error'; text: string } | null>(null);
   let showSavedMessage = $state(false);
+  let avatarUrl = $state<string | null>($authStore.user?.avatarUrl ?? null);
+  let avatarFromSSO = $state(false);
+
+  onMount(async () => {
+    try {
+      const profile = await trpc.user.me.query();
+      if (profile.avatar) {
+        avatarUrl = profile.avatar.url;
+        avatarFromSSO = profile.avatar.key.includes('oidc-avatar');
+      }
+    } catch {}
+  });
 
   let formData = $state({
     firstName: $authStore.user?.firstName || '',
@@ -92,6 +105,24 @@
       {message.text}
     </Alert>
   {/if}
+
+  <div class="flex items-center gap-4">
+    <Avatar
+      src={avatarUrl}
+      alt={formData.firstName || 'Avatar'}
+      initials={formData.firstName?.[0] || 'U'}
+      size="xl"
+    />
+    <div>
+      <p class="text-base font-semibold text-foreground">
+        {formData.firstName} {formData.lastName}
+      </p>
+      <p class="text-sm text-muted-foreground">{formData.email}</p>
+      {#if avatarFromSSO}
+        <p class="text-xs text-muted-foreground mt-1">Synchronisé depuis le SSO</p>
+      {/if}
+    </div>
+  </div>
 
   <div class="rounded-xl border border-border p-6 space-y-6">
     <div>
