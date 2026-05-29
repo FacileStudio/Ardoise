@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun --external=* --minify",
-    "start": "bun run dist/index.js",
+    "start": "cd ../../packages/database && bunx prisma migrate deploy && cd ../../apps/backend && bun run dist/index.js",
     "typecheck": "tsc --noEmit",
     "check-env": "bun ./src/lib/env.ts",
     "lint": "eslint src --max-warnings 0"

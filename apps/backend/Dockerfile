@@ -98,4 +98,4 @@ USER backend
 
 EXPOSE 3001
 
-CMD ["/bin/sh", "-lc", "cd /app/packages/database && (bunx prisma migrate resolve --rolled-back 20260302151300_fix_settings_format_defaults || true) && bun run db:migrate:deploy && cd /app && bun run apps/backend/src/index.ts"]
+CMD ["/bin/sh", "-lc", "cd /app/packages/database && bun run db:migrate:deploy && cd /app && bun run apps/backend/src/index.ts"]
