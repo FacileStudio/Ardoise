@@ -41,9 +41,17 @@
 
     <div class="mt-auto border-t border-border px-3 py-4 space-y-3">
       <div class="flex items-center gap-3 px-2">
-        <div class="w-8 h-8 rounded-full bg-foreground flex items-center justify-center text-background text-xs font-medium flex-shrink-0">
-          {userInitials}
-        </div>
+        {#if $authStore.user?.avatarUrl}
+          <img
+            src={$authStore.user.avatarUrl}
+            alt={userName}
+            class="w-8 h-8 rounded-full object-cover flex-shrink-0"
+          />
+        {:else}
+          <div class="w-8 h-8 rounded-full bg-foreground flex items-center justify-center text-background text-xs font-medium flex-shrink-0">
+            {userInitials}
+          </div>
+        {/if}
         <div class="overflow-hidden flex-1">
           <p class="text-sm font-medium text-foreground truncate">
             {userName}

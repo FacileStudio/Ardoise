@@ -53,9 +53,17 @@
             <div
                 class="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/40 p-2.5"
             >
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-sm font-semibold text-background">
-                    {getInitials($authStore.user?.firstName)}
-                </div>
+                {#if $authStore.user?.avatarUrl}
+                    <img
+                        src={$authStore.user.avatarUrl}
+                        alt={$authStore.user?.firstName || 'Admin'}
+                        class="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
+                    />
+                {:else}
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-sm font-semibold text-background">
+                        {getInitials($authStore.user?.firstName)}
+                    </div>
+                {/if}
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium">{$authStore.user?.firstName || 'Admin'}</p>
                     <p class="truncate text-xs text-muted-foreground">{$i18n.t('admin.sidebar.admin')}</p>
