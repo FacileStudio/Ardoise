@@ -2,21 +2,23 @@
     import authStore from '$lib/auth-store';
     import { page } from '$app/stores';
     import { resolve } from '$app/paths';
-    import { Button } from '@repo/ui';
     import { i18n } from '@repo/i18n/svelte';
     import SpaceSwitcher from '$lib/components/SpaceSwitcher.svelte';
+    import MobileNav from '$lib/components/MobileNav.svelte';
     import 'iconify-icon';
 
-    const menuItems = [
-        { label: $i18n.t('nav.clients'), icon: 'solar:users-group-rounded-linear', href: '/admin/clients' },
+    const navLinks = [
+        { label: $i18n.t('nav.documents'), icon: 'solar:document-linear', href: '/admin/documents' },
+        { label: $i18n.t('nav.clients'), icon: 'solar:users-group-two-rounded-linear', href: '/admin/clients' },
         { label: $i18n.t('nav.payments'), icon: 'solar:wallet-linear', href: '/admin/payments' },
-        { label: $i18n.t('nav.documents'), icon: 'solar:document-text-linear', href: '/admin/documents' },
-        { label: 'Prestataires', icon: 'solar:buildings-2-linear', href: '/admin/prestataires' },
-        { label: $i18n.t('nav.statistics'), icon: 'solar:chart-linear', href: '/admin/statistics' },
-        { label: $i18n.t('nav.users'), icon: 'solar:user-linear', href: '/admin/users' },
-        { label: $i18n.t('nav.spaces'), icon: 'solar:planet-linear', href: '/admin/spaces' },
+        { label: 'Prestataires', icon: 'solar:buildings-linear', href: '/admin/prestataires' },
+        { label: $i18n.t('nav.spaces'), icon: 'solar:users-group-rounded-linear', href: '/admin/spaces' },
         { label: 'Paramètres', icon: 'solar:settings-linear', href: '/admin/settings' },
     ];
+
+    function isActive(href: string) {
+        return $page.url.pathname === href || $page.url.pathname.startsWith(href + '/');
+    }
 
     function getInitials(name: string | undefined) {
         if (!name) return 'A';
@@ -27,26 +29,26 @@
     }
 </script>
 
-<div class="flex h-screen w-full overflow-hidden">
-    <aside class="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-background">
+<div class="flex h-[100dvh] w-full overflow-hidden">
+    <aside class="sticky top-0 hidden h-[100dvh] w-60 flex-col border-r bg-background md:flex">
         <div class="flex items-center gap-3 px-5 pt-8 pb-4">
-            <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-foreground"></iconify-icon>
+            <iconify-icon icon="solar:document-bold-duotone" width="28" class="text-foreground"></iconify-icon>
             <span class="text-2xl font-bold font-heading tracking-tight">Ardoise</span>
         </div>
 
         <SpaceSwitcher />
 
         <nav class="flex flex-1 flex-col gap-1 px-3">
-            {#each menuItems as item (item.href)}
-                {@const active = $page.url.pathname === item.href}
+            {#each navLinks as link (link.href)}
+                {@const active = isActive(link.href)}
                 <a
-                    href={resolve(item.href as any)}
+                    href={resolve(link.href as any)}
                     class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active
                         ? 'bg-foreground text-background font-medium'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
                 >
-                    <iconify-icon icon={item.icon} width="16" class="shrink-0"></iconify-icon>
-                    {item.label}
+                    <iconify-icon icon={link.icon} width="16" class="shrink-0"></iconify-icon>
+                    {link.label}
                 </a>
             {/each}
         </nav>
@@ -54,17 +56,15 @@
         <div class="h-px bg-border"></div>
 
         <div class="flex flex-col gap-2 p-4">
-            <div
-                class="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/40 p-2.5"
-            >
+            <div class="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/40 p-2.5">
                 {#if $authStore.user?.avatarUrl}
                     <img
                         src={$authStore.user.avatarUrl}
                         alt={$authStore.user?.firstName || 'Admin'}
-                        class="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
+                        class="h-9 w-9 shrink-0 rounded-full border border-border object-cover"
                     />
                 {:else}
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-sm font-semibold text-background">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-xs font-semibold text-background">
                         {getInitials($authStore.user?.firstName)}
                     </div>
                 {/if}
@@ -73,19 +73,19 @@
                     <p class="truncate text-xs text-muted-foreground">{$i18n.t('admin.sidebar.admin')}</p>
                 </div>
             </div>
-            <Button
-                intent="ghost"
-                size="sm"
+            <button
                 onclick={() => authStore.logout()}
-                class="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-destructive hover:bg-destructive/10"
             >
                 <iconify-icon icon="solar:logout-2-linear" width="16"></iconify-icon>
                 {$i18n.t('admin.sidebar.logout')}
-            </Button>
+            </button>
         </div>
     </aside>
 
-    <main class="flex-1 overflow-auto">
+    <main class="flex-1 overflow-auto pb-24 md:pb-0">
         <slot />
     </main>
+
+    <MobileNav />
 </div>
