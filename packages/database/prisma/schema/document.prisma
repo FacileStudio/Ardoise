@@ -73,6 +73,9 @@ model Document {
   createdBy        String
   createdByUser    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
+  spaceId          String?
+  space            Space?   @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
   paymentAttachments PaymentDocument[]
 
   @@index([createdBy])
@@ -80,4 +83,5 @@ model Document {
   @@index([createdAt])
   @@index([providerId])
   @@index([clientName])
+  @@index([spaceId])
 }

@@ -22,6 +22,9 @@ model Payment {
   clientId String
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
   amount Decimal @db.Decimal(10, 2)
   stripeFee Decimal @db.Decimal(10, 2) @default(0)
   totalWithFees Decimal @db.Decimal(10, 2)
@@ -54,6 +57,7 @@ model Payment {
   @@index([dueDate])
   @@index([collectionMethod])
   @@index([stripePaymentIntentId])
+  @@index([spaceId])
 }
 
 model PaymentDocument {

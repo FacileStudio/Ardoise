@@ -206,13 +206,17 @@ export const documentRouter = router({
         pageSize: z.number().min(1).max(100).default(20),
         search: z.string().optional(),
         type: z.string().optional(),
+        spaceId: z.string().optional(),
       })
     )
     .query(async ({ input, ctx }) => {
-      const { page, pageSize, search, type } = input;
+      const { page, pageSize, search, type, spaceId } = input;
       const skip = (page - 1) * pageSize;
 
       const where: any = {};
+      if (spaceId !== undefined) {
+        where.spaceId = spaceId || null;
+      }
       if (search) {
         where.OR = [
           { name: { contains: search, mode: 'insensitive' } },

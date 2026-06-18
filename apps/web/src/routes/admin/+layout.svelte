@@ -4,6 +4,7 @@
     import { resolve } from '$app/paths';
     import { Button } from '@repo/ui';
     import { i18n } from '@repo/i18n/svelte';
+    import SpaceSwitcher from '$lib/components/SpaceSwitcher.svelte';
     import 'iconify-icon';
 
     const menuItems = [
@@ -13,6 +14,7 @@
         { label: 'Prestataires', icon: 'solar:buildings-2-linear', href: '/admin/prestataires' },
         { label: $i18n.t('nav.statistics'), icon: 'solar:chart-linear', href: '/admin/statistics' },
         { label: $i18n.t('nav.users'), icon: 'solar:user-linear', href: '/admin/users' },
+        { label: $i18n.t('nav.spaces'), icon: 'solar:planet-linear', href: '/admin/spaces' },
         { label: 'Paramètres', icon: 'solar:settings-linear', href: '/admin/settings' },
     ];
 
@@ -27,9 +29,13 @@
 
 <div class="flex h-screen w-full overflow-hidden">
     <aside class="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-background">
-        <div class="flex items-center gap-3 px-5 pt-8 pb-6">
+        <div class="flex items-center gap-3 px-5 pt-8 pb-4">
             <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-foreground"></iconify-icon>
             <span class="text-2xl font-bold font-heading tracking-tight">Ardoise</span>
+        </div>
+
+        <div class="px-3 pb-4">
+            <SpaceSwitcher />
         </div>
 
         <nav class="flex flex-1 flex-col gap-1 px-3">

@@ -29,6 +29,7 @@ model User {
 
   client         Client?
   documents      Document[]
+  spaceMembers   SpaceMember[]
 
   profileSyncedAt DateTime?
 

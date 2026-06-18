@@ -17,6 +17,9 @@ model Client {
 
   stripeCustomerId String? @unique
 
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
   payments Payment[]
 
   createdAt DateTime @default(now())
@@ -25,4 +28,5 @@ model Client {
   @@index([userId])
   @@index([contactEmail])
   @@index([stripeCustomerId])
+  @@index([spaceId])
 }

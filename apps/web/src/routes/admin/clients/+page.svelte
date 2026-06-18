@@ -13,6 +13,7 @@
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	let pageLoading = $state(true);
@@ -45,7 +46,8 @@
 			const response = await trpc.client.list.query({
 				page: currentPage,
 				limit,
-				search: searchQuery || undefined
+				search: searchQuery || undefined,
+				spaceId: spaceContext.spaceId,
 			});
 			clients = response.clients;
 			total = response.total;

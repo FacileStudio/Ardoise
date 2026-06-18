@@ -7,6 +7,7 @@
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
@@ -80,6 +81,7 @@
 				page: filters.page,
 				limit: filters.limit,
 				status: filters.status,
+				spaceId: spaceContext.spaceId,
 			});
 			payments = result.payments as unknown as Payment[];
 			total = result.total;

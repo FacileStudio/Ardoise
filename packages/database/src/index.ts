@@ -21,6 +21,6 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
 }
 
 export type * from '@prisma/client';
-export { UserRole, Prisma } from '@prisma/client';
+export { UserRole, SpaceRole, Prisma } from '@prisma/client';
 export type InputJsonValue = Prisma.InputJsonValue;
 export type JsonValue = Prisma.JsonValue;

@@ -6,6 +6,7 @@
 	import { Spinner, Button } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	type Document = {
@@ -60,6 +61,7 @@
 				pageSize: 20,
 				search: searchQuery || undefined,
 				type: selectedType || undefined,
+				spaceId: spaceContext.spaceId,
 			});
 			documents = result.items as unknown as Document[];
 			totalPages = result.totalPages;

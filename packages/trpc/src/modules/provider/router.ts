@@ -37,20 +37,25 @@ export const providerRouter = router({
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(100).default(20),
         search: z.string().optional(),
+        spaceId: z.string().optional(),
       })
     )
     .query(async ({ input, ctx }) => {
-      const { page, limit, search } = input;
+      const { page, limit, search, spaceId } = input;
       const skip = (page - 1) * limit;
 
-      const where = search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' as const } },
-              { siret: { contains: search, mode: 'insensitive' as const } },
-            ],
-          }
-        : {};
+      const where: any = {};
+
+      if (spaceId !== undefined) {
+        where.spaceId = spaceId || null;
+      }
+
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { siret: { contains: search, mode: 'insensitive' as const } },
+        ];
+      }
 
       const [providers, total] = await Promise.all([
         ctx.db.provider.findMany({

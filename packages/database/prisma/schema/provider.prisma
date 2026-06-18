@@ -24,10 +24,14 @@ model Provider {
 
   tvaRate Decimal @default(20) @db.Decimal(5, 2)
 
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
   documents Document[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
+  @@index([spaceId])
 }

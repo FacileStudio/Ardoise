@@ -7,6 +7,7 @@
 	import { Spinner, Button, Input, Drawer } from '@repo/ui';
 	import { toast, downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	type Provider = {
@@ -71,6 +72,7 @@
 				page: currentPage,
 				limit: 20,
 				search: searchQuery || undefined,
+				spaceId: spaceContext.spaceId,
 			});
 			providers = result.providers as unknown as Provider[];
 			totalPages = result.totalPages;

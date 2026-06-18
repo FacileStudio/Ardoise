@@ -10,9 +10,17 @@ export type {
   Settings,
   Document,
   Provider,
+  Space,
+  SpaceMember,
 } from '@repo/database';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
   CLIENT = 'CLIENT',
+}
+
+export enum SpaceRole {
+  OWNER = 'OWNER',
+  ADMIN = 'ADMIN',
+  MEMBER = 'MEMBER',
 }

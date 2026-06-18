@@ -17,12 +17,13 @@ import type {
 
 export const paymentService = {
   listPayments: async (db: PrismaClient, params: ListPaymentsInput) => {
-    const { page, limit, status, clientId } = params;
+    const { page, limit, status, clientId, spaceId } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.PaymentWhereInput = {};
     if (status) where.status = status;
     if (clientId) where.clientId = clientId;
+    if (spaceId !== undefined) where.spaceId = spaceId || null;
 
     const [payments, total] = await db.$transaction([
       db.payment.findMany({

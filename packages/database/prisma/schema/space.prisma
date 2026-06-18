@@ -1,0 +1,32 @@
+enum SpaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Space {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Text
+  name        String        @db.Text
+  description String?       @db.Text
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @default(now()) @updatedAt @db.Timestamptz(3)
+  members     SpaceMember[]
+  clients     Client[]
+  documents   Document[]
+  payments    Payment[]
+  providers   Provider[]
+}
+
+model SpaceMember {
+  id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Text
+  spaceId  String    @db.Text
+  userId   String    @db.Text
+  role     SpaceRole @default(MEMBER)
+  joinedAt DateTime  @default(now()) @db.Timestamptz(3)
+  space    Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, userId])
+  @@index([spaceId])
+  @@index([userId])
+}

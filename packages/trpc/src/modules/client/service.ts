@@ -10,10 +10,14 @@ function normalizeOptional(value: string | undefined) {
 
 export const clientService = {
   listClients: async (db: PrismaClient, params: ListClientsInput) => {
-    const { page, limit, search } = params;
+    const { page, limit, search, spaceId } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {};
+
+    if (spaceId !== undefined) {
+      where.spaceId = spaceId || null;
+    }
 
     if (search) {
       where.OR = [
