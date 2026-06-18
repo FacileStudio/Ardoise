@@ -21,37 +21,42 @@
         }
     });
 
-    function handleSelect(space: any) {
+    function selectSpace(space: any) {
         spaceContext.switchToSpace(space.id, space.name, space.role);
         open = false;
     }
 
-    function handlePersonal() {
+    function selectPersonal() {
         spaceContext.switchToPersonal();
         open = false;
     }
 
     function handleClickOutside(e: MouseEvent) {
         const target = e.target as HTMLElement;
-        if (!target.closest('[data-space-switcher]')) {
+        if (!target.closest('.space-switcher')) {
             open = false;
         }
     }
+
+    $effect(() => {
+        if (open) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    });
 </script>
 
-<svelte:window onclick={handleClickOutside} />
-
-<div class="relative" data-space-switcher>
+<div class="space-switcher relative px-3 pb-2">
     <button
-        onclick={() => { open = !open; }}
-        class="flex w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60"
+        class="flex w-full items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60"
+        onclick={() => open = !open}
     >
         <iconify-icon
-            icon={spaceContext.isPersonal ? 'solar:user-circle-linear' : 'solar:users-group-rounded-linear'}
-            width="16"
+            icon={spaceContext.isPersonal ? 'solar:user-circle-bold-duotone' : 'solar:users-group-rounded-bold-duotone'}
+            width="18"
             class="shrink-0 text-muted-foreground"
         ></iconify-icon>
-        <span class="flex-1 truncate font-medium">
+        <span class="min-w-0 flex-1 truncate font-medium">
             {spaceContext.isPersonal ? $i18n.t('spaces.personal') : spaceContext.spaceName}
         </span>
         <iconify-icon
@@ -62,57 +67,37 @@
     </button>
 
     {#if open}
-        <div class="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border bg-background shadow-lg">
-            <div class="p-1">
+        <div class="absolute left-3 right-3 z-50 mt-1 overflow-hidden rounded-lg border border-border bg-background shadow-lg">
+            <div class="max-h-64 overflow-auto p-1">
                 <button
-                    onclick={handlePersonal}
-                    class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors {spaceContext.isPersonal
-                        ? 'bg-foreground text-background font-medium'
-                        : 'text-foreground hover:bg-muted'}"
+                    class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors {spaceContext.isPersonal ? 'bg-foreground text-background' : 'text-foreground hover:bg-muted'}"
+                    onclick={selectPersonal}
                 >
-                    <iconify-icon icon="solar:user-circle-linear" width="16" class="shrink-0"></iconify-icon>
-                    <span class="flex-1 truncate">{$i18n.t('spaces.personal')}</span>
-                    {#if spaceContext.isPersonal}
-                        <iconify-icon icon="solar:check-circle-bold" width="14" class="shrink-0"></iconify-icon>
-                    {/if}
+                    <iconify-icon icon="solar:user-circle-bold-duotone" width="16" class="shrink-0"></iconify-icon>
+                    {$i18n.t('spaces.personal')}
                 </button>
-
-                {#if spaces.length > 0}
-                    <div class="my-1 h-px bg-border"></div>
-                {/if}
 
                 {#each spaces as space (space.id)}
                     <button
-                        onclick={() => handleSelect(space)}
-                        class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors {spaceContext.spaceId === space.id
-                            ? 'bg-foreground text-background font-medium'
-                            : 'text-foreground hover:bg-muted'}"
+                        class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors {spaceContext.spaceId === space.id ? 'bg-foreground text-background' : 'text-foreground hover:bg-muted'}"
+                        onclick={() => selectSpace(space)}
                     >
-                        <iconify-icon icon="solar:users-group-rounded-linear" width="16" class="shrink-0"></iconify-icon>
-                        <span class="flex-1 truncate">{space.name}</span>
-                        {#if spaceContext.spaceId === space.id}
-                            <iconify-icon icon="solar:check-circle-bold" width="14" class="shrink-0"></iconify-icon>
-                        {/if}
+                        <iconify-icon icon="solar:users-group-rounded-bold-duotone" width="16" class="shrink-0"></iconify-icon>
+                        <span class="min-w-0 flex-1 truncate">{space.name}</span>
+                        <span class="shrink-0 text-xs opacity-60">{$i18n.t(`spaces.roles.${space.role}`)}</span>
                     </button>
                 {/each}
+            </div>
 
-                <div class="my-1 h-px bg-border"></div>
-
-                <button
-                    onclick={() => { open = false; goto(resolve('/admin/spaces')); }}
-                    class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            <div class="border-t border-border p-1">
+                <a
+                    href={resolve('/admin/spaces')}
+                    class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    onclick={() => open = false}
                 >
                     <iconify-icon icon="solar:settings-linear" width="16" class="shrink-0"></iconify-icon>
-                    <span>{$i18n.t('spaces.title')}</span>
-                </button>
-
-                <button
-                    onclick={() => { open = false; goto(resolve('/admin/spaces/new')); }}
-                    class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                    <iconify-icon icon="mdi:plus" width="16" class="shrink-0"></iconify-icon>
-                    <span>{$i18n.t('spaces.createSpace')}</span>
-                </button>
+                    {$i18n.t('spaces.title')}
+                </a>
             </div>
         </div>
     {/if}

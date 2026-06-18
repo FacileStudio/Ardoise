@@ -6,7 +6,7 @@
     import { resolve } from '$app/paths';
     import { i18n } from '@repo/i18n/svelte';
     import { logger } from '@repo/logger';
-    import { Alert, ConfirmDialog } from '@repo/ui';
+    import { ConfirmDialog } from '@repo/ui';
     import authStore from '$lib/auth-store';
     import 'iconify-icon';
 
@@ -15,10 +15,10 @@
     let loading = $state(true);
     let error = $state('');
 
-    let showAddForm = $state(false);
-    let addEmail = $state('');
+    let addUserId = $state('');
     let addRole = $state('MEMBER');
-    let addLoading = $state(false);
+    let addError = $state('');
+    let adding = $state(false);
 
     let confirmRemove: any = $state(null);
     let showRemoveDialog = $state(false);
@@ -52,28 +52,29 @@
     const canManage = $derived(space?.role === 'OWNER' || space?.role === 'ADMIN');
     const isOwner = $derived(space?.role === 'OWNER');
 
-    async function handleAddMember(e: Event) {
-        e.preventDefault();
-        if (!addEmail.trim()) return;
+    async function addMember() {
+        if (!addUserId.trim()) {
+            addError = $i18n.t('spaces.emailPlaceholder');
+            return;
+        }
 
-        addLoading = true;
-        error = '';
+        adding = true;
+        addError = '';
         try {
             await trpc.space.addMember.mutate({
                 spaceId,
-                email: addEmail.trim(),
+                email: addUserId.trim(),
                 role: addRole as any,
             });
-            addEmail = '';
+            addUserId = '';
             addRole = 'MEMBER';
-            showAddForm = false;
-            await fetchData();
+            const membersData = await trpc.space.getMembers.query({ id: spaceId });
+            members = membersData;
         } catch (err: any) {
             logger.error({ err }, 'Failed to add member');
-            error = err?.message || $i18n.t('common.actions.error');
-            setTimeout(() => { error = ''; }, 5000);
+            addError = err?.message || $i18n.t('common.actions.error');
         } finally {
-            addLoading = false;
+            adding = false;
         }
     }
 
@@ -99,7 +100,7 @@
         }
     }
 
-    async function handleRoleChange(userId: string, newRole: string) {
+    async function updateRole(userId: string, newRole: string) {
         try {
             await trpc.space.updateMemberRole.mutate({
                 spaceId,
@@ -129,159 +130,155 @@
         }
     }
 
-    function getRoleBadgeClass(role: string) {
+    function roleBadgeClass(role: string): string {
         switch (role) {
-            case 'OWNER': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
-            case 'ADMIN': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
+            case 'OWNER': return 'bg-amber-500/10 text-amber-600';
+            case 'ADMIN': return 'bg-blue-500/10 text-blue-600';
+            default: return 'bg-muted text-muted-foreground';
         }
     }
 </script>
 
-{#if loading}
-    <div class="flex flex-col items-center justify-center h-screen space-y-4">
-        <iconify-icon icon="svg-spinners:blocks-shuffle-3" width="40" class="text-foreground"></iconify-icon>
-        <p class="text-sm text-muted-foreground">{$i18n.t('common.actions.loading')}</p>
+<div class="flex h-full flex-col">
+    <div class="border-b border-border px-4 py-4 md:px-8 md:py-5">
+        <div class="flex items-center gap-3">
+            <a href={resolve(`/admin/spaces/${spaceId}`)} class="text-muted-foreground transition-colors hover:text-foreground" aria-label="Back to space">
+                <iconify-icon icon="solar:arrow-left-linear" width="20"></iconify-icon>
+            </a>
+            <div>
+                <h1 class="text-lg font-semibold">{$i18n.t('spaces.membersTitle')}</h1>
+                {#if space}
+                    <p class="mt-0.5 text-sm text-muted-foreground">{space.name}</p>
+                {/if}
+            </div>
+        </div>
     </div>
-{:else if space}
-    <div class="p-8 max-w-[900px] mx-auto space-y-6">
-        {#if error}
-            <Alert variant="danger" dismissible>{error}</Alert>
-        {/if}
 
-        <header>
-            <div class="flex items-center gap-2 mb-4">
-                <button
-                    onclick={() => goto(resolve(`/admin/spaces/${spaceId}`))}
-                    class="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                >
-                    <iconify-icon icon="solar:arrow-left-linear" width="18"></iconify-icon>
-                </button>
+    <div class="flex-1 overflow-auto px-4 py-6 md:px-8">
+        {#if loading}
+            <div class="flex items-center justify-center py-20">
+                <div class="h-6 w-6 animate-spin rounded-full border-2 border-foreground border-t-transparent"></div>
             </div>
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('spaces.membersTitle')}</h1>
-                    <p class="text-sm text-muted-foreground mt-1">{space.name} &middot; {members.length} {members.length === 1 ? $i18n.t('spaces.member') : $i18n.t('spaces.members').toLowerCase()}</p>
-                </div>
-                <div class="flex gap-2">
-                    {#if !isOwner}
-                        <button
-                            onclick={() => { showLeaveDialog = true; }}
-                            class="rounded-md px-4 h-9 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-2"
-                        >
-                            <iconify-icon icon="solar:logout-2-linear" width="16"></iconify-icon>
-                            {$i18n.t('spaces.leaveSpace')}
-                        </button>
-                    {/if}
-                    {#if canManage}
-                        <button
-                            onclick={() => { showAddForm = !showAddForm; }}
-                            class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
-                        >
-                            <iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-                            {$i18n.t('spaces.addMember')}
-                        </button>
-                    {/if}
-                </div>
+        {:else if !space}
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+                <p class="text-sm text-muted-foreground">Space not found</p>
             </div>
-        </header>
-
-        {#if showAddForm && canManage}
-            <form onsubmit={handleAddMember} class="rounded-xl border border-border p-4 space-y-3">
-                <p class="text-sm text-muted-foreground">{$i18n.t('spaces.addMemberDescription')}</p>
-                <div class="flex gap-3">
-                    <input
-                        type="email"
-                        bind:value={addEmail}
-                        placeholder={$i18n.t('spaces.emailPlaceholder')}
-                        required
-                        class="h-9 flex-1 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus:border-foreground transition-colors"
-                    />
-                    <select
-                        bind:value={addRole}
-                        class="h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus:border-foreground transition-colors"
-                    >
-                        <option value="MEMBER">{$i18n.t('spaces.roles.MEMBER')}</option>
-                        <option value="ADMIN">{$i18n.t('spaces.roles.ADMIN')}</option>
-                    </select>
-                    <button
-                        type="submit"
-                        disabled={addLoading || !addEmail.trim()}
-                        class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {#if addLoading}
-                            <iconify-icon icon="svg-spinners:ring-resize" width="16"></iconify-icon>
-                            {$i18n.t('spaces.adding')}
-                        {:else}
-                            {$i18n.t('spaces.addMember')}
+        {:else}
+            <div class="max-w-2xl space-y-8">
+                {#if canManage}
+                    <div class="space-y-3">
+                        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{$i18n.t('spaces.addMember')}</h2>
+                        <div class="flex items-end gap-2">
+                            <div class="flex-1">
+                                <label for="user-email" class="mb-1.5 block text-sm font-medium">{$i18n.t('spaces.emailPlaceholder')}</label>
+                                <input
+                                    id="user-email"
+                                    type="email"
+                                    bind:value={addUserId}
+                                    placeholder={$i18n.t('spaces.emailPlaceholder')}
+                                    class="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                />
+                            </div>
+                            <div class="w-32">
+                                <label for="add-role" class="mb-1.5 block text-sm font-medium">{$i18n.t('spaces.role')}</label>
+                                <select
+                                    id="add-role"
+                                    bind:value={addRole}
+                                    class="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    <option value="MEMBER">{$i18n.t('spaces.roles.MEMBER')}</option>
+                                    <option value="ADMIN">{$i18n.t('spaces.roles.ADMIN')}</option>
+                                </select>
+                            </div>
+                            <button
+                                class="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                onclick={addMember}
+                                disabled={adding}
+                            >
+                                {adding ? $i18n.t('spaces.adding') : $i18n.t('spaces.addMember')}
+                            </button>
+                        </div>
+                        {#if addError}
+                            <p class="text-sm text-destructive">{addError}</p>
                         {/if}
-                    </button>
-                </div>
-            </form>
-        {/if}
+                    </div>
+                {/if}
 
-        <div class="rounded-xl border border-border overflow-hidden">
-            <table class="w-full">
-                <thead class="border-b border-border">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">User</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('spaces.role')}</th>
-                        {#if canManage}
-                            <th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
-                        {/if}
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-border">
+                {#if error}
+                    <p class="text-sm text-destructive">{error}</p>
+                {/if}
+
+                <div class="space-y-3">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        {members.length} {members.length === 1 ? $i18n.t('spaces.member') : $i18n.t('spaces.members').toLowerCase()}
+                    </h2>
+
                     {#each members as m (m.id)}
                         {@const isCurrentUser = m.userId === $authStore.user?.id}
-                        <tr class="hover:bg-muted/50 transition-colors">
-                            <td class="px-4 py-3">
-                                <div class="font-medium text-foreground">
-                                    {m.user.firstName} {m.user.lastName}
-                                    {#if isCurrentUser}
-                                        <span class="text-xs text-muted-foreground ml-1">(you)</span>
-                                    {/if}
+                        <div class="flex items-center justify-between rounded-lg border border-border p-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold"
+                                >
+                                    {(m.user?.firstName || m.user?.email || '?').slice(0, 2).toUpperCase()}
                                 </div>
-                                <div class="text-sm text-muted-foreground">{m.user.email}</div>
-                            </td>
-                            <td class="px-4 py-3">
-                                {#if isOwner && m.role !== 'OWNER' && !isCurrentUser}
+                                <div>
+                                    <p class="text-sm font-medium">
+                                        {m.user.firstName} {m.user.lastName}
+                                        {#if isCurrentUser}
+                                            <span class="text-xs text-muted-foreground ml-1">(you)</span>
+                                        {/if}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">{m.user.email}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                {#if m.role === 'OWNER'}
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {roleBadgeClass('OWNER')}">
+                                        {$i18n.t('spaces.roles.OWNER')}
+                                    </span>
+                                {:else if canManage && !isCurrentUser}
                                     <select
                                         value={m.role}
-                                        onchange={(e) => handleRoleChange(m.userId, (e.target as HTMLSelectElement).value)}
-                                        class="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus:border-foreground transition-colors"
+                                        onchange={(e) => updateRole(m.userId, (e.target as HTMLSelectElement).value)}
+                                        class="h-8 rounded-md border border-border bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     >
                                         <option value="MEMBER">{$i18n.t('spaces.roles.MEMBER')}</option>
                                         <option value="ADMIN">{$i18n.t('spaces.roles.ADMIN')}</option>
                                     </select>
+                                    <button
+                                        class="inline-flex h-8 items-center rounded-md px-2 text-xs text-destructive transition-colors hover:bg-destructive/10"
+                                        onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
+                                        aria-label={$i18n.t('spaces.removeMember')}
+                                    >
+                                        <iconify-icon icon="solar:trash-bin-2-linear" width="14"></iconify-icon>
+                                    </button>
                                 {:else}
-                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {getRoleBadgeClass(m.role)}">
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {roleBadgeClass(m.role)}">
                                         {$i18n.t(`spaces.roles.${m.role}`)}
                                     </span>
                                 {/if}
-                            </td>
-                            {#if canManage}
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center justify-end">
-                                        {#if m.role !== 'OWNER' && !isCurrentUser}
-                                            <button
-                                                onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
-                                                class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md transition-colors"
-                                                title={$i18n.t('spaces.removeMember')}
-                                            >
-                                                <iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-                                            </button>
-                                        {/if}
-                                    </div>
-                                </td>
-                            {/if}
-                        </tr>
+                            </div>
+                        </div>
                     {/each}
-                </tbody>
-            </table>
-        </div>
+                </div>
+
+                {#if !isOwner}
+                    <div class="space-y-4 border-t border-border pt-8">
+                        <h2 class="text-sm font-semibold uppercase tracking-wider text-destructive">{$i18n.t('spaces.leaveSpace')}</h2>
+                        <button
+                            class="inline-flex h-9 items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20"
+                            onclick={() => { showLeaveDialog = true; }}
+                        >
+                            <iconify-icon icon="solar:logout-2-linear" width="16"></iconify-icon>
+                            {$i18n.t('spaces.leaveSpace')}
+                        </button>
+                    </div>
+                {/if}
+            </div>
+        {/if}
     </div>
-{/if}
+</div>
 
 <ConfirmDialog
     bind:isOpen={showRemoveDialog}

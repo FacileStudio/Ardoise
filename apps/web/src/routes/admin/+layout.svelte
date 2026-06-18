@@ -34,9 +34,7 @@
             <span class="text-2xl font-bold font-heading tracking-tight">Ardoise</span>
         </div>
 
-        <div class="px-3 pb-4">
-            <SpaceSwitcher />
-        </div>
+        <SpaceSwitcher />
 
         <nav class="flex flex-1 flex-col gap-1 px-3">
             {#each menuItems as item (item.href)}
