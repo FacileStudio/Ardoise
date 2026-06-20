@@ -99,7 +99,7 @@
 
 	async function fetchStats() {
 		try {
-			const allPayments = await trpc.payment.list.query({ page: 1, limit: 100 });
+			const allPayments = await trpc.payment.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
 			const paymentsData = allPayments.payments as unknown as Payment[];
 
 			const now = new Date();

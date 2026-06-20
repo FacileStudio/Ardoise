@@ -6,6 +6,7 @@
 	import { Spinner, Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	type DocType = 'prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
@@ -147,7 +148,7 @@
 
 	async function loadClients() {
 		try {
-			const result = await trpc.client.list.query({ page: 1, limit: 100 });
+			const result = await trpc.client.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
 			clients = result.clients as unknown as Client[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch clients');

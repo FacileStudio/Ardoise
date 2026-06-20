@@ -7,6 +7,7 @@
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
@@ -63,7 +64,7 @@
 
 	async function loadClients() {
 		try {
-			const result = await trpc.client.list.query({ page: 1, limit: 100 });
+			const result = await trpc.client.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
 			clients = result.clients as Client[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch clients');
@@ -77,6 +78,7 @@
 				page: 1,
 				pageSize: 100,
 				search: documentSearchQuery || undefined,
+				spaceId: spaceContext.spaceId,
 			});
 			documents = result.items as Document[];
 		} catch (err) {

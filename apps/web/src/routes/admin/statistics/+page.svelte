@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { logger } from '@repo/logger';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
@@ -28,7 +29,7 @@
 
 	async function fetchPayments() {
 		try {
-			const result = await trpc.payment.list.query({ page: 1, limit: 100 });
+			const result = await trpc.payment.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
 			payments = result.payments as unknown as Payment[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch payment statistics');
