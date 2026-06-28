@@ -90,7 +90,9 @@ export const DocumentScalarFieldEnumSchema = z.enum(['id','createdAt','updatedAt
 
 export const MediaScalarFieldEnumSchema = z.enum(['id','url','key','mimeType','size','avatarUserId','coverUserId','createdAt']);
 
-export const PaymentScalarFieldEnumSchema = z.enum(['id','clientId','spaceId','amount','stripeFee','totalWithFees','description','status','frequency','collectionMethod','reference','dueDate','paidAt','stripePaymentIntentId','stripeSubscriptionId','attachedFiles','receiptUrl','lastReminderSentAt','reminderCount','createdAt','updatedAt']);
+export const PaymentScalarFieldEnumSchema = z.enum(['id','clientId','spaceId','amount','stripeFee','totalWithFees','description','status','frequency','collectionMethod','reference','dueDate','paidAt','stripePaymentIntentId','stripeSubscriptionId','stripeInvoiceId','attachedFiles','receiptUrl','receiptAttempts','receiptError','lastReminderSentAt','reminderCount','createdAt','updatedAt']);
+
+export const PaymentInvoiceScalarFieldEnumSchema = z.enum(['id','paymentId','stripeInvoiceId','amount','status','periodStart','periodEnd','paidAt','createdAt','updatedAt']);
 
 export const PaymentDocumentScalarFieldEnumSchema = z.enum(['id','paymentId','documentId','attachedAt']);
 
@@ -130,7 +132,7 @@ export const DocumentTypeSchema = z.enum(['prestation','maintenance','contrat_pr
 
 export type DocumentTypeType = `${z.infer<typeof DocumentTypeSchema>}`
 
-export const PaymentStatusSchema = z.enum(['PENDING','PAID','EXPIRED','CANCELLED']);
+export const PaymentStatusSchema = z.enum(['PENDING','PAID','EXPIRED','CANCELLED','PAST_DUE','FAILED']);
 
 export type PaymentStatusType = `${z.infer<typeof PaymentStatusSchema>}`
 
@@ -141,6 +143,10 @@ export type PaymentFrequencyType = `${z.infer<typeof PaymentFrequencySchema>}`
 export const PaymentCollectionMethodSchema = z.enum(['STRIPE','MANUAL']);
 
 export type PaymentCollectionMethodType = `${z.infer<typeof PaymentCollectionMethodSchema>}`
+
+export const PaymentInvoiceStatusSchema = z.enum(['PAID','FAILED']);
+
+export type PaymentInvoiceStatusType = `${z.infer<typeof PaymentInvoiceStatusSchema>}`
 
 export const SpaceRoleSchema = z.enum(['OWNER','ADMIN','MEMBER']);
 
@@ -427,8 +433,11 @@ export const PaymentSchema = z.object({
   paidAt: z.coerce.date().nullable(),
   stripePaymentIntentId: z.string().nullable(),
   stripeSubscriptionId: z.string().nullable(),
+  stripeInvoiceId: z.string().nullable(),
   attachedFiles: z.string().array(),
   receiptUrl: z.string().nullable(),
+  receiptAttempts: z.number(),
+  receiptError: z.string().nullable(),
   lastReminderSentAt: z.coerce.date().nullable(),
   reminderCount: z.number(),
   createdAt: z.coerce.date(),
@@ -444,6 +453,7 @@ export type PaymentRelations = {
   client: ClientWithRelations;
   space?: SpaceWithRelations | null;
   attachedDocuments: PaymentDocumentWithRelations[];
+  invoices: PaymentInvoiceWithRelations[];
 };
 
 export type PaymentWithRelations = z.infer<typeof PaymentSchema> & PaymentRelations
@@ -452,6 +462,39 @@ export const PaymentWithRelationsSchema: z.ZodType<PaymentWithRelations> = Payme
   client: z.lazy(() => ClientWithRelationsSchema),
   space: z.lazy(() => SpaceWithRelationsSchema).nullable(),
   attachedDocuments: z.lazy(() => PaymentDocumentWithRelationsSchema).array(),
+  invoices: z.lazy(() => PaymentInvoiceWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// PAYMENT INVOICE SCHEMA
+/////////////////////////////////////////
+
+export const PaymentInvoiceSchema = z.object({
+  status: PaymentInvoiceStatusSchema,
+  id: z.string(),
+  paymentId: z.string(),
+  stripeInvoiceId: z.string(),
+  amount: z.instanceof(Prisma.Decimal, { message: "Field 'amount' must be a Decimal. Location: ['Models', 'PaymentInvoice']"}),
+  periodStart: z.coerce.date().nullable(),
+  periodEnd: z.coerce.date().nullable(),
+  paidAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type PaymentInvoice = z.infer<typeof PaymentInvoiceSchema>
+
+// PAYMENT INVOICE RELATION SCHEMA
+//------------------------------------------------------
+
+export type PaymentInvoiceRelations = {
+  payment: PaymentWithRelations;
+};
+
+export type PaymentInvoiceWithRelations = z.infer<typeof PaymentInvoiceSchema> & PaymentInvoiceRelations
+
+export const PaymentInvoiceWithRelationsSchema: z.ZodType<PaymentInvoiceWithRelations> = PaymentInvoiceSchema.merge(z.object({
+  payment: z.lazy(() => PaymentWithRelationsSchema),
 }))
 
 /////////////////////////////////////////
@@ -1001,6 +1044,7 @@ export const PaymentIncludeSchema: z.ZodType<Prisma.PaymentInclude> = z.object({
   client: z.union([z.boolean(),z.lazy(() => ClientArgsSchema)]).optional(),
   space: z.union([z.boolean(),z.lazy(() => SpaceArgsSchema)]).optional(),
   attachedDocuments: z.union([z.boolean(),z.lazy(() => PaymentDocumentFindManyArgsSchema)]).optional(),
+  invoices: z.union([z.boolean(),z.lazy(() => PaymentInvoiceFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => PaymentCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
@@ -1015,6 +1059,7 @@ export const PaymentCountOutputTypeArgsSchema: z.ZodType<Prisma.PaymentCountOutp
 
 export const PaymentCountOutputTypeSelectSchema: z.ZodType<Prisma.PaymentCountOutputTypeSelect> = z.object({
   attachedDocuments: z.boolean().optional(),
+  invoices: z.boolean().optional(),
 }).strict();
 
 export const PaymentSelectSchema: z.ZodType<Prisma.PaymentSelect> = z.object({
@@ -1033,8 +1078,11 @@ export const PaymentSelectSchema: z.ZodType<Prisma.PaymentSelect> = z.object({
   paidAt: z.boolean().optional(),
   stripePaymentIntentId: z.boolean().optional(),
   stripeSubscriptionId: z.boolean().optional(),
+  stripeInvoiceId: z.boolean().optional(),
   attachedFiles: z.boolean().optional(),
   receiptUrl: z.boolean().optional(),
+  receiptAttempts: z.boolean().optional(),
+  receiptError: z.boolean().optional(),
   lastReminderSentAt: z.boolean().optional(),
   reminderCount: z.boolean().optional(),
   createdAt: z.boolean().optional(),
@@ -1042,7 +1090,34 @@ export const PaymentSelectSchema: z.ZodType<Prisma.PaymentSelect> = z.object({
   client: z.union([z.boolean(),z.lazy(() => ClientArgsSchema)]).optional(),
   space: z.union([z.boolean(),z.lazy(() => SpaceArgsSchema)]).optional(),
   attachedDocuments: z.union([z.boolean(),z.lazy(() => PaymentDocumentFindManyArgsSchema)]).optional(),
+  invoices: z.union([z.boolean(),z.lazy(() => PaymentInvoiceFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => PaymentCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// PAYMENT INVOICE
+//------------------------------------------------------
+
+export const PaymentInvoiceIncludeSchema: z.ZodType<Prisma.PaymentInvoiceInclude> = z.object({
+  payment: z.union([z.boolean(),z.lazy(() => PaymentArgsSchema)]).optional(),
+}).strict();
+
+export const PaymentInvoiceArgsSchema: z.ZodType<Prisma.PaymentInvoiceDefaultArgs> = z.object({
+  select: z.lazy(() => PaymentInvoiceSelectSchema).optional(),
+  include: z.lazy(() => PaymentInvoiceIncludeSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceSelectSchema: z.ZodType<Prisma.PaymentInvoiceSelect> = z.object({
+  id: z.boolean().optional(),
+  paymentId: z.boolean().optional(),
+  stripeInvoiceId: z.boolean().optional(),
+  amount: z.boolean().optional(),
+  status: z.boolean().optional(),
+  periodStart: z.boolean().optional(),
+  periodEnd: z.boolean().optional(),
+  paidAt: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  payment: z.union([z.boolean(),z.lazy(() => PaymentArgsSchema)]).optional(),
 }).strict()
 
 // PAYMENT DOCUMENT
@@ -2201,8 +2276,11 @@ export const PaymentWhereInputSchema: z.ZodType<Prisma.PaymentWhereInput> = z.ob
   paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   attachedFiles: z.lazy(() => StringNullableListFilterSchema).optional(),
   receiptUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  receiptAttempts: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  receiptError: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   reminderCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -2210,6 +2288,7 @@ export const PaymentWhereInputSchema: z.ZodType<Prisma.PaymentWhereInput> = z.ob
   client: z.union([ z.lazy(() => ClientScalarRelationFilterSchema), z.lazy(() => ClientWhereInputSchema) ]).optional(),
   space: z.union([ z.lazy(() => SpaceNullableScalarRelationFilterSchema), z.lazy(() => SpaceWhereInputSchema) ]).optional().nullable(),
   attachedDocuments: z.lazy(() => PaymentDocumentListRelationFilterSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceListRelationFilterSchema).optional(),
 }).strict();
 
 export const PaymentOrderByWithRelationInputSchema: z.ZodType<Prisma.PaymentOrderByWithRelationInput> = z.object({
@@ -2228,8 +2307,11 @@ export const PaymentOrderByWithRelationInputSchema: z.ZodType<Prisma.PaymentOrde
   paidAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   stripePaymentIntentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   stripeSubscriptionId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   attachedFiles: z.lazy(() => SortOrderSchema).optional(),
   receiptUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  receiptAttempts: z.lazy(() => SortOrderSchema).optional(),
+  receiptError: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   lastReminderSentAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   reminderCount: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -2237,6 +2319,7 @@ export const PaymentOrderByWithRelationInputSchema: z.ZodType<Prisma.PaymentOrde
   client: z.lazy(() => ClientOrderByWithRelationInputSchema).optional(),
   space: z.lazy(() => SpaceOrderByWithRelationInputSchema).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentOrderByRelationAggregateInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const PaymentWhereUniqueInputSchema: z.ZodType<Prisma.PaymentWhereUniqueInput> = z.union([
@@ -2286,8 +2369,11 @@ export const PaymentWhereUniqueInputSchema: z.ZodType<Prisma.PaymentWhereUniqueI
   reference: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   dueDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   attachedFiles: z.lazy(() => StringNullableListFilterSchema).optional(),
   receiptUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  receiptAttempts: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  receiptError: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   reminderCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -2295,6 +2381,7 @@ export const PaymentWhereUniqueInputSchema: z.ZodType<Prisma.PaymentWhereUniqueI
   client: z.union([ z.lazy(() => ClientScalarRelationFilterSchema), z.lazy(() => ClientWhereInputSchema) ]).optional(),
   space: z.union([ z.lazy(() => SpaceNullableScalarRelationFilterSchema), z.lazy(() => SpaceWhereInputSchema) ]).optional().nullable(),
   attachedDocuments: z.lazy(() => PaymentDocumentListRelationFilterSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceListRelationFilterSchema).optional(),
 }).strict());
 
 export const PaymentOrderByWithAggregationInputSchema: z.ZodType<Prisma.PaymentOrderByWithAggregationInput> = z.object({
@@ -2313,8 +2400,11 @@ export const PaymentOrderByWithAggregationInputSchema: z.ZodType<Prisma.PaymentO
   paidAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   stripePaymentIntentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   stripeSubscriptionId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   attachedFiles: z.lazy(() => SortOrderSchema).optional(),
   receiptUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  receiptAttempts: z.lazy(() => SortOrderSchema).optional(),
+  receiptError: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   lastReminderSentAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   reminderCount: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -2345,10 +2435,107 @@ export const PaymentScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Payme
   paidAt: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   attachedFiles: z.lazy(() => StringNullableListFilterSchema).optional(),
   receiptUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  receiptAttempts: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  receiptError: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
   reminderCount: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const PaymentInvoiceWhereInputSchema: z.ZodType<Prisma.PaymentInvoiceWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => PaymentInvoiceWhereInputSchema), z.lazy(() => PaymentInvoiceWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => PaymentInvoiceWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => PaymentInvoiceWhereInputSchema), z.lazy(() => PaymentInvoiceWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  paymentId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  stripeInvoiceId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  amount: z.union([ z.lazy(() => DecimalFilterSchema), z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }) ]).optional(),
+  status: z.union([ z.lazy(() => EnumPaymentInvoiceStatusFilterSchema), z.lazy(() => PaymentInvoiceStatusSchema) ]).optional(),
+  periodStart: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  periodEnd: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  payment: z.union([ z.lazy(() => PaymentScalarRelationFilterSchema), z.lazy(() => PaymentWhereInputSchema) ]).optional(),
+}).strict();
+
+export const PaymentInvoiceOrderByWithRelationInputSchema: z.ZodType<Prisma.PaymentInvoiceOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  paymentId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
+  amount: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  periodStart: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  periodEnd: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  paidAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  payment: z.lazy(() => PaymentOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceWhereUniqueInputSchema: z.ZodType<Prisma.PaymentInvoiceWhereUniqueInput> = z.union([
+  z.object({
+    id: z.string(),
+    stripeInvoiceId: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+  }),
+  z.object({
+    stripeInvoiceId: z.string(),
+  }),
+])
+.and(z.object({
+  id: z.string().optional(),
+  stripeInvoiceId: z.string().optional(),
+  AND: z.union([ z.lazy(() => PaymentInvoiceWhereInputSchema), z.lazy(() => PaymentInvoiceWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => PaymentInvoiceWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => PaymentInvoiceWhereInputSchema), z.lazy(() => PaymentInvoiceWhereInputSchema).array() ]).optional(),
+  paymentId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  amount: z.union([ z.lazy(() => DecimalFilterSchema), z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }) ]).optional(),
+  status: z.union([ z.lazy(() => EnumPaymentInvoiceStatusFilterSchema), z.lazy(() => PaymentInvoiceStatusSchema) ]).optional(),
+  periodStart: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  periodEnd: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  payment: z.union([ z.lazy(() => PaymentScalarRelationFilterSchema), z.lazy(() => PaymentWhereInputSchema) ]).optional(),
+}).strict());
+
+export const PaymentInvoiceOrderByWithAggregationInputSchema: z.ZodType<Prisma.PaymentInvoiceOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  paymentId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
+  amount: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  periodStart: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  periodEnd: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  paidAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => PaymentInvoiceCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => PaymentInvoiceAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => PaymentInvoiceMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => PaymentInvoiceMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => PaymentInvoiceSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.PaymentInvoiceScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => PaymentInvoiceScalarWhereWithAggregatesInputSchema), z.lazy(() => PaymentInvoiceScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => PaymentInvoiceScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => PaymentInvoiceScalarWhereWithAggregatesInputSchema), z.lazy(() => PaymentInvoiceScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  paymentId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  stripeInvoiceId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  amount: z.union([ z.lazy(() => DecimalWithAggregatesFilterSchema), z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }) ]).optional(),
+  status: z.union([ z.lazy(() => EnumPaymentInvoiceStatusWithAggregatesFilterSchema), z.lazy(() => PaymentInvoiceStatusSchema) ]).optional(),
+  periodStart: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  periodEnd: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  paidAt: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
@@ -4173,8 +4360,11 @@ export const PaymentCreateInputSchema: z.ZodType<Prisma.PaymentCreateInput> = z.
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
@@ -4182,6 +4372,7 @@ export const PaymentCreateInputSchema: z.ZodType<Prisma.PaymentCreateInput> = z.
   client: z.lazy(() => ClientCreateNestedOneWithoutPaymentsInputSchema),
   space: z.lazy(() => SpaceCreateNestedOneWithoutPaymentsInputSchema).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentCreateNestedManyWithoutPaymentInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedCreateInputSchema: z.ZodType<Prisma.PaymentUncheckedCreateInput> = z.object({
@@ -4200,13 +4391,17 @@ export const PaymentUncheckedCreateInputSchema: z.ZodType<Prisma.PaymentUnchecke
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentUpdateInputSchema: z.ZodType<Prisma.PaymentUpdateInput> = z.object({
@@ -4223,8 +4418,11 @@ export const PaymentUpdateInputSchema: z.ZodType<Prisma.PaymentUpdateInput> = z.
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -4232,6 +4430,7 @@ export const PaymentUpdateInputSchema: z.ZodType<Prisma.PaymentUpdateInput> = z.
   client: z.lazy(() => ClientUpdateOneRequiredWithoutPaymentsNestedInputSchema).optional(),
   space: z.lazy(() => SpaceUpdateOneWithoutPaymentsNestedInputSchema).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUpdateManyWithoutPaymentNestedInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedUpdateInputSchema: z.ZodType<Prisma.PaymentUncheckedUpdateInput> = z.object({
@@ -4250,13 +4449,17 @@ export const PaymentUncheckedUpdateInputSchema: z.ZodType<Prisma.PaymentUnchecke
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const PaymentCreateManyInputSchema: z.ZodType<Prisma.PaymentCreateManyInput> = z.object({
@@ -4275,8 +4478,11 @@ export const PaymentCreateManyInputSchema: z.ZodType<Prisma.PaymentCreateManyInp
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
@@ -4297,8 +4503,11 @@ export const PaymentUpdateManyMutationInputSchema: z.ZodType<Prisma.PaymentUpdat
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -4321,10 +4530,103 @@ export const PaymentUncheckedUpdateManyInputSchema: z.ZodType<Prisma.PaymentUnch
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const PaymentInvoiceCreateInputSchema: z.ZodType<Prisma.PaymentInvoiceCreateInput> = z.object({
+  id: z.string().optional(),
+  stripeInvoiceId: z.string(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  status: z.lazy(() => PaymentInvoiceStatusSchema),
+  periodStart: z.coerce.date().optional().nullable(),
+  periodEnd: z.coerce.date().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  payment: z.lazy(() => PaymentCreateNestedOneWithoutInvoicesInputSchema),
+}).strict();
+
+export const PaymentInvoiceUncheckedCreateInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  paymentId: z.string(),
+  stripeInvoiceId: z.string(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  status: z.lazy(() => PaymentInvoiceStatusSchema),
+  periodStart: z.coerce.date().optional().nullable(),
+  periodEnd: z.coerce.date().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const PaymentInvoiceUpdateInputSchema: z.ZodType<Prisma.PaymentInvoiceUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  periodStart: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodEnd: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  payment: z.lazy(() => PaymentUpdateOneRequiredWithoutInvoicesNestedInputSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceUncheckedUpdateInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  paymentId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  periodStart: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodEnd: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const PaymentInvoiceCreateManyInputSchema: z.ZodType<Prisma.PaymentInvoiceCreateManyInput> = z.object({
+  id: z.string().optional(),
+  paymentId: z.string(),
+  stripeInvoiceId: z.string(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  status: z.lazy(() => PaymentInvoiceStatusSchema),
+  periodStart: z.coerce.date().optional().nullable(),
+  periodEnd: z.coerce.date().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const PaymentInvoiceUpdateManyMutationInputSchema: z.ZodType<Prisma.PaymentInvoiceUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  periodStart: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodEnd: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const PaymentInvoiceUncheckedUpdateManyInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  paymentId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  periodStart: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodEnd: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -6215,6 +6517,16 @@ export const ClientScalarRelationFilterSchema: z.ZodType<Prisma.ClientScalarRela
   isNot: z.lazy(() => ClientWhereInputSchema).optional(),
 }).strict();
 
+export const PaymentInvoiceListRelationFilterSchema: z.ZodType<Prisma.PaymentInvoiceListRelationFilter> = z.object({
+  every: z.lazy(() => PaymentInvoiceWhereInputSchema).optional(),
+  some: z.lazy(() => PaymentInvoiceWhereInputSchema).optional(),
+  none: z.lazy(() => PaymentInvoiceWhereInputSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceOrderByRelationAggregateInputSchema: z.ZodType<Prisma.PaymentInvoiceOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
 export const PaymentCountOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   clientId: z.lazy(() => SortOrderSchema).optional(),
@@ -6231,8 +6543,11 @@ export const PaymentCountOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentCo
   paidAt: z.lazy(() => SortOrderSchema).optional(),
   stripePaymentIntentId: z.lazy(() => SortOrderSchema).optional(),
   stripeSubscriptionId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
   attachedFiles: z.lazy(() => SortOrderSchema).optional(),
   receiptUrl: z.lazy(() => SortOrderSchema).optional(),
+  receiptAttempts: z.lazy(() => SortOrderSchema).optional(),
+  receiptError: z.lazy(() => SortOrderSchema).optional(),
   lastReminderSentAt: z.lazy(() => SortOrderSchema).optional(),
   reminderCount: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -6243,6 +6558,7 @@ export const PaymentAvgOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentAvgO
   amount: z.lazy(() => SortOrderSchema).optional(),
   stripeFee: z.lazy(() => SortOrderSchema).optional(),
   totalWithFees: z.lazy(() => SortOrderSchema).optional(),
+  receiptAttempts: z.lazy(() => SortOrderSchema).optional(),
   reminderCount: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -6262,7 +6578,10 @@ export const PaymentMaxOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentMaxO
   paidAt: z.lazy(() => SortOrderSchema).optional(),
   stripePaymentIntentId: z.lazy(() => SortOrderSchema).optional(),
   stripeSubscriptionId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
   receiptUrl: z.lazy(() => SortOrderSchema).optional(),
+  receiptAttempts: z.lazy(() => SortOrderSchema).optional(),
+  receiptError: z.lazy(() => SortOrderSchema).optional(),
   lastReminderSentAt: z.lazy(() => SortOrderSchema).optional(),
   reminderCount: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -6285,7 +6604,10 @@ export const PaymentMinOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentMinO
   paidAt: z.lazy(() => SortOrderSchema).optional(),
   stripePaymentIntentId: z.lazy(() => SortOrderSchema).optional(),
   stripeSubscriptionId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
   receiptUrl: z.lazy(() => SortOrderSchema).optional(),
+  receiptAttempts: z.lazy(() => SortOrderSchema).optional(),
+  receiptError: z.lazy(() => SortOrderSchema).optional(),
   lastReminderSentAt: z.lazy(() => SortOrderSchema).optional(),
   reminderCount: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -6296,6 +6618,7 @@ export const PaymentSumOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentSumO
   amount: z.lazy(() => SortOrderSchema).optional(),
   stripeFee: z.lazy(() => SortOrderSchema).optional(),
   totalWithFees: z.lazy(() => SortOrderSchema).optional(),
+  receiptAttempts: z.lazy(() => SortOrderSchema).optional(),
   reminderCount: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -6329,9 +6652,73 @@ export const EnumPaymentCollectionMethodWithAggregatesFilterSchema: z.ZodType<Pr
   _max: z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema).optional(),
 }).strict();
 
+export const EnumPaymentInvoiceStatusFilterSchema: z.ZodType<Prisma.EnumPaymentInvoiceStatusFilter> = z.object({
+  equals: z.lazy(() => PaymentInvoiceStatusSchema).optional(),
+  in: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  notIn: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => NestedEnumPaymentInvoiceStatusFilterSchema) ]).optional(),
+}).strict();
+
 export const PaymentScalarRelationFilterSchema: z.ZodType<Prisma.PaymentScalarRelationFilter> = z.object({
   is: z.lazy(() => PaymentWhereInputSchema).optional(),
   isNot: z.lazy(() => PaymentWhereInputSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceCountOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentInvoiceCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  paymentId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
+  amount: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  periodStart: z.lazy(() => SortOrderSchema).optional(),
+  periodEnd: z.lazy(() => SortOrderSchema).optional(),
+  paidAt: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceAvgOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentInvoiceAvgOrderByAggregateInput> = z.object({
+  amount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceMaxOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentInvoiceMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  paymentId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
+  amount: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  periodStart: z.lazy(() => SortOrderSchema).optional(),
+  periodEnd: z.lazy(() => SortOrderSchema).optional(),
+  paidAt: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceMinOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentInvoiceMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  paymentId: z.lazy(() => SortOrderSchema).optional(),
+  stripeInvoiceId: z.lazy(() => SortOrderSchema).optional(),
+  amount: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  periodStart: z.lazy(() => SortOrderSchema).optional(),
+  periodEnd: z.lazy(() => SortOrderSchema).optional(),
+  paidAt: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const PaymentInvoiceSumOrderByAggregateInputSchema: z.ZodType<Prisma.PaymentInvoiceSumOrderByAggregateInput> = z.object({
+  amount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const EnumPaymentInvoiceStatusWithAggregatesFilterSchema: z.ZodType<Prisma.EnumPaymentInvoiceStatusWithAggregatesFilter> = z.object({
+  equals: z.lazy(() => PaymentInvoiceStatusSchema).optional(),
+  in: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  notIn: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => NestedEnumPaymentInvoiceStatusWithAggregatesFilterSchema) ]).optional(),
+  _count: z.lazy(() => NestedIntFilterSchema).optional(),
+  _min: z.lazy(() => NestedEnumPaymentInvoiceStatusFilterSchema).optional(),
+  _max: z.lazy(() => NestedEnumPaymentInvoiceStatusFilterSchema).optional(),
 }).strict();
 
 export const DocumentScalarRelationFilterSchema: z.ZodType<Prisma.DocumentScalarRelationFilter> = z.object({
@@ -7284,11 +7671,25 @@ export const PaymentDocumentCreateNestedManyWithoutPaymentInputSchema: z.ZodType
   connect: z.union([ z.lazy(() => PaymentDocumentWhereUniqueInputSchema), z.lazy(() => PaymentDocumentWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
+export const PaymentInvoiceCreateNestedManyWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceCreateNestedManyWithoutPaymentInput> = z.object({
+  create: z.union([ z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema).array(), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => PaymentInvoiceCreateManyPaymentInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const PaymentDocumentUncheckedCreateNestedManyWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentDocumentUncheckedCreateNestedManyWithoutPaymentInput> = z.object({
   create: z.union([ z.lazy(() => PaymentDocumentCreateWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentCreateWithoutPaymentInputSchema).array(), z.lazy(() => PaymentDocumentUncheckedCreateWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentUncheckedCreateWithoutPaymentInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => PaymentDocumentCreateOrConnectWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentCreateOrConnectWithoutPaymentInputSchema).array() ]).optional(),
   createMany: z.lazy(() => PaymentDocumentCreateManyPaymentInputEnvelopeSchema).optional(),
   connect: z.union([ z.lazy(() => PaymentDocumentWhereUniqueInputSchema), z.lazy(() => PaymentDocumentWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const PaymentInvoiceUncheckedCreateNestedManyWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedCreateNestedManyWithoutPaymentInput> = z.object({
+  create: z.union([ z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema).array(), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => PaymentInvoiceCreateManyPaymentInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const EnumPaymentStatusFieldUpdateOperationsInputSchema: z.ZodType<Prisma.EnumPaymentStatusFieldUpdateOperationsInput> = z.object({
@@ -7340,6 +7741,20 @@ export const PaymentDocumentUpdateManyWithoutPaymentNestedInputSchema: z.ZodType
   deleteMany: z.union([ z.lazy(() => PaymentDocumentScalarWhereInputSchema), z.lazy(() => PaymentDocumentScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
+export const PaymentInvoiceUpdateManyWithoutPaymentNestedInputSchema: z.ZodType<Prisma.PaymentInvoiceUpdateManyWithoutPaymentNestedInput> = z.object({
+  create: z.union([ z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema).array(), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => PaymentInvoiceUpsertWithWhereUniqueWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUpsertWithWhereUniqueWithoutPaymentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => PaymentInvoiceCreateManyPaymentInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => PaymentInvoiceUpdateWithWhereUniqueWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUpdateWithWhereUniqueWithoutPaymentInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => PaymentInvoiceUpdateManyWithWhereWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUpdateManyWithWhereWithoutPaymentInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => PaymentInvoiceScalarWhereInputSchema), z.lazy(() => PaymentInvoiceScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
 export const PaymentDocumentUncheckedUpdateManyWithoutPaymentNestedInputSchema: z.ZodType<Prisma.PaymentDocumentUncheckedUpdateManyWithoutPaymentNestedInput> = z.object({
   create: z.union([ z.lazy(() => PaymentDocumentCreateWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentCreateWithoutPaymentInputSchema).array(), z.lazy(() => PaymentDocumentUncheckedCreateWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentUncheckedCreateWithoutPaymentInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => PaymentDocumentCreateOrConnectWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentCreateOrConnectWithoutPaymentInputSchema).array() ]).optional(),
@@ -7352,6 +7767,38 @@ export const PaymentDocumentUncheckedUpdateManyWithoutPaymentNestedInputSchema: 
   update: z.union([ z.lazy(() => PaymentDocumentUpdateWithWhereUniqueWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentUpdateWithWhereUniqueWithoutPaymentInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => PaymentDocumentUpdateManyWithWhereWithoutPaymentInputSchema), z.lazy(() => PaymentDocumentUpdateManyWithWhereWithoutPaymentInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => PaymentDocumentScalarWhereInputSchema), z.lazy(() => PaymentDocumentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const PaymentInvoiceUncheckedUpdateManyWithoutPaymentNestedInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedUpdateManyWithoutPaymentNestedInput> = z.object({
+  create: z.union([ z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema).array(), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => PaymentInvoiceUpsertWithWhereUniqueWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUpsertWithWhereUniqueWithoutPaymentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => PaymentInvoiceCreateManyPaymentInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => PaymentInvoiceWhereUniqueInputSchema), z.lazy(() => PaymentInvoiceWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => PaymentInvoiceUpdateWithWhereUniqueWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUpdateWithWhereUniqueWithoutPaymentInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => PaymentInvoiceUpdateManyWithWhereWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUpdateManyWithWhereWithoutPaymentInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => PaymentInvoiceScalarWhereInputSchema), z.lazy(() => PaymentInvoiceScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const PaymentCreateNestedOneWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentCreateNestedOneWithoutInvoicesInput> = z.object({
+  create: z.union([ z.lazy(() => PaymentCreateWithoutInvoicesInputSchema), z.lazy(() => PaymentUncheckedCreateWithoutInvoicesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => PaymentCreateOrConnectWithoutInvoicesInputSchema).optional(),
+  connect: z.lazy(() => PaymentWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema: z.ZodType<Prisma.EnumPaymentInvoiceStatusFieldUpdateOperationsInput> = z.object({
+  set: z.lazy(() => PaymentInvoiceStatusSchema).optional(),
+}).strict();
+
+export const PaymentUpdateOneRequiredWithoutInvoicesNestedInputSchema: z.ZodType<Prisma.PaymentUpdateOneRequiredWithoutInvoicesNestedInput> = z.object({
+  create: z.union([ z.lazy(() => PaymentCreateWithoutInvoicesInputSchema), z.lazy(() => PaymentUncheckedCreateWithoutInvoicesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => PaymentCreateOrConnectWithoutInvoicesInputSchema).optional(),
+  upsert: z.lazy(() => PaymentUpsertWithoutInvoicesInputSchema).optional(),
+  connect: z.lazy(() => PaymentWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => PaymentUpdateToOneWithWhereWithoutInvoicesInputSchema), z.lazy(() => PaymentUpdateWithoutInvoicesInputSchema), z.lazy(() => PaymentUncheckedUpdateWithoutInvoicesInputSchema) ]).optional(),
 }).strict();
 
 export const PaymentCreateNestedOneWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.PaymentCreateNestedOneWithoutAttachedDocumentsInput> = z.object({
@@ -8435,6 +8882,23 @@ export const NestedEnumPaymentCollectionMethodWithAggregatesFilterSchema: z.ZodT
   _max: z.lazy(() => NestedEnumPaymentCollectionMethodFilterSchema).optional(),
 }).strict();
 
+export const NestedEnumPaymentInvoiceStatusFilterSchema: z.ZodType<Prisma.NestedEnumPaymentInvoiceStatusFilter> = z.object({
+  equals: z.lazy(() => PaymentInvoiceStatusSchema).optional(),
+  in: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  notIn: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => NestedEnumPaymentInvoiceStatusFilterSchema) ]).optional(),
+}).strict();
+
+export const NestedEnumPaymentInvoiceStatusWithAggregatesFilterSchema: z.ZodType<Prisma.NestedEnumPaymentInvoiceStatusWithAggregatesFilter> = z.object({
+  equals: z.lazy(() => PaymentInvoiceStatusSchema).optional(),
+  in: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  notIn: z.lazy(() => PaymentInvoiceStatusSchema).array().optional(),
+  not: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => NestedEnumPaymentInvoiceStatusWithAggregatesFilterSchema) ]).optional(),
+  _count: z.lazy(() => NestedIntFilterSchema).optional(),
+  _min: z.lazy(() => NestedEnumPaymentInvoiceStatusFilterSchema).optional(),
+  _max: z.lazy(() => NestedEnumPaymentInvoiceStatusFilterSchema).optional(),
+}).strict();
+
 export const NestedEnumSpaceRoleFilterSchema: z.ZodType<Prisma.NestedEnumSpaceRoleFilter> = z.object({
   equals: z.lazy(() => SpaceRoleSchema).optional(),
   in: z.lazy(() => SpaceRoleSchema).array().optional(),
@@ -9016,14 +9480,18 @@ export const PaymentCreateWithoutClientInputSchema: z.ZodType<Prisma.PaymentCrea
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   space: z.lazy(() => SpaceCreateNestedOneWithoutPaymentsInputSchema).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentCreateNestedManyWithoutPaymentInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedCreateWithoutClientInputSchema: z.ZodType<Prisma.PaymentUncheckedCreateWithoutClientInput> = z.object({
@@ -9041,13 +9509,17 @@ export const PaymentUncheckedCreateWithoutClientInputSchema: z.ZodType<Prisma.Pa
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentCreateOrConnectWithoutClientInputSchema: z.ZodType<Prisma.PaymentCreateOrConnectWithoutClientInput> = z.object({
@@ -9203,8 +9675,11 @@ export const PaymentScalarWhereInputSchema: z.ZodType<Prisma.PaymentScalarWhereI
   paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   attachedFiles: z.lazy(() => StringNullableListFilterSchema).optional(),
   receiptUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  receiptAttempts: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  receiptError: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   reminderCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -9957,6 +10432,40 @@ export const PaymentDocumentCreateManyPaymentInputEnvelopeSchema: z.ZodType<Pris
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
+export const PaymentInvoiceCreateWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceCreateWithoutPaymentInput> = z.object({
+  id: z.string().optional(),
+  stripeInvoiceId: z.string(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  status: z.lazy(() => PaymentInvoiceStatusSchema),
+  periodStart: z.coerce.date().optional().nullable(),
+  periodEnd: z.coerce.date().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedCreateWithoutPaymentInput> = z.object({
+  id: z.string().optional(),
+  stripeInvoiceId: z.string(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  status: z.lazy(() => PaymentInvoiceStatusSchema),
+  periodStart: z.coerce.date().optional().nullable(),
+  periodEnd: z.coerce.date().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const PaymentInvoiceCreateOrConnectWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceCreateOrConnectWithoutPaymentInput> = z.object({
+  where: z.lazy(() => PaymentInvoiceWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema) ]),
+}).strict();
+
+export const PaymentInvoiceCreateManyPaymentInputEnvelopeSchema: z.ZodType<Prisma.PaymentInvoiceCreateManyPaymentInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => PaymentInvoiceCreateManyPaymentInputSchema), z.lazy(() => PaymentInvoiceCreateManyPaymentInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
 export const ClientUpsertWithoutPaymentsInputSchema: z.ZodType<Prisma.ClientUpsertWithoutPaymentsInput> = z.object({
   update: z.union([ z.lazy(() => ClientUpdateWithoutPaymentsInputSchema), z.lazy(() => ClientUncheckedUpdateWithoutPaymentsInputSchema) ]),
   create: z.union([ z.lazy(() => ClientCreateWithoutPaymentsInputSchema), z.lazy(() => ClientUncheckedCreateWithoutPaymentsInputSchema) ]),
@@ -10057,6 +10566,166 @@ export const PaymentDocumentUpdateManyWithWhereWithoutPaymentInputSchema: z.ZodT
   data: z.union([ z.lazy(() => PaymentDocumentUpdateManyMutationInputSchema), z.lazy(() => PaymentDocumentUncheckedUpdateManyWithoutPaymentInputSchema) ]),
 }).strict();
 
+export const PaymentInvoiceUpsertWithWhereUniqueWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUpsertWithWhereUniqueWithoutPaymentInput> = z.object({
+  where: z.lazy(() => PaymentInvoiceWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => PaymentInvoiceUpdateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedUpdateWithoutPaymentInputSchema) ]),
+  create: z.union([ z.lazy(() => PaymentInvoiceCreateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedCreateWithoutPaymentInputSchema) ]),
+}).strict();
+
+export const PaymentInvoiceUpdateWithWhereUniqueWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUpdateWithWhereUniqueWithoutPaymentInput> = z.object({
+  where: z.lazy(() => PaymentInvoiceWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => PaymentInvoiceUpdateWithoutPaymentInputSchema), z.lazy(() => PaymentInvoiceUncheckedUpdateWithoutPaymentInputSchema) ]),
+}).strict();
+
+export const PaymentInvoiceUpdateManyWithWhereWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUpdateManyWithWhereWithoutPaymentInput> = z.object({
+  where: z.lazy(() => PaymentInvoiceScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => PaymentInvoiceUpdateManyMutationInputSchema), z.lazy(() => PaymentInvoiceUncheckedUpdateManyWithoutPaymentInputSchema) ]),
+}).strict();
+
+export const PaymentInvoiceScalarWhereInputSchema: z.ZodType<Prisma.PaymentInvoiceScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => PaymentInvoiceScalarWhereInputSchema), z.lazy(() => PaymentInvoiceScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => PaymentInvoiceScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => PaymentInvoiceScalarWhereInputSchema), z.lazy(() => PaymentInvoiceScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  paymentId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  stripeInvoiceId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  amount: z.union([ z.lazy(() => DecimalFilterSchema), z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }) ]).optional(),
+  status: z.union([ z.lazy(() => EnumPaymentInvoiceStatusFilterSchema), z.lazy(() => PaymentInvoiceStatusSchema) ]).optional(),
+  periodStart: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  periodEnd: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  paidAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const PaymentCreateWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentCreateWithoutInvoicesInput> = z.object({
+  id: z.string().optional(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  stripeFee: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }).optional(),
+  totalWithFees: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  description: z.string(),
+  status: z.lazy(() => PaymentStatusSchema).optional(),
+  frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
+  dueDate: z.coerce.date(),
+  paidAt: z.coerce.date().optional().nullable(),
+  stripePaymentIntentId: z.string().optional().nullable(),
+  stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
+  attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
+  receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
+  lastReminderSentAt: z.coerce.date().optional().nullable(),
+  reminderCount: z.number().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  client: z.lazy(() => ClientCreateNestedOneWithoutPaymentsInputSchema),
+  space: z.lazy(() => SpaceCreateNestedOneWithoutPaymentsInputSchema).optional(),
+  attachedDocuments: z.lazy(() => PaymentDocumentCreateNestedManyWithoutPaymentInputSchema).optional(),
+}).strict();
+
+export const PaymentUncheckedCreateWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentUncheckedCreateWithoutInvoicesInput> = z.object({
+  id: z.string().optional(),
+  clientId: z.string(),
+  spaceId: z.string().optional().nullable(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  stripeFee: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }).optional(),
+  totalWithFees: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  description: z.string(),
+  status: z.lazy(() => PaymentStatusSchema).optional(),
+  frequency: z.lazy(() => PaymentFrequencySchema).optional(),
+  collectionMethod: z.lazy(() => PaymentCollectionMethodSchema).optional(),
+  reference: z.string().optional().nullable(),
+  dueDate: z.coerce.date(),
+  paidAt: z.coerce.date().optional().nullable(),
+  stripePaymentIntentId: z.string().optional().nullable(),
+  stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
+  attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
+  receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
+  lastReminderSentAt: z.coerce.date().optional().nullable(),
+  reminderCount: z.number().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  attachedDocuments: z.lazy(() => PaymentDocumentUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
+}).strict();
+
+export const PaymentCreateOrConnectWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentCreateOrConnectWithoutInvoicesInput> = z.object({
+  where: z.lazy(() => PaymentWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => PaymentCreateWithoutInvoicesInputSchema), z.lazy(() => PaymentUncheckedCreateWithoutInvoicesInputSchema) ]),
+}).strict();
+
+export const PaymentUpsertWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentUpsertWithoutInvoicesInput> = z.object({
+  update: z.union([ z.lazy(() => PaymentUpdateWithoutInvoicesInputSchema), z.lazy(() => PaymentUncheckedUpdateWithoutInvoicesInputSchema) ]),
+  create: z.union([ z.lazy(() => PaymentCreateWithoutInvoicesInputSchema), z.lazy(() => PaymentUncheckedCreateWithoutInvoicesInputSchema) ]),
+  where: z.lazy(() => PaymentWhereInputSchema).optional(),
+}).strict();
+
+export const PaymentUpdateToOneWithWhereWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentUpdateToOneWithWhereWithoutInvoicesInput> = z.object({
+  where: z.lazy(() => PaymentWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => PaymentUpdateWithoutInvoicesInputSchema), z.lazy(() => PaymentUncheckedUpdateWithoutInvoicesInputSchema) ]),
+}).strict();
+
+export const PaymentUpdateWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentUpdateWithoutInvoicesInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeFee: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  totalWithFees: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
+  receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  client: z.lazy(() => ClientUpdateOneRequiredWithoutPaymentsNestedInputSchema).optional(),
+  space: z.lazy(() => SpaceUpdateOneWithoutPaymentsNestedInputSchema).optional(),
+  attachedDocuments: z.lazy(() => PaymentDocumentUpdateManyWithoutPaymentNestedInputSchema).optional(),
+}).strict();
+
+export const PaymentUncheckedUpdateWithoutInvoicesInputSchema: z.ZodType<Prisma.PaymentUncheckedUpdateWithoutInvoicesInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  clientId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  spaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeFee: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  totalWithFees: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentStatusSchema), z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  frequency: z.union([ z.lazy(() => PaymentFrequencySchema), z.lazy(() => EnumPaymentFrequencyFieldUpdateOperationsInputSchema) ]).optional(),
+  collectionMethod: z.union([ z.lazy(() => PaymentCollectionMethodSchema), z.lazy(() => EnumPaymentCollectionMethodFieldUpdateOperationsInputSchema) ]).optional(),
+  reference: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dueDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
+  receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  attachedDocuments: z.lazy(() => PaymentDocumentUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
+}).strict();
+
 export const PaymentCreateWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.PaymentCreateWithoutAttachedDocumentsInput> = z.object({
   id: z.string().optional(),
   amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
@@ -10071,14 +10740,18 @@ export const PaymentCreateWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   client: z.lazy(() => ClientCreateNestedOneWithoutPaymentsInputSchema),
   space: z.lazy(() => SpaceCreateNestedOneWithoutPaymentsInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedCreateWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.PaymentUncheckedCreateWithoutAttachedDocumentsInput> = z.object({
@@ -10097,12 +10770,16 @@ export const PaymentUncheckedCreateWithoutAttachedDocumentsInputSchema: z.ZodTyp
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentCreateOrConnectWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.PaymentCreateOrConnectWithoutAttachedDocumentsInput> = z.object({
@@ -10238,14 +10915,18 @@ export const PaymentUpdateWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   client: z.lazy(() => ClientUpdateOneRequiredWithoutPaymentsNestedInputSchema).optional(),
   space: z.lazy(() => SpaceUpdateOneWithoutPaymentsNestedInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedUpdateWithoutAttachedDocumentsInputSchema: z.ZodType<Prisma.PaymentUncheckedUpdateWithoutAttachedDocumentsInput> = z.object({
@@ -10264,12 +10945,16 @@ export const PaymentUncheckedUpdateWithoutAttachedDocumentsInputSchema: z.ZodTyp
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const DocumentUpsertWithoutPaymentAttachmentsInputSchema: z.ZodType<Prisma.DocumentUpsertWithoutPaymentAttachmentsInput> = z.object({
@@ -10955,14 +11640,18 @@ export const PaymentCreateWithoutSpaceInputSchema: z.ZodType<Prisma.PaymentCreat
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   client: z.lazy(() => ClientCreateNestedOneWithoutPaymentsInputSchema),
   attachedDocuments: z.lazy(() => PaymentDocumentCreateNestedManyWithoutPaymentInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedCreateWithoutSpaceInputSchema: z.ZodType<Prisma.PaymentUncheckedCreateWithoutSpaceInput> = z.object({
@@ -10980,13 +11669,17 @@ export const PaymentUncheckedCreateWithoutSpaceInputSchema: z.ZodType<Prisma.Pay
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedCreateNestedManyWithoutPaymentInputSchema).optional(),
 }).strict();
 
 export const PaymentCreateOrConnectWithoutSpaceInputSchema: z.ZodType<Prisma.PaymentCreateOrConnectWithoutSpaceInput> = z.object({
@@ -12051,8 +12744,11 @@ export const PaymentCreateManyClientInputSchema: z.ZodType<Prisma.PaymentCreateM
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
@@ -12073,14 +12769,18 @@ export const PaymentUpdateWithoutClientInputSchema: z.ZodType<Prisma.PaymentUpda
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   space: z.lazy(() => SpaceUpdateOneWithoutPaymentsNestedInputSchema).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUpdateManyWithoutPaymentNestedInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedUpdateWithoutClientInputSchema: z.ZodType<Prisma.PaymentUncheckedUpdateWithoutClientInput> = z.object({
@@ -12098,13 +12798,17 @@ export const PaymentUncheckedUpdateWithoutClientInputSchema: z.ZodType<Prisma.Pa
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedUpdateManyWithoutClientInputSchema: z.ZodType<Prisma.PaymentUncheckedUpdateManyWithoutClientInput> = z.object({
@@ -12122,8 +12826,11 @@ export const PaymentUncheckedUpdateManyWithoutClientInputSchema: z.ZodType<Prism
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -12160,6 +12867,18 @@ export const PaymentDocumentCreateManyPaymentInputSchema: z.ZodType<Prisma.Payme
   attachedAt: z.coerce.date().optional(),
 }).strict();
 
+export const PaymentInvoiceCreateManyPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceCreateManyPaymentInput> = z.object({
+  id: z.string().optional(),
+  stripeInvoiceId: z.string(),
+  amount: z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),
+  status: z.lazy(() => PaymentInvoiceStatusSchema),
+  periodStart: z.coerce.date().optional().nullable(),
+  periodEnd: z.coerce.date().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
 export const PaymentDocumentUpdateWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentDocumentUpdateWithoutPaymentInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   attachedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -12176,6 +12895,42 @@ export const PaymentDocumentUncheckedUpdateManyWithoutPaymentInputSchema: z.ZodT
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   documentId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   attachedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const PaymentInvoiceUpdateWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUpdateWithoutPaymentInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  periodStart: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodEnd: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const PaymentInvoiceUncheckedUpdateWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedUpdateWithoutPaymentInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  periodStart: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodEnd: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const PaymentInvoiceUncheckedUpdateManyWithoutPaymentInputSchema: z.ZodType<Prisma.PaymentInvoiceUncheckedUpdateManyWithoutPaymentInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  amount: z.union([ z.union([z.number(),z.string(),z.instanceof(Prisma.Decimal),DecimalJsLikeSchema,]).refine((v) => isValidDecimalInput(v), { message: 'Must be a Decimal' }),z.lazy(() => DecimalFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => PaymentInvoiceStatusSchema), z.lazy(() => EnumPaymentInvoiceStatusFieldUpdateOperationsInputSchema) ]).optional(),
+  periodStart: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodEnd: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const DocumentCreateManyProviderInputSchema: z.ZodType<Prisma.DocumentCreateManyProviderInput> = z.object({
@@ -12460,8 +13215,11 @@ export const PaymentCreateManySpaceInputSchema: z.ZodType<Prisma.PaymentCreateMa
   paidAt: z.coerce.date().optional().nullable(),
   stripePaymentIntentId: z.string().optional().nullable(),
   stripeSubscriptionId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentCreateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.string().optional().nullable(),
+  receiptAttempts: z.number().optional(),
+  receiptError: z.string().optional().nullable(),
   lastReminderSentAt: z.coerce.date().optional().nullable(),
   reminderCount: z.number().optional(),
   createdAt: z.coerce.date().optional(),
@@ -12730,14 +13488,18 @@ export const PaymentUpdateWithoutSpaceInputSchema: z.ZodType<Prisma.PaymentUpdat
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   client: z.lazy(() => ClientUpdateOneRequiredWithoutPaymentsNestedInputSchema).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUpdateManyWithoutPaymentNestedInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedUpdateWithoutSpaceInputSchema: z.ZodType<Prisma.PaymentUncheckedUpdateWithoutSpaceInput> = z.object({
@@ -12755,13 +13517,17 @@ export const PaymentUncheckedUpdateWithoutSpaceInputSchema: z.ZodType<Prisma.Pay
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   attachedDocuments: z.lazy(() => PaymentDocumentUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
+  invoices: z.lazy(() => PaymentInvoiceUncheckedUpdateManyWithoutPaymentNestedInputSchema).optional(),
 }).strict();
 
 export const PaymentUncheckedUpdateManyWithoutSpaceInputSchema: z.ZodType<Prisma.PaymentUncheckedUpdateManyWithoutSpaceInput> = z.object({
@@ -12779,8 +13545,11 @@ export const PaymentUncheckedUpdateManyWithoutSpaceInputSchema: z.ZodType<Prisma
   paidAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripePaymentIntentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   stripeSubscriptionId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  stripeInvoiceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   attachedFiles: z.union([ z.lazy(() => PaymentUpdateattachedFilesInputSchema), z.string().array() ]).optional(),
   receiptUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  receiptAttempts: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  receiptError: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   lastReminderSentAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   reminderCount: z.union([ z.number(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -13712,6 +14481,68 @@ export const PaymentFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.PaymentFindUni
   where: PaymentWhereUniqueInputSchema, 
 }).strict();
 
+export const PaymentInvoiceFindFirstArgsSchema: z.ZodType<Prisma.PaymentInvoiceFindFirstArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  where: PaymentInvoiceWhereInputSchema.optional(), 
+  orderBy: z.union([ PaymentInvoiceOrderByWithRelationInputSchema.array(), PaymentInvoiceOrderByWithRelationInputSchema ]).optional(),
+  cursor: PaymentInvoiceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ PaymentInvoiceScalarFieldEnumSchema, PaymentInvoiceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const PaymentInvoiceFindFirstOrThrowArgsSchema: z.ZodType<Prisma.PaymentInvoiceFindFirstOrThrowArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  where: PaymentInvoiceWhereInputSchema.optional(), 
+  orderBy: z.union([ PaymentInvoiceOrderByWithRelationInputSchema.array(), PaymentInvoiceOrderByWithRelationInputSchema ]).optional(),
+  cursor: PaymentInvoiceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ PaymentInvoiceScalarFieldEnumSchema, PaymentInvoiceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const PaymentInvoiceFindManyArgsSchema: z.ZodType<Prisma.PaymentInvoiceFindManyArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  where: PaymentInvoiceWhereInputSchema.optional(), 
+  orderBy: z.union([ PaymentInvoiceOrderByWithRelationInputSchema.array(), PaymentInvoiceOrderByWithRelationInputSchema ]).optional(),
+  cursor: PaymentInvoiceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ PaymentInvoiceScalarFieldEnumSchema, PaymentInvoiceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const PaymentInvoiceAggregateArgsSchema: z.ZodType<Prisma.PaymentInvoiceAggregateArgs> = z.object({
+  where: PaymentInvoiceWhereInputSchema.optional(), 
+  orderBy: z.union([ PaymentInvoiceOrderByWithRelationInputSchema.array(), PaymentInvoiceOrderByWithRelationInputSchema ]).optional(),
+  cursor: PaymentInvoiceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const PaymentInvoiceGroupByArgsSchema: z.ZodType<Prisma.PaymentInvoiceGroupByArgs> = z.object({
+  where: PaymentInvoiceWhereInputSchema.optional(), 
+  orderBy: z.union([ PaymentInvoiceOrderByWithAggregationInputSchema.array(), PaymentInvoiceOrderByWithAggregationInputSchema ]).optional(),
+  by: PaymentInvoiceScalarFieldEnumSchema.array(), 
+  having: PaymentInvoiceScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const PaymentInvoiceFindUniqueArgsSchema: z.ZodType<Prisma.PaymentInvoiceFindUniqueArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  where: PaymentInvoiceWhereUniqueInputSchema, 
+}).strict();
+
+export const PaymentInvoiceFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.PaymentInvoiceFindUniqueOrThrowArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  where: PaymentInvoiceWhereUniqueInputSchema, 
+}).strict();
+
 export const PaymentDocumentFindFirstArgsSchema: z.ZodType<Prisma.PaymentDocumentFindFirstArgs> = z.object({
   select: PaymentDocumentSelectSchema.optional(),
   include: PaymentDocumentIncludeSchema.optional(),
@@ -14630,6 +15461,60 @@ export const PaymentUpdateManyAndReturnArgsSchema: z.ZodType<Prisma.PaymentUpdat
 
 export const PaymentDeleteManyArgsSchema: z.ZodType<Prisma.PaymentDeleteManyArgs> = z.object({
   where: PaymentWhereInputSchema.optional(), 
+  limit: z.number().optional(),
+}).strict();
+
+export const PaymentInvoiceCreateArgsSchema: z.ZodType<Prisma.PaymentInvoiceCreateArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  data: z.union([ PaymentInvoiceCreateInputSchema, PaymentInvoiceUncheckedCreateInputSchema ]),
+}).strict();
+
+export const PaymentInvoiceUpsertArgsSchema: z.ZodType<Prisma.PaymentInvoiceUpsertArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  where: PaymentInvoiceWhereUniqueInputSchema, 
+  create: z.union([ PaymentInvoiceCreateInputSchema, PaymentInvoiceUncheckedCreateInputSchema ]),
+  update: z.union([ PaymentInvoiceUpdateInputSchema, PaymentInvoiceUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const PaymentInvoiceCreateManyArgsSchema: z.ZodType<Prisma.PaymentInvoiceCreateManyArgs> = z.object({
+  data: z.union([ PaymentInvoiceCreateManyInputSchema, PaymentInvoiceCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const PaymentInvoiceCreateManyAndReturnArgsSchema: z.ZodType<Prisma.PaymentInvoiceCreateManyAndReturnArgs> = z.object({
+  data: z.union([ PaymentInvoiceCreateManyInputSchema, PaymentInvoiceCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const PaymentInvoiceDeleteArgsSchema: z.ZodType<Prisma.PaymentInvoiceDeleteArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  where: PaymentInvoiceWhereUniqueInputSchema, 
+}).strict();
+
+export const PaymentInvoiceUpdateArgsSchema: z.ZodType<Prisma.PaymentInvoiceUpdateArgs> = z.object({
+  select: PaymentInvoiceSelectSchema.optional(),
+  include: PaymentInvoiceIncludeSchema.optional(),
+  data: z.union([ PaymentInvoiceUpdateInputSchema, PaymentInvoiceUncheckedUpdateInputSchema ]),
+  where: PaymentInvoiceWhereUniqueInputSchema, 
+}).strict();
+
+export const PaymentInvoiceUpdateManyArgsSchema: z.ZodType<Prisma.PaymentInvoiceUpdateManyArgs> = z.object({
+  data: z.union([ PaymentInvoiceUpdateManyMutationInputSchema, PaymentInvoiceUncheckedUpdateManyInputSchema ]),
+  where: PaymentInvoiceWhereInputSchema.optional(), 
+  limit: z.number().optional(),
+}).strict();
+
+export const PaymentInvoiceUpdateManyAndReturnArgsSchema: z.ZodType<Prisma.PaymentInvoiceUpdateManyAndReturnArgs> = z.object({
+  data: z.union([ PaymentInvoiceUpdateManyMutationInputSchema, PaymentInvoiceUncheckedUpdateManyInputSchema ]),
+  where: PaymentInvoiceWhereInputSchema.optional(), 
+  limit: z.number().optional(),
+}).strict();
+
+export const PaymentInvoiceDeleteManyArgsSchema: z.ZodType<Prisma.PaymentInvoiceDeleteManyArgs> = z.object({
+  where: PaymentInvoiceWhereInputSchema.optional(), 
   limit: z.number().optional(),
 }).strict();
 
