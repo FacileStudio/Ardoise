@@ -1,6 +1,7 @@
 import pino from 'pino';
 
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env['NODE_ENV'] === 'production';
+const usePretty = process.env['LOG_PRETTY'] === '1';
 const logLevel = isProd ? 'info' : 'debug';
 
 const redactPaths = [
@@ -20,7 +21,7 @@ const redactPaths = [
 
 let transport;
 
-if (!isProd) {
+if (usePretty) {
   transport = pino.transport({
     target: 'pino-pretty',
     options: {
