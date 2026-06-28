@@ -6,6 +6,7 @@ import { SMTPClient } from '@repo/smtp';
 import type { UpdateSettingsInput } from './types';
 import { TRPCError } from '@trpc/server';
 import { DocuSealService } from '../docuseal/service';
+import { CryptoService } from '@repo/crypto';
 import { join } from 'path';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
@@ -21,6 +22,31 @@ export const secretFields = [
   'docusealApiKey',
   'webhookSecret',
 ] as const;
+
+let cryptoService: CryptoService | null = null;
+
+function getCrypto(): CryptoService {
+  if (!cryptoService) {
+    const key = process.env.ENCRYPTION_SECRET;
+    if (!key) {
+      throw new Error('ENCRYPTION_SECRET is required to read or write settings secrets');
+    }
+    cryptoService = new CryptoService({ ENCRYPTION_KEY: key });
+  }
+  return cryptoService;
+}
+
+function encryptSecret(value: string): string {
+  return getCrypto().encrypt(value);
+}
+
+function decryptSecret(value: string): string {
+  try {
+    return getCrypto().decrypt(value);
+  } catch {
+    return value;
+  }
+}
 
 export function redactSecrets<T extends Record<string, unknown>>(settings: T) {
   const result = { ...settings } as Record<string, unknown>;
@@ -85,13 +111,18 @@ export async function getAdminSettings(db: PrismaClient) {
   return redactSecrets(await getSettingsRecord(db));
 }
 
-export async function updateSettings(
-  db: PrismaClient,
-  data: UpdateSettingsInput
-) {
+export async function updateSettings(db: PrismaClient, data: UpdateSettingsInput) {
+  const isSecretField = (key: string) =>
+    secretFields.includes(key as (typeof secretFields)[number]);
   const normalizedEntries = Object.entries(data)
-    .filter(([key, value]) => !secretFields.includes(key as (typeof secretFields)[number]) || value !== '')
-    .map(([key, value]) => [key, value === '' ? null : value]);
+    .filter(([key, value]) => !isSecretField(key) || value !== '')
+    .map(([key, value]) => {
+      if (value === '') return [key, null];
+      if (isSecretField(key) && typeof value === 'string') {
+        return [key, encryptSecret(value)];
+      }
+      return [key, value];
+    });
   const normalizedData = Object.fromEntries(normalizedEntries) as Prisma.SettingsUpdateInput;
   const createData = {
     ...normalizedData,
@@ -151,7 +182,7 @@ export async function getDocuSealService(db: PrismaClient) {
 
   return new DocuSealService(
     typeof config.docusealApiUrl === 'string' ? config.docusealApiUrl : undefined,
-    typeof config.docusealApiKey === 'string' ? config.docusealApiKey : undefined
+    typeof config.docusealApiKey === 'string' ? decryptSecret(config.docusealApiKey) : undefined
   );
 }
 
@@ -159,7 +190,10 @@ export async function getStripeService(db: PrismaClient) {
   const settings = await getSettingsRecord(db);
   const config = settings as unknown as Record<string, unknown>;
 
-  if (typeof config.stripeSecretKey !== 'string' || typeof config.stripeWebhookSecret !== 'string') {
+  if (
+    typeof config.stripeSecretKey !== 'string' ||
+    typeof config.stripeWebhookSecret !== 'string'
+  ) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Stripe is not configured',
@@ -167,8 +201,8 @@ export async function getStripeService(db: PrismaClient) {
   }
 
   return new StripeService({
-    apiKey: config.stripeSecretKey,
-    webhookSecret: config.stripeWebhookSecret,
+    apiKey: decryptSecret(config.stripeSecretKey),
+    webhookSecret: decryptSecret(config.stripeWebhookSecret),
   });
 }
 
@@ -193,7 +227,7 @@ export async function getSmtpClient(db: PrismaClient) {
     host: config.smtpHost,
     port: config.smtpPort,
     user: config.smtpUser,
-    pass: config.smtpPass,
+    pass: decryptSecret(config.smtpPass),
     from: config.smtpFrom,
   });
 }
