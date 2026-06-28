@@ -1,4 +1,4 @@
-import type { PrismaClient, Payment, Prisma } from '@repo/database';
+import type { PrismaClient, Payment } from '@repo/database';
 import type { StripeService } from '@repo/stripe';
 import type { StorageService } from '@repo/storage';
 import { SMTPClient, EmailTemplates } from '@repo/smtp';
@@ -7,13 +7,59 @@ import { calculateStripeFees } from '@repo/utils/stripe-fees';
 import { TRPCError } from '@trpc/server';
 import type { ServerEnv } from '@repo/env';
 import type Stripe from 'stripe';
+import { randomUUID } from 'node:crypto';
+import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
-import type {
-  CreatePaymentInput,
-  UpdatePaymentInput,
-  ListPaymentsInput,
-} from './types';
+import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsInput } from './types';
+
+const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
+  const sub = invoice.parent?.subscription_details?.subscription;
+  const id = typeof sub === 'string' ? sub : sub?.id;
+  return typeof id === 'string' ? id : null;
+};
+
+const recordPaymentInvoice = async (
+  db: PrismaClient,
+  paymentId: string,
+  invoice: Stripe.Invoice,
+  status: 'PAID' | 'FAILED'
+): Promise<void> => {
+  if (!invoice.id) return;
+
+  const amountCents = status === 'PAID' ? invoice.amount_paid : invoice.amount_due;
+  const data = {
+    amount: (amountCents ?? 0) / 100,
+    status,
+    periodStart: invoice.period_start ? new Date(invoice.period_start * 1000) : null,
+    periodEnd: invoice.period_end ? new Date(invoice.period_end * 1000) : null,
+    paidAt: status === 'PAID' ? new Date() : null,
+  };
+
+  await db.paymentInvoice.upsert({
+    where: { stripeInvoiceId: invoice.id },
+    create: { paymentId, stripeInvoiceId: invoice.id, ...data },
+    update: data,
+  });
+};
+
+const recordReceiptFailure = async (
+  db: PrismaClient,
+  paymentId: string,
+  error: unknown
+): Promise<void> => {
+  try {
+    await db.payment.update({
+      where: { id: paymentId },
+      data: {
+        receiptAttempts: { increment: 1 },
+        receiptError: error instanceof Error ? error.message : 'Unknown receipt error',
+      },
+    });
+  } catch (updateError) {
+    logger.error({ err: updateError }, 'Failed to record receipt failure');
+  }
+};
 
 export const paymentService = {
   listPayments: async (db: PrismaClient, params: ListPaymentsInput) => {
@@ -66,6 +112,39 @@ export const paymentService = {
                 lastName: true,
               },
             },
+          },
+        },
+        attachedDocuments: {
+          include: {
+            document: true,
+          },
+        },
+        invoices: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Payment not found',
+      });
+    }
+
+    return payment;
+  },
+
+  getPaymentByIdPublic: async (db: PrismaClient, id: string) => {
+    const payment = await db.payment.findUnique({
+      where: { id },
+      include: {
+        client: {
+          select: {
+            companyName: true,
+            billingAddress: true,
+            billingCity: true,
+            billingCountry: true,
           },
         },
         attachedDocuments: {
@@ -161,27 +240,35 @@ export const paymentService = {
         });
       }
 
+      const idemBase = randomUUID();
+
       try {
         if (data.frequency === 'ONE_TIME') {
-          const paymentIntent = await stripe.client.paymentIntents.create({
-            amount: Math.round(feeCalculation.totalWithFees * 100),
-            currency: 'eur',
-            metadata: {
-              clientId: client.id,
-              description: data.description,
+          const paymentIntent = await stripe.client.paymentIntents.create(
+            {
+              amount: Math.round(feeCalculation.totalWithFees * 100),
+              currency: 'eur',
+              metadata: {
+                clientId: client.id,
+                description: data.description,
+              },
+              automatic_payment_methods: { enabled: true },
             },
-            automatic_payment_methods: { enabled: true },
-          });
+            { idempotencyKey: `${idemBase}-pi` }
+          );
           stripePaymentIntentId = paymentIntent.id;
         } else {
           let customerId = client.stripeCustomerId;
 
           if (!customerId) {
-            const customer = await stripe.client.customers.create({
-              email: clientEmail,
-              name: client.companyName,
-              metadata: { clientId: client.id },
-            });
+            const customer = await stripe.client.customers.create(
+              {
+                email: clientEmail,
+                name: client.companyName,
+                metadata: { clientId: client.id },
+              },
+              { idempotencyKey: `${idemBase}-customer` }
+            );
             customerId = customer.id;
 
             await db.client.update({
@@ -198,28 +285,34 @@ export const paymentService = {
             ONE_TIME: 'month' as const,
           };
 
-          const price = await stripe.client.prices.create({
-            currency: 'eur',
-            unit_amount: Math.round(feeCalculation.totalWithFees * 100),
-            recurring: {
-              interval: intervalMap[data.frequency],
+          const price = await stripe.client.prices.create(
+            {
+              currency: 'eur',
+              unit_amount: Math.round(feeCalculation.totalWithFees * 100),
+              recurring: {
+                interval: intervalMap[data.frequency],
+              },
+              product_data: {
+                name: data.description,
+              },
             },
-            product_data: {
-              name: data.description,
-            },
-          });
+            { idempotencyKey: `${idemBase}-price` }
+          );
 
-          const subscription = await stripe.client.subscriptions.create({
-            customer: customerId,
-            items: [{ price: price.id }],
-            payment_behavior: 'default_incomplete',
-            payment_settings: { save_default_payment_method: 'on_subscription' },
-            expand: ['latest_invoice.payment_intent'],
-            metadata: {
-              clientId: client.id,
-              description: data.description,
+          const subscription = await stripe.client.subscriptions.create(
+            {
+              customer: customerId,
+              items: [{ price: price.id }],
+              payment_behavior: 'default_incomplete',
+              payment_settings: { save_default_payment_method: 'on_subscription' },
+              expand: ['latest_invoice.payment_intent'],
+              metadata: {
+                clientId: client.id,
+                description: data.description,
+              },
             },
-          });
+            { idempotencyKey: `${idemBase}-sub` }
+          );
 
           stripeSubscriptionId = subscription.id;
         }
@@ -325,11 +418,7 @@ export const paymentService = {
     });
   },
 
-  cancelPayment: async (
-    db: PrismaClient,
-    stripe: StripeService,
-    id: string
-  ): Promise<Payment> => {
+  cancelPayment: async (db: PrismaClient, stripe: StripeService, id: string): Promise<Payment> => {
     const payment = await db.payment.findUnique({
       where: { id },
     });
@@ -376,6 +465,41 @@ export const paymentService = {
         },
       },
     });
+  },
+
+  createBillingPortalSession: async (
+    db: PrismaClient,
+    stripe: StripeService,
+    paymentId: string,
+    userId: string,
+    returnUrl: string
+  ): Promise<{ url: string }> => {
+    const payment = await db.payment.findUnique({
+      where: { id: paymentId },
+      include: { client: true },
+    });
+
+    if (!payment) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found' });
+    }
+
+    if (payment.client.userId !== userId) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this payment' });
+    }
+
+    if (!payment.stripeSubscriptionId || !payment.client.stripeCustomerId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'This payment has no subscription to manage',
+      });
+    }
+
+    const session = await stripe.createBillingPortalSession(
+      payment.client.stripeCustomerId,
+      returnUrl
+    );
+
+    return { url: session.url };
   },
 
   sendReminder: async (
@@ -426,7 +550,8 @@ export const paymentService = {
     }
 
     if (payment.lastReminderSentAt) {
-      const hoursSinceLastReminder = (Date.now() - new Date(payment.lastReminderSentAt).getTime()) / (1000 * 60 * 60);
+      const hoursSinceLastReminder =
+        (Date.now() - new Date(payment.lastReminderSentAt).getTime()) / (1000 * 60 * 60);
       if (hoursSinceLastReminder < 24) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',
@@ -435,7 +560,8 @@ export const paymentService = {
       }
     }
 
-    const clientName = `${payment.client.contactFirstName} ${payment.client.contactLastName}`.trim();
+    const clientName =
+      `${payment.client.contactFirstName} ${payment.client.contactLastName}`.trim();
     const daysUntilDue = Math.ceil(
       (new Date(payment.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     );
@@ -481,6 +607,37 @@ export const paymentService = {
     });
 
     return { count: result.count };
+  },
+
+  retryFailedReceipts: async (
+    db: PrismaClient,
+    storage: StorageService,
+    smtpClient: SMTPClient,
+    env: ServerEnv,
+    maxAttempts = 5
+  ) => {
+    const pending = await db.payment.findMany({
+      where: {
+        status: 'PAID',
+        receiptUrl: null,
+        receiptAttempts: { lt: maxAttempts },
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    let succeeded = 0;
+    for (const { id } of pending) {
+      try {
+        await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, id);
+        succeeded += 1;
+      } catch (error) {
+        logger.error({ err: error }, 'Receipt retry failed');
+        await recordReceiptFailure(db, id, error);
+      }
+    }
+
+    return { attempted: pending.length, succeeded };
   },
 
   generateAndSendReceipt: async (
@@ -566,7 +723,7 @@ export const paymentService = {
 
       await db.payment.update({
         where: { id: paymentId },
-        data: { receiptUrl },
+        data: { receiptUrl, receiptError: null },
       });
 
       const emailTemplates = new EmailTemplates(smtpClient);
@@ -601,17 +758,22 @@ export const paymentService = {
       await db.webhookEvent.create({
         data: { id: event.id, type: event.type },
       });
-    } catch {
-      return;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return;
+      }
+      throw error;
     }
 
     await paymentService.processWebhookEvent(db, storage, smtpClient, env, event);
 
     if (Math.random() < 0.01) {
       const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      await db.webhookEvent.deleteMany({
-        where: { processedAt: { lt: cutoff } },
-      }).catch(() => {});
+      await db.webhookEvent
+        .deleteMany({
+          where: { processedAt: { lt: cutoff } },
+        })
+        .catch(() => {});
     }
   },
 
@@ -640,49 +802,97 @@ export const paymentService = {
         if (updated.count === 0) break;
 
         try {
-          await paymentService.generateAndSendReceipt(
-            db,
-            storage,
-            smtpClient,
-            env,
-            payment.id
-          );
+          await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);
         } catch (error) {
           logger.error({ err: error }, 'Failed to generate receipt for payment_intent.succeeded');
+          await recordReceiptFailure(db, payment.id, error);
         }
+        break;
+      }
+
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
+        await db.payment.updateMany({
+          where: { stripePaymentIntentId: paymentIntent.id, status: 'PENDING' },
+          data: { status: 'FAILED' },
+        });
         break;
       }
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        const sub = invoice.parent?.subscription_details?.subscription;
-        const subscriptionId = typeof sub === 'string' ? sub : sub?.id;
+        const subscriptionId = subscriptionIdFromInvoice(invoice);
 
-        if (!subscriptionId || typeof subscriptionId !== 'string') break;
+        if (!subscriptionId) break;
 
         const payment = await db.payment.findFirst({
-          where: { stripeSubscriptionId: subscriptionId, status: 'PENDING' },
+          where: { stripeSubscriptionId: subscriptionId },
         });
 
         if (!payment) break;
 
+        try {
+          await recordPaymentInvoice(db, payment.id, invoice, 'PAID');
+        } catch (error) {
+          logger.error({ err: error }, 'Failed to record paid subscription invoice');
+        }
+
         const updated = await db.payment.updateMany({
-          where: { id: payment.id, status: 'PENDING' },
-          data: { status: 'PAID', paidAt: new Date() },
+          where: { id: payment.id, status: { in: ['PENDING', 'PAST_DUE'] } },
+          data: { status: 'PAID', paidAt: new Date(), stripeInvoiceId: invoice.id ?? null },
         });
 
         if (updated.count === 0) break;
 
         try {
-          await paymentService.generateAndSendReceipt(
-            db,
-            storage,
-            smtpClient,
-            env,
-            payment.id
-          );
+          await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);
         } catch (error) {
           logger.error({ err: error }, 'Failed to generate receipt for invoice.payment_succeeded');
+          await recordReceiptFailure(db, payment.id, error);
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = subscriptionIdFromInvoice(invoice);
+
+        if (!subscriptionId) break;
+
+        const payment = await db.payment.findFirst({
+          where: { stripeSubscriptionId: subscriptionId },
+        });
+
+        if (payment) {
+          try {
+            await recordPaymentInvoice(db, payment.id, invoice, 'FAILED');
+          } catch (error) {
+            logger.error({ err: error }, 'Failed to record failed subscription invoice');
+          }
+        }
+
+        await db.payment.updateMany({
+          where: {
+            stripeSubscriptionId: subscriptionId,
+            status: { in: ['PENDING', 'PAID', 'PAST_DUE'] },
+          },
+          data: { status: 'PAST_DUE', stripeInvoiceId: invoice.id ?? null },
+        });
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+
+        if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+          await db.payment.updateMany({
+            where: {
+              stripeSubscriptionId: subscription.id,
+              status: { not: 'CANCELLED' },
+            },
+            data: { status: 'PAST_DUE' },
+          });
         }
         break;
       }
@@ -693,7 +903,7 @@ export const paymentService = {
         await db.payment.updateMany({
           where: {
             stripeSubscriptionId: subscription.id,
-            status: 'PENDING',
+            status: { not: 'CANCELLED' },
           },
           data: {
             status: 'CANCELLED',

@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-export const PaymentStatusSchema = z.enum(['PENDING', 'PAID', 'EXPIRED', 'CANCELLED']);
+export const PaymentStatusSchema = z.enum([
+  'PENDING',
+  'PAID',
+  'PAST_DUE',
+  'FAILED',
+  'EXPIRED',
+  'CANCELLED',
+]);
 export const PaymentFrequencySchema = z.enum(['ONE_TIME', 'MONTHLY', 'YEARLY']);
 export const PaymentCollectionMethodSchema = z.enum(['STRIPE', 'MANUAL']);
 

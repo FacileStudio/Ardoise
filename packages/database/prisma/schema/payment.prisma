@@ -3,6 +3,8 @@ enum PaymentStatus {
   PAID
   EXPIRED
   CANCELLED
+  PAST_DUE
+  FAILED
 }
 
 enum PaymentFrequency {
@@ -16,35 +18,44 @@ enum PaymentCollectionMethod {
   MANUAL
 }
 
+enum PaymentInvoiceStatus {
+  PAID
+  FAILED
+}
+
 model Payment {
   id String @id @default(cuid())
 
   clientId String
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
-  amount Decimal @db.Decimal(10, 2)
-  stripeFee Decimal @db.Decimal(10, 2) @default(0)
-  totalWithFees Decimal @db.Decimal(10, 2)
-  description String
-  status PaymentStatus @default(PENDING)
-  frequency PaymentFrequency @default(ONE_TIME)
+  amount           Decimal                 @db.Decimal(10, 2)
+  stripeFee        Decimal                 @default(0) @db.Decimal(10, 2)
+  totalWithFees    Decimal                 @db.Decimal(10, 2)
+  description      String
+  status           PaymentStatus           @default(PENDING)
+  frequency        PaymentFrequency        @default(ONE_TIME)
   collectionMethod PaymentCollectionMethod @default(STRIPE)
-  reference String?
+  reference        String?
 
   dueDate DateTime
-  paidAt DateTime?
+  paidAt  DateTime?
 
   stripePaymentIntentId String? @unique
-  stripeSubscriptionId String? @unique
+  stripeSubscriptionId  String? @unique
+  stripeInvoiceId       String?
 
   attachedFiles String[]
 
   attachedDocuments PaymentDocument[]
+  invoices          PaymentInvoice[]
 
-  receiptUrl String?
+  receiptUrl      String?
+  receiptAttempts Int     @default(0)
+  receiptError    String?
 
   lastReminderSentAt DateTime?
   reminderCount      Int       @default(0)
@@ -60,11 +71,30 @@ model Payment {
   @@index([spaceId])
 }
 
+model PaymentInvoice {
+  id String @id @default(cuid())
+
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  stripeInvoiceId String               @unique
+  amount          Decimal              @db.Decimal(10, 2)
+  status          PaymentInvoiceStatus
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  paidAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([paymentId])
+}
+
 model PaymentDocument {
   id String @id @default(cuid())
 
-  paymentId  String
-  payment    Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   documentId String
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)

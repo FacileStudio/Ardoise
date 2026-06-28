@@ -259,6 +259,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@repo/admin": "workspace:*",
+        "@repo/crypto": "workspace:*",
         "@repo/database": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/smtp": "workspace:*",
