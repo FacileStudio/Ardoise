@@ -10,6 +10,14 @@
 
   const apiUrl = env.API_URL?.replace(/\/trpc\/?$/, '').replace(/\/$/, '') ?? '';
 
+  const inputClass =
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+  const labelClass = 'text-sm font-medium leading-none';
+  const primaryButtonClass =
+    'inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50';
+  const outlineButtonClass =
+    'inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50';
+
   let loading = $state(false);
   let oidcLoading = $state(false);
   let error = $state('');
@@ -77,28 +85,33 @@
 </svelte:head>
 
 <div class="flex min-h-screen">
-  <div class="hidden lg:flex lg:w-1/2 flex-col bg-foreground px-12 py-10">
+  <div class="hidden lg:flex lg:w-1/2 flex-col bg-black px-12 py-10">
     <a href={resolve('/')} class="flex items-center gap-3 mb-auto">
       <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-white"></iconify-icon>
-      <span class="text-xl font-bold font-heading tracking-tight text-background">Ardoise</span>
+      <span class="text-xl font-bold font-heading tracking-tight text-white">Ardoise</span>
     </a>
 
     <div class="mb-auto">
-      <h2 class="text-4xl font-bold font-heading text-background leading-tight tracking-tight">
+      <h2 class="text-4xl font-bold font-heading text-white leading-tight tracking-tight">
         Facturation.<br />Paiement.
       </h2>
-      <p class="mt-4 text-sm text-background/50 max-w-xs leading-relaxed">
+      <p class="mt-4 text-sm text-white/50 max-w-xs leading-relaxed">
         Plateforme de facturation et de paiement pour Facile Studio.
       </p>
     </div>
 
-    <p class="text-xs text-background/30">
+    <p class="text-xs text-white/30">
       © {new Date().getFullYear()} Ardoise par Facile.
     </p>
   </div>
 
   <div class="flex w-full lg:w-1/2 flex-col items-center justify-center px-8 py-12 bg-background">
     <div class="w-full max-w-sm">
+      <a href={resolve('/')} class="mb-10 flex items-center gap-3 lg:hidden">
+        <iconify-icon icon="solar:bill-list-bold-duotone" width="28"></iconify-icon>
+        <span class="text-xl font-bold font-heading tracking-tight">Ardoise</span>
+      </a>
+
       <div class="mb-8">
         <h1 class="text-2xl font-bold font-heading tracking-tight text-foreground">
           Bienvenue
@@ -113,6 +126,8 @@
           <iconify-icon icon="svg-spinners:ring-resize" width="16"></iconify-icon>
           Connexion en cours…
         </div>
+      {:else if !configLoaded}
+        <div class="h-40"></div>
       {:else}
         {#if !ssoOnly}
           <form
@@ -120,58 +135,60 @@
             class="space-y-4"
           >
             <div class="space-y-1.5">
-              <label for="email" class="text-sm font-medium">Email</label>
+              <label for="email" class={labelClass}>Email</label>
               <input
                 id="email"
                 type="email"
                 bind:value={email}
                 placeholder="vous@exemple.com"
+                autocomplete="email"
                 required
-                class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
+                disabled={loading}
+                class={inputClass}
               />
             </div>
 
             <div class="space-y-1.5">
-              <label for="password" class="text-sm font-medium">Mot de passe</label>
+              <label for="password" class={labelClass}>Mot de passe</label>
               <input
                 id="password"
                 type="password"
                 bind:value={password}
                 placeholder="••••••••"
+                autocomplete="current-password"
                 required
-                class="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-ring/50 focus:border-foreground"
+                disabled={loading}
+                class={inputClass}
               />
             </div>
 
             {#if error}
-              <p class="text-sm text-destructive">{error}</p>
+              <p class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
             {/if}
 
             <button
               type="submit"
               disabled={loading || !email || !password}
-              class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+              class={primaryButtonClass}
             >
-              {#if loading}
-                <iconify-icon icon="svg-spinners:ring-resize" width="16"></iconify-icon>
-              {/if}
-              Se connecter
+              {loading ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
         {/if}
 
         {#if ssoOnly && error}
-          <p class="text-sm text-destructive mb-4">{error}</p>
+          <p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
         {/if}
 
         {#if oidcEnabled && !ssoOnly}
-          <div class="relative my-4">
-            <div class="absolute inset-0 flex items-center">
-              <span class="w-full border-t"></span>
-            </div>
-            <div class="relative flex justify-center text-xs">
-              <span class="bg-background px-2 text-muted-foreground">ou</span>
-            </div>
+          <div class="my-5 flex items-center gap-3">
+            <div class="h-px flex-1 bg-border"></div>
+            <span class="text-xs text-muted-foreground">ou</span>
+            <div class="h-px flex-1 bg-border"></div>
           </div>
         {/if}
 
@@ -179,10 +196,9 @@
           <a
             href="{apiUrl}/auth/oidc?redirect={encodeURIComponent(window.location.origin + resolve('/login'))}"
             rel="external"
-            class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            class="block"
           >
-            <iconify-icon icon="solar:shield-keyhole-bold" width="16"></iconify-icon>
-            Connexion SSO
+            <button type="button" class={outlineButtonClass}>Continuer avec SSO</button>
           </a>
         {/if}
       {/if}
