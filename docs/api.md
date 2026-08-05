@@ -17,8 +17,13 @@ Failures come back as tRPC errors: `UNAUTHORIZED` ("Please log in."), `FORBIDDEN
 restricted to administrators."), `NOT_FOUND`. In production, `INTERNAL_SERVER_ERROR` messages are
 replaced with a generic string and stacks are stripped.
 
-An OpenAPI document is generated from the router (`trpc-to-openapi`) and served at
-`GET /openapi.json`, with a Scalar reference UI at `GET /docs`.
+A Scalar API reference is served at `GET /docs`, over an OpenAPI document at
+`GET /docs/openapi.json` — the same two paths every Facile backend uses.
+
+The document is produced by `trpc-to-openapi` from the tRPC router, but **no procedure declares
+`.meta({ openapi: … })`**, so it currently ships an empty `paths` object. It does not document the
+tRPC procedures, and it does not document the plain Hono routes below either. Adding `openapi`
+meta to the procedures you want exposed is what fills it in.
 
 ## `auth`
 
@@ -215,8 +220,8 @@ Not tRPC — these exist because of raw bodies, redirects, or callers that canno
 | `POST` | `/auth/sync-profile` | session | Pushes profile changes to the IdP, rate-limited by `profileSyncedAt` |
 | `PUT` | `/storage/*` | `?ticket=` HMAC | Uploads a file body to that key |
 | `GET` | `/storage/*` | `?ticket=` HMAC | Downloads it |
-| `GET` | `/openapi.json` | none | Generated OpenAPI document |
 | `GET` | `/docs` | none | Scalar API reference UI |
+| `GET` | `/docs/openapi.json` | none | Generated OpenAPI document |
 | `GET` | `/version` | none | Backend version |
 | `GET` | `/health` | none | Full probe: `api`, `database`, `storage` with latencies |
 | `GET` | `/health/live` | none | Liveness |

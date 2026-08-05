@@ -66,8 +66,8 @@ app.options('*', (c) => c.body(null, 204));
 
 app.post('/webhook', createStripeWebhookHandler(storage, env));
 
-app.get('/openapi.json', openApiHandler);
-app.get('/docs', apiReference({ url: '/openapi.json', pageTitle: 'Ardoise API' }));
+app.get('/docs/openapi.json', openApiHandler);
+app.get('/docs', apiReference({ url: '/docs/openapi.json', pageTitle: 'Ardoise API' }));
 
 app.get('/version', (c) => c.json({ version: VERSION }));
 app.get('/health', createHealthCheckHandler({ storage }));

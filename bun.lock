@@ -26,7 +26,7 @@
         "@repo/logger": "workspace:*",
         "@repo/trpc": "workspace:*",
         "@repo/types": "workspace:*",
-        "@scalar/hono-api-reference": "^0.10.19",
+        "@scalar/hono-api-reference": "0.10.19",
         "@trpc/server": "^11.9.0",
         "bcryptjs": "^3.0.3",
         "hono": "^4.11.7",
