@@ -18,7 +18,6 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-      network: host
     container_name: ardoise-backend
     environment:
       NODE_ENV: production
@@ -43,7 +42,6 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      network: host
       args:
         VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
     container_name: ardoise-web
