@@ -2,22 +2,46 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%sveltekit.assets%/favicon.ico" type="image/x-icon" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Ardoise - Payment & Invoicing Platform</title>
-    <meta name="description" content="Secure payment requests and invoice management for Facile Studio" />
-    <meta name="theme-color" content="#291334" />
+    <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
+    <link rel="manifest" href="%sveltekit.assets%/site.webmanifest" />
 
-    <meta property="og:title" content="Ardoise - Payment & Invoicing Platform" />
-    <meta property="og:description" content="Secure payment requests and invoice management for Facile Studio" />
-    <meta property="og:image" content="%sveltekit.assets%/logo.svg" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
+
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Ardoise" />
+    <meta property="og:url" content="https://ardoise.facile.studio/" />
+    <meta property="og:title" content="Ardoise — Facturation et paiement" />
+    <meta
+      property="og:description"
+      content="Facturation et paiement auto-hébergés : demandes de paiement réglées par Stripe, devis, contrats et factures rendus en PDF."
+    />
+    <meta property="og:image" content="https://ardoise.facile.studio/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Ardoise — Facturation et paiement" />
+    <meta
+      name="twitter:description"
+      content="Facturation et paiement auto-hébergés : demandes de paiement réglées par Stripe, devis, contrats et factures rendus en PDF."
+    />
+    <meta name="twitter:image" content="https://ardoise.facile.studio/og-image.png" />
 
     <meta name="robots" content="noindex, nofollow" />
 
     <script type="module" src="https://cdn.jsdelivr.net/npm/iconify-icon@2.2.0/dist/iconify-icon.min.js"></script>
     %sveltekit.head%
+
+    <title>Ardoise — Facturation et paiement</title>
+    <meta
+      name="description"
+      content="Facturation et paiement auto-hébergés : demandes de paiement réglées par Stripe, devis, contrats et factures rendus en PDF."
+    />
   </head>
   <body data-sveltekit-preload-data="hover">
     <div style="display: contents">%sveltekit.body%</div>
