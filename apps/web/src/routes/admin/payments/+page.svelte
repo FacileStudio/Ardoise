@@ -148,7 +148,7 @@
 
 		try {
 			actionLoading = 'expire';
-			await trpc.payment.markExpired.mutate();
+			await trpc.payment.markExpired.mutate({ spaceId: spaceContext.spaceId });
 			await Promise.all([fetchPayments(), fetchStats()]);
 		} catch (err) {
 			logger.error({ err }, 'Failed to mark expired payments');

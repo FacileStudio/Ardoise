@@ -1,4 +1,5 @@
 import { router, adminProcedure } from '../../trpc';
+import spaceService, { scopeWhere, requireRowScope } from '../space/service';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
@@ -44,11 +45,8 @@ export const providerRouter = router({
       const { page, limit, search, spaceId } = input;
       const skip = (page - 1) * limit;
 
-      const where: any = {};
-
-      if (spaceId !== undefined) {
-        where.spaceId = spaceId || null;
-      }
+      const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
+      const where: any = { ...scopeWhere(scope) };
 
       if (search) {
         where.OR = [
@@ -79,21 +77,20 @@ export const providerRouter = router({
   get: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const provider = await ctx.db.provider.findUnique({
-        where: { id: input.id },
-        include: {
-          documents: {
-            orderBy: { createdAt: 'desc' },
-            take: 20,
-          },
-        },
+      const provider = await requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.provider.findUnique({ where: { id: input.id } }),
+        'Provider not found'
+      );
+
+      const documents = await ctx.db.document.findMany({
+        where: { providerId: provider.id, spaceId: provider.spaceId },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
       });
 
-      if (!provider) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-      }
-
-      return provider;
+      return { ...provider, documents };
     }),
 
   create: adminProcedure
@@ -114,6 +111,13 @@ export const providerRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      await requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.provider.findUnique({ where: { id: input.id } }),
+        'Provider not found'
+      );
+
       const provider = await ctx.db.provider.update({
         where: { id: input.id },
         data: input.data,
@@ -125,6 +129,13 @@ export const providerRouter = router({
   delete: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      await requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.provider.findUnique({ where: { id: input.id } }),
+        'Provider not found'
+      );
+
       const documentsCount = await ctx.db.document.count({
         where: { providerId: input.id },
       });

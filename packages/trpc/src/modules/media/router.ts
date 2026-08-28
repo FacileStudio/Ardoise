@@ -31,22 +31,10 @@ export const mediaRouter = router({
   getDownloadUrl: protectedProcedure
     .input(z.object({ url: z.string() }))
     .query(async ({ ctx, input }) => {
-      const urlPath = new URL(input.url).pathname;
-      const pathParts = urlPath.split('/').filter(Boolean);
-      const storageIndex = pathParts.indexOf('storage');
-      const uploadsIndex = pathParts.indexOf('uploads');
-
-      let filePath = '';
-      if (storageIndex !== -1) {
-        filePath = pathParts.slice(storageIndex + 1).join('/');
-      } else if (uploadsIndex !== -1) {
-        filePath = pathParts.slice(uploadsIndex).join('/');
-      } else {
-        throw new Error('Invalid file URL: storage path not found');
-      }
+      const key = await mediaService.resolveDownloadKey(ctx.db, ctx.user.id, input.url);
 
       return {
-        url: mediaService.generateDownloadUrl(filePath, ctx.apiOrigin, ctx.env.ENCRYPTION_SECRET),
+        url: mediaService.generateDownloadUrl(key, ctx.apiOrigin, ctx.env.ENCRYPTION_SECRET),
       };
     }),
 

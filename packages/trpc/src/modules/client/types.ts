@@ -44,4 +44,5 @@ export const GetByIdSchema = z.object({
 export type CreateClientInput = z.infer<typeof CreateClientSchema>;
 export type UpdateClientInput = z.infer<typeof UpdateClientSchema>;
 export type ListClientsInput = z.infer<typeof ListClientsSchema>;
+export type ListClientsParams = Omit<ListClientsInput, 'spaceId'>;
 export type GetByIdInput = z.infer<typeof GetByIdSchema>;

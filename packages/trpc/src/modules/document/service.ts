@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import { getSettingsRecord } from '../settings/service';
+import { requireRowScope } from '../space/service';
 
 export const DocTypeSchema = z.enum([
   'prestation',
@@ -664,18 +665,23 @@ export async function generateDocument(
 
 export async function loadDocumentContext(
   db: PrismaClient,
+  userId: string,
   clientId: string,
   providerId: string
 ) {
-  const client = await db.client.findUnique({ where: { id: clientId } });
-  if (!client) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
-  }
+  const client = await requireRowScope(
+    db,
+    userId,
+    await db.client.findUnique({ where: { id: clientId } }),
+    'Client not found'
+  );
 
-  const provider = await db.provider.findUnique({ where: { id: providerId } });
-  if (!provider) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
-  }
+  const provider = await requireRowScope(
+    db,
+    userId,
+    await db.provider.findUnique({ where: { id: providerId } }),
+    'Provider not found'
+  );
 
   const settings = await getSettingsRecord(db);
   const tvaRate = Number(provider.tvaRate || 20);

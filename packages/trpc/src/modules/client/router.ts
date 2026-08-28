@@ -1,5 +1,6 @@
 import { router, protectedProcedure, adminProcedure } from '../../trpc';
 import clientService from './service';
+import spaceService from '../space/service';
 import {
   CreateClientSchema,
   UpdateClientSchema,
@@ -10,11 +11,13 @@ import { dispatchConfiguredWebhook } from '../webhook/service';
 
 export const clientRouter = router({
   list: adminProcedure.input(ListClientsSchema).query(async ({ ctx, input }) => {
-    return clientService.listClients(ctx.db, input);
+    const { spaceId, ...params } = input;
+    const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
+    return clientService.listClients(ctx.db, params, scope);
   }),
 
   getById: adminProcedure.input(GetByIdSchema).query(async ({ ctx, input }) => {
-    return clientService.getClientById(ctx.db, input.id);
+    return clientService.getClientById(ctx.db, ctx.user.id, input.id);
   }),
 
   create: adminProcedure.input(CreateClientSchema).mutation(async ({ ctx, input }) => {
@@ -33,7 +36,7 @@ export const clientRouter = router({
 
   update: adminProcedure.input(UpdateClientSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
-    const client = await clientService.updateClient(ctx.db, id, data);
+    const client = await clientService.updateClient(ctx.db, ctx.user.id, id, data);
 
     await dispatchConfiguredWebhook({
       db: ctx.db,
@@ -47,7 +50,7 @@ export const clientRouter = router({
   }),
 
   delete: adminProcedure.input(GetByIdSchema).mutation(async ({ ctx, input }) => {
-    const result = await clientService.deleteClient(ctx.db, input.id);
+    const result = await clientService.deleteClient(ctx.db, ctx.user.id, input.id);
 
     await dispatchConfiguredWebhook({
       db: ctx.db,

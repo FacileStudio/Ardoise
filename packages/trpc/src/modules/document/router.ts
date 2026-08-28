@@ -25,9 +25,11 @@ import {
   PrestationVideoInputSchema,
 } from './services/schemas';
 import { generateNextDocumentNumber, previewDocumentNumber } from './numbering';
+import spaceService, { scopeWhere, requireRowScope, requireRowsScope } from '../space/service';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { StorageService } from '@repo/storage';
+import type { PrismaClient } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
 
@@ -58,19 +60,21 @@ async function generateDocumentWithLogo(
   }
 }
 
-async function fetchProvidersByIds(db: any, ids: string[]) {
+async function fetchProvidersByIds(db: PrismaClient, userId: string, ids: string[]) {
   const providers = await db.provider.findMany({ where: { id: { in: ids } } });
   if (providers.length !== ids.length) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more providers not found' });
   }
+  await requireRowsScope(db, userId, providers, 'One or more providers not found');
   return providers as Array<{ id: string; name: string; address: string | null; city: string | null; siret: string | null; email: string | null; iban: string | null; bic: string | null }>;
 }
 
 async function resolveSubProvidersForBack(
-  db: any,
+  db: PrismaClient,
+  userId: string,
   inputs: Array<{ id: string; role: string; amount: number }>
 ) {
-  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
+  const providers = await fetchProvidersByIds(db, userId, inputs.map(p => p.id));
   return inputs.map(inputProvider => {
     const dbProvider = providers.find(p => p.id === inputProvider.id)!;
     return {
@@ -101,7 +105,7 @@ async function previewSpecializedPrestation(
   ctx: any
 ) {
   const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-  const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+  const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
   const documentData = {
     type,
@@ -136,7 +140,7 @@ async function createSpecializedPrestation(
   ctx: any
 ) {
   const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-  const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+  const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
   const documentData = {
     type,
@@ -183,10 +187,11 @@ async function createSpecializedPrestation(
 }
 
 async function resolveSubProvidersForAppel(
-  db: any,
+  db: PrismaClient,
+  userId: string,
   inputs: Array<{ id: string; amount_to_pay: number }>
 ) {
-  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
+  const providers = await fetchProvidersByIds(db, userId, inputs.map(p => p.id));
   return inputs.map(inputProvider => {
     const dbProvider = providers.find(p => p.id === inputProvider.id)!;
     return {
@@ -213,10 +218,8 @@ export const documentRouter = router({
       const { page, pageSize, search, type, spaceId } = input;
       const skip = (page - 1) * pageSize;
 
-      const where: any = {};
-      if (spaceId !== undefined) {
-        where.spaceId = spaceId || null;
-      }
+      const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
+      const where: any = { ...scopeWhere(scope) };
       if (search) {
         where.OR = [
           { name: { contains: search, mode: 'insensitive' } },
@@ -261,36 +264,36 @@ export const documentRouter = router({
   get: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const document = await ctx.db.document.findUnique({
-        where: { id: input.id },
-        include: {
-          createdByUser: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
+      return requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.document.findUnique({
+          where: { id: input.id },
+          include: {
+            createdByUser: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
             },
           },
-        },
-      });
-
-      if (!document) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
-      }
-
-      return document;
+        }),
+        'Document not found'
+      );
     }),
 
   delete: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const document = await ctx.db.document.findUnique({
-        where: { id: input.id },
-      });
-
-      if (!document) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
-      }
+      await requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.document.findUnique({
+          where: { id: input.id },
+        }),
+        'Document not found'
+      );
 
       await ctx.db.document.delete({
         where: { id: input.id },
@@ -313,13 +316,14 @@ export const documentRouter = router({
   download: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const document = await ctx.db.document.findUnique({
-        where: { id: input.id },
-      });
-
-      if (!document) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
-      }
+      const document = await requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.document.findUnique({
+          where: { id: input.id },
+        }),
+        'Document not found'
+      );
 
       try {
         let logoUrl: string | undefined;
@@ -327,8 +331,8 @@ export const documentRouter = router({
         let iban = '';
         let bic = '';
         if (document.providerId) {
-          const provider = await ctx.db.provider.findUnique({
-            where: { id: document.providerId },
+          const provider = await ctx.db.provider.findFirst({
+            where: { id: document.providerId, spaceId: document.spaceId },
             select: { logoUrl: true, bankName: true, iban: true, bic: true },
           });
           logoUrl = provider?.logoUrl || undefined;
@@ -399,7 +403,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'prestation' as const,
@@ -438,7 +442,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'prestation' as const,
@@ -494,7 +498,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const quoteNumber = await previewDocumentNumber(ctx.db, 'quote');
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -534,7 +538,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -590,8 +594,8 @@ export const documentRouter = router({
     .input(BackContractuelInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
-        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, ctx.user!.id, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -627,8 +631,8 @@ export const documentRouter = router({
     .input(BackContractuelInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
-        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, ctx.user!.id, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -683,8 +687,8 @@ export const documentRouter = router({
     .input(AppelDeFondsInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
-        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, ctx.user!.id, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -721,8 +725,8 @@ export const documentRouter = router({
     .input(AppelDeFondsInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
-        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, ctx.user!.id, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -781,7 +785,7 @@ export const documentRouter = router({
     .input(ContratPrestationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -817,7 +821,7 @@ export const documentRouter = router({
     .input(ContratPrestationInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -870,7 +874,7 @@ export const documentRouter = router({
     .input(ContratMaintenanceInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_maintenance' as const,
@@ -906,7 +910,7 @@ export const documentRouter = router({
     .input(ContratMaintenanceInputSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, input.clientId, input.providerId);
+        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId);
 
         const documentData = {
           type: 'contrat_maintenance' as const,

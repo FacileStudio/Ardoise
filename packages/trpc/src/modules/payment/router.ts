@@ -1,11 +1,13 @@
 import { router, publicProcedure, protectedProcedure, adminProcedure } from '../../trpc';
 import { paymentService } from './service';
+import spaceService from '../space/service';
 import {
   CreatePaymentSchema,
   UpdatePaymentSchema,
   ListPaymentsSchema,
   GetPaymentByIdSchema,
   CancelPaymentSchema,
+  SpaceScopeSchema,
   WebhookSchema,
 } from './types';
 import { TRPCError } from '@trpc/server';
@@ -13,42 +15,54 @@ import type Stripe from 'stripe';
 
 export const paymentRouter = router({
   list: adminProcedure.input(ListPaymentsSchema).query(async ({ ctx, input }) => {
-    return paymentService.listPayments(ctx.db, input);
+    const { spaceId, ...params } = input;
+    const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
+    return paymentService.listPayments(ctx.db, params, scope);
   }),
 
   getById: adminProcedure.input(GetPaymentByIdSchema).query(async ({ ctx, input }) => {
-    return paymentService.getPaymentById(ctx.db, input.id);
+    return paymentService.getPaymentById(ctx.db, ctx.user.id, input.id);
   }),
 
   create: adminProcedure.input(CreatePaymentSchema).mutation(async ({ ctx, input }) => {
     const stripe = input.collectionMethod === 'STRIPE' ? await ctx.getStripe() : null;
     const smtp = input.collectionMethod === 'STRIPE' ? await ctx.getSmtp() : null;
 
-    return paymentService.createPayment(ctx.db, stripe, smtp, ctx.env, ctx.appOrigin, input);
+    return paymentService.createPayment(
+      ctx.db,
+      ctx.user.id,
+      stripe,
+      smtp,
+      ctx.env,
+      ctx.appOrigin,
+      input
+    );
   }),
 
   update: adminProcedure.input(UpdatePaymentSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
-    return paymentService.updatePayment(ctx.db, id, data);
+    return paymentService.updatePayment(ctx.db, ctx.user.id, id, data);
   }),
 
   cancel: adminProcedure.input(CancelPaymentSchema).mutation(async ({ ctx, input }) => {
-    return paymentService.cancelPayment(ctx.db, await ctx.getStripe(), input.id);
+    return paymentService.cancelPayment(ctx.db, ctx.user.id, await ctx.getStripe(), input.id);
   }),
 
   sendReminder: adminProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
     const smtp = await ctx.getSmtp();
-    await paymentService.sendReminder(ctx.db, smtp, ctx.env, ctx.appOrigin, input.id);
+    await paymentService.sendReminder(ctx.db, ctx.user.id, smtp, ctx.env, ctx.appOrigin, input.id);
     return { success: true };
   }),
 
-  markExpired: adminProcedure.mutation(async ({ ctx }) => {
-    return paymentService.markExpiredPayments(ctx.db);
+  markExpired: adminProcedure.input(SpaceScopeSchema).mutation(async ({ ctx, input }) => {
+    const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input?.spaceId);
+    return paymentService.markExpiredPayments(ctx.db, scope);
   }),
 
-  retryReceipts: adminProcedure.mutation(async ({ ctx }) => {
+  retryReceipts: adminProcedure.input(SpaceScopeSchema).mutation(async ({ ctx, input }) => {
+    const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input?.spaceId);
     const smtp = await ctx.getSmtp();
-    return paymentService.retryFailedReceipts(ctx.db, ctx.storage, smtp, ctx.env);
+    return paymentService.retryFailedReceipts(ctx.db, ctx.storage, smtp, ctx.env, scope);
   }),
 
   myPayments: protectedProcedure.query(async ({ ctx }) => {

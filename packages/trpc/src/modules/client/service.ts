@@ -1,7 +1,9 @@
 import { TRPCError } from '@trpc/server';
 import { type PrismaClient } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
-import type { CreateClientInput, UpdateClientInput, ListClientsInput } from './types';
+import { scopeWhere, requireRowScope } from '../space/service';
+import type { Scope } from '../space/types';
+import type { CreateClientInput, UpdateClientInput, ListClientsParams } from './types';
 
 function normalizeOptional(value: string | undefined) {
   const trimmed = value?.trim();
@@ -9,15 +11,11 @@ function normalizeOptional(value: string | undefined) {
 }
 
 export const clientService = {
-  listClients: async (db: PrismaClient, params: ListClientsInput) => {
-    const { page, limit, search, spaceId } = params;
+  listClients: async (db: PrismaClient, params: ListClientsParams, scope: Scope) => {
+    const { page, limit, search } = params;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-
-    if (spaceId !== undefined) {
-      where.spaceId = spaceId || null;
-    }
+    const where: any = { ...scopeWhere(scope) };
 
     if (search) {
       where.OR = [
@@ -65,40 +63,40 @@ export const clientService = {
     };
   },
 
-  getClientById: async (db: PrismaClient, id: string) => {
-    const client = await db.client.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            emailVerified: true,
-            status: true,
-            isBanned: true,
-            isSuspended: true,
-            lastLoginAt: true,
-            createdAt: true,
-            updatedAt: true,
+  getClientById: async (db: PrismaClient, userId: string, id: string) => {
+    const client = await requireRowScope(
+      db,
+      userId,
+      await db.client.findUnique({
+        where: { id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              emailVerified: true,
+              status: true,
+              isBanned: true,
+              isSuspended: true,
+              lastLoginAt: true,
+              createdAt: true,
+              updatedAt: true,
+            },
           },
         },
-        payments: {
-          orderBy: { createdAt: 'desc' },
-          take: 20,
-        },
-      },
+      }),
+      'Client not found'
+    );
+
+    const payments = await db.payment.findMany({
+      where: { clientId: id, spaceId: client.spaceId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
     });
 
-    if (!client) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Client not found',
-      });
-    }
-
-    return client;
+    return { ...client, payments };
   },
 
   createClient: async (db: PrismaClient, auth: AuthManager, data: CreateClientInput) => {
@@ -178,20 +176,23 @@ export const clientService = {
     return client;
   },
 
-  updateClient: async (db: PrismaClient, id: string, data: Omit<UpdateClientInput, 'id'>) => {
-    const existingClient = await db.client.findUnique({
-      where: { id },
-      include: {
-        user: true,
-      },
-    });
-
-    if (!existingClient) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Client not found',
-      });
-    }
+  updateClient: async (
+    db: PrismaClient,
+    userId: string,
+    id: string,
+    data: Omit<UpdateClientInput, 'id'>
+  ) => {
+    const existingClient = await requireRowScope(
+      db,
+      userId,
+      await db.client.findUnique({
+        where: { id },
+        include: {
+          user: true,
+        },
+      }),
+      'Client not found'
+    );
 
     const userUpdateData: any = {};
     if (existingClient.userId && data.contactFirstName !== undefined) userUpdateData.firstName = data.contactFirstName;
@@ -256,20 +257,18 @@ export const clientService = {
     return client;
   },
 
-  deleteClient: async (db: PrismaClient, id: string) => {
-    const existingClient = await db.client.findUnique({
-      where: { id },
-      include: {
-        payments: true,
-      },
-    });
-
-    if (!existingClient) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Client not found',
-      });
-    }
+  deleteClient: async (db: PrismaClient, userId: string, id: string) => {
+    const existingClient = await requireRowScope(
+      db,
+      userId,
+      await db.client.findUnique({
+        where: { id },
+        include: {
+          payments: true,
+        },
+      }),
+      'Client not found'
+    );
 
     if (existingClient.payments.length > 0) {
       throw new TRPCError({

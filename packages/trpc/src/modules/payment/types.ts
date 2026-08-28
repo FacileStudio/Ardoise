@@ -43,6 +43,12 @@ export const ListPaymentsSchema = z.object({
   spaceId: z.string().optional(),
 });
 
+export const SpaceScopeSchema = z
+  .object({
+    spaceId: z.string().optional(),
+  })
+  .optional();
+
 export const GetPaymentByIdSchema = z.object({
   id: z.string().min(1, 'Payment ID is required'),
 });
@@ -62,6 +68,7 @@ export type PaymentCollectionMethod = z.infer<typeof PaymentCollectionMethodSche
 export type CreatePaymentInput = z.infer<typeof CreatePaymentSchema>;
 export type UpdatePaymentInput = z.infer<typeof UpdatePaymentSchema>;
 export type ListPaymentsInput = z.infer<typeof ListPaymentsSchema>;
+export type ListPaymentsParams = Omit<ListPaymentsInput, 'spaceId'>;
 export type GetPaymentByIdInput = z.infer<typeof GetPaymentByIdSchema>;
 export type CancelPaymentInput = z.infer<typeof CancelPaymentSchema>;
 export type WebhookInput = z.infer<typeof WebhookSchema>;

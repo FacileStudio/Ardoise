@@ -24,6 +24,42 @@ function requireRole(member: { role: SpaceRole } | null, minimum: SpaceRole): vo
   }
 }
 
+export function scopeWhere(scope: Scope): { spaceId: string | null } {
+  return scope.type === 'space' ? { spaceId: scope.spaceId } : { spaceId: null };
+}
+
+export async function requireRowScope<T extends { spaceId: string | null }>(
+  db: PrismaClient,
+  userId: string,
+  row: T | null | undefined,
+  message: string
+): Promise<T> {
+  if (row) {
+    try {
+      await spaceService.resolveScope(db, userId, row.spaceId);
+      return row;
+    } catch (error) {
+      if (!(error instanceof TRPCError) || error.code !== 'FORBIDDEN') {
+        throw error;
+      }
+    }
+  }
+
+  throw new TRPCError({ code: 'NOT_FOUND', message });
+}
+
+export async function requireRowsScope<T extends { spaceId: string | null }>(
+  db: PrismaClient,
+  userId: string,
+  rows: T[],
+  message: string
+): Promise<T[]> {
+  for (const row of rows) {
+    await requireRowScope(db, userId, row, message);
+  }
+  return rows;
+}
+
 export const spaceService = {
   async resolveScope(db: PrismaClient, userId: string, spaceId?: string | null): Promise<Scope> {
     if (!spaceId) {

@@ -11,7 +11,9 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
-import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsInput } from './types';
+import { scopeWhere, requireRowScope } from '../space/service';
+import type { Scope } from '../space/types';
+import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsParams } from './types';
 
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
   const sub = invoice.parent?.subscription_details?.subscription;
@@ -62,14 +64,13 @@ const recordReceiptFailure = async (
 };
 
 export const paymentService = {
-  listPayments: async (db: PrismaClient, params: ListPaymentsInput) => {
-    const { page, limit, status, clientId, spaceId } = params;
+  listPayments: async (db: PrismaClient, params: ListPaymentsParams, scope: Scope) => {
+    const { page, limit, status, clientId } = params;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.PaymentWhereInput = {};
+    const where: Prisma.PaymentWhereInput = { ...scopeWhere(scope), client: scopeWhere(scope) };
     if (status) where.status = status;
     if (clientId) where.clientId = clientId;
-    if (spaceId !== undefined) where.spaceId = spaceId || null;
 
     const [payments, total] = await db.$transaction([
       db.payment.findMany({
@@ -98,47 +99,60 @@ export const paymentService = {
     return { payments, total };
   },
 
-  getPaymentById: async (db: PrismaClient, id: string) => {
-    const payment = await db.payment.findUnique({
-      where: { id },
+  getPaymentById: async (db: PrismaClient, userId: string, id: string) => {
+    const payment = await requireRowScope(
+      db,
+      userId,
+      await db.payment.findUnique({
+        where: { id },
+        include: {
+          invoices: {
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      }),
+      'Payment not found'
+    );
+
+    const client = await db.client.findFirst({
+      where: { id: payment.clientId, spaceId: payment.spaceId },
       include: {
-        client: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
           },
-        },
-        attachedDocuments: {
-          include: {
-            document: true,
-          },
-        },
-        invoices: {
-          orderBy: { createdAt: 'desc' },
         },
       },
     });
 
-    if (!payment) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Payment not found',
-      });
-    }
+    const attachedDocuments = await db.paymentDocument.findMany({
+      where: { paymentId: id, document: { spaceId: payment.spaceId } },
+      include: { document: true },
+    });
 
-    return payment;
+    return { ...payment, client, attachedDocuments };
   },
 
   getPaymentByIdPublic: async (db: PrismaClient, id: string) => {
     const payment = await db.payment.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        amount: true,
+        stripeFee: true,
+        totalWithFees: true,
+        description: true,
+        status: true,
+        frequency: true,
+        collectionMethod: true,
+        reference: true,
+        dueDate: true,
+        paidAt: true,
+        receiptUrl: true,
+        stripeSubscriptionId: true,
         client: {
           select: {
             companyName: true,
@@ -148,8 +162,20 @@ export const paymentService = {
           },
         },
         attachedDocuments: {
-          include: {
-            document: true,
+          select: {
+            id: true,
+            document: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                invoiceNumber: true,
+                quoteNumber: true,
+                contractRef: true,
+                pdfUrl: true,
+                total: true,
+              },
+            },
           },
         },
       },
@@ -167,44 +193,44 @@ export const paymentService = {
 
   createPayment: async (
     db: PrismaClient,
+    userId: string,
     stripe: StripeService | null,
     smtpClient: SMTPClient | null,
     env: ServerEnv,
     appOrigin: string,
     data: CreatePaymentInput
   ): Promise<Payment> => {
-    const client = await db.client.findUnique({
-      where: { id: data.clientId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+    const client = await requireRowScope(
+      db,
+      userId,
+      await db.client.findUnique({
+        where: { id: data.clientId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
-      },
-    });
-
-    if (!client) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Client not found',
-      });
-    }
+      }),
+      'Client not found'
+    );
 
     if (data.attachedDocumentIds && data.attachedDocumentIds.length > 0) {
       const documents = await db.document.findMany({
         where: {
           id: { in: data.attachedDocumentIds },
+          spaceId: client.spaceId,
         },
         select: { id: true },
       });
 
       if (documents.length !== data.attachedDocumentIds.length) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
+          code: 'NOT_FOUND',
           message: 'One or more documents not found',
         });
       }
@@ -327,6 +353,7 @@ export const paymentService = {
     const payment = await db.payment.create({
       data: {
         clientId: data.clientId,
+        spaceId: client.spaceId,
         amount: feeCalculation.amount,
         stripeFee: useStripe ? feeCalculation.stripeFee : 0,
         totalWithFees: useStripe ? feeCalculation.totalWithFees : feeCalculation.amount,
@@ -378,17 +405,16 @@ export const paymentService = {
 
   updatePayment: async (
     db: PrismaClient,
+    userId: string,
     id: string,
     data: Omit<UpdatePaymentInput, 'id'>
   ): Promise<Payment> => {
-    const existing = await db.payment.findUnique({ where: { id } });
-
-    if (!existing) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Payment not found',
-      });
-    }
+    const existing = await requireRowScope(
+      db,
+      userId,
+      await db.payment.findUnique({ where: { id } }),
+      'Payment not found'
+    );
 
     if (existing.status === 'PAID') {
       throw new TRPCError({
@@ -418,17 +444,18 @@ export const paymentService = {
     });
   },
 
-  cancelPayment: async (db: PrismaClient, stripe: StripeService, id: string): Promise<Payment> => {
-    const payment = await db.payment.findUnique({
-      where: { id },
-    });
-
-    if (!payment) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Payment not found',
-      });
-    }
+  cancelPayment: async (
+    db: PrismaClient,
+    userId: string,
+    stripe: StripeService,
+    id: string
+  ): Promise<Payment> => {
+    const payment = await requireRowScope(
+      db,
+      userId,
+      await db.payment.findUnique({ where: { id } }),
+      'Payment not found'
+    );
 
     if (payment.status === 'PAID') {
       throw new TRPCError({
@@ -504,35 +531,34 @@ export const paymentService = {
 
   sendReminder: async (
     db: PrismaClient,
+    userId: string,
     smtpClient: SMTPClient,
     env: ServerEnv,
     appOrigin: string,
     paymentId: string
   ): Promise<void> => {
-    const payment = await db.payment.findUnique({
-      where: { id: paymentId },
-      include: {
-        client: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
+    const payment = await requireRowScope(
+      db,
+      userId,
+      await db.payment.findUnique({
+        where: { id: paymentId },
+        include: {
+          client: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
               },
             },
           },
         },
-      },
-    });
-
-    if (!payment) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Payment not found',
-      });
-    }
+      }),
+      'Payment not found'
+    );
 
     if (payment.status !== 'PENDING') {
       throw new TRPCError({
@@ -593,11 +619,12 @@ export const paymentService = {
     });
   },
 
-  markExpiredPayments: async (db: PrismaClient) => {
+  markExpiredPayments: async (db: PrismaClient, scope: Scope) => {
     const now = new Date();
 
     const result = await db.payment.updateMany({
       where: {
+        ...scopeWhere(scope),
         status: 'PENDING',
         dueDate: { lt: now },
       },
@@ -614,10 +641,12 @@ export const paymentService = {
     storage: StorageService,
     smtpClient: SMTPClient,
     env: ServerEnv,
+    scope: Scope,
     maxAttempts = 5
   ) => {
     const pending = await db.payment.findMany({
       where: {
+        ...scopeWhere(scope),
         status: 'PAID',
         receiptUrl: null,
         receiptAttempts: { lt: maxAttempts },
