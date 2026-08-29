@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
-import spaceService, { scopeWhere, scopeConnect, requireRowScope, requireRowsScope } from './service';
+import spaceService, {
+  scopeWhere,
+  scopeConnect,
+  requireRowScope,
+  requireRowsScope,
+  type Scope,
+} from './service';
 import clientService from '../client/service';
 import mediaService from '../media/service';
 import { paymentService } from '../payment/service';
@@ -46,7 +52,7 @@ describe('spaceService.resolveScope', () => {
   it('resolves a space the caller is a member of', async () => {
     const db = dbWithMembership({ role: 'MEMBER' });
 
-    expect(await spaceService.resolveScope(db, 'user-1', 'space-1')).toEqual({
+    expect(await spaceService.resolveScope(db, 'user-1', 'space-1')).toMatchObject({
       type: 'space',
       spaceId: 'space-1',
       userId: 'user-1',
@@ -56,38 +62,78 @@ describe('spaceService.resolveScope', () => {
   it('resolves an absent or empty space id to personal scope', async () => {
     const db = dbWithMembership(null);
 
-    expect(await spaceService.resolveScope(db, 'user-1')).toEqual({
+    expect(await spaceService.resolveScope(db, 'user-1')).toMatchObject({
       type: 'personal',
       userId: 'user-1',
     });
-    expect(await spaceService.resolveScope(db, 'user-1', '')).toEqual({
+    expect(await spaceService.resolveScope(db, 'user-1', '')).toMatchObject({
       type: 'personal',
       userId: 'user-1',
     });
   });
 });
 
-describe('scopeWhere', () => {
-  it('pins personal scope to unspaced rows instead of every row', () => {
-    expect(scopeWhere({ type: 'personal', userId: 'user-1' })).toEqual({ spaceId: null });
+function resolvedSpaceScope(spaceId: string, userId = 'user-1') {
+  return spaceService.resolveScope(dbWithMembership({ role: 'MEMBER' }), userId, spaceId);
+}
+
+function resolvedPersonalScope(userId = 'user-1') {
+  return spaceService.resolveScope(dbWithMembership(null), userId);
+}
+
+const forgedSpaceScope = {
+  type: 'space',
+  spaceId: 'space-1',
+  userId: 'mallory',
+} as unknown as Scope;
+
+const forgedPersonalScope = { type: 'personal', userId: 'mallory' } as unknown as Scope;
+
+describe('a Scope that resolveScope did not mint', () => {
+  it('is refused by the read boundary', () => {
+    expect(() => scopeWhere(forgedSpaceScope)).toThrow(TRPCError);
+    expect(() => scopeWhere(forgedPersonalScope)).toThrow(TRPCError);
   });
 
-  it('pins space scope to the resolved space', () => {
-    expect(scopeWhere({ type: 'space', spaceId: 'space-1', userId: 'user-1' })).toEqual({
+  it('is refused by the create boundary', () => {
+    expect(() => scopeConnect(forgedSpaceScope)).toThrow(TRPCError);
+  });
+
+  it('is refused by the document persistence boundary', () => {
+    expect(() =>
+      buildDocumentPersistenceBase(
+        {} as any,
+        'provider-1',
+        100,
+        'user-1',
+        {} as any,
+        forgedSpaceScope
+      )
+    ).toThrow(TRPCError);
+  });
+});
+
+describe('scopeWhere', () => {
+  it('pins personal scope to unspaced rows instead of every row', async () => {
+    expect(scopeWhere(await resolvedPersonalScope())).toEqual({ spaceId: null });
+  });
+
+  it('pins space scope to the resolved space', async () => {
+    expect(scopeWhere(await resolvedSpaceScope('space-1'))).toEqual({
       spaceId: 'space-1',
     });
   });
 });
 
 describe('scopeConnect', () => {
-  it('attaches a created row to the resolved space', () => {
-    expect(scopeConnect({ type: 'space', spaceId: 'space-1', userId: 'user-1' })).toEqual({
+  it('attaches a created row to the resolved space', async () => {
+    expect(scopeConnect(await resolvedSpaceScope('space-1'))).toEqual({
       space: { connect: { id: 'space-1' } },
     });
   });
 
-  it('leaves a personal row unattached', () => {
-    expect(scopeConnect({ type: 'personal', userId: 'user-1' })).toEqual({});
+  it('leaves a personal row unattached', async () => {
+    expect(scopeConnect(await resolvedPersonalScope())).toEqual({});
   });
 });
 
@@ -468,11 +514,15 @@ describe('clientService.listClients', () => {
   it('never queries without a spaceId filter', async () => {
     const { db, seen } = capturingClientDb();
 
-    await clientService.listClients(db, { page: 1, limit: 10 }, { type: 'personal', userId: 'u' });
+    await clientService.listClients(
+      db,
+      { page: 1, limit: 10 },
+      await resolvedPersonalScope('u')
+    );
     await clientService.listClients(
       db,
       { page: 1, limit: 10, search: 'acme' },
-      { type: 'space', spaceId: 'space-1', userId: 'u' }
+      await resolvedSpaceScope('space-1', 'u')
     );
 
     expect(seen.length).toBe(4);
@@ -552,23 +602,19 @@ describe('the create path carries the space', () => {
       },
     } as unknown as PrismaClient;
 
-    await providerService.createProvider(db, { name: 'Acme' }, {
-      type: 'space',
-      spaceId: 'space-a',
-      userId: 'user-1',
-    });
+    await providerService.createProvider(db, { name: 'Acme' }, await resolvedSpaceScope('space-a'));
 
     expect(created[0].data.spaceId).toBe('space-a');
   });
 
-  it('stamps a document with the scope it was created in', () => {
+  it('stamps a document with the scope it was created in', async () => {
     const persisted = buildDocumentPersistenceBase(
       {} as any,
       'provider-1',
       100,
       'user-1',
       {} as any,
-      { type: 'space', spaceId: 'space-a', userId: 'user-1' }
+      await resolvedSpaceScope('space-a')
     );
 
     expect((persisted as { spaceId?: string | null }).spaceId).toBe('space-a');
@@ -636,7 +682,8 @@ describe('loadDocumentContext', () => {
 
     const context = await loadDocumentContext(db, 'user-1', 'client-1', 'provider-1', 'space-a');
 
-    expect(context.scope).toEqual({ type: 'space', spaceId: 'space-a', userId: 'user-1' });
+    expect(context.scope).toMatchObject({ type: 'space', spaceId: 'space-a', userId: 'user-1' });
+    expect(scopeWhere(context.scope)).toEqual({ spaceId: 'space-a' });
   });
 });
 
@@ -686,15 +733,78 @@ describe('spaceService.delete', () => {
     payments: number;
     providers: number;
   }) {
-    return {
-      spaceMember: { findUnique: async () => ({ role: 'OWNER' }) },
-      client: { count: async () => counts.clients },
-      document: { count: async () => counts.documents },
-      payment: { count: async () => counts.payments },
-      provider: { count: async () => counts.providers },
-      space: { delete: async () => ({ id: 'space-a' }) },
-    } as unknown as PrismaClient;
+    return dbWithSpaceContentsTracked(counts).db;
   }
+
+  function dbWithSpaceContentsTracked(counts: {
+    clients: number;
+    documents: number;
+    payments: number;
+    providers: number;
+  }) {
+    let depth = 0;
+    const outsideTransaction: string[] = [];
+    const record = (name: string) => {
+      if (depth === 0) outsideTransaction.push(name);
+    };
+
+    const db: any = {
+      $transaction: async (run: (tx: any) => Promise<unknown>) => {
+        depth += 1;
+        try {
+          return await run(db);
+        } finally {
+          depth -= 1;
+        }
+      },
+      spaceMember: { findUnique: async () => ({ role: 'OWNER' }) },
+      client: {
+        count: async () => {
+          record('client.count');
+          return counts.clients;
+        },
+      },
+      document: {
+        count: async () => {
+          record('document.count');
+          return counts.documents;
+        },
+      },
+      payment: {
+        count: async () => {
+          record('payment.count');
+          return counts.payments;
+        },
+      },
+      provider: {
+        count: async () => {
+          record('provider.count');
+          return counts.providers;
+        },
+      },
+      space: {
+        delete: async () => {
+          record('space.delete');
+          return { id: 'space-a' };
+        },
+      },
+    };
+
+    return { db: db as PrismaClient, outsideTransaction };
+  }
+
+  it('counts the held rows and deletes inside one transaction', async () => {
+    const { db, outsideTransaction } = dbWithSpaceContentsTracked({
+      clients: 0,
+      documents: 0,
+      payments: 0,
+      providers: 0,
+    });
+
+    await spaceService.delete(db, 'user-1', 'space-a');
+
+    expect(outsideTransaction).toEqual([]);
+  });
 
   it('refuses to delete a space that still holds rows', async () => {
     const db = dbWithSpaceContents({ clients: 0, documents: 2, payments: 0, providers: 0 });

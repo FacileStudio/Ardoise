@@ -18,8 +18,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import { getSettingsRecord } from '../settings/service';
-import spaceService, { scopeWhere } from '../space/service';
-import type { Scope } from '../space/types';
+import spaceService, { scopeWhere, type Scope } from '../space/service';
 
 export const DocTypeSchema = z.enum([
   'prestation',

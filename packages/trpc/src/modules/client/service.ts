@@ -1,8 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { type PrismaClient } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
-import { scopeWhere, scopeConnect, requireRowScope } from '../space/service';
-import type { Scope } from '../space/types';
+import { scopeWhere, scopeConnect, requireRowScope, type Scope } from '../space/service';
 import type { CreateClientInput, UpdateClientInput, ListClientsParams } from './types';
 
 function normalizeOptional(value: string | undefined) {

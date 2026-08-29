@@ -35,4 +35,4 @@ export { globalCacheFactory } from './cache';
 export { paymentService } from './modules/payment/service';
 export { DocuSealService } from './modules/docuseal/service';
 export { spaceService } from './modules/space/service';
-export type { Scope } from './modules/space/types';
+export type { Scope } from './modules/space/service';

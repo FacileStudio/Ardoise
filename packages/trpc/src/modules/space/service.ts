@@ -6,8 +6,40 @@ import type {
   AddMemberInput,
   RemoveMemberInput,
   UpdateMemberRoleInput,
-  Scope,
 } from './types';
+
+/**
+ * Marks a Scope as minted by resolveScope. The symbol is module-private, so no
+ * caller outside this file can name the key, and a hand-written scope literal
+ * does not typecheck as a Scope.
+ */
+const RESOLVED: unique symbol = Symbol('space.scope.resolved');
+
+type ResolvedMark = { readonly [RESOLVED]: true };
+
+type ScopeShape =
+  | { type: 'personal'; userId: string }
+  | { type: 'space'; spaceId: string; userId: string };
+
+/**
+ * The resolved answer to "what may this request touch". Only resolveScope
+ * produces one, and only after membership has been established, so a Scope that
+ * reaches a query or a write is proof of membership in its space.
+ */
+export type Scope = ResolvedMark & ScopeShape;
+
+function mintScope(shape: ScopeShape): Scope {
+  return { ...shape, [RESOLVED]: true } as Scope;
+}
+
+function requireMintedScope(scope: Scope): void {
+  if ((scope as Partial<ResolvedMark>)[RESOLVED] !== true) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Scope was not produced by resolveScope',
+    });
+  }
+}
 
 const ROLE_WEIGHT: Record<SpaceRole, number> = {
   OWNER: 3,
@@ -25,10 +57,12 @@ function requireRole(member: { role: SpaceRole } | null, minimum: SpaceRole): vo
 }
 
 export function scopeWhere(scope: Scope): { spaceId: string | null } {
+  requireMintedScope(scope);
   return scope.type === 'space' ? { spaceId: scope.spaceId } : { spaceId: null };
 }
 
 export function scopeConnect(scope: Scope): { space?: { connect: { id: string } } } {
+  requireMintedScope(scope);
   return scope.type === 'space' ? { space: { connect: { id: scope.spaceId } } } : {};
 }
 
@@ -67,7 +101,7 @@ export async function requireRowsScope<T extends { spaceId: string | null }>(
 export const spaceService = {
   async resolveScope(db: PrismaClient, userId: string, spaceId?: string | null): Promise<Scope> {
     if (!spaceId) {
-      return { type: 'personal', userId };
+      return mintScope({ type: 'personal', userId });
     }
 
     const member = await db.spaceMember.findUnique({
@@ -78,7 +112,7 @@ export const spaceService = {
       throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this space' });
     }
 
-    return { type: 'space', spaceId, userId };
+    return mintScope({ type: 'space', spaceId, userId });
   },
 
   async list(db: PrismaClient, userId: string) {
@@ -177,22 +211,25 @@ export const spaceService = {
     });
     requireRole(member, 'OWNER');
 
-    const held = await Promise.all([
-      db.client.count({ where: { spaceId } }),
-      db.document.count({ where: { spaceId } }),
-      db.payment.count({ where: { spaceId } }),
-      db.provider.count({ where: { spaceId } }),
-    ]);
-    const total = held.reduce((sum, count) => sum + count, 0);
+    await db.$transaction(async (tx) => {
+      const held = await Promise.all([
+        tx.client.count({ where: { spaceId } }),
+        tx.document.count({ where: { spaceId } }),
+        tx.payment.count({ where: { spaceId } }),
+        tx.provider.count({ where: { spaceId } }),
+      ]);
+      const total = held.reduce((sum, count) => sum + count, 0);
 
-    if (total > 0) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: `Cannot delete a space that still holds ${total} clients, documents, payments or providers`,
-      });
-    }
+      if (total > 0) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `Cannot delete a space that still holds ${total} clients, documents, payments or providers`,
+        });
+      }
 
-    await db.space.delete({ where: { id: spaceId } });
+      await tx.space.delete({ where: { id: spaceId } });
+    });
+
     return { success: true };
   },
 

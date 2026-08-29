@@ -43,7 +43,3 @@ export type UpdateSpaceInput = z.infer<typeof UpdateSpaceSchema>;
 export type AddMemberInput = z.infer<typeof AddMemberSchema>;
 export type RemoveMemberInput = z.infer<typeof RemoveMemberSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof UpdateMemberRoleSchema>;
-
-export type Scope =
-  | { type: 'personal'; userId: string }
-  | { type: 'space'; spaceId: string; userId: string };

@@ -1,6 +1,5 @@
 import { type PrismaClient, type Prisma } from '@repo/database';
-import { scopeWhere } from '../space/service';
-import type { Scope } from '../space/types';
+import { scopeWhere, type Scope } from '../space/service';
 
 export const providerService = {
   createProvider: async (

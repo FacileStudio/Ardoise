@@ -36,6 +36,22 @@ import { logger } from '@repo/logger';
 const spaceScoped = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
   schema.extend({ spaceId: z.string().optional() });
 
+/**
+ * Lets a deliberate TRPCError keep its own code and message, and turns anything
+ * else into a 500. Re-wrapping every failure collapsed FORBIDDEN and NOT_FOUND
+ * into one status while still shipping the message that told them apart.
+ */
+function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
+  if (error instanceof TRPCError) {
+    throw error;
+  }
+
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: error instanceof Error && error.message ? error.message : fallbackMessage,
+  });
+}
+
 async function downloadLogoFromS3(logoUrl: string | null | undefined, storage: StorageService): Promise<string | undefined> {
   if (!logoUrl || (!logoUrl.includes('storageapi.dev') && !logoUrl.includes('/storage/'))) {
     return undefined;
@@ -411,10 +427,7 @@ export const documentRouter = router({
           fileName: document.name,
         };
       } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to download document',
-        });
+        rethrowUnexpected(error, 'Failed to download document');
       }
     }),
 
@@ -449,11 +462,8 @@ export const documentRouter = router({
           fileName,
           typstContent: generateTypstContent(documentData),
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate prestation preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate prestation preview');
       }
     }),
 
@@ -505,11 +515,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           fileName,
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create prestation',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create prestation');
       }
     }),
 
@@ -545,11 +552,8 @@ export const documentRouter = router({
           fileName,
           typstContent: generateTypstContent(documentData),
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate maintenance preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate maintenance preview');
       }
     }),
 
@@ -602,11 +606,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           fileName,
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create maintenance',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create maintenance');
       }
     }),
 
@@ -639,11 +640,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           typstContent: generateTypstContent(documentData),
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate preview');
       }
     }),
 
@@ -695,11 +693,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           fileName,
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create document',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create document');
       }
     }),
 
@@ -733,11 +728,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           typstContent: generateTypstContent(documentData),
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate preview');
       }
     }),
 
@@ -793,11 +785,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           fileName,
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create document',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create document');
       }
     }),
 
@@ -829,11 +818,8 @@ export const documentRouter = router({
           fileName: `contrat_prestation_${input.contract_reference}.pdf`,
           typstContent: generateTypstContent(documentData),
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to preview contract',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to preview contract');
       }
     }),
 
@@ -882,11 +868,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           fileName,
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create contract',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create contract');
       }
     }),
 
@@ -918,11 +901,8 @@ export const documentRouter = router({
           fileName: `contrat_maintenance_${input.contract_reference}.pdf`,
           typstContent: generateTypstContent(documentData),
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to preview contract',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to preview contract');
       }
     }),
 
@@ -971,11 +951,8 @@ export const documentRouter = router({
           pdf: pdfBuffer.toString('base64'),
           fileName,
         };
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create contract',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create contract');
       }
     }),
 
@@ -983,19 +960,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationBarmanInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await previewSpecializedPrestation(
           'prestation_barman',
           'prestation_barman',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate prestation barman preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate prestation barman preview');
       }
     }),
 
@@ -1003,19 +977,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationBarmanInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_barman',
           'prestation_barman',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create prestation barman',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create prestation barman');
       }
     }),
 
@@ -1023,19 +994,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationPhotoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await previewSpecializedPrestation(
           'prestation_photo',
           'prestation_photo',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate prestation photo preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate prestation photo preview');
       }
     }),
 
@@ -1043,19 +1011,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationPhotoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_photo',
           'prestation_photo',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create prestation photo',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create prestation photo');
       }
     }),
 
@@ -1063,19 +1028,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationVideoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await previewSpecializedPrestation(
           'prestation_video',
           'prestation_video',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate prestation video preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate prestation video preview');
       }
     }),
 
@@ -1083,19 +1045,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationVideoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_video',
           'prestation_video',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create prestation video',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create prestation video');
       }
     }),
 
@@ -1103,19 +1062,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationDesignInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await previewSpecializedPrestation(
           'prestation_design',
           'prestation_design',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate preview');
       }
     }),
 
@@ -1123,19 +1079,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationDesignInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_design',
           'prestation_design',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create document',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create document');
       }
     }),
 
@@ -1143,19 +1096,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationDevInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await previewSpecializedPrestation(
           'prestation_dev',
           'prestation_dev',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate preview');
       }
     }),
 
@@ -1163,19 +1113,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationDevInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_dev',
           'prestation_dev',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create document',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create document');
       }
     }),
 
@@ -1183,19 +1130,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationFormationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await previewSpecializedPrestation(
           'prestation_formation',
           'prestation_formation',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate preview');
       }
     }),
 
@@ -1203,19 +1147,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationFormationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_formation',
           'prestation_formation',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create document',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create document');
       }
     }),
 
@@ -1223,19 +1164,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationBtpInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await previewSpecializedPrestation(
           'prestation_btp',
           'prestation_btp',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to generate preview',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to generate preview');
       }
     }),
 
@@ -1243,19 +1181,16 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationBtpInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_btp',
           'prestation_btp',
-          { invoice_date, due_date, clientId, providerId, items },
+          { invoice_date, due_date, clientId, providerId, items, spaceId },
           typeSpecific,
           ctx
         );
-      } catch (error: any) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to create document',
-        });
+      } catch (error) {
+        rethrowUnexpected(error, 'Failed to create document');
       }
     }),
 });

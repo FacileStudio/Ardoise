@@ -11,8 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
-import { scopeWhere, requireRowScope } from '../space/service';
-import type { Scope } from '../space/types';
+import { scopeWhere, requireRowScope, type Scope } from '../space/service';
 import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsParams } from './types';
 
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
