@@ -153,7 +153,7 @@
 
 		try {
 			submitting = true;
-			await trpc.provider.create.mutate(formData);
+			await trpc.provider.create.mutate({ ...formData, spaceId: spaceContext.spaceId });
 			toast.push('Prestataire créé avec succès!', 'success');
 			showCreateDrawer = false;
 			resetForm();

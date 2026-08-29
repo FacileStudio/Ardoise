@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
-import spaceService, { scopeWhere, requireRowScope, requireRowsScope } from './service';
+import spaceService, { scopeWhere, scopeConnect, requireRowScope, requireRowsScope } from './service';
 import clientService from '../client/service';
 import mediaService from '../media/service';
 import { paymentService } from '../payment/service';
+import providerService from '../provider/service';
+import { loadDocumentContext, buildDocumentPersistenceBase } from '../document/service';
 import type { CreatePaymentInput } from '../payment/types';
+import type { CreateClientInput } from '../client/types';
+import type { AuthManager } from '@repo/auth';
 
 function dbWithMembership(member: { role: 'OWNER' | 'ADMIN' | 'MEMBER' } | null) {
   return {
@@ -72,6 +76,18 @@ describe('scopeWhere', () => {
     expect(scopeWhere({ type: 'space', spaceId: 'space-1', userId: 'user-1' })).toEqual({
       spaceId: 'space-1',
     });
+  });
+});
+
+describe('scopeConnect', () => {
+  it('attaches a created row to the resolved space', () => {
+    expect(scopeConnect({ type: 'space', spaceId: 'space-1', userId: 'user-1' })).toEqual({
+      space: { connect: { id: 'space-1' } },
+    });
+  });
+
+  it('leaves a personal row unattached', () => {
+    expect(scopeConnect({ type: 'personal', userId: 'user-1' })).toEqual({});
   });
 });
 
@@ -462,5 +478,236 @@ describe('clientService.listClients', () => {
     expect(seen.length).toBe(4);
     expect(seen.slice(0, 2).every((where) => where.spaceId === null)).toBe(true);
     expect(seen.slice(2).every((where) => where.spaceId === 'space-1')).toBe(true);
+  });
+});
+
+describe('the create path carries the space', () => {
+  const clientInput: CreateClientInput = {
+    contactFirstName: 'Ada',
+    contactLastName: 'Lovelace',
+    companyName: 'Analytical Engines',
+    createCredentials: false,
+  };
+
+  function dbForClientCreate(member: { role: 'MEMBER' } | null, created: any[]) {
+    return {
+      spaceMember: { findUnique: async () => member },
+      client: {
+        create: async (args: any) => {
+          created.push(args);
+          return { id: 'client-1' };
+        },
+      },
+    } as unknown as PrismaClient;
+  }
+
+  async function createClientThroughRouter(
+    db: PrismaClient,
+    userId: string,
+    spaceId: string | undefined,
+    input: CreateClientInput
+  ) {
+    const scope = await spaceService.resolveScope(db, userId, spaceId);
+    return clientService.createClient(db, {} as AuthManager, input, scope);
+  }
+
+  it('refuses a client create in a space the caller is not a member of', async () => {
+    const created: any[] = [];
+    const db = dbForClientCreate(null, created);
+
+    expect(
+      await trpcErrorOf(() => createClientThroughRouter(db, 'user-1', 'space-a', clientInput))
+    ).toEqual({ code: 'FORBIDDEN', message: 'Not a member of this space' });
+    expect(created.length).toBe(0);
+  });
+
+  it('lands a client in the active space', async () => {
+    const created: any[] = [];
+    const db = dbForClientCreate({ role: 'MEMBER' }, created);
+
+    await createClientThroughRouter(db, 'user-1', 'space-a', clientInput);
+
+    expect(created.length).toBe(1);
+    expect(created[0].data.space).toEqual({ connect: { id: 'space-a' } });
+  });
+
+  it('leaves a personal client unattached to any space', async () => {
+    const created: any[] = [];
+    const db = dbForClientCreate(null, created);
+
+    await createClientThroughRouter(db, 'user-1', undefined, clientInput);
+
+    expect(created.length).toBe(1);
+    expect(created[0].data.space).toBe(undefined);
+  });
+
+  it('lands a provider in the resolved scope', async () => {
+    const created: any[] = [];
+    const db = {
+      provider: {
+        create: async (args: any) => {
+          created.push(args);
+          return { id: 'provider-1' };
+        },
+      },
+    } as unknown as PrismaClient;
+
+    await providerService.createProvider(db, { name: 'Acme' }, {
+      type: 'space',
+      spaceId: 'space-a',
+      userId: 'user-1',
+    });
+
+    expect(created[0].data.spaceId).toBe('space-a');
+  });
+
+  it('stamps a document with the scope it was created in', () => {
+    const persisted = buildDocumentPersistenceBase(
+      {} as any,
+      'provider-1',
+      100,
+      'user-1',
+      {} as any,
+      { type: 'space', spaceId: 'space-a', userId: 'user-1' }
+    );
+
+    expect((persisted as { spaceId?: string | null }).spaceId).toBe('space-a');
+  });
+});
+
+describe('loadDocumentContext', () => {
+  function dbWithParties(options: {
+    client?: { id: string; spaceId: string | null };
+    provider?: { id: string; spaceId: string | null };
+    member?: { role: 'MEMBER' } | null;
+  }) {
+    const matches = (row: { spaceId: string | null } | undefined, where: any) =>
+      row !== undefined && where.spaceId === row.spaceId;
+
+    return {
+      spaceMember: { findUnique: async () => options.member ?? null },
+      settings: { findUnique: async () => ({ id: 'settings' }) },
+      client: {
+        findFirst: async ({ where }: any) => (matches(options.client, where) ? options.client : null),
+        findUnique: async () => options.client ?? null,
+      },
+      provider: {
+        findFirst: async ({ where }: any) =>
+          matches(options.provider, where) ? options.provider : null,
+        findUnique: async () => options.provider ?? null,
+      },
+    } as unknown as PrismaClient;
+  }
+
+  it('refuses a client that does not live in the requested space', async () => {
+    const db = dbWithParties({
+      client: { id: 'client-1', spaceId: null },
+      provider: { id: 'provider-1', spaceId: 'space-a' },
+      member: { role: 'MEMBER' },
+    });
+
+    expect(
+      await trpcErrorOf(() =>
+        loadDocumentContext(db, 'user-1', 'client-1', 'provider-1', 'space-a')
+      )
+    ).toEqual({ code: 'NOT_FOUND', message: 'Client not found' });
+  });
+
+  it('refuses a provider from a different space than the document', async () => {
+    const db = dbWithParties({
+      client: { id: 'client-1', spaceId: 'space-a' },
+      provider: { id: 'provider-1', spaceId: 'space-b' },
+      member: { role: 'MEMBER' },
+    });
+
+    expect(
+      await trpcErrorOf(() =>
+        loadDocumentContext(db, 'user-1', 'client-1', 'provider-1', 'space-a')
+      )
+    ).toEqual({ code: 'NOT_FOUND', message: 'Provider not found' });
+  });
+
+  it('returns the resolved scope so the created row can be stamped with it', async () => {
+    const db = dbWithParties({
+      client: { id: 'client-1', spaceId: 'space-a' },
+      provider: { id: 'provider-1', spaceId: 'space-a' },
+      member: { role: 'MEMBER' },
+    });
+
+    const context = await loadDocumentContext(db, 'user-1', 'client-1', 'provider-1', 'space-a');
+
+    expect(context.scope).toEqual({ type: 'space', spaceId: 'space-a', userId: 'user-1' });
+  });
+});
+
+describe('paymentService.listClientPayments', () => {
+  const foreignAttachment = {
+    id: 'pd-1',
+    document: { id: 'doc-b', spaceId: 'space-b', name: 'Other contract' },
+  };
+
+  function dbForClientPortal() {
+    return {
+      client: {
+        findUnique: async () => ({ id: 'client-1', spaceId: null, userId: 'user-1' }),
+        findFirst: async ({ where }: any) =>
+          where.spaceId === null ? { id: 'client-1', spaceId: null, user: null } : null,
+      },
+      payment: {
+        findMany: async ({ where }: any) =>
+          where.spaceId === null
+            ? [{ id: 'pay-1', clientId: 'client-1', spaceId: null }]
+            : [],
+      },
+      paymentDocument: {
+        findMany: async ({ where }: any) =>
+          where.document?.spaceId === foreignAttachment.document.spaceId
+            ? [foreignAttachment]
+            : [],
+      },
+    } as unknown as PrismaClient;
+  }
+
+  it('does not return a document from another space to the client portal', async () => {
+    const result = (await paymentService.listClientPayments(
+      dbForClientPortal(),
+      'user-1'
+    )) as any;
+
+    expect(result.payments.length).toBe(1);
+    expect(result.payments[0].attachedDocuments).toEqual([]);
+  });
+});
+
+describe('spaceService.delete', () => {
+  function dbWithSpaceContents(counts: {
+    clients: number;
+    documents: number;
+    payments: number;
+    providers: number;
+  }) {
+    return {
+      spaceMember: { findUnique: async () => ({ role: 'OWNER' }) },
+      client: { count: async () => counts.clients },
+      document: { count: async () => counts.documents },
+      payment: { count: async () => counts.payments },
+      provider: { count: async () => counts.providers },
+      space: { delete: async () => ({ id: 'space-a' }) },
+    } as unknown as PrismaClient;
+  }
+
+  it('refuses to delete a space that still holds rows', async () => {
+    const db = dbWithSpaceContents({ clients: 0, documents: 2, payments: 0, providers: 0 });
+
+    expect(await trpcErrorOf(() => spaceService.delete(db, 'user-1', 'space-a'))).toEqual({
+      code: 'CONFLICT',
+      message: 'Cannot delete a space that still holds 2 clients, documents, payments or providers',
+    });
+  });
+
+  it('deletes an empty space', async () => {
+    const db = dbWithSpaceContents({ clients: 0, documents: 0, payments: 0, providers: 0 });
+
+    expect(await spaceService.delete(db, 'user-1', 'space-a')).toEqual({ success: true });
   });
 });

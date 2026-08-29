@@ -5,6 +5,7 @@
 	import { Spinner, Button, Input, ImageUpload } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	let submitting = $state(false);
@@ -120,7 +121,7 @@
 
 		try {
 			submitting = true;
-			await trpc.provider.create.mutate(normalizePayload());
+			await trpc.provider.create.mutate({ ...normalizePayload(), spaceId: spaceContext.spaceId });
 			toast.push('Prestataire créé avec succès!', 'success');
 			goto(resolve('/admin/prestataires'));
 		} catch (err: any) {

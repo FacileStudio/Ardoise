@@ -21,7 +21,8 @@ export const clientRouter = router({
   }),
 
   create: adminProcedure.input(CreateClientSchema).mutation(async ({ ctx, input }) => {
-    const client = await clientService.createClient(ctx.db, ctx.auth, input);
+    const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
+    const client = await clientService.createClient(ctx.db, ctx.auth, input, scope);
 
     await dispatchConfiguredWebhook({
       db: ctx.db,

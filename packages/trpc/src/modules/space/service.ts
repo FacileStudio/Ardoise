@@ -28,6 +28,10 @@ export function scopeWhere(scope: Scope): { spaceId: string | null } {
   return scope.type === 'space' ? { spaceId: scope.spaceId } : { spaceId: null };
 }
 
+export function scopeConnect(scope: Scope): { space?: { connect: { id: string } } } {
+  return scope.type === 'space' ? { space: { connect: { id: scope.spaceId } } } : {};
+}
+
 export async function requireRowScope<T extends { spaceId: string | null }>(
   db: PrismaClient,
   userId: string,
@@ -172,6 +176,21 @@ export const spaceService = {
       where: { spaceId_userId: { spaceId, userId } },
     });
     requireRole(member, 'OWNER');
+
+    const held = await Promise.all([
+      db.client.count({ where: { spaceId } }),
+      db.document.count({ where: { spaceId } }),
+      db.payment.count({ where: { spaceId } }),
+      db.provider.count({ where: { spaceId } }),
+    ]);
+    const total = held.reduce((sum, count) => sum + count, 0);
+
+    if (total > 0) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: `Cannot delete a space that still holds ${total} clients, documents, payments or providers`,
+      });
+    }
 
     await db.space.delete({ where: { id: spaceId } });
     return { success: true };

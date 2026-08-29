@@ -6,6 +6,7 @@
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
+	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
 	let submitting = $state(false);
@@ -89,6 +90,7 @@
 			submitting = true;
 			await trpc.client.create.mutate({
 				...formData,
+				spaceId: spaceContext.spaceId,
 				contactEmail: formData.contactEmail.trim(),
 				credentialEmail: formData.credentialEmail.trim(),
 			});

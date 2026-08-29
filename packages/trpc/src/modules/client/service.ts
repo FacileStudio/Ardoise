@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { type PrismaClient } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
-import { scopeWhere, requireRowScope } from '../space/service';
+import { scopeWhere, scopeConnect, requireRowScope } from '../space/service';
 import type { Scope } from '../space/types';
 import type { CreateClientInput, UpdateClientInput, ListClientsParams } from './types';
 
@@ -99,7 +99,12 @@ export const clientService = {
     return { ...client, payments };
   },
 
-  createClient: async (db: PrismaClient, auth: AuthManager, data: CreateClientInput) => {
+  createClient: async (
+    db: PrismaClient,
+    auth: AuthManager,
+    data: CreateClientInput,
+    scope: Scope
+  ) => {
     const credentialEmail = data.credentialEmail?.trim();
     const credentialPassword = data.credentialPassword?.trim();
 
@@ -145,6 +150,7 @@ export const clientService = {
 
     const client = await db.client.create({
       data: {
+        ...scopeConnect(scope),
         contactFirstName: data.contactFirstName,
         contactLastName: data.contactLastName,
         contactEmail: normalizeOptional(data.contactEmail),

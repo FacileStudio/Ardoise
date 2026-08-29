@@ -136,6 +136,52 @@ export const paymentService = {
     return { ...payment, client, attachedDocuments };
   },
 
+  listClientPayments: async (db: PrismaClient, userId: string) => {
+    const client = await db.client.findUnique({ where: { userId } });
+
+    if (!client) {
+      return { payments: [], total: 0 };
+    }
+
+    const payments = await db.payment.findMany({
+      where: { clientId: client.id, spaceId: client.spaceId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const owner = await db.client.findFirst({
+      where: { id: client.id, spaceId: client.spaceId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    const attachments = await db.paymentDocument.findMany({
+      where: {
+        paymentId: { in: payments.map((payment) => payment.id) },
+        document: { spaceId: client.spaceId },
+      },
+      include: { document: true },
+    });
+
+    return {
+      payments: payments.map((payment) => ({
+        ...payment,
+        client: owner,
+        attachedDocuments: attachments.filter(
+          (attachment) => attachment.paymentId === payment.id
+        ),
+      })),
+      total: payments.length,
+    };
+  },
+
   getPaymentByIdPublic: async (db: PrismaClient, id: string) => {
     const payment = await db.payment.findUnique({
       where: { id },

@@ -73,39 +73,7 @@ export const paymentRouter = router({
       });
     }
 
-    const client = await ctx.db.client.findUnique({
-      where: { userId: ctx.user.id },
-    });
-
-    if (!client) {
-      return { payments: [], total: 0 };
-    }
-
-    const payments = await ctx.db.payment.findMany({
-      where: { clientId: client.id },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        client: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        },
-        attachedDocuments: {
-          include: {
-            document: true,
-          },
-        },
-      },
-    });
-
-    return { payments, total: payments.length };
+    return paymentService.listClientPayments(ctx.db, ctx.user.id);
   }),
 
   billingPortal: protectedProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {

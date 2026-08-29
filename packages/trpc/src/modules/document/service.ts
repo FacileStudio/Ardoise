@@ -18,7 +18,8 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import { getSettingsRecord } from '../settings/service';
-import { requireRowScope } from '../space/service';
+import spaceService, { scopeWhere } from '../space/service';
+import type { Scope } from '../space/types';
 
 export const DocTypeSchema = z.enum([
   'prestation',
@@ -667,26 +668,31 @@ export async function loadDocumentContext(
   db: PrismaClient,
   userId: string,
   clientId: string,
-  providerId: string
+  providerId: string,
+  spaceId?: string
 ) {
-  const client = await requireRowScope(
-    db,
-    userId,
-    await db.client.findUnique({ where: { id: clientId } }),
-    'Client not found'
-  );
+  const scope = await spaceService.resolveScope(db, userId, spaceId);
 
-  const provider = await requireRowScope(
-    db,
-    userId,
-    await db.provider.findUnique({ where: { id: providerId } }),
-    'Provider not found'
-  );
+  const client = await db.client.findFirst({
+    where: { id: clientId, ...scopeWhere(scope) },
+  });
+
+  if (!client) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+  }
+
+  const provider = await db.provider.findFirst({
+    where: { id: providerId, ...scopeWhere(scope) },
+  });
+
+  if (!provider) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+  }
 
   const settings = await getSettingsRecord(db);
   const tvaRate = Number(provider.tvaRate || 20);
 
-  return { client, provider, settings, tvaRate };
+  return { client, provider, settings, tvaRate, scope };
 }
 
 export function computeInvoiceTotals(
@@ -709,9 +715,11 @@ export function buildDocumentPersistenceBase(
   providerId: string,
   fileSize: number,
   createdBy: string,
-  legalPersistence: ReturnType<typeof buildDocumentLegalPersistence>
+  legalPersistence: ReturnType<typeof buildDocumentLegalPersistence>,
+  scope: Scope
 ) {
   return {
+    ...scopeWhere(scope),
     clientName: documentData.client_name ?? '',
     clientSiret: documentData.client_siret,
     clientAddress: documentData.client_address,

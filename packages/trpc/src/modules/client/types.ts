@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const CreateClientSchema = z.object({
+  spaceId: z.string().optional(),
   contactEmail: z.string().email().optional().or(z.literal('')),
   contactFirstName: z.string().min(1),
   contactLastName: z.string().min(1),

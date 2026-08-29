@@ -1,5 +1,6 @@
 import { router, adminProcedure } from '../../trpc';
 import spaceService, { scopeWhere, requireRowScope } from '../space/service';
+import providerService from './service';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
@@ -94,13 +95,12 @@ export const providerRouter = router({
     }),
 
   create: adminProcedure
-    .input(ProviderInput)
+    .input(ProviderInput.extend({ spaceId: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
-      const provider = await ctx.db.provider.create({
-        data: input,
-      });
+      const { spaceId, ...data } = input;
+      const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
 
-      return provider;
+      return providerService.createProvider(ctx.db, data, scope);
     }),
 
   update: adminProcedure
