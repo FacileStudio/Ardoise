@@ -7,23 +7,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-ardoise}
     volumes:
-    - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-      - CMD
-      - nc
-      - -z
-      - localhost
-      - '3000'
-      interval: 30s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ardoise}"]
+      interval: 10s
       timeout: 5s
-      retries: 3
-    deploy:
-      update_config:
-        order: start-first
-        parallelism: 1
-      restart_policy:
-        condition: any
+      retries: 5
+
   ardoise-backend:
     build:
       context: .
@@ -40,29 +30,14 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       STORAGE_PATH: /data/uploads
     volumes:
-    - uploads_data:/data/uploads
+      - uploads_data:/data/uploads
     expose:
-    - '3001'
+      - "3001"
     depends_on:
       ardoise-postgres:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test:
-      - CMD
-      - nc
-      - -z
-      - localhost
-      - '3001'
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      update_config:
-        order: start-first
-        parallelism: 1
-      restart_policy:
-        condition: any
+
   ardoise-web:
     build:
       context: .
@@ -75,26 +50,11 @@ services:
       PORT: 3000
       VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
     expose:
-    - '3000'
+      - "3000"
     depends_on:
-    - ardoise-backend
+      - ardoise-backend
     restart: unless-stopped
-    healthcheck:
-      test:
-      - CMD
-      - nc
-      - -z
-      - localhost
-      - '3000'
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      update_config:
-        order: start-first
-        parallelism: 1
-      restart_policy:
-        condition: any
+
 volumes:
-  postgres_data: null
-  uploads_data: null
+  postgres_data:
+  uploads_data:
