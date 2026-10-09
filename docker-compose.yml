@@ -29,6 +29,11 @@ services:
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3001}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       STORAGE_PATH: /data/uploads
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-}
+      OIDC_SUCCESS_URL: ${OIDC_SUCCESS_URL:-}
     volumes:
       - uploads_data:/data/uploads
     expose:

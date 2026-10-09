@@ -21,8 +21,15 @@
   let email = $state('');
   let password = $state('');
   let oidcEnabled = $state(false);
-  let ssoOnly = $state(false);
   let configLoaded = $state(false);
+
+  const ssoErrors: Record<string, string> = {
+    oidc_failed: "Échec de l'authentification SSO.",
+    not_invited: "Aucun compte n'existe pour cette adresse. Demandez une invitation.",
+    email_unverified: "Votre adresse email n'est pas vérifiée auprès du fournisseur SSO.",
+    identity_conflict: 'Ce compte est déjà lié à une autre identité SSO.',
+    blocked: 'Ce compte est suspendu ou banni.',
+  };
 
   function redirectForRole(user: SessionUser) {
     return isAdmin(user) ? '/admin/clients' : '/app';
@@ -47,8 +54,9 @@
       }
     }
 
-    if (params.has('error') && params.get('error') === 'oidc_failed') {
-      error = "Échec de l'authentification SSO.";
+    const ssoError = params.get('error');
+    if (ssoError) {
+      error = ssoErrors[ssoError] ?? ssoErrors.oidc_failed;
       window.history.replaceState({}, '', window.location.pathname);
     }
 
@@ -56,7 +64,6 @@
       const res = await fetch(`${apiUrl}/auth/config`);
       const config = await res.json();
       oidcEnabled = config.oidc_enabled ?? false;
-      ssoOnly = config.sso_only ?? false;
     } catch { /* noop */ }
 
     configLoaded = true;
@@ -140,69 +147,59 @@
             ></iconify-icon>
             Se connecter avec Facile
           </a>
-          {#if !ssoOnly}
-            <div class="my-6 flex items-center gap-3">
-              <span class="h-px flex-1 bg-border"></span>
-              <span class="text-xs text-muted-foreground">ou</span>
-              <span class="h-px flex-1 bg-border"></span>
-            </div>
+          <div class="my-6 flex items-center gap-3">
+            <span class="h-px flex-1 bg-border"></span>
+            <span class="text-xs text-muted-foreground">ou</span>
+            <span class="h-px flex-1 bg-border"></span>
+          </div>
+        {/if}
+
+        <form
+          onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
+          class="space-y-4"
+        >
+          <div class="space-y-1.5">
+            <label for="email" class={labelClass}>Email</label>
+            <input
+              id="email"
+              type="email"
+              bind:value={email}
+              placeholder="vous@exemple.com"
+              autocomplete="email"
+              required
+              disabled={loading}
+              class={inputClass}
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="password" class={labelClass}>Mot de passe</label>
+            <input
+              id="password"
+              type="password"
+              bind:value={password}
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+              disabled={loading}
+              class={inputClass}
+            />
+          </div>
+
+          {#if error}
+            <p class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
           {/if}
-        {/if}
 
-        {#if !ssoOnly}
-          <form
-            onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
-            class="space-y-4"
+          <button
+            type="submit"
+            disabled={loading || !email || !password}
+            class={primaryButtonClass}
           >
-            <div class="space-y-1.5">
-              <label for="email" class={labelClass}>Email</label>
-              <input
-                id="email"
-                type="email"
-                bind:value={email}
-                placeholder="vous@exemple.com"
-                autocomplete="email"
-                required
-                disabled={loading}
-                class={inputClass}
-              />
-            </div>
-
-            <div class="space-y-1.5">
-              <label for="password" class={labelClass}>Mot de passe</label>
-              <input
-                id="password"
-                type="password"
-                bind:value={password}
-                placeholder="••••••••"
-                autocomplete="current-password"
-                required
-                disabled={loading}
-                class={inputClass}
-              />
-            </div>
-
-            {#if error}
-              <p class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            {/if}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              class={primaryButtonClass}
-            >
-              {loading ? 'Connexion…' : 'Se connecter'}
-            </button>
-          </form>
-        {/if}
-
-        {#if ssoOnly && error}
-          <p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
-        {/if}
+            {loading ? 'Connexion…' : 'Se connecter'}
+          </button>
+        </form>
       {/if}
     </div>
   </div>

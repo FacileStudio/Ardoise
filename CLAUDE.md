@@ -99,6 +99,10 @@ Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `s
 
 Custom JWT auth via `AuthManager` from `@repo/auth`. Password hashing uses Argon2/scrypt through `CryptoService`. Always use `AuthManager.hashPassword()` when creating users -- never bcrypt directly. The backend auto-creates an admin user on first startup from `ADMIN_EMAIL` and `ADMIN_PASSWORD` env vars.
 
+### OIDC
+
+Optional, invite-only SSO in `apps/backend/src/oidc/` (see `docs/architecture.md`). SSO never creates users: an admin creates the `User`, and the first SSO login links it by `(issuer, sub)` through a verified email. Roles are never taken from claims. Password login always stays on.
+
 ### Prisma
 
 Multi-file schema in `packages/database/prisma/schema/`. Core models: User, Client, Payment, Settings, Media. The `@repo/database` package has conditional exports (browser stub vs. real client) to prevent Node.js imports in the browser.

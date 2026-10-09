@@ -10,7 +10,7 @@ import trpcHandler from './handlers/trpc';
 import { openApiHandler } from './handlers/openapi';
 import { apiReference } from '@scalar/hono-api-reference';
 import { createStorageDownloadHandler, createStorageUploadHandler } from './handlers/storage';
-import { createOIDCRoutes } from './handlers/oidc';
+import { createOIDCRoutes } from './oidc/routes';
 import {
   createHealthCheckHandler,
   createLivenessHandler,
