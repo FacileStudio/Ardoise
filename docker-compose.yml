@@ -1,7 +1,6 @@
 services:
   ardoise-postgres:
     image: postgres:16-alpine
-    container_name: ardoise-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -18,7 +17,6 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-    container_name: ardoise-backend
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -49,7 +47,6 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
-    container_name: ardoise-web
     environment:
       NODE_ENV: production
       PORT: 3000
