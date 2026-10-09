@@ -26,6 +26,12 @@ falls back — to `postgresql://localhost:5432/ardoise` in the runtime client an
 `postgresql://postgres:postgres@postgres:5432/ardoise` in the Prisma CLI config. Always set it
 explicitly; a typo silently connects somewhere else rather than erroring.
 
+### Cookies
+
+| Variable | Required | Default | What it does |
+|---|---|---|---|
+| `COOKIE_DOMAIN` | no | — | Adds `Domain=` to the auth cookies. Set it only when the web app and API are on different subdomains of one base domain (the web server's `/admin` guard reads the cookie). Use the narrowest shared parent, for example `.ardoise.facile.studio` for `ardoise.facile.studio` and `api.ardoise.facile.studio` |
+
 ### OIDC
 
 All optional. OIDC turns on when `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set;

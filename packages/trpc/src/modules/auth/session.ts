@@ -82,30 +82,35 @@ export const issueSession = async (
   return { token, refreshToken: refresh.token, user: sessionUser };
 };
 
-const cookie = (
-  name: string,
-  value: string,
-  path: string,
-  maxAge: number,
-  isProduction: boolean
-) =>
+export interface CookieOptions {
+  secure: boolean;
+  domain?: string;
+}
+
+const cookie = (name: string, value: string, path: string, maxAge: number, opts: CookieOptions) =>
   [
     `${name}=${encodeURIComponent(value)}`,
     `Path=${path}`,
+    ...(opts.domain ? [`Domain=${opts.domain}`] : []),
     'HttpOnly',
     'SameSite=Lax',
     `Max-Age=${maxAge}`,
-    ...(isProduction ? ['Secure'] : []),
+    ...(opts.secure ? ['Secure'] : []),
   ].join('; ');
+
+export const cookieOptions = (env: { NODE_ENV?: string; COOKIE_DOMAIN?: string }): CookieOptions => ({
+  secure: env.NODE_ENV === 'production',
+  domain: env.COOKIE_DOMAIN,
+});
 
 const REFRESH_COOKIE_PATH = '/trpc/auth.refresh';
 
-export const authCookies = (accessToken: string, refreshToken: string, isProduction: boolean) => [
-  cookie(AUTH_COOKIE_NAME, accessToken, '/', 15 * 60, isProduction),
-  cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_PATH, 7 * 24 * 60 * 60, isProduction),
+export const authCookies = (accessToken: string, refreshToken: string, opts: CookieOptions) => [
+  cookie(AUTH_COOKIE_NAME, accessToken, '/', 15 * 60, opts),
+  cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_PATH, 7 * 24 * 60 * 60, opts),
 ];
 
-export const clearedAuthCookies = (isProduction: boolean) => [
-  cookie(AUTH_COOKIE_NAME, '', '/', 0, isProduction),
-  cookie(REFRESH_COOKIE_NAME, '', REFRESH_COOKIE_PATH, 0, isProduction),
+export const clearedAuthCookies = (opts: CookieOptions) => [
+  cookie(AUTH_COOKIE_NAME, '', '/', 0, opts),
+  cookie(REFRESH_COOKIE_NAME, '', REFRESH_COOKIE_PATH, 0, opts),
 ];

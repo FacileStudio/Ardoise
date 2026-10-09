@@ -33,7 +33,7 @@ export function createOIDCRoutes(
     path: STATE_COOKIE_PATH,
     httpOnly: true,
     sameSite: 'Lax',
-    secure: config.secureCookies,
+    secure: config.cookies.secure,
   } as const;
 
   app.get('/auth/oidc', async (c) => {
@@ -66,7 +66,7 @@ export function createOIDCRoutes(
           ipAddress: c.req.header('x-forwarded-for') || c.req.header('cf-connecting-ip'),
           userAgent: c.req.header('user-agent'),
         });
-        for (const value of authCookies(session.token, session.refreshToken, config.secureCookies)) {
+        for (const value of authCookies(session.token, session.refreshToken, config.cookies)) {
           c.header('Set-Cookie', value, { append: true });
         }
         return c.redirect(withParam(redirect, 'oidc', 'success'));

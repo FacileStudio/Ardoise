@@ -1,4 +1,5 @@
 import type { ServerEnv } from '@repo/env';
+import { cookieOptions, type CookieOptions } from '@repo/trpc/auth/session';
 
 export interface OidcConfig {
   issuer: string;
@@ -8,7 +9,7 @@ export interface OidcConfig {
   successUrl: string;
   frontendOrigin: string;
   stateSecret: string;
-  secureCookies: boolean;
+  cookies: CookieOptions;
 }
 
 export function oidcConfig(env: ServerEnv): OidcConfig | null {
@@ -22,6 +23,6 @@ export function oidcConfig(env: ServerEnv): OidcConfig | null {
     successUrl: env.OIDC_SUCCESS_URL ?? `${env.FRONTEND_URL}/login`,
     frontendOrigin: new URL(env.FRONTEND_URL).origin,
     stateSecret: env.ENCRYPTION_SECRET,
-    secureCookies: env.NODE_ENV === 'production',
+    cookies: cookieOptions(env),
   };
 }
