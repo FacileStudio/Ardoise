@@ -668,7 +668,8 @@ export async function loadDocumentContext(
   userId: string,
   clientId: string,
   providerId: string,
-  spaceId?: string
+  spaceId?: string,
+  prestationId?: string
 ) {
   const scope = await spaceService.resolveScope(db, userId, spaceId);
 
@@ -688,10 +689,25 @@ export async function loadDocumentContext(
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
   }
 
+  if (prestationId) {
+    const prestation = await db.prestation.findFirst({
+      where: { id: prestationId, clientId: client.id, ...scopeWhere(scope) },
+      select: { id: true, status: true },
+    });
+
+    if (!prestation) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Prestation not found' });
+    }
+
+    if (prestation.status === 'CANCELLED') {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Prestation is cancelled' });
+    }
+  }
+
   const settings = await getSettingsRecord(db);
   const tvaRate = Number(provider.tvaRate || 20);
 
-  return { client, provider, settings, tvaRate, scope };
+  return { client, provider, settings, tvaRate, scope, prestationId: prestationId ?? null };
 }
 
 export function computeInvoiceTotals(
@@ -715,10 +731,12 @@ export function buildDocumentPersistenceBase(
   fileSize: number,
   createdBy: string,
   legalPersistence: ReturnType<typeof buildDocumentLegalPersistence>,
-  scope: Scope
+  scope: Scope,
+  prestationId: string | null = null
 ) {
   return {
     ...scopeWhere(scope),
+    prestationId,
     clientName: documentData.client_name ?? '',
     clientSiret: documentData.client_siret,
     clientAddress: documentData.client_address,

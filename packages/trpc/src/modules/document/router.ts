@@ -34,7 +34,7 @@ import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/servi
 import { logger } from '@repo/logger';
 
 const spaceScoped = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
-  schema.extend({ spaceId: z.string().optional() });
+  schema.extend({ spaceId: z.string().optional(), prestationId: z.string().optional() });
 
 /**
  * Lets a deliberate TRPCError keep its own code and message, and turns anything
@@ -118,6 +118,7 @@ async function resolveSubProvidersForBack(
 
 type SpecializedInput = {
   spaceId?: string;
+  prestationId?: string;
   clientId: string;
   providerId: string;
   items: Array<{ description?: string; quantity?: number; unit?: string; price?: number }>;
@@ -168,7 +169,7 @@ async function createSpecializedPrestation(
   ctx: any
 ) {
   const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-  const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+  const { client, provider, settings, tvaRate, scope, prestationId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.prestationId);
 
   const documentData = {
     type,
@@ -203,7 +204,8 @@ async function createSpecializedPrestation(
         pdfBuffer.length,
         ctx.user!.id,
         legalPersistence,
-        scope
+        scope,
+        prestationId
       ),
       items: input.items,
       subtotal,
@@ -472,7 +474,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, prestationId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.prestationId);
 
         const documentData = {
           type: 'facture_prestation' as const,
@@ -500,7 +502,7 @@ export const documentRouter = router({
             type: 'facture_prestation',
             name: fileName,
             invoiceNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, prestationId),
             items: input.items,
             subtotal,
             tva,
@@ -562,7 +564,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, prestationId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.prestationId);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -591,7 +593,7 @@ export const documentRouter = router({
             type: 'maintenance',
             name: fileName,
             quoteNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, prestationId),
             items: input.items,
             subtotal,
             tva,
@@ -649,7 +651,7 @@ export const documentRouter = router({
     .input(spaceScoped(BackContractuelInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, prestationId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.prestationId);
         const providersWithDetails = await resolveSubProvidersForBack(ctx.db, ctx.user!.id, input.providers, input.spaceId);
 
         const documentData = {
@@ -679,7 +681,7 @@ export const documentRouter = router({
             type: 'back_contractuel',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, prestationId),
             items: input.items || [],
             subtotal,
             tva,
@@ -737,7 +739,7 @@ export const documentRouter = router({
     .input(spaceScoped(AppelDeFondsInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, prestationId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.prestationId);
         const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, ctx.user!.id, input.payment_providers, input.spaceId);
 
         const documentData = {
@@ -771,7 +773,7 @@ export const documentRouter = router({
             type: 'appel_de_fonds',
             name: fileName,
             invoiceNumber: input.global_invoice_ref,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, prestationId),
             items: input.items || [],
             subtotal,
             tva,
@@ -827,7 +829,7 @@ export const documentRouter = router({
     .input(spaceScoped(ContratPrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, prestationId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.prestationId);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -854,7 +856,7 @@ export const documentRouter = router({
             type: 'contrat_prestation',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, prestationId),
             items: [],
             subtotal: 0,
             tva: 0,
@@ -910,7 +912,7 @@ export const documentRouter = router({
     .input(spaceScoped(ContratMaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, prestationId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.prestationId);
 
         const documentData = {
           type: 'contrat_maintenance' as const,
@@ -937,7 +939,7 @@ export const documentRouter = router({
             type: 'contrat_maintenance',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, prestationId),
             items: [],
             subtotal: 0,
             tva: 0,
