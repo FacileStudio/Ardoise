@@ -13,7 +13,8 @@ export const ReceiptItemSchema = z.object({
   description: z.string(),
   quantity: z.number().positive(),
   unit: z.string(),
-  price: z.number().nonnegative(),
+  // a balance invoice deducts the deposit already billed as a negative line
+  price: z.number(),
 });
 
 export const ReceiptDataSchema = z.object({
