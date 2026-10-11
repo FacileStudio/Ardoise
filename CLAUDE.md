@@ -109,7 +109,7 @@ Multi-file schema in `packages/database/prisma/schema/`. Core models: User, Clie
 
 ### Payments flow
 
-Admin creates a mission for a client, attaches its quotes, contracts and invoice, then generates the payment from the invoice (`mission.createPayment`). The payment can also be created on its own.
+Admin creates a mission for a client and lists its prestations (the billable lines). The quote and the invoice are generated from them on request: a new quote after each change of the lines, then, once the quote is accepted, a full invoice or a deposit and a balance (`mission.generateQuote`, `acceptQuote`, `generateInvoice`). The payment of an invoice comes from `mission.createPayment`, and a payment can also be created on its own.
 
 Flow of a payment: admin creates payment -> backend sends email to client -> client clicks payment link -> Stripe checkout -> webhook updates status to PAID -> receipt available.
 
