@@ -1,0 +1,88 @@
+monorepo_root = true
+
+[settings]
+experimental = true
+lockfile = true
+
+[monorepo]
+config_roots = ["apps/backend", "apps/web", "packages/database"]
+
+[tools]
+bun = "1.2.0"
+node = "22.22.1"
+"asdf:mise-plugins/mise-postgres" = "16.15"
+
+[env]
+BUN_BIN = { value = "{{tools.bun.path}}/bin/bun", tools = true }
+NODE_BIN_DIR = { value = "{{tools.node.path}}/bin", tools = true }
+
+[tasks.install]
+description = "Install workspace dependencies with Bun"
+sources = ["bun.lock", "package.json", "apps/*/package.json", "packages/*/package.json"]
+outputs = ["node_modules"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" install --frozen-lockfile'
+
+[tasks.dev]
+description = "Run all app dev servers via Turbo"
+depends = [":install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run dev'
+
+[tasks.build]
+description = "Build the monorepo"
+depends = [":install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run build'
+
+[tasks.lint]
+description = "Lint the monorepo"
+depends = [":install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run lint'
+
+[tasks.typecheck]
+description = "Typecheck the monorepo"
+depends = [":install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run typecheck'
+
+[tasks.check]
+description = "Run lint and typecheck across the monorepo"
+depends = [":install"]
+run = [
+  'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run lint',
+  'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run typecheck',
+]
+
+[tasks.format]
+description = "Format repository files"
+depends = [":install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run format'
+
+[tasks.clean]
+description = "Clean build outputs and root node_modules"
+depends = [":install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run clean'
+
+[tasks."db:up"]
+description = "Start the repo-local Postgres dev database and sync DATABASE_URL"
+run = "./scripts/db-up.sh"
+
+[tasks."db:down"]
+description = "Stop the repo-local Postgres dev database"
+run = "./scripts/db-down.sh"
+
+[tasks."db:setup"]
+description = "Start the repo-local Postgres dev database and push the Prisma schema"
+depends = [":install"]
+run = [
+  'mise run db:up',
+  'mise run //packages/database:generate',
+  'mise run //packages/database:push',
+]
+
+[tasks."db:studio"]
+description = "Open Prisma Studio"
+depends = [":install"]
+run = 'mise run //packages/database:studio'
+
+[tasks."db:seed"]
+description = "Seed the database"
+depends = [":install"]
+run = 'mise run //packages/database:seed'

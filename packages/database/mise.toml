@@ -1,0 +1,39 @@
+[env]
+_.file = ".env"
+
+[tasks.generate]
+description = "Generate Prisma client and Zod types"
+depends = ["//:install"]
+sources = ["package.json", "prisma.config.ts", "prisma/**/*.prisma", "prisma/zod-generator.config.json"]
+outputs = ["src/zod"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:generate'
+
+[tasks.push]
+description = "Push the Prisma schema to the database"
+depends = ["//:install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:push'
+
+[tasks."migrate:dev"]
+description = "Run Prisma dev migrations"
+depends = ["//:install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:migrate:dev'
+
+[tasks."migrate:deploy"]
+description = "Run Prisma deploy migrations"
+depends = ["//:install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:migrate:deploy'
+
+[tasks.seed]
+description = "Seed the database"
+depends = ["//:install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:seed'
+
+[tasks.studio]
+description = "Open Prisma Studio"
+depends = ["//:install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:studio'
+
+[tasks.typecheck]
+description = "Typecheck the database package"
+depends = ["//:install", ":generate"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run typecheck'

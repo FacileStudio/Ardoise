@@ -18,22 +18,22 @@ Internal payment and invoicing platform for Facile Studio. Clients receive payme
 
 ## Key Commands
 
-Use `just` (recommended) or `bun run`:
+Use `mise run` (task runner, pins bun, node and Postgres) or `bun run`:
 
 | Command | What it does |
 |---|---|
-| `just init` | Full setup: install, generate Prisma, create DB, push schema |
-| `just dev` | Run backend + web in parallel |
-| `just backend` | Backend only (port 3001) |
-| `just web` | Web app only (port 3000) |
-| `just generate` | Generate Prisma client |
-| `just push` | Push Prisma schema to DB |
-| `just studio` | Open Prisma Studio |
-| `just typecheck` | Typecheck all workspaces |
-| `just lint` | Lint all workspaces |
-| `just format` | Prettier format |
-| `just build` | Build all apps |
-| `just create-admin` | Create admin user for local dev |
+| `mise run db:setup` | Full setup: install, start local Postgres, generate Prisma, push schema |
+| `mise run dev` | Run backend + web in parallel |
+| `mise run //apps/backend:dev` | Backend only (port 3001) |
+| `mise run //apps/web:dev` | Web app only (port 3000) |
+| `mise run //packages/database:generate` | Generate Prisma client |
+| `mise run //packages/database:push` | Push Prisma schema to DB |
+| `mise run db:studio` | Open Prisma Studio |
+| `mise run typecheck` | Typecheck all workspaces |
+| `mise run lint` | Lint all workspaces |
+| `mise run format` | Prettier format |
+| `mise run build` | Build all apps |
+| `mise run //apps/backend:create-admin` | Create admin user for local dev |
 
 Database scripts (from `packages/database`):
 
@@ -139,7 +139,7 @@ See `apps/backend/.env.example` for reference.
 
 ## Gotchas
 
-- Prisma client must be generated before build/dev/typecheck (Turbo handles this, but manual runs need `just generate` first)
+- Prisma client must be generated before build/dev/typecheck (Turbo handles this, but manual runs need `mise run //packages/database:generate` first)
 - Browser imports of `@repo/database` get a null stub for `prisma` -- add `@repo/database`, `@prisma/client`, `pg` to Vite `optimizeDeps.exclude`
 - `BACKEND_URL` is passed as `VITE_API_URL` at Docker build time to the web app
 - CORS origins are derived from `FRONTEND_URL` env var

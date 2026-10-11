@@ -4,23 +4,26 @@ Getting a working local Ardoise, the database workflow, and the checks to run be
 
 ## Prerequisites
 
-- **Bun 1.2.0 or newer.** `packageManager` pins `bun@1.2.0`; the Docker images build on
-  `oven/bun:1.3.7`. No npm, yarn or pnpm — the lockfile is `bun.lock`
-- **PostgreSQL 16**, either locally or via `docker compose up -d ardoise-postgres`
-- **`just`**, the task runner for this repo. Ardoise uses a `justfile`, not `mise.toml`
+- **`mise`**, the task runner for this repo. `mise.toml` pins bun 1.2.0, node 22 and Postgres 16
+  and defines every task. The Docker images build on `oven/bun:1.3.7`. No npm, yarn or pnpm — the
+  lockfile is `bun.lock`
+- **PostgreSQL**, repo-local through `mise run db:up`, or your own server, or
+  `docker compose up -d ardoise-postgres`
 - **`typst` 0.13** on `PATH` if you want document generation to work outside Docker. The
   container copies the binary from `ghcr.io/typst/typst:v0.13.1`
 
 ## Setup
 
 ```sh
-just init
+mise trust . && mise install
+mise run db:setup
 ```
 
-That runs `bun install`, generates the Prisma client, creates a local `ardoise` database, and
-pushes the schema with `--accept-data-loss`. It assumes
-`postgresql://user@localhost:5432/ardoise`; edit the `justfile` or export `DATABASE_URL` if your
-local Postgres differs.
+That runs `bun install`, starts a Postgres under `.local/postgres` on `127.0.0.1:5433`, creates
+the `ardoise` database, copies `.env.example` to `.env` in `apps/backend` and `packages/database`
+when missing, points their `DATABASE_URL` at it, generates the Prisma client and pushes the
+schema. `mise run db:down` stops it. To use another Postgres, skip `db:up` and set `DATABASE_URL`
+in both `.env` files.
 
 You still need a backend environment. The required variables are `NODE_ENV`, `DATABASE_URL`,
 `ENCRYPTION_SECRET` (32+ characters), `ADMIN_EMAIL` and `ADMIN_PASSWORD` — see
@@ -29,18 +32,18 @@ You still need a backend environment. The required variables are `NODE_ENV`, `DA
 ## Running
 
 ```sh
-just dev        # backend and web together, through Turborepo
-just backend    # backend only, port 3001
-just web        # web only, port 3000
+mise run dev                  # backend and web together, through Turborepo
+mise run //apps/backend:dev   # backend only, port 3001
+mise run //apps/web:dev       # web only, port 3000
 ```
 
-`just dev` is `bun run dev`, which is `turbo run dev`. The `dev` task depends on `db:generate`
+`mise run dev` is `bun run dev`, which is `turbo run dev`. The `dev` task depends on `db:generate`
 and `check-env`, so Turbo regenerates the Prisma client and validates the environment before
 either app comes up.
 
 The backend calls `bootstrapAdmin()` on startup, so the account from `ADMIN_EMAIL` /
-`ADMIN_PASSWORD` always exists — there is no separate seeding step for logging in. `just
-create-admin` exists as a manual fallback and writes the development default
+`ADMIN_PASSWORD` always exists — there is no separate seeding step for logging in. `mise run
+//apps/backend:create-admin` exists as a manual fallback and writes the development default
 `admin@example.com` / `admin123456789`.
 
 Once running: the web app is at <http://localhost:3000> (client portal `/app`, admin panel
@@ -53,9 +56,9 @@ The schema is split across `packages/database/prisma/schema/*.prisma`; `prisma.c
 Prisma at the directory rather than a single file.
 
 ```sh
-just generate                          # prisma generate + zod-prisma-types
-just push                              # prisma db push, development only
-just studio                            # Prisma Studio
+mise run //packages/database:generate  # prisma generate + zod-prisma-types
+mise run //packages/database:push      # prisma db push, development only
+mise run db:studio                     # Prisma Studio
 
 cd packages/database
 bun run db:migrate:dev                 # create a migration
@@ -72,14 +75,14 @@ There is no `scripts/check.sh`, no `.githooks/`, and no CI. GitHub Actions was r
 suite-wide. Run the checks yourself:
 
 ```sh
-just typecheck    # turbo run typecheck — tsc for the backend, svelte-check for the web app
-just lint         # turbo run lint — eslint with --max-warnings 0 on the backend
-just format       # prettier --write over ts, tsx, md and json
-just build        # turbo run build
+mise run typecheck  # turbo run typecheck — tsc for the backend, svelte-check for the web app
+mise run lint       # turbo run lint — eslint with --max-warnings 0 on the backend
+mise run format     # prettier --write over ts, tsx, md and json
+mise run build      # turbo run build
 ```
 
 `typecheck` and `build` both depend on `db:generate`, so a stale Prisma client is a common cause
-of type errors that vanish after `just generate`.
+of type errors that vanish after `mise run //packages/database:generate`.
 
 There is no test suite in this repo. `scripts/stripe-test-clock.ts` exists for exercising
 recurring payments against Stripe test clocks manually.
@@ -96,9 +99,9 @@ recurring payments against Stripe test clocks manually.
 ## Adding a model
 
 1. Add a `.prisma` file under `packages/database/prisma/schema/`.
-2. Run `bun run db:migrate:dev` from `packages/database` — or `just push` if you are iterating
+2. Run `bun run db:migrate:dev` from `packages/database` — or `mise run //packages/database:push` if you are iterating
    and do not want a migration yet.
-3. `just generate` if the client did not regenerate on its own.
+3. `mise run //packages/database:generate` if the client did not regenerate on its own.
 
 ## Gotchas
 

@@ -43,12 +43,12 @@ Then open <http://localhost:3000>. The API answers on <http://localhost:3001>.
 ### Local development
 
 ```sh
-just init
-just dev
+mise run db:setup
+mise run dev
 ```
 
-`just init` installs dependencies, generates the Prisma client, creates the `ardoise` database
-and pushes the schema. The backend bootstraps an admin account from `ADMIN_EMAIL` and
+`mise run db:setup` installs dependencies, starts a repo-local Postgres on port 5433, creates the
+`ardoise` database, generates the Prisma client and pushes the schema. The backend bootstraps an admin account from `ADMIN_EMAIL` and
 `ADMIN_PASSWORD` on every startup.
 
 ## Configuration

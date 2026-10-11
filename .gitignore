@@ -47,3 +47,6 @@ data/
 *~
 .cache
 .env.turbo
+
+# Repo-local Postgres (mise db:up)
+.local
