@@ -10,6 +10,20 @@ import {
   PrestationDocumentSchema,
   CreatePrestationPaymentSchema,
 } from './types';
+import { dispatchConfiguredWebhook } from '../webhook/service';
+
+type EventContext = Pick<Parameters<typeof dispatchConfiguredWebhook>[0], 'db' | 'log'> & {
+  user: { id: string; email: string; role: string };
+};
+
+const emit = (ctx: EventContext, event: string, data: Record<string, unknown>) =>
+  dispatchConfiguredWebhook({
+    db: ctx.db,
+    log: ctx.log,
+    event,
+    actor: { id: ctx.user.id, email: ctx.user.email, role: ctx.user.role },
+    data,
+  });
 
 export const prestationRouter = router({
   list: adminProcedure.input(ListPrestationsSchema).query(async ({ ctx, input }) => {
@@ -24,16 +38,36 @@ export const prestationRouter = router({
 
   create: adminProcedure.input(CreatePrestationSchema).mutation(async ({ ctx, input }) => {
     const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
-    return prestationService.createPrestation(ctx.db, input, scope);
+    const prestation = await prestationService.createPrestation(ctx.db, input, scope);
+
+    await emit(ctx, 'prestation.created', { prestation });
+
+    return prestation;
   }),
 
   update: adminProcedure.input(UpdatePrestationSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
-    return prestationService.updatePrestation(ctx.db, ctx.user.id, id, data);
+    const prestation = await prestationService.updatePrestation(ctx.db, ctx.user.id, id, data);
+
+    await emit(ctx, 'prestation.updated', { prestationId: id, prestation });
+
+    return prestation;
   }),
 
   setStatus: adminProcedure.input(SetPrestationStatusSchema).mutation(async ({ ctx, input }) => {
-    return prestationService.setStatus(ctx.db, ctx.user.id, input.id, input.status);
+    const prestation = await prestationService.setStatus(
+      ctx.db,
+      ctx.user.id,
+      input.id,
+      input.status
+    );
+
+    await emit(ctx, 'prestation.status_changed', {
+      prestationId: input.id,
+      status: prestation.status,
+    });
+
+    return prestation;
   }),
 
   attachDocument: adminProcedure
@@ -53,7 +87,7 @@ export const prestationRouter = router({
     .mutation(async ({ ctx, input }) => {
       const useStripe = input.collectionMethod === 'STRIPE';
 
-      return prestationService.createPayment(
+      const payment = await prestationService.createPayment(
         ctx.db,
         ctx.user.id,
         {
@@ -64,10 +98,18 @@ export const prestationRouter = router({
         },
         input
       );
+
+      await emit(ctx, 'prestation.payment_created', { prestationId: input.id, payment });
+
+      return payment;
     }),
 
   delete: adminProcedure.input(GetPrestationByIdSchema).mutation(async ({ ctx, input }) => {
-    return prestationService.deletePrestation(ctx.db, ctx.user.id, input.id);
+    const result = await prestationService.deletePrestation(ctx.db, ctx.user.id, input.id);
+
+    await emit(ctx, 'prestation.deleted', { prestationId: input.id });
+
+    return result;
   }),
 });
 

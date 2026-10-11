@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import { prestationRouter } from './router';
+import { syncPrestationPaid } from './sync';
 
 const prestationRow = { id: 'p-1', clientId: 'client-1', spaceId: null, status: 'DRAFT' };
 
@@ -15,7 +16,10 @@ const invoice = {
 
 function callerFor(db: Record<string, unknown>) {
   return prestationRouter.createCaller({
-    db: db as unknown as PrismaClient,
+    db: {
+      settings: { findUnique: async () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }) },
+      ...db,
+    } as unknown as PrismaClient,
     auth: {},
     user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
@@ -173,8 +177,12 @@ describe('prestationRouter.delete', () => {
 describe('prestationRouter.createPayment', () => {
   const input = { id: 'p-1', documentId: 'doc-1', collectionMethod: 'MANUAL' } as const;
 
-  const dbWith = (document: any, live: any, created: any[] = []) => ({
-    prestation: { findUnique: async () => prestationRow, findFirst: async () => ({ id: 'p-1' }) },
+  const dbWith = (document: any, live: any, created: any[] = [], moved: any[] = []) => ({
+    prestation: {
+      findUnique: async () => prestationRow,
+      findFirst: async () => ({ id: 'p-1' }),
+      updateMany: async (args: any) => moved.push(args),
+    },
     document: { findFirst: async () => document, findMany: async () => [{ id: 'doc-1' }] },
     payment: {
       findFirst: async () => live,
@@ -223,5 +231,60 @@ describe('prestationRouter.createPayment', () => {
     expect(created[0].data.prestationId).toBe('p-1');
     expect(created[0].data.documentId).toBe('doc-1');
     expect(created[0].data.reference).toBe('F-001');
+  });
+
+  it('moves an accepted prestation to invoiced once the payment exists', async () => {
+    const moved: any[] = [];
+
+    await callerFor(dbWith(invoice, null, [], moved)).createPayment(input);
+
+    expect(moved[0]).toEqual({
+      where: { id: 'p-1', status: 'ACCEPTED' },
+      data: { status: 'INVOICED' },
+    });
+  });
+});
+
+describe('prestation status sync after a payment', () => {
+  const dbFor = (invoices: string[], paid: string[], updates: any[]) =>
+    ({
+      document: { findMany: async () => invoices.map((id) => ({ id })) },
+      payment: { findMany: async () => paid.map((documentId) => ({ documentId })) },
+      prestation: { updateMany: async (args: any) => updates.push(args) },
+    }) as unknown as PrismaClient;
+
+  it('marks the prestation paid once every invoice has a paid payment', async () => {
+    const updates: any[] = [];
+
+    await syncPrestationPaid(dbFor(['d1', 'd2'], ['d1', 'd2'], updates), 'p-1');
+
+    expect(updates[0]).toEqual({
+      where: { id: 'p-1', status: 'INVOICED' },
+      data: { status: 'PAID' },
+    });
+  });
+
+  it('waits while one invoice is still unpaid', async () => {
+    const updates: any[] = [];
+
+    await syncPrestationPaid(dbFor(['d1', 'd2'], ['d1'], updates), 'p-1');
+
+    expect(updates.length).toBe(0);
+  });
+
+  it('leaves a prestation with no invoice alone', async () => {
+    const updates: any[] = [];
+
+    await syncPrestationPaid(dbFor([], [], updates), 'p-1');
+
+    expect(updates.length).toBe(0);
+  });
+
+  it('ignores a payment that belongs to no prestation', async () => {
+    const updates: any[] = [];
+
+    await syncPrestationPaid(dbFor(['d1'], ['d1'], updates), null);
+
+    expect(updates.length).toBe(0);
   });
 });

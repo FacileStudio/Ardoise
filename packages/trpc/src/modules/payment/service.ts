@@ -12,6 +12,7 @@ import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
+import { syncPrestationPaid } from '../prestation/sync';
 import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsParams } from './types';
 
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
@@ -506,7 +507,7 @@ export const paymentService = {
     if (data.reference !== undefined) updateData.reference = data.reference;
     if (data.attachedFiles !== undefined) updateData.attachedFiles = data.attachedFiles;
 
-    return db.payment.update({
+    const updated = await db.payment.update({
       where: { id },
       data: updateData,
       include: {
@@ -515,6 +516,12 @@ export const paymentService = {
         },
       },
     });
+
+    if (updated.status === 'PAID') {
+      await syncPrestationPaid(db, updated.prestationId);
+    }
+
+    return updated;
   },
 
   cancelPayment: async (
@@ -903,6 +910,8 @@ export const paymentService = {
 
         if (updated.count === 0) break;
 
+        await syncPrestationPaid(db, payment.prestationId);
+
         try {
           await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);
         } catch (error) {
@@ -946,6 +955,8 @@ export const paymentService = {
         });
 
         if (updated.count === 0) break;
+
+        await syncPrestationPaid(db, payment.prestationId);
 
         try {
           await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);

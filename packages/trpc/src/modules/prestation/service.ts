@@ -299,7 +299,7 @@ export const prestationService = {
     // the payment term starts when the payment is requested, not when the invoice was issued
     const dueDate = input.dueDate ?? new Date(Date.now() + document.paymentTermsDays * DAY_MS);
 
-    return paymentService.createPayment(
+    const payment = await paymentService.createPayment(
       db,
       userId,
       deps.stripe,
@@ -320,6 +320,14 @@ export const prestationService = {
         documentId: document.id,
       }
     );
+
+    // asking for payment on an invoice is what makes an accepted prestation invoiced
+    await db.prestation.updateMany({
+      where: { id: prestation.id, status: 'ACCEPTED' },
+      data: { status: 'INVOICED' },
+    });
+
+    return payment;
   },
 
   deletePrestation: async (db: PrismaClient, userId: string, id: string) => {
