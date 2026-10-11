@@ -281,6 +281,32 @@ export const paymentService = {
       }
     }
 
+    if (data.prestationId) {
+      const prestation = await db.prestation.findFirst({
+        where: { id: data.prestationId, clientId: client.id, spaceId: client.spaceId },
+        select: { id: true },
+      });
+
+      if (!prestation) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Prestation not found' });
+      }
+    }
+
+    if (data.documentId) {
+      const document = await db.document.findFirst({
+        where: {
+          id: data.documentId,
+          spaceId: client.spaceId,
+          ...(data.prestationId ? { prestationId: data.prestationId } : {}),
+        },
+        select: { id: true },
+      });
+
+      if (!document) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
+      }
+    }
+
     const feeCalculation = calculateStripeFees(data.amount);
     const clientEmail = client.contactEmail || client.user?.email || null;
     const clientName = `${client.contactFirstName} ${client.contactLastName}`.trim();
@@ -399,6 +425,8 @@ export const paymentService = {
       data: {
         clientId: data.clientId,
         spaceId: client.spaceId,
+        prestationId: data.prestationId,
+        documentId: data.documentId,
         amount: feeCalculation.amount,
         stripeFee: useStripe ? feeCalculation.stripeFee : 0,
         totalWithFees: useStripe ? feeCalculation.totalWithFees : feeCalculation.amount,
