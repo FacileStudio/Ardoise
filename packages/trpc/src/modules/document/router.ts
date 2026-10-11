@@ -1,12 +1,12 @@
 import { router, adminProcedure } from '../../trpc';
 import {
-  generateDocument,
   generateTypstContent,
   buildPartyAndLegalData,
   buildDocumentLegalPersistence,
   buildDocumentPersistenceBase,
   loadDocumentContext,
   computeInvoiceTotals,
+  storeDocumentPdf,
   ContratPrestationInputSchema,
   ContratMaintenanceInputSchema,
   BackContractuelInputSchema,
@@ -25,13 +25,12 @@ import {
   PrestationVideoInputSchema,
 } from './services/schemas';
 import { generateNextDocumentNumber, previewDocumentNumber } from './numbering';
+import { generateDocumentWithLogo } from './render';
 import spaceService, { scopeWhere, requireRowScope } from '../space/service';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import type { StorageService } from '@repo/storage';
 import type { PrismaClient } from '@repo/database';
-import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
-import { logger } from '@repo/logger';
+import { parseStorageKey } from '../media/service';
 
 const spaceScoped = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
   schema.extend({ spaceId: z.string().optional(), missionId: z.string().optional() });
@@ -50,33 +49,6 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
     code: 'INTERNAL_SERVER_ERROR',
     message: error instanceof Error && error.message ? error.message : fallbackMessage,
   });
-}
-
-async function downloadLogoFromS3(logoUrl: string | null | undefined, storage: StorageService): Promise<string | undefined> {
-  if (!logoUrl || (!logoUrl.includes('storageapi.dev') && !logoUrl.includes('/storage/'))) {
-    return undefined;
-  }
-
-  try {
-    return await downloadStoredFileToTempPath(logoUrl, storage, 'logo');
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to download logo from S3');
-    return undefined;
-  }
-}
-
-async function generateDocumentWithLogo(
-  documentData: any,
-  logoUrl: string | null | undefined,
-  storage: StorageService
-): Promise<Buffer> {
-  const logoPath = await downloadLogoFromS3(logoUrl, storage);
-
-  try {
-    return await generateDocument(documentData, logoPath);
-  } finally {
-    cleanupTempFile(logoPath);
-  }
 }
 
 async function fetchProvidersByIds(
@@ -193,6 +165,8 @@ async function createSpecializedPrestation(
   const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate);
   const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+  const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
   const document = await ctx.db.document.create({
     data: {
       type,
@@ -205,7 +179,8 @@ async function createSpecializedPrestation(
         ctx.user!.id,
         legalPersistence,
         scope,
-        missionId
+        missionId,
+        stored
       ),
       items: input.items,
       subtotal,
@@ -364,6 +339,14 @@ export const documentRouter = router({
       );
 
       try {
+        const storedKey = parseStorageKey(document.pdfUrl);
+
+        if (storedKey) {
+          const bytes = await ctx.storage.download(storedKey);
+
+          return { pdf: Buffer.from(bytes).toString('base64'), fileName: document.name };
+        }
+
         let logoUrl: string | undefined;
         let bankName = '';
         let iban = '';
@@ -382,7 +365,11 @@ export const documentRouter = router({
         const documentData = {
           type: document.type as DocType,
           invoice_number: document.invoiceNumber || '',
+          invoice_date: document.createdAt.toISOString().split('T')[0],
+          due_date: (document.dueDate ?? document.createdAt).toISOString().split('T')[0],
           quote_number: document.quoteNumber || '',
+          quote_date: document.createdAt.toISOString().split('T')[0],
+          validity_date: document.createdAt.toISOString().split('T')[0],
           contract_reference: document.contractRef || '',
           clientId: '',
           providerId: document.providerId || undefined,
@@ -497,12 +484,14 @@ export const documentRouter = router({
         const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'facture_prestation',
             name: fileName,
             invoiceNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items,
             subtotal,
             tva,
@@ -588,12 +577,14 @@ export const documentRouter = router({
         const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'maintenance',
             name: fileName,
             quoteNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items,
             subtotal,
             tva,
@@ -676,12 +667,14 @@ export const documentRouter = router({
         const { subtotal, tva, total } = computeInvoiceTotals(input.items || [], tvaRate);
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'back_contractuel',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items || [],
             subtotal,
             tva,
@@ -768,12 +761,14 @@ export const documentRouter = router({
         const total = subtotal + tva;
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'appel_de_fonds',
             name: fileName,
             invoiceNumber: input.global_invoice_ref,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items || [],
             subtotal,
             tva,
@@ -851,12 +846,14 @@ export const documentRouter = router({
         const fileName = `contrat_prestation_${input.contract_reference}.pdf`;
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'contrat_prestation',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: [],
             subtotal: 0,
             tva: 0,
@@ -934,12 +931,14 @@ export const documentRouter = router({
         const fileName = `contrat_maintenance_${input.contract_reference}.pdf`;
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'contrat_maintenance',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: [],
             subtotal: 0,
             tva: 0,
