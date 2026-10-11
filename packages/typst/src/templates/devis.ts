@@ -5,13 +5,6 @@ export const devis: string = `#set document(
   author: "{{provider_name}}"
 )
 
-#set page(
-  paper: "a4",
-  margin: (top: 1.6cm, bottom: 1.6cm, left: 2.5cm, right: 2.5cm),
-  numbering: "1 / 1",
-  number-align: right + bottom,
-)
-
 #set text(font: "Satoshi", size: 10pt, lang: "fr")
 #set par(leading: 0.65em, spacing: 0.65em)
 
@@ -39,6 +32,16 @@ export const devis: string = `#set document(
 #let items = ({{items}})
 #let tva_rate = {{tva_rate}}
 ${legalLetDeclarations}
+
+#set page(
+  paper: "a4",
+  margin: (top: 1.8cm, bottom: 3.2cm, left: 2.5cm, right: 2.5cm),
+  footer-descent: 0.3cm,
+  footer: context [
+    ${legalContractFooter}
+    #align(right)[#text(size: 8pt, fill: rgb("#888888"))[#counter(page).display("1 / 1", both: true)]]
+  ],
+)
 
 // Header
 #grid(
@@ -205,7 +208,4 @@ ${legalLetDeclarations}
   ],
 )
 
-#v(1fr)
-
-${legalContractFooter}
 `;
