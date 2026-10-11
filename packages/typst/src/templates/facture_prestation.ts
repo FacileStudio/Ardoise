@@ -1,6 +1,6 @@
 import { legalLetDeclarations, legalInvoiceFooter } from './_legal';
 
-export const prestation: string = `#set document(
+export const facture_prestation: string = `#set document(
   title: "Facture",
   author: "{{provider_name}}"
 )
@@ -21,6 +21,8 @@ export const prestation: string = `#set document(
 #let invoice_date = "{{invoice_date}}"
 #let due_date = "{{due_date}}"
 #let delivery_date = "{{delivery_date}}"
+#let invoice_title = "{{invoice_title}}"
+#let quote_number = "{{quote_number}}"
 
 #let client_name = "{{client_name}}"
 #let client_address = "{{client_address}}"
@@ -53,22 +55,22 @@ ${legalLetDeclarations}
     #text(size: 26pt, weight: "bold", font: "Satoshi")[#provider_name]
     #v(0.7cm)
     #text(size: 9.5pt, fill: rgb("#555555"))[
-      #provider_address \
-      #if provider_postal_code != "" [#provider_postal_code #h(0.2cm)]#provider_city \
-      SIRET: #provider_siret #if provider_ape_code != "" [\u{00A0}\u{00B7}\u{00A0}APE: #provider_ape_code] \
-      #if provider_tva_intracom != "" [TVA intracom: #provider_tva_intracom \ ]
+      #provider_address \\
+      #if provider_postal_code != "" [#provider_postal_code #h(0.2cm)]#provider_city \\
+      SIRET: #provider_siret #if provider_ape_code != "" [\u{00A0}\u{00B7}\u{00A0}APE: #provider_ape_code] \\
+      #if provider_tva_intracom != "" [TVA intracom: #provider_tva_intracom \\ ]
       #if provider_legal_form != "" or provider_share_capital != "" [
-        #if provider_legal_form != "" [#provider_legal_form ]#if provider_share_capital != "" [au capital de #provider_share_capital\u{00A0}€ ]#if provider_rcs_city != "" [\u{00B7} RCS #provider_rcs_city] \
+        #if provider_legal_form != "" [#provider_legal_form ]#if provider_share_capital != "" [au capital de #provider_share_capital\u{00A0}€ ]#if provider_rcs_city != "" [\u{00B7} RCS #provider_rcs_city] \\
       ]
     ]
     #v(0.3cm)
     #text(size: 9.5pt, fill: rgb("#555555"))[
-      #provider_email \
+      #provider_email \\
       #provider_phone
     ]
   ],
   [
-    #text(size: 28pt, weight: "bold", font: "Satoshi", fill: rgb("#1a1a1a"))[FACTURE]
+    #text(size: if invoice_title.len() > 8 { 20pt } else { 28pt }, weight: "bold", font: "Satoshi", fill: rgb("#1a1a1a"))[#invoice_title]
     #v(0.8cm)
     #table(
       columns: (auto, auto),
@@ -84,6 +86,12 @@ ${legalLetDeclarations}
       text(size: 10pt)[#if delivery_date != "" [#delivery_date] else [#invoice_date]],
       text(weight: "medium", fill: rgb("#666666"), size: 9pt)[ÉCHÉANCE],
       text(size: 10pt)[#due_date],
+      ..if quote_number != "" {
+        (
+          text(weight: "medium", fill: rgb("#666666"), size: 9pt)[RÉF. DEVIS],
+          text(size: 10pt)[#quote_number],
+        )
+      } else { () },
     )
   ]
 )
@@ -103,10 +111,10 @@ ${legalLetDeclarations}
   #text(size: 12pt, weight: "bold", font: "Satoshi")[#client_name]
   #v(0.3cm)
   #text(size: 9.5pt, fill: rgb("#333333"))[
-    #client_address \
-    #if client_postal_code != "" [#client_postal_code #h(0.2cm)]#client_city \
-    #client_country \
-    #if client_siret != "" and client_siret != "0" [SIRET: #client_siret \ ]
+    #client_address \\
+    #if client_postal_code != "" [#client_postal_code #h(0.2cm)]#client_city \\
+    #client_country \\
+    #if client_siret != "" and client_siret != "0" [SIRET: #client_siret \\ ]
     #if client_tva_intracom != "" [TVA intracom: #client_tva_intracom]
   ]
 ]

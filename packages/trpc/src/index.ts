@@ -10,6 +10,7 @@ import { documentRouter } from './modules/document/router';
 import { providerRouter } from './modules/provider/router';
 import { docusealRouter } from './modules/docuseal/router';
 import { spaceRouter } from './modules/space/router';
+import { missionRouter } from './modules/mission/router';
 import { createOpenApiDocument } from './openapi';
 
 export const appRouter = router({
@@ -24,6 +25,7 @@ export const appRouter = router({
   provider: providerRouter,
   docuseal: docusealRouter,
   space: spaceRouter,
+  mission: missionRouter,
 });
 export const openApiDocument = createOpenApiDocument(appRouter);
 

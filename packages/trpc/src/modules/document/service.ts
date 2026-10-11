@@ -1,6 +1,7 @@
 import {
   TypstGenerator,
-  prestation,
+  facture_prestation,
+  devis,
   maintenance,
   contrat_prestation,
   contrat_maintenance,
@@ -15,13 +16,16 @@ import {
   prestation_btp,
 } from '@repo/typst';
 import { z } from 'zod';
+import { createHash, randomUUID } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
+import type { StorageService } from '@repo/storage';
 import { getSettingsRecord } from '../settings/service';
 import spaceService, { scopeWhere, type Scope } from '../space/service';
 
 export const DocTypeSchema = z.enum([
-  'prestation',
+  'facture_prestation',
+  'devis',
   'maintenance',
   'contrat_prestation',
   'contrat_maintenance',
@@ -43,6 +47,9 @@ export const DocumentItemSchema = z.object({
   unit: z.string(),
   price: z.number().nonnegative(),
 });
+
+// a balance invoice carries negative lines for the deposits already billed
+const InvoiceLineSchema = DocumentItemSchema.extend({ price: z.number() });
 
 export const ProviderSchema = z.object({
   id: z.string(),
@@ -124,6 +131,8 @@ export type DocumentData = {
   vat_exemption_mention?: string;
   railway_estimate?: number;
   project_name?: string;
+  deposit_percent?: number | string;
+  invoice_title?: string;
   valid_until?: string;
   providers?: Array<{name: string; role: string; address: string; city: string; siret: string; email: string; amount: number}>;
   features?: Array<{title: string; desc: string}>;
@@ -187,8 +196,8 @@ const ContratPrestationDataSchema = z.object({
   tva_rate: z.number().nonnegative().default(20),
 }).passthrough();
 
-const PrestationDataSchema = z.object({
-  type: z.literal('prestation'),
+const FacturePrestationDataSchema = z.object({
+  type: z.literal('facture_prestation'),
   invoice_number: z.string(),
   invoice_date: z.string(),
   due_date: z.string(),
@@ -209,7 +218,7 @@ const PrestationDataSchema = z.object({
   bank_name: z.string().optional(),
   iban: z.string().optional(),
   bic: z.string().optional(),
-  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour une facture"),
+  items: z.array(InvoiceLineSchema).min(1, "Au moins un article est requis pour une facture"),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().optional().default(0),
 }).passthrough();
@@ -240,6 +249,29 @@ const MaintenanceDataSchema = z.object({
   items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour un devis"),
   tva_rate: z.number().nonnegative().default(20),
   railway_estimate: z.number().optional().default(0),
+}).passthrough();
+
+const DevisDataSchema = z.object({
+  type: z.literal('devis'),
+  quote_number: z.string(),
+  quote_date: z.string(),
+  validity_date: z.string(),
+  clientId: z.string(),
+  providerId: z.string(),
+  client_name: z.string().optional(),
+  client_address: z.string().optional(),
+  client_city: z.string().optional(),
+  client_country: z.string().optional(),
+  client_siret: z.string().optional(),
+  provider_name: z.string().optional(),
+  provider_legal: z.string().optional(),
+  provider_address: z.string().optional(),
+  provider_city: z.string().optional(),
+  provider_siret: z.string().optional(),
+  provider_email: z.string().optional(),
+  provider_phone: z.string().optional(),
+  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour un devis"),
+  tva_rate: z.number().nonnegative().default(20),
 }).passthrough();
 
 const BackContractuelDataSchema = z.object({
@@ -435,7 +467,8 @@ export const PrestationVideoInputSchema = z.object({
 export type PrestationVideoInput = z.infer<typeof PrestationVideoInputSchema>;
 
 const TEMPLATES: Record<DocType, string> = {
-  prestation,
+  facture_prestation,
+  devis,
   maintenance,
   contrat_prestation,
   contrat_maintenance,
@@ -450,12 +483,17 @@ const TEMPLATES: Record<DocType, string> = {
   prestation_btp,
 };
 
+// a quote or a backslash inside a Typst string literal would end it early
+export function escapeTypstString(value: unknown): string {
+  return String(value ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 export function formatItems(items: Array<{ description?: string; quantity?: number; unit?: string; price?: number }>): string {
   if (!items || items.length === 0) return '';
   return items.map((item) => {
     const safePrice = parseFloat(String(item.price)) || 0;
     const safeQty = parseFloat(String(item.quantity)) || 1;
-    return `(description: "${item.description}", quantity: ${safeQty}, unit: "${item.unit || 'u'}", price: ${safePrice})`;
+    return `(description: "${escapeTypstString(item.description)}", quantity: ${safeQty}, unit: "${escapeTypstString(item.unit || 'u')}", price: ${safePrice})`;
   }).join(', ') + ',';
 }
 
@@ -463,14 +501,14 @@ export function formatProviders(providers: Array<{ name: string; role: string; a
   if (!providers || providers.length === 0) return '';
   return providers.map((p) => {
     const safeAmount = parseFloat(String(p.amount)) || 0;
-    return `(name: "${p.name}", role: "${p.role}", address: "${p.address}", city: "${p.city}", siret: "${p.siret}", email: "${p.email}", amount: ${safeAmount})`;
+    return `(name: "${escapeTypstString(p.name)}", role: "${escapeTypstString(p.role)}", address: "${escapeTypstString(p.address)}", city: "${escapeTypstString(p.city)}", siret: "${escapeTypstString(p.siret)}", email: "${escapeTypstString(p.email)}", amount: ${safeAmount})`;
   }).join(', ');
 }
 
 export function formatFeatures(features: Array<{ title: string; desc: string }>): string {
   if (!features || features.length === 0) return '';
   return features.map((f) => {
-    return `(title: "${f.title}", desc: "${f.desc}")`;
+    return `(title: "${escapeTypstString(f.title)}", desc: "${escapeTypstString(f.desc)}")`;
   }).join(', ');
 }
 
@@ -478,9 +516,12 @@ export function formatPaymentProviders(providers: Array<{ name: string; iban: st
   if (!providers || providers.length === 0) return '';
   return providers.map((p) => {
     const safeAmount = parseFloat(String(p.amount_to_pay)) || 0;
-    return `(name: "${p.name}", iban: "${p.iban}", bic: "${p.bic}", amount_to_pay: ${safeAmount})`;
+    return `(name: "${escapeTypstString(p.name)}", iban: "${escapeTypstString(p.iban)}", bic: "${escapeTypstString(p.bic)}", amount_to_pay: ${safeAmount})`;
   }).join(', ');
 }
+
+// these variables already hold Typst code that the format* helpers escaped
+const TYPST_CODE_VARIABLES = new Set(['items', 'providers', 'features', 'payment_providers']);
 
 export function injectVariables(content: string, variables: Record<string, any>): string {
   let result = content;
@@ -489,7 +530,10 @@ export function injectVariables(content: string, variables: Record<string, any>)
   tags.forEach((tag) => {
     const key = tag.slice(2, -2);
     if (variables[key] !== undefined) {
-      result = result.replaceAll(tag, String(variables[key]));
+      const value = TYPST_CODE_VARIABLES.has(key)
+        ? String(variables[key])
+        : escapeTypstString(variables[key]);
+      result = result.replaceAll(tag, value);
     } else {
       const isNumeric = key.match(/rate|price|amount|estimate|qty/);
       result = result.replaceAll(tag, isNumeric ? '0.00' : '');
@@ -511,7 +555,7 @@ function getMissingProviderFields(data: DocumentData): string[] {
   if (!data.providerId) return [];
 
   const missingFields: string[] = [];
-  const requiresBanking = data.type === 'maintenance' || data.type.startsWith('prestation');
+  const requiresBanking = data.type === 'maintenance' || data.type === 'facture_prestation' || data.type.startsWith('prestation_');
 
   if (isBlank(data.provider_address)) missingFields.push('adresse');
   if (isBlank(data.provider_city)) missingFields.push('ville');
@@ -541,11 +585,14 @@ export async function generateDocument(
     case 'contrat_prestation':
       validated = ContratPrestationDataSchema.parse(data);
       break;
-    case 'prestation':
-      validated = PrestationDataSchema.parse(data);
+    case 'facture_prestation':
+      validated = FacturePrestationDataSchema.parse(data);
       break;
     case 'maintenance':
       validated = MaintenanceDataSchema.parse(data);
+      break;
+    case 'devis':
+      validated = DevisDataSchema.parse(data) as DocumentData;
       break;
     case 'back_contractuel':
       validated = BackContractuelDataSchema.parse(data);
@@ -628,7 +675,10 @@ export async function generateDocument(
     vat_exemption_mention: v.vat_exemption_mention || '',
     railway_estimate: validated.railway_estimate,
 
-    // For back_contractuel
+    invoice_title: v.invoice_title || 'FACTURE',
+    deposit_percent: v.deposit_percent ?? '',
+
+    // For back_contractuel and devis
     project_name: validated.project_name || '',
     valid_until: validated.valid_until || '',
     providers: formatProviders(validated.providers || []),
@@ -668,7 +718,8 @@ export async function loadDocumentContext(
   userId: string,
   clientId: string,
   providerId: string,
-  spaceId?: string
+  spaceId?: string,
+  missionId?: string
 ) {
   const scope = await spaceService.resolveScope(db, userId, spaceId);
 
@@ -688,10 +739,25 @@ export async function loadDocumentContext(
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
   }
 
+  if (missionId) {
+    const mission = await db.mission.findFirst({
+      where: { id: missionId, clientId: client.id, ...scopeWhere(scope) },
+      select: { id: true, status: true },
+    });
+
+    if (!mission) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Mission not found' });
+    }
+
+    if (mission.status === 'CANCELLED') {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mission is cancelled' });
+    }
+  }
+
   const settings = await getSettingsRecord(db);
   const tvaRate = Number(provider.tvaRate || 20);
 
-  return { client, provider, settings, tvaRate, scope };
+  return { client, provider, settings, tvaRate, scope, missionId: missionId ?? null };
 }
 
 export function computeInvoiceTotals(
@@ -709,16 +775,39 @@ export function computeInvoiceTotals(
   return { subtotal, totalWithRailway, tva, total };
 }
 
+export interface StoredPdf {
+  id: string;
+  pdfUrl: string;
+  pdfHash: string;
+}
+
+export async function storeDocumentPdf(storage: StorageService, pdf: Buffer): Promise<StoredPdf> {
+  const id = randomUUID();
+  const key = `documents/${id}.pdf`;
+
+  await storage.upload(key, pdf, 'application/pdf');
+
+  return {
+    id,
+    pdfUrl: storage.getFileUrl(key),
+    pdfHash: createHash('sha256').update(pdf).digest('hex'),
+  };
+}
+
 export function buildDocumentPersistenceBase(
   documentData: DocumentData,
   providerId: string,
   fileSize: number,
   createdBy: string,
   legalPersistence: ReturnType<typeof buildDocumentLegalPersistence>,
-  scope: Scope
+  scope: Scope,
+  missionId: string | null = null,
+  stored?: StoredPdf
 ) {
   return {
     ...scopeWhere(scope),
+    missionId,
+    ...stored,
     clientName: documentData.client_name ?? '',
     clientSiret: documentData.client_siret,
     clientAddress: documentData.client_address,

@@ -18,22 +18,22 @@ Internal payment and invoicing platform for Facile Studio. Clients receive payme
 
 ## Key Commands
 
-Use `just` (recommended) or `bun run`:
+Use `mise run` (task runner, pins bun, node and Postgres) or `bun run`:
 
 | Command | What it does |
 |---|---|
-| `just init` | Full setup: install, generate Prisma, create DB, push schema |
-| `just dev` | Run backend + web in parallel |
-| `just backend` | Backend only (port 3001) |
-| `just web` | Web app only (port 3000) |
-| `just generate` | Generate Prisma client |
-| `just push` | Push Prisma schema to DB |
-| `just studio` | Open Prisma Studio |
-| `just typecheck` | Typecheck all workspaces |
-| `just lint` | Lint all workspaces |
-| `just format` | Prettier format |
-| `just build` | Build all apps |
-| `just create-admin` | Create admin user for local dev |
+| `mise run db:setup` | Full setup: install, start local Postgres, generate Prisma, push schema |
+| `mise run dev` | Run backend + web in parallel |
+| `mise run //apps/backend:dev` | Backend only (port 3001) |
+| `mise run //apps/web:dev` | Web app only (port 3000) |
+| `mise run //packages/database:generate` | Generate Prisma client |
+| `mise run //packages/database:push` | Push Prisma schema to DB |
+| `mise run db:studio` | Open Prisma Studio |
+| `mise run typecheck` | Typecheck all workspaces |
+| `mise run lint` | Lint all workspaces |
+| `mise run format` | Prettier format |
+| `mise run build` | Build all apps |
+| `mise run //apps/backend:create-admin` | Create admin user for local dev |
 
 Database scripts (from `packages/database`):
 
@@ -93,7 +93,7 @@ The web app (`apps/web`) serves both client and admin interfaces from a single S
 
 ### tRPC modules
 
-Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, payment, settings, document, media, admin, stripe. Three procedure levels: `publicProcedure`, `protectedProcedure`, `adminProcedure`.
+Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe. Three procedure levels: `publicProcedure`, `protectedProcedure`, `adminProcedure`.
 
 ### Authentication
 
@@ -105,11 +105,13 @@ Optional, invite-only SSO in `apps/backend/src/oidc/` (see `docs/architecture.md
 
 ### Prisma
 
-Multi-file schema in `packages/database/prisma/schema/`. Core models: User, Client, Payment, Settings, Media. The `@repo/database` package has conditional exports (browser stub vs. real client) to prevent Node.js imports in the browser.
+Multi-file schema in `packages/database/prisma/schema/`. Core models: User, Client, Mission, Payment, Document, Settings, Media. The `@repo/database` package has conditional exports (browser stub vs. real client) to prevent Node.js imports in the browser.
 
 ### Payments flow
 
-Admin creates payment -> backend sends email to client -> client clicks payment link -> Stripe checkout -> webhook updates status to PAID -> receipt available.
+Admin creates a mission for a client and lists its prestations (the billable lines). The quote and the invoice are generated from them on request: a new quote after each change of the lines, then, once the quote is accepted, a full invoice or a deposit and a balance (`mission.generateQuote`, `acceptQuote`, `generateInvoice`). The payment of an invoice comes from `mission.createPayment`, and a payment can also be created on its own.
+
+Flow of a payment: admin creates payment -> backend sends email to client -> client clicks payment link -> Stripe checkout -> webhook updates status to PAID -> receipt available.
 
 ### Storage
 
@@ -137,7 +139,7 @@ See `apps/backend/.env.example` for reference.
 
 ## Gotchas
 
-- Prisma client must be generated before build/dev/typecheck (Turbo handles this, but manual runs need `just generate` first)
+- Prisma client must be generated before build/dev/typecheck (Turbo handles this, but manual runs need `mise run //packages/database:generate` first)
 - Browser imports of `@repo/database` get a null stub for `prisma` -- add `@repo/database`, `@prisma/client`, `pg` to Vite `optimizeDeps.exclude`
 - `BACKEND_URL` is passed as `VITE_API_URL` at Docker build time to the web app
 - CORS origins are derived from `FRONTEND_URL` env var

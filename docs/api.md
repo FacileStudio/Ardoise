@@ -63,7 +63,7 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 | `getById` | query | admin | `{ id }` |
 | `create` | mutation | admin | contact name, `companyName`, optional billing address, `siret`, `tvaIntracom`, plus `createCredentials` and optional `credentialEmail` / `credentialPassword` to provision a portal login |
 | `update` | mutation | admin | `{ id }` plus the same fields, all optional |
-| `delete` | mutation | admin | `{ id }` |
+| `delete` | mutation | admin | `{ id }` — refused while the client has payments or missions |
 | `me` | query | protected | — the signed-in user's own client record |
 
 ## `payment`
@@ -72,7 +72,7 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 |---|---|---|---|
 | `list` | query | admin | `{ page = 1, limit = 20 (max 100), status?, clientId?, spaceId? }` |
 | `getById` | query | admin | `{ id }` |
-| `create` | mutation | admin | `{ clientId, amount > 0, description, frequency = 'ONE_TIME', collectionMethod = 'STRIPE', reference?, dueDate, attachedFiles = [], attachedDocumentIds = [] }` |
+| `create` | mutation | admin | `{ clientId, amount > 0, description, frequency = 'ONE_TIME', collectionMethod = 'STRIPE', reference?, dueDate, attachedFiles = [], attachedDocumentIds = [], missionId?, documentId? }` — `missionId` and `documentId` must belong to the client's space |
 | `update` | mutation | admin | `{ id }` plus any of amount, description, dueDate, status, collectionMethod, reference, attachments |
 | `cancel` | mutation | admin | `{ id }` |
 | `sendReminder` | mutation | admin | `{ id }` |
@@ -89,6 +89,92 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 own rate-limit bucket. Stripe normally reaches the plain `POST /webhook` route rather than
 `handleWebhook`.
 
+## `mission`
+
+A mission is one job for one client, with one or more providers. It holds the prestations (the
+billable lines), and the quotes, invoices, contracts and payments built from them. Every procedure
+is admin-only and scoped by space like `client` and `payment`.
+
+| Procedure | Type | Level | Input |
+|---|---|---|---|
+| `list` | query | admin | `{ page = 1, limit = 20 (max 100), status?, clientId?, search?, spaceId? }` |
+| `getById` | query | admin | `{ id }`: client, providers, prestations, documents, payments and a `billing` object |
+| `create` | mutation | admin | `{ name, clientId, description?, depositPercent?, providers = [{ providerId, role = 'LEAD' }], spaceId? }` |
+| `update` | mutation | admin | `{ id, name?, description?, depositPercent?, providers? }`: `providers` replaces the whole list, `depositPercent: null` removes the deposit |
+| `setPrestations` | mutation | admin | `{ id, prestations: [{ description, quantity, unit = 'jour', unitPrice, providerId? }] }`: replaces every line |
+| `generateQuote` | mutation | admin | `{ id, validityDays = 30 }` |
+| `acceptQuote` | mutation | admin | `{ id, documentId }` |
+| `generateInvoice` | mutation | admin | `{ id, kind = 'TOTAL', dueDate? }`: `kind` is `TOTAL` or `DEPOSIT` |
+| `createPayment` | mutation | admin | `{ id, documentId, collectionMethod = 'STRIPE', frequency = 'ONE_TIME', dueDate? }` |
+| `attachDocument` | mutation | admin | `{ id, documentId }` |
+| `detachDocument` | mutation | admin | `{ id, documentId }` |
+| `setStatus` | mutation | admin | `{ id, status }` |
+| `delete` | mutation | admin | `{ id }` |
+
+### From prestations to invoices
+
+The prestations are the source. A quote and an invoice are generated from them on request, and an
+issued document is never edited.
+
+1. `setPrestations` replaces the lines. A provider on a line must be linked to the mission.
+2. `generateQuote` freezes the lines into a `devis` document with the next `version`, and records
+   the deposit percentage it quoted in `serviceData`. It refuses a mission with no line, a mission
+   whose latest quote already matches its lines, and a mission with no provider to issue it. The
+   issuer is the `LEAD` provider, or the first one. Each version gets its own quote number.
+3. `acceptQuote` sets `acceptedAt` on the latest quote. It refuses an older quote, and a quote
+   the lines have moved away from.
+4. `generateInvoice` bills the accepted quote, and refuses while the lines or the deposit
+   percentage differ from it. Amounts are computed in cents.
+   - `TOTAL` with no deposit invoice yet makes a `FULL` invoice of every line.
+   - `DEPOSIT` makes a `DEPOSIT` invoice of `depositPercent` of the quote total excluding tax. It
+     needs a `depositPercent` on the mission and allows one deposit per mission.
+   - `TOTAL` after a deposit makes a `BALANCE` invoice: every line, minus one negative line for
+     each deposit already billed.
+   The invoice stores `invoiceKind`, `sourceQuoteId` and `dueDate`, and prints the source quote
+   number. The due date defaults to the invoice date plus the default payment terms.
+
+Changing a line or the deposit percentage after a quote makes that quote outdated. `getById`
+reports it, and a quote or an invoice cannot be built on an outdated quote. Once a `FULL` or
+`BALANCE` invoice exists the lines are locked. A deposit alone leaves them editable, so a changed
+scope gets a new quote and a smaller balance.
+
+`getById` returns a `billing` object with the flags the UI needs: `locked`, `quoteOutdated`,
+`needsQuote`, `currentQuoteId`, `canEditPrestations`, `canGenerateQuote`, `canAcceptQuote`,
+`canInvoiceDeposit` and `canInvoiceTotal`. The same rules are enforced again by each procedure.
+
+### Status
+
+`status` is `DRAFT`, `QUOTED`, `ACCEPTED`, `INVOICED`, `PAID` or `CANCELLED`. It follows events:
+
+| Event | Effect |
+|---|---|
+| `generateQuote` | `DRAFT`, `QUOTED` or `ACCEPTED` becomes `QUOTED` |
+| `acceptQuote` | `QUOTED` becomes `ACCEPTED` |
+| `generateInvoice` | `ACCEPTED` becomes `INVOICED` |
+| `createPayment` | `ACCEPTED` becomes `INVOICED` (an invoice attached by hand) |
+| `setPrestations` leaving a quote outdated | `QUOTED` or `ACCEPTED` becomes `DRAFT` |
+| every invoice paid, with a `FULL` or `BALANCE` one among them | `INVOICED` becomes `PAID` |
+
+The payment event is the Stripe `payment_intent.succeeded` or `invoice.payment_succeeded` event,
+or an admin setting a payment to `PAID` with `payment.update`. A paid deposit alone does not
+settle the mission. `setStatus` is the manual escape hatch and follows a fixed map: `DRAFT` to
+`QUOTED` or `CANCELLED`, `QUOTED` to `DRAFT`, `ACCEPTED` or `CANCELLED`, `ACCEPTED` to `INVOICED`
+or `CANCELLED`, `INVOICED` to `PAID` or `CANCELLED`. `PAID` and `CANCELLED` are final. `role` is
+`LEAD` or `SUBCONTRACTOR`; a provider can be linked once.
+
+### Payments and documents
+
+`createPayment` bills one invoice of the mission through the `payment` service. The amount is
+`Document.total` and the reference is the invoice number. The due date is the one given, else the
+invoice's own `dueDate`, else the request date plus the document's `paymentTermsDays`. It refuses a
+document that has no `invoiceNumber`, a cancelled mission, and an invoice that already has a
+`PENDING`, `PAID` or `PAST_DUE` payment.
+
+`attachDocument` links a document made elsewhere, such as a contract, and refuses one that belongs
+to another mission. `detachDocument` refuses a document with a live payment, and refuses a
+generated quote or invoice. `delete` refuses a mission that holds an issued invoice or any payment,
+and deletes its quotes. Contracts are detached, not deleted.
+
 ## `document`
 
 Generates Typst-rendered PDFs. Every generator comes as a `preview*` / `create*` pair taking the
@@ -102,7 +188,7 @@ PDF.
 | `delete` | mutation | admin | `{ id }` |
 | `types` | query | admin | — the six document types offered in the UI, with French labels |
 | `download` | mutation | admin | `{ id }` |
-| `previewPrestation` / `createPrestation` | mutation | admin | `{ invoice_date, due_date, clientId, providerId, items[], railway_estimate = 0 }` |
+| `previewFacturePrestation` / `createFacturePrestation` | mutation | admin | `{ invoice_date, due_date, clientId, providerId, items[], railway_estimate = 0 }` |
 | `previewMaintenance` / `createMaintenance` | mutation | admin | `{ quote_date, validity_date, maintenance_period, clientId, providerId, items[], railway_estimate = 0 }` |
 | `previewContratPrestation` / `createContratPrestation` | mutation | admin | service contract inputs |
 | `previewContratMaintenance` / `createContratMaintenance` | mutation | admin | maintenance contract inputs |

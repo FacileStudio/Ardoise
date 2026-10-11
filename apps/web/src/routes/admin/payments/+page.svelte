@@ -3,14 +3,17 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, SearchInput, Badge, EmptyState, Button } from '@repo/ui';
+	import { Badge, Button, Pagination, SearchInput } from '@repo/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
+	import { PAYMENT_STATUS_LABELS } from '$lib/mission';
 	import 'iconify-icon';
 
-	type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+	type PaymentStatus = 'PENDING' | 'PAID' | 'PAST_DUE' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
+	const STATUSES: PaymentStatus[] = ['PENDING', 'PAID', 'PAST_DUE', 'FAILED', 'EXPIRED', 'CANCELLED'];
+	const PAGE_SIZE = 20;
 	type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
 
 	interface Client {
@@ -47,14 +50,11 @@
 	let loading = $state(false);
 	let payments: Payment[] = $state([]);
 	let total = $state(0);
+	let page = $state(1);
 	let searchQuery = $state('');
+	let status = $state<PaymentStatus | undefined>(undefined);
 	let actionLoading = $state('');
-
-	let filters = $state({
-		status: undefined as PaymentStatus | undefined,
-		page: 1,
-		limit: 20,
-	});
+	let searchTimer: ReturnType<typeof setTimeout>;
 
 	let stats = $state({
 		totalPending: 0,
@@ -63,11 +63,11 @@
 		countExpired: 0,
 	});
 
-	let isInitialMount = true;
+	let totalPages = $derived(Math.max(1, Math.ceil(total / PAGE_SIZE)));
 
-	onMount(async () => {
-		await Promise.all([fetchPayments(true), fetchStats()]);
-		isInitialMount = false;
+	onMount(() => {
+		Promise.all([fetchPayments(true), fetchStats()]);
+		return () => clearTimeout(searchTimer);
 	});
 
 	async function fetchPayments(isInitialLoad = false) {
@@ -78,9 +78,10 @@
 		}
 		try {
 			const result = await trpc.payment.list.query({
-				page: filters.page,
-				limit: filters.limit,
-				status: filters.status,
+				page,
+				limit: PAGE_SIZE,
+				status,
+				search: searchQuery.trim() || undefined,
 				spaceId: spaceContext.spaceId,
 			});
 			payments = result.payments as unknown as Payment[];
@@ -96,36 +97,32 @@
 		}
 	}
 
-
 	async function fetchStats() {
 		try {
-			const allPayments = await trpc.payment.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
-			const paymentsData = allPayments.payments as unknown as Payment[];
-
-			const now = new Date();
-			const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-			stats.totalPending = paymentsData
-				.filter((p) => p.status === 'PENDING')
-				.reduce((sum, p) => sum + Number(p.amount), 0);
-
-			stats.totalPaidThisMonth = paymentsData
-				.filter((p) => p.status === 'PAID' && p.paidAt && new Date(p.paidAt) >= startOfMonth)
-				.reduce((sum, p) => sum + Number(p.amount), 0);
-
-			stats.countPending = paymentsData.filter((p) => p.status === 'PENDING').length;
-			stats.countExpired = paymentsData.filter((p) => p.status === 'EXPIRED').length;
+			stats = await trpc.payment.stats.query({ spaceId: spaceContext.spaceId });
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch payment statistics');
 		}
 	}
 
-	$effect(() => {
-		if (!isInitialMount) {
-			fetchPayments();
-		}
-	});
+	function setStatus(next: PaymentStatus | undefined) {
+		status = next;
+		page = 1;
+		fetchPayments();
+	}
 
+	function handleSearch() {
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			page = 1;
+			fetchPayments();
+		}, 300);
+	}
+
+	function handlePageChange(next: number) {
+		page = next;
+		fetchPayments();
+	}
 
 	async function handleCancelPayment(id: string, description: string) {
 		if (!confirm($i18n.t('admin.payments.cancelConfirm', { description })))
@@ -201,15 +198,6 @@
 			currency: 'EUR',
 		}).format(amount);
 	}
-
-	let searchTerm = $derived(searchQuery.toLowerCase().trim());
-	let filteredPayments = $derived(
-		payments.filter((payment) => {
-			if (!searchTerm) return true;
-			const searchContent = `${payment.description} ${payment.client.companyName} ${payment.id}`.toLowerCase();
-			return searchTerm.split(' ').every((word) => searchContent.includes(word));
-		})
-	);
 
 	function handleExportCSV() {
 		const csvData = payments.map(payment => ({
@@ -320,65 +308,27 @@
 	</div>
 
 	<div class="space-y-4">
-		<div class="relative">
-			<iconify-icon
-				icon="solar:magnifer-linear"
-				width="18"
-				class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-			></iconify-icon>
-			<input
-				type="text"
-				placeholder={$i18n.t('admin.payments.searchPlaceholder')}
-				class="h-9 w-full rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm outline-none focus:border-foreground transition-colors"
-				bind:value={searchQuery}
-			/>
-		</div>
+		<SearchInput
+			bind:value={searchQuery}
+			oninput={handleSearch}
+			placeholder={$i18n.t('admin.payments.searchPlaceholder')}
+		/>
 
 		<div class="flex gap-2 flex-wrap">
-			<button
-				onclick={() => filters.status = undefined}
-				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {!filters.status
-					? 'bg-foreground text-background'
-					: 'border border-border text-muted-foreground hover:bg-muted'}"
-			>
-				{$i18n.t('admin.payments.allStatus')}
-			</button>
-			<button
-				onclick={() => filters.status = 'PENDING'}
-				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {filters.status === 'PENDING'
-					? 'bg-foreground text-background'
-					: 'border border-border text-muted-foreground hover:bg-muted'}"
-			>
-				{$i18n.t('common.status.pending')}
-			</button>
-			<button
-				onclick={() => filters.status = 'PAID'}
-				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {filters.status === 'PAID'
-					? 'bg-foreground text-background'
-					: 'border border-border text-muted-foreground hover:bg-muted'}"
-			>
-				{$i18n.t('common.status.paid')}
-			</button>
-			<button
-				onclick={() => filters.status = 'EXPIRED'}
-				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {filters.status === 'EXPIRED'
-					? 'bg-foreground text-background'
-					: 'border border-border text-muted-foreground hover:bg-muted'}"
-			>
-				{$i18n.t('common.status.expired')}
-			</button>
-			<button
-				onclick={() => filters.status = 'CANCELLED'}
-				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {filters.status === 'CANCELLED'
-					? 'bg-foreground text-background'
-					: 'border border-border text-muted-foreground hover:bg-muted'}"
-			>
-				{$i18n.t('common.status.cancelled')}
-			</button>
+			{#each [undefined, ...STATUSES] as option (option ?? 'ALL')}
+				<button
+					onclick={() => setStatus(option)}
+					class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {status === option
+						? 'bg-foreground text-background'
+						: 'border border-border text-muted-foreground hover:bg-muted'}"
+				>
+					{option ? PAYMENT_STATUS_LABELS[option] : $i18n.t('admin.payments.allStatus')}
+				</button>
+			{/each}
 		</div>
 	</div>
 
-	{#if filteredPayments.length > 0}
+	{#if payments.length > 0}
 		<div class="rounded-xl border border-border overflow-hidden">
 			<div class="overflow-x-auto">
 				<table class="w-full">
@@ -407,7 +357,7 @@
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-border">
-						{#each filteredPayments as payment (payment.id)}
+						{#each payments as payment (payment.id)}
 							<tr
 								class="hover:bg-muted/50 transition-colors cursor-pointer"
 								onclick={() => goto(resolve(`/admin/payments/${payment.id}`))}
@@ -525,8 +475,12 @@
 		</div>
 
 			<div class="text-sm text-muted-foreground text-center">
-				{$i18n.t('admin.payments.showing', { count: filteredPayments.length, total: total })}
+				{$i18n.t('admin.payments.showing', { count: payments.length, total: total })}
 			</div>
+
+			{#if totalPages > 1}
+				<Pagination currentPage={page} {totalPages} onPageChange={handlePageChange} />
+			{/if}
 		{:else}
 			<div class="text-center py-16">
 				<div class="flex flex-col items-center gap-4">
@@ -535,7 +489,7 @@
 					</div>
 					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('admin.payments.noPaymentsFound')}</h3>
 					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('admin.payments.tryAdjustingFilters')}</p>
-					{#if !searchQuery && !filters.status}
+					{#if !searchQuery && !status}
 						<button
 							onclick={() => goto(resolve('/admin/payments/create'))}
 							class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity mt-2"

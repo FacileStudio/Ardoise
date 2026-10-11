@@ -12,6 +12,7 @@ import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
+import { syncMissionPaid } from '../mission/sync';
 import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsParams } from './types';
 
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
@@ -64,12 +65,19 @@ const recordReceiptFailure = async (
 
 export const paymentService = {
   listPayments: async (db: PrismaClient, params: ListPaymentsParams, scope: Scope) => {
-    const { page, limit, status, clientId } = params;
+    const { page, limit, status, clientId, search } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.PaymentWhereInput = { ...scopeWhere(scope), client: scopeWhere(scope) };
     if (status) where.status = status;
     if (clientId) where.clientId = clientId;
+    if (search) {
+      where.OR = [
+        { description: { contains: search, mode: 'insensitive' } },
+        { id: { contains: search, mode: 'insensitive' } },
+        { client: { companyName: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
 
     const [payments, total] = await db.$transaction([
       db.payment.findMany({
@@ -96,6 +104,27 @@ export const paymentService = {
     ]);
 
     return { payments, total };
+  },
+
+  paymentStats: async (db: PrismaClient, scope: Scope) => {
+    const where: Prisma.PaymentWhereInput = { ...scopeWhere(scope), client: scopeWhere(scope) };
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+    const [pending, paidThisMonth, expired] = await db.$transaction([
+      db.payment.aggregate({ where: { ...where, status: 'PENDING' }, _sum: { amount: true }, _count: true }),
+      db.payment.aggregate({
+        where: { ...where, status: 'PAID', paidAt: { gte: startOfMonth } },
+        _sum: { amount: true },
+      }),
+      db.payment.count({ where: { ...where, status: 'EXPIRED' } }),
+    ]);
+
+    return {
+      totalPending: Number(pending._sum.amount ?? 0),
+      countPending: pending._count,
+      totalPaidThisMonth: Number(paidThisMonth._sum.amount ?? 0),
+      countExpired: expired,
+    };
   },
 
   getPaymentById: async (db: PrismaClient, userId: string, id: string) => {
@@ -281,6 +310,32 @@ export const paymentService = {
       }
     }
 
+    if (data.missionId) {
+      const mission = await db.mission.findFirst({
+        where: { id: data.missionId, clientId: client.id, spaceId: client.spaceId },
+        select: { id: true },
+      });
+
+      if (!mission) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Mission not found' });
+      }
+    }
+
+    if (data.documentId) {
+      const document = await db.document.findFirst({
+        where: {
+          id: data.documentId,
+          spaceId: client.spaceId,
+          ...(data.missionId ? { missionId: data.missionId } : {}),
+        },
+        select: { id: true },
+      });
+
+      if (!document) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
+      }
+    }
+
     const feeCalculation = calculateStripeFees(data.amount);
     const clientEmail = client.contactEmail || client.user?.email || null;
     const clientName = `${client.contactFirstName} ${client.contactLastName}`.trim();
@@ -399,6 +454,8 @@ export const paymentService = {
       data: {
         clientId: data.clientId,
         spaceId: client.spaceId,
+        missionId: data.missionId,
+        documentId: data.documentId,
         amount: feeCalculation.amount,
         stripeFee: useStripe ? feeCalculation.stripeFee : 0,
         totalWithFees: useStripe ? feeCalculation.totalWithFees : feeCalculation.amount,
@@ -478,7 +535,7 @@ export const paymentService = {
     if (data.reference !== undefined) updateData.reference = data.reference;
     if (data.attachedFiles !== undefined) updateData.attachedFiles = data.attachedFiles;
 
-    return db.payment.update({
+    const updated = await db.payment.update({
       where: { id },
       data: updateData,
       include: {
@@ -487,6 +544,12 @@ export const paymentService = {
         },
       },
     });
+
+    if (updated.status === 'PAID') {
+      await syncMissionPaid(db, updated.missionId);
+    }
+
+    return updated;
   },
 
   cancelPayment: async (
@@ -875,6 +938,8 @@ export const paymentService = {
 
         if (updated.count === 0) break;
 
+        await syncMissionPaid(db, payment.missionId);
+
         try {
           await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);
         } catch (error) {
@@ -918,6 +983,8 @@ export const paymentService = {
         });
 
         if (updated.count === 0) break;
+
+        await syncMissionPaid(db, payment.missionId);
 
         try {
           await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);

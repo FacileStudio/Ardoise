@@ -3,13 +3,14 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/stores';
 	import { Spinner, Button, Input } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
-	type DocType = 'prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
+	type DocType = 'facture_prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
 
 	interface Client {
 		id: string;
@@ -46,8 +47,13 @@
 	let selectedClientId = $state('');
 	let selectedProviderId = $state('');
 
+	const missionId = $page.url.searchParams.get('missionId');
+	const requestedType = $page.url.searchParams.get('type');
+	let mission: any = $state(null);
+	const backPath = missionId ? `/admin/prestations/${missionId}` : '/admin/documents';
+
 	let formData = $state<any>({
-		type: 'prestation',
+		type: 'facture_prestation',
 		invoice_number: 'FAC-001',
 		invoice_date: new Date().toISOString().split('T')[0],
 		due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -99,8 +105,28 @@
 	} as const;
 
 	onMount(async () => {
-		await Promise.all([loadDocumentTypes(), loadClients(), loadProviders()]);
+		await Promise.all([loadDocumentTypes(), loadClients(), loadProviders(), loadPrestation()]);
+
+		if (requestedType && docTypes.some((t) => t.value === requestedType)) {
+			formData.type = requestedType;
+		}
 	});
+
+	async function loadPrestation() {
+		if (!missionId) return;
+
+		try {
+			mission = await trpc.mission.getById.query({ id: missionId });
+			selectedClientId = mission.clientId;
+
+			if (mission.providers.length === 1) {
+				selectedProviderId = mission.providers[0].providerId;
+			}
+		} catch (err) {
+			logger.error({ err }, 'Failed to fetch mission');
+			toast.push('Mission introuvable', 'error');
+		}
+	}
 
 	$effect(() => {
 		if (selectedClientId) {
@@ -175,7 +201,7 @@
 
 	function getRequiredProviderFields(type: DocType) {
 		const commonFields = ['address', 'city', 'siret', 'email', 'phone'] as const;
-		if (type === 'prestation' || type === 'maintenance') {
+		if (type === 'facture_prestation' || type === 'maintenance') {
 			return [...commonFields, 'bankName', 'iban', 'bic'] as const;
 		}
 		return commonFields;
@@ -251,13 +277,13 @@
 			return providerValidationMessage;
 		}
 
-		if (formData.type === 'prestation' || formData.type === 'maintenance') {
+		if (formData.type === 'facture_prestation' || formData.type === 'maintenance') {
 			if (!formData.items || formData.items.length === 0) {
 				return 'Veuillez ajouter au moins un item à la facture';
 			}
 		}
 
-		if (formData.type === 'prestation' && !formData.invoice_number) {
+		if (formData.type === 'facture_prestation' && !formData.invoice_number) {
 			return 'Veuillez saisir un numéro de facture';
 		}
 
@@ -289,8 +315,8 @@
 			let result;
 
 			switch (formData.type) {
-				case 'prestation':
-					result = await trpc.document.previewPrestation.mutate({
+				case 'facture_prestation':
+					result = await trpc.document.previewFacturePrestation.mutate({
 						invoice_number: formData.invoice_number,
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
@@ -397,12 +423,13 @@
 			let result;
 
 			switch (formData.type) {
-				case 'prestation':
-					result = await trpc.document.createPrestation.mutate({
+				case 'facture_prestation':
+					result = await trpc.document.createFacturePrestation.mutate({
 						invoice_number: formData.invoice_number,
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
 						spaceId: spaceContext.spaceId,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
@@ -417,6 +444,7 @@
 						validity_date: formData.validity_date,
 						maintenance_period: formData.maintenance_period,
 						spaceId: spaceContext.spaceId,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
@@ -430,6 +458,7 @@
 						contract_date: formData.contract_date,
 						quote_number: formData.quote_number,
 						spaceId: spaceContext.spaceId,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						});
@@ -441,6 +470,7 @@
 						contract_date: formData.contract_date,
 						maintenance_period: formData.maintenance_period,
 						spaceId: spaceContext.spaceId,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						});
@@ -453,6 +483,7 @@
 						project_name: formData.project_name,
 						valid_until: formData.valid_until,
 						spaceId: spaceContext.spaceId,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId || undefined,
 						providers: formData.providers,
@@ -469,6 +500,7 @@
 						project_step: formData.project_step,
 						project_name: formData.project_name,
 						spaceId: spaceContext.spaceId,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId || undefined,
 						payment_providers: formData.payment_providers,
@@ -488,7 +520,7 @@
 			URL.revokeObjectURL(url);
 
 			toast.push('Document créé avec succès!', 'success');
-			goto(resolve('/admin/documents'));
+			goto(resolve(backPath as any));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create document');
 			const message = err.message || 'Erreur lors de la création';
@@ -582,6 +614,10 @@
 	);
 	const totalWithRailway = $derived(subtotal + (formData.railway_estimate || 0));
 	const selectedProvider = $derived(providers.find(p => p.id === selectedProviderId));
+	const linkedProviderIds = $derived(new Set((mission?.providers ?? []).map((link: any) => link.providerId)));
+	const availableProviders = $derived(
+		linkedProviderIds.size > 0 ? providers.filter((p) => linkedProviderIds.has(p.id)) : providers
+	);
 	const selectedProviderMissingFields = $derived(getMissingProviderFields(selectedProvider, formData.type as DocType));
 	const tvaRate = $derived(selectedProvider?.tvaRate || 20);
 	const tva = $derived(totalWithRailway * (tvaRate / 100));
@@ -591,14 +627,20 @@
 <div class="max-w-3xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto(resolve('/admin/documents'))}
+			onclick={() => goto(resolve(backPath as any))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			Retour aux documents
+			{missionId ? 'Retour à la mission' : 'Retour aux documents'}
 		</button>
 		<h1 class="text-2xl font-bold tracking-tight text-foreground">Créer un document</h1>
-		<p class="text-sm text-muted-foreground mt-1">Générez une facture, un devis ou un contrat</p>
+		<p class="text-sm text-muted-foreground mt-1">
+			{#if mission}
+				Le document sera rattaché à la mission « {mission.name} »
+			{:else}
+				Générez une facture, un devis ou un contrat
+			{/if}
+		</p>
 	</div>
 
 	<div class="space-y-6">
@@ -620,7 +662,7 @@
 			</select>
 
 			<div class="grid grid-cols-3 gap-4">
-				{#if formData.type === 'prestation'}
+				{#if formData.type === 'facture_prestation'}
 					<div>
 						<div class="text-sm font-medium mb-2">N° Facture</div>
 						<Input bind:value={formData.invoice_number} />
@@ -681,7 +723,8 @@
 			<h2 class="text-base font-semibold text-foreground">Client</h2>
 			<select
 				bind:value={selectedClientId}
-				class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+				disabled={!!mission}
+				class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
 			>
 				<option value="">-- Sélectionner un client --</option>
 				{#each clients as client (client.id)}
@@ -709,7 +752,7 @@
 					class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
 				>
 					<option value="">-- Sélectionner un prestataire --</option>
-					{#each providers as provider (provider.id)}
+					{#each availableProviders as provider (provider.id)}
 						<option value={provider.id}>{provider.name}</option>
 					{/each}
 				</select>
@@ -969,7 +1012,7 @@
 					</div>
 				{/if}
 			</div>
-		{:else if formData.type === 'prestation' || formData.type === 'maintenance'}
+		{:else if formData.type === 'facture_prestation' || formData.type === 'maintenance'}
 			<div class="rounded-xl border border-border p-6 space-y-4">
 				<div class="flex justify-between items-center">
 					<h2 class="text-base font-semibold text-foreground">Items de facturation</h2>

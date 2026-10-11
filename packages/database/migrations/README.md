@@ -5,7 +5,7 @@ Manual SQL migrations for production deployments.
 ## How to Apply Migrations
 
 ### Local Development
-The schema is already synced via `just push` or `bun run db:push`.
+The schema is already synced via `mise run //packages/database:push` or `bun run db:push`.
 
 ### Production (Railway/Other)
 Apply migrations manually using psql:

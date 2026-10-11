@@ -65,12 +65,15 @@ Postgres 16 through Prisma. The schema is split by concern across `prisma/schema
 |---|---|
 | `User` | Accounts. `role` is `ADMIN` or `CLIENT`; `status` is `ACTIVE`, `SUSPENDED`, `BANNED` or `PENDING`. Carries ban/suspension fields, `lastLoginAt`, `lastLoginIp` and `profileSyncedAt` (no longer written since the OIDC profile sync was removed) |
 | `Client` | Billing counterparty — contact name, company, address, SIRET, VAT number, `stripeCustomerId`. Optionally linked one-to-one to a `User` for portal access |
-| `Payment` | A payment request: amount, `stripeFee`, `totalWithFees`, due date, `status`, `frequency` (`ONE_TIME`/`MONTHLY`/`YEARLY`), `collectionMethod` (`STRIPE`/`MANUAL`), Stripe intent/subscription ids, receipt URL and retry counters, reminder counters |
+| `Mission` | One job for one client. `status` is `DRAFT`, `QUOTED`, `ACCEPTED`, `INVOICED`, `PAID` or `CANCELLED` and follows the quote, invoice and payment events. An optional `depositPercent` allows a deposit invoice. Owns its `Prestation` lines and the `Document` and `Payment` rows linked to it through a nullable `missionId`, and links its providers through `MissionProvider` |
+| `MissionProvider` | Join table between a `Mission` and a `Provider`, with a `LEAD` or `SUBCONTRACTOR` role |
+| `Prestation` | A billable line of a `Mission`: `position`, `description`, `quantity`, `unit`, `unitPrice` and the optional `Provider` who carries it out. Quotes and invoices are generated from these lines |
+| `Payment` | A payment request: amount, `stripeFee`, `totalWithFees`, due date, `status`, `frequency` (`ONE_TIME`/`MONTHLY`/`YEARLY`), `collectionMethod` (`STRIPE`/`MANUAL`), Stripe intent/subscription ids, receipt URL and retry counters, reminder counters. `missionId` and `documentId` (the invoice it settles) are optional |
 | `PaymentInvoice` | One row per Stripe invoice on a recurring payment |
 | `PaymentDocument` | Join table attaching generated `Document` rows to a `Payment` |
-| `Document` | A rendered document. `type` is one of thirteen `DocumentType` values. Snapshots both client and provider legal identity at generation time, stores `items` as JSON, decimal `subtotal`/`tva`/`total`, French late-fee and recovery-fee mentions, and `pdfUrl` + `pdfHash` |
+| `Document` | A rendered document. `type` is one of fourteen `DocumentType` values. Snapshots both client and provider legal identity at generation time, stores `items` as JSON, decimal `subtotal`/`tva`/`total`, French late-fee and recovery-fee mentions. The PDF is uploaded at creation to `documents/<id>.pdf`, and `pdfUrl` + `pdfHash` point to it: `document.download` serves that file. A `devis` carries a `version` and `acceptedAt`; an invoice built from one carries `invoiceKind` (`FULL`, `DEPOSIT`, `BALANCE`), `sourceQuoteId` and `dueDate` |
 | `Provider` | The issuing legal entity — legal form, share capital, RCS city, APE code, IBAN/BIC, logo, VAT rate |
-| `Space` / `SpaceMember` | Shared workspaces. `SpaceRole` is `OWNER`, `ADMIN` or `MEMBER`. Clients, documents, payments and providers all carry an optional `spaceId` |
+| `Space` / `SpaceMember` | Shared workspaces. `SpaceRole` is `OWNER`, `ADMIN` or `MEMBER`. Clients, documents, payments, providers and missions all carry an optional `spaceId` |
 | `Settings` | Singleton row keyed `global`: company identity, Stripe keys, SMTP credentials, DocuSeal credentials, outbound webhook config, bank details, VAT rate, document numbering counters and formats |
 | `AdminPermission` | Per-user, per-entity `canCreate` / `canRead` / `canUpdate` / `canDelete` flags for the generic admin engine |
 | `AuditLog` | `CREATE` / `UPDATE` / `DELETE` history written by the admin engine |
@@ -139,7 +142,12 @@ ones `modules/auth` issues (`issueSession` and `authCookies` in `packages/trpc`)
 - **DocuSeal.** Optional e-signature backend, also configured from `Settings`; the `docuseal`
   module proxies submissions, templates and submitters.
 - **Outbound webhooks.** `Settings.webhookUrl` / `webhookSecret` / `webhookEvents` feed the
-  `webhook` service.
+  `webhook` service. Events sent today: `client.created`, `client.updated`, `client.deleted`,
+  `mission.created`, `mission.updated`, `mission.prestations_updated`,
+  `mission.quote_generated`, `mission.quote_accepted`, `mission.invoice_generated`,
+  `mission.status_changed`, `mission.payment_created` and `mission.deleted`. The moves of a
+  mission status that follow those events, including the automatic move to `PAID`, send no
+  event of their own.
 
 Ardoise does **not** use `pool` or `enveloppe`, and does not ship events to Nook or Journal.
 

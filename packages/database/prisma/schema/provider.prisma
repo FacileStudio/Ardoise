@@ -27,7 +27,9 @@ model Provider {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
-  documents Document[]
+  documents   Document[]
+  missions    MissionProvider[]
+  prestations Prestation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

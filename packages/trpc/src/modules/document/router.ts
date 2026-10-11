@@ -1,12 +1,12 @@
 import { router, adminProcedure } from '../../trpc';
 import {
-  generateDocument,
   generateTypstContent,
   buildPartyAndLegalData,
   buildDocumentLegalPersistence,
   buildDocumentPersistenceBase,
   loadDocumentContext,
   computeInvoiceTotals,
+  storeDocumentPdf,
   ContratPrestationInputSchema,
   ContratMaintenanceInputSchema,
   BackContractuelInputSchema,
@@ -14,7 +14,7 @@ import {
   type DocType,
   type DocumentData,
 } from './service';
-import { PrestationInputSchema, MaintenanceInputSchema } from './types';
+import { FacturePrestationInputSchema, MaintenanceInputSchema } from './types';
 import {
   PrestationDesignInputSchema,
   PrestationDevInputSchema,
@@ -25,16 +25,15 @@ import {
   PrestationVideoInputSchema,
 } from './services/schemas';
 import { generateNextDocumentNumber, previewDocumentNumber } from './numbering';
+import { generateDocumentWithLogo } from './render';
 import spaceService, { scopeWhere, requireRowScope } from '../space/service';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import type { StorageService } from '@repo/storage';
 import type { PrismaClient } from '@repo/database';
-import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
-import { logger } from '@repo/logger';
+import { parseStorageKey } from '../media/service';
 
 const spaceScoped = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
-  schema.extend({ spaceId: z.string().optional() });
+  schema.extend({ spaceId: z.string().optional(), missionId: z.string().optional() });
 
 /**
  * Lets a deliberate TRPCError keep its own code and message, and turns anything
@@ -50,33 +49,6 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
     code: 'INTERNAL_SERVER_ERROR',
     message: error instanceof Error && error.message ? error.message : fallbackMessage,
   });
-}
-
-async function downloadLogoFromS3(logoUrl: string | null | undefined, storage: StorageService): Promise<string | undefined> {
-  if (!logoUrl || (!logoUrl.includes('storageapi.dev') && !logoUrl.includes('/storage/'))) {
-    return undefined;
-  }
-
-  try {
-    return await downloadStoredFileToTempPath(logoUrl, storage, 'logo');
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to download logo from S3');
-    return undefined;
-  }
-}
-
-async function generateDocumentWithLogo(
-  documentData: any,
-  logoUrl: string | null | undefined,
-  storage: StorageService
-): Promise<Buffer> {
-  const logoPath = await downloadLogoFromS3(logoUrl, storage);
-
-  try {
-    return await generateDocument(documentData, logoPath);
-  } finally {
-    cleanupTempFile(logoPath);
-  }
 }
 
 async function fetchProvidersByIds(
@@ -118,6 +90,7 @@ async function resolveSubProvidersForBack(
 
 type SpecializedInput = {
   spaceId?: string;
+  missionId?: string;
   clientId: string;
   providerId: string;
   items: Array<{ description?: string; quantity?: number; unit?: string; price?: number }>;
@@ -168,7 +141,7 @@ async function createSpecializedPrestation(
   ctx: any
 ) {
   const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-  const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+  const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
 
   const documentData = {
     type,
@@ -192,6 +165,8 @@ async function createSpecializedPrestation(
   const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate);
   const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+  const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
   const document = await ctx.db.document.create({
     data: {
       type,
@@ -203,7 +178,9 @@ async function createSpecializedPrestation(
         pdfBuffer.length,
         ctx.user!.id,
         legalPersistence,
-        scope
+        scope,
+        missionId,
+        stored
       ),
       items: input.items,
       subtotal,
@@ -340,12 +317,13 @@ export const documentRouter = router({
 
   types: adminProcedure.query(() => {
     return [
-      { value: 'prestation', label: 'Facture Prestation' },
-      { value: 'maintenance', label: 'Devis Maintenance' },
-      { value: 'contrat_prestation', label: 'Contrat Prestation' },
-      { value: 'contrat_maintenance', label: 'Contrat Maintenance' },
-      { value: 'back_contractuel', label: 'Back Contractuel (Co-traitance)' },
-      { value: 'appel_de_fonds', label: 'Appel de Fonds Global' },
+      { value: 'devis', label: 'Devis' },
+      { value: 'facture_prestation', label: 'Facture' },
+      { value: 'maintenance', label: 'Devis maintenance' },
+      { value: 'contrat_prestation', label: 'Contrat de prestation' },
+      { value: 'contrat_maintenance', label: 'Contrat de maintenance' },
+      { value: 'back_contractuel', label: 'Back contractuel' },
+      { value: 'appel_de_fonds', label: 'Appel de fonds' },
     ];
   }),
 
@@ -362,6 +340,14 @@ export const documentRouter = router({
       );
 
       try {
+        const storedKey = parseStorageKey(document.pdfUrl);
+
+        if (storedKey) {
+          const bytes = await ctx.storage.download(storedKey);
+
+          return { pdf: Buffer.from(bytes).toString('base64'), fileName: document.name };
+        }
+
         let logoUrl: string | undefined;
         let bankName = '';
         let iban = '';
@@ -380,7 +366,11 @@ export const documentRouter = router({
         const documentData = {
           type: document.type as DocType,
           invoice_number: document.invoiceNumber || '',
+          invoice_date: document.createdAt.toISOString().split('T')[0],
+          due_date: (document.dueDate ?? document.createdAt).toISOString().split('T')[0],
           quote_number: document.quoteNumber || '',
+          quote_date: document.createdAt.toISOString().split('T')[0],
+          validity_date: document.createdAt.toISOString().split('T')[0],
           contract_reference: document.contractRef || '',
           clientId: '',
           providerId: document.providerId || undefined,
@@ -431,15 +421,15 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestation: adminProcedure
-    .input(spaceScoped(PrestationInputSchema))
+  previewFacturePrestation: adminProcedure
+    .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
         const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
 
         const documentData = {
-          type: 'prestation' as const,
+          type: 'facture_prestation' as const,
           invoice_number: invoiceNumber,
           invoice_date: input.invoice_date,
           due_date: input.due_date,
@@ -455,7 +445,7 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_${invoiceNumber}.pdf`;
+        const fileName = `facture_prestation_${invoiceNumber}.pdf`;
 
         return {
           pdf: pdfBuffer.toString('base64'),
@@ -463,19 +453,19 @@ export const documentRouter = router({
           typstContent: generateTypstContent(documentData),
         };
       } catch (error) {
-        rethrowUnexpected(error, 'Failed to generate prestation preview');
+        rethrowUnexpected(error, 'Failed to generate facture prestation preview');
       }
     }),
 
-  createPrestation: adminProcedure
-    .input(spaceScoped(PrestationInputSchema))
+  createFacturePrestation: adminProcedure
+    .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
 
         const documentData = {
-          type: 'prestation' as const,
+          type: 'facture_prestation' as const,
           invoice_number: invoiceNumber,
           invoice_date: input.invoice_date,
           due_date: input.due_date,
@@ -491,16 +481,18 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_${invoiceNumber}.pdf`;
+        const fileName = `facture_prestation_${invoiceNumber}.pdf`;
         const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
-            type: 'prestation',
+            type: 'facture_prestation',
             name: fileName,
             invoiceNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items,
             subtotal,
             tva,
@@ -516,7 +508,7 @@ export const documentRouter = router({
           fileName,
         };
       } catch (error) {
-        rethrowUnexpected(error, 'Failed to create prestation');
+        rethrowUnexpected(error, 'Failed to create facture prestation');
       }
     }),
 
@@ -562,7 +554,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
 
         const documentData = {
           type: 'maintenance' as const,
@@ -586,12 +578,14 @@ export const documentRouter = router({
         const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'maintenance',
             name: fileName,
             quoteNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items,
             subtotal,
             tva,
@@ -649,7 +643,7 @@ export const documentRouter = router({
     .input(spaceScoped(BackContractuelInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
         const providersWithDetails = await resolveSubProvidersForBack(ctx.db, ctx.user!.id, input.providers, input.spaceId);
 
         const documentData = {
@@ -674,12 +668,14 @@ export const documentRouter = router({
         const { subtotal, tva, total } = computeInvoiceTotals(input.items || [], tvaRate);
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'back_contractuel',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items || [],
             subtotal,
             tva,
@@ -737,7 +733,7 @@ export const documentRouter = router({
     .input(spaceScoped(AppelDeFondsInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
         const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, ctx.user!.id, input.payment_providers, input.spaceId);
 
         const documentData = {
@@ -766,12 +762,14 @@ export const documentRouter = router({
         const total = subtotal + tva;
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'appel_de_fonds',
             name: fileName,
             invoiceNumber: input.global_invoice_ref,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: input.items || [],
             subtotal,
             tva,
@@ -827,7 +825,7 @@ export const documentRouter = router({
     .input(spaceScoped(ContratPrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
 
         const documentData = {
           type: 'contrat_prestation' as const,
@@ -849,12 +847,14 @@ export const documentRouter = router({
         const fileName = `contrat_prestation_${input.contract_reference}.pdf`;
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'contrat_prestation',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: [],
             subtotal: 0,
             tva: 0,
@@ -910,7 +910,7 @@ export const documentRouter = router({
     .input(spaceScoped(ContratMaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
 
         const documentData = {
           type: 'contrat_maintenance' as const,
@@ -932,12 +932,14 @@ export const documentRouter = router({
         const fileName = `contrat_maintenance_${input.contract_reference}.pdf`;
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
+        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
         const document = await ctx.db.document.create({
           data: {
             type: 'contrat_maintenance',
             name: fileName,
             contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
+            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
             items: [],
             subtotal: 0,
             tva: 0,

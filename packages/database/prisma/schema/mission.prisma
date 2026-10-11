@@ -1,0 +1,81 @@
+enum MissionStatus {
+  DRAFT
+  QUOTED
+  ACCEPTED
+  INVOICED
+  PAID
+  CANCELLED
+}
+
+enum MissionProviderRole {
+  LEAD
+  SUBCONTRACTOR
+}
+
+model Mission {
+  id String @id @default(cuid())
+
+  name        String
+  description String?
+  status      MissionStatus @default(DRAFT)
+
+  depositPercent Decimal? @db.Decimal(5, 2)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
+  providers   MissionProvider[]
+  prestations Prestation[]
+  documents   Document[]
+  payments    Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([spaceId])
+}
+
+model MissionProvider {
+  id String @id @default(cuid())
+
+  missionId String
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  role MissionProviderRole @default(LEAD)
+
+  createdAt DateTime @default(now())
+
+  @@unique([missionId, providerId])
+  @@index([missionId])
+  @@index([providerId])
+}
+
+model Prestation {
+  id String @id @default(cuid())
+
+  missionId String
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  position    Int     @default(0)
+  description String
+  quantity    Decimal @default(1) @db.Decimal(10, 2)
+  unit        String  @default("jour")
+  unitPrice   Decimal @db.Decimal(10, 2)
+
+  providerId String?
+  provider   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([missionId])
+  @@index([providerId])
+}

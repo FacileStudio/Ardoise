@@ -21,6 +21,8 @@ export const CreatePaymentSchema = z.object({
   dueDate: z.coerce.date(),
   attachedFiles: z.array(z.string().url()).optional().default([]),
   attachedDocumentIds: z.array(z.string()).optional().default([]),
+  missionId: z.string().optional(),
+  documentId: z.string().optional(),
 });
 
 export const UpdatePaymentSchema = z.object({
@@ -40,6 +42,7 @@ export const ListPaymentsSchema = z.object({
   limit: z.number().int().positive().max(100).default(20),
   status: PaymentStatusSchema.optional(),
   clientId: z.string().optional(),
+  search: z.string().trim().optional(),
   spaceId: z.string().optional(),
 });
 

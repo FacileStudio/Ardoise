@@ -20,7 +20,8 @@ model Client {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
-  payments Payment[]
+  payments    Payment[]
+  missions Mission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

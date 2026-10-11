@@ -1,5 +1,5 @@
 enum DocumentType {
-  prestation
+  facture_prestation
   maintenance
   contrat_prestation
   contrat_maintenance
@@ -12,6 +12,13 @@ enum DocumentType {
   prestation_video
   prestation_formation
   prestation_btp
+  devis
+}
+
+enum InvoiceKind {
+  FULL
+  DEPOSIT
+  BALANCE
 }
 
 model Document {
@@ -76,6 +83,18 @@ model Document {
   spaceId          String?
   space            Space?   @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
+  missionId     String?
+  mission          Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
+
+  version       Int?
+  acceptedAt    DateTime?
+  dueDate       DateTime?
+  invoiceKind   InvoiceKind?
+  sourceQuoteId String?
+  sourceQuote   Document?  @relation("QuoteInvoices", fields: [sourceQuoteId], references: [id], onDelete: SetNull)
+  invoices      Document[] @relation("QuoteInvoices")
+
+  payments           Payment[]
   paymentAttachments PaymentDocument[]
 
   @@index([createdBy])
@@ -84,4 +103,7 @@ model Document {
   @@index([providerId])
   @@index([clientName])
   @@index([spaceId])
+  @@index([missionId])
+  @@index([sourceQuoteId])
+  @@unique([missionId, version])
 }
