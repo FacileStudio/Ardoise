@@ -1,6 +1,6 @@
 import {
   TypstGenerator,
-  prestation,
+  facture_prestation,
   maintenance,
   contrat_prestation,
   contrat_maintenance,
@@ -21,7 +21,7 @@ import { getSettingsRecord } from '../settings/service';
 import spaceService, { scopeWhere, type Scope } from '../space/service';
 
 export const DocTypeSchema = z.enum([
-  'prestation',
+  'facture_prestation',
   'maintenance',
   'contrat_prestation',
   'contrat_maintenance',
@@ -187,8 +187,8 @@ const ContratPrestationDataSchema = z.object({
   tva_rate: z.number().nonnegative().default(20),
 }).passthrough();
 
-const PrestationDataSchema = z.object({
-  type: z.literal('prestation'),
+const FacturePrestationDataSchema = z.object({
+  type: z.literal('facture_prestation'),
   invoice_number: z.string(),
   invoice_date: z.string(),
   due_date: z.string(),
@@ -435,7 +435,7 @@ export const PrestationVideoInputSchema = z.object({
 export type PrestationVideoInput = z.infer<typeof PrestationVideoInputSchema>;
 
 const TEMPLATES: Record<DocType, string> = {
-  prestation,
+  facture_prestation,
   maintenance,
   contrat_prestation,
   contrat_maintenance,
@@ -511,7 +511,7 @@ function getMissingProviderFields(data: DocumentData): string[] {
   if (!data.providerId) return [];
 
   const missingFields: string[] = [];
-  const requiresBanking = data.type === 'maintenance' || data.type.startsWith('prestation');
+  const requiresBanking = data.type === 'maintenance' || data.type === 'facture_prestation' || data.type.startsWith('prestation_');
 
   if (isBlank(data.provider_address)) missingFields.push('adresse');
   if (isBlank(data.provider_city)) missingFields.push('ville');
@@ -541,8 +541,8 @@ export async function generateDocument(
     case 'contrat_prestation':
       validated = ContratPrestationDataSchema.parse(data);
       break;
-    case 'prestation':
-      validated = PrestationDataSchema.parse(data);
+    case 'facture_prestation':
+      validated = FacturePrestationDataSchema.parse(data);
       break;
     case 'maintenance':
       validated = MaintenanceDataSchema.parse(data);

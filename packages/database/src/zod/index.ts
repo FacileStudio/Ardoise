@@ -128,7 +128,7 @@ export const AuditActionSchema = z.enum(['CREATE','UPDATE','DELETE']);
 
 export type AuditActionType = `${z.infer<typeof AuditActionSchema>}`
 
-export const DocumentTypeSchema = z.enum(['prestation','maintenance','contrat_prestation','contrat_maintenance','back_contractuel','appel_de_fonds','prestation_barman','prestation_design','prestation_dev','prestation_photo','prestation_video','prestation_formation','prestation_btp']);
+export const DocumentTypeSchema = z.enum(['facture_prestation','maintenance','contrat_prestation','contrat_maintenance','back_contractuel','appel_de_fonds','prestation_barman','prestation_design','prestation_dev','prestation_photo','prestation_video','prestation_formation','prestation_btp']);
 
 export type DocumentTypeType = `${z.infer<typeof DocumentTypeSchema>}`
 

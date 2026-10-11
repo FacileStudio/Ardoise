@@ -14,7 +14,7 @@ import {
   type DocType,
   type DocumentData,
 } from './service';
-import { PrestationInputSchema, MaintenanceInputSchema } from './types';
+import { FacturePrestationInputSchema, MaintenanceInputSchema } from './types';
 import {
   PrestationDesignInputSchema,
   PrestationDevInputSchema,
@@ -340,7 +340,7 @@ export const documentRouter = router({
 
   types: adminProcedure.query(() => {
     return [
-      { value: 'prestation', label: 'Facture Prestation' },
+      { value: 'facture_prestation', label: 'Facture Prestation' },
       { value: 'maintenance', label: 'Devis Maintenance' },
       { value: 'contrat_prestation', label: 'Contrat Prestation' },
       { value: 'contrat_maintenance', label: 'Contrat Maintenance' },
@@ -431,15 +431,15 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestation: adminProcedure
-    .input(spaceScoped(PrestationInputSchema))
+  previewFacturePrestation: adminProcedure
+    .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
         const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
 
         const documentData = {
-          type: 'prestation' as const,
+          type: 'facture_prestation' as const,
           invoice_number: invoiceNumber,
           invoice_date: input.invoice_date,
           due_date: input.due_date,
@@ -455,7 +455,7 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_${invoiceNumber}.pdf`;
+        const fileName = `facture_prestation_${invoiceNumber}.pdf`;
 
         return {
           pdf: pdfBuffer.toString('base64'),
@@ -463,19 +463,19 @@ export const documentRouter = router({
           typstContent: generateTypstContent(documentData),
         };
       } catch (error) {
-        rethrowUnexpected(error, 'Failed to generate prestation preview');
+        rethrowUnexpected(error, 'Failed to generate facture prestation preview');
       }
     }),
 
-  createPrestation: adminProcedure
-    .input(spaceScoped(PrestationInputSchema))
+  createFacturePrestation: adminProcedure
+    .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
         const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
 
         const documentData = {
-          type: 'prestation' as const,
+          type: 'facture_prestation' as const,
           invoice_number: invoiceNumber,
           invoice_date: input.invoice_date,
           due_date: input.due_date,
@@ -491,13 +491,13 @@ export const documentRouter = router({
         };
 
         const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `prestation_${invoiceNumber}.pdf`;
+        const fileName = `facture_prestation_${invoiceNumber}.pdf`;
         const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
         const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
         const document = await ctx.db.document.create({
           data: {
-            type: 'prestation',
+            type: 'facture_prestation',
             name: fileName,
             invoiceNumber,
             ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope),
@@ -516,7 +516,7 @@ export const documentRouter = router({
           fileName,
         };
       } catch (error) {
-        rethrowUnexpected(error, 'Failed to create prestation');
+        rethrowUnexpected(error, 'Failed to create facture prestation');
       }
     }),
 

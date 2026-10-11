@@ -9,7 +9,7 @@
 	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
-	type DocType = 'prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
+	type DocType = 'facture_prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
 
 	interface Client {
 		id: string;
@@ -47,7 +47,7 @@
 	let selectedProviderId = $state('');
 
 	let formData = $state<any>({
-		type: 'prestation',
+		type: 'facture_prestation',
 		invoice_number: 'FAC-001',
 		invoice_date: new Date().toISOString().split('T')[0],
 		due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -175,7 +175,7 @@
 
 	function getRequiredProviderFields(type: DocType) {
 		const commonFields = ['address', 'city', 'siret', 'email', 'phone'] as const;
-		if (type === 'prestation' || type === 'maintenance') {
+		if (type === 'facture_prestation' || type === 'maintenance') {
 			return [...commonFields, 'bankName', 'iban', 'bic'] as const;
 		}
 		return commonFields;
@@ -251,13 +251,13 @@
 			return providerValidationMessage;
 		}
 
-		if (formData.type === 'prestation' || formData.type === 'maintenance') {
+		if (formData.type === 'facture_prestation' || formData.type === 'maintenance') {
 			if (!formData.items || formData.items.length === 0) {
 				return 'Veuillez ajouter au moins un item à la facture';
 			}
 		}
 
-		if (formData.type === 'prestation' && !formData.invoice_number) {
+		if (formData.type === 'facture_prestation' && !formData.invoice_number) {
 			return 'Veuillez saisir un numéro de facture';
 		}
 
@@ -289,8 +289,8 @@
 			let result;
 
 			switch (formData.type) {
-				case 'prestation':
-					result = await trpc.document.previewPrestation.mutate({
+				case 'facture_prestation':
+					result = await trpc.document.previewFacturePrestation.mutate({
 						invoice_number: formData.invoice_number,
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
@@ -397,8 +397,8 @@
 			let result;
 
 			switch (formData.type) {
-				case 'prestation':
-					result = await trpc.document.createPrestation.mutate({
+				case 'facture_prestation':
+					result = await trpc.document.createFacturePrestation.mutate({
 						invoice_number: formData.invoice_number,
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
@@ -620,7 +620,7 @@
 			</select>
 
 			<div class="grid grid-cols-3 gap-4">
-				{#if formData.type === 'prestation'}
+				{#if formData.type === 'facture_prestation'}
 					<div>
 						<div class="text-sm font-medium mb-2">N° Facture</div>
 						<Input bind:value={formData.invoice_number} />
@@ -969,7 +969,7 @@
 					</div>
 				{/if}
 			</div>
-		{:else if formData.type === 'prestation' || formData.type === 'maintenance'}
+		{:else if formData.type === 'facture_prestation' || formData.type === 'maintenance'}
 			<div class="rounded-xl border border-border p-6 space-y-4">
 				<div class="flex justify-between items-center">
 					<h2 class="text-base font-semibold text-foreground">Items de facturation</h2>

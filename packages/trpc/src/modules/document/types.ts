@@ -7,7 +7,7 @@ export const DocumentItemSchema = z.object({
   price: z.number().nonnegative(),
 });
 
-export const GeneratePrestationSchema = z.object({
+export const GenerateFacturePrestationSchema = z.object({
   number: z.string(),
   date: z.string(),
   dueDate: z.string(),
@@ -38,7 +38,7 @@ export const GenerateContratMaintenanceSchema = z.object({
   clientId: z.string(),
 });
 
-export const PrestationInputSchema = z.object({
+export const FacturePrestationInputSchema = z.object({
   invoice_date: z.string().min(1, 'Invoice date is required'),
   due_date: z.string().min(1, 'Due date is required'),
   clientId: z.string().min(1, 'Client is required'),
@@ -57,10 +57,10 @@ export const MaintenanceInputSchema = z.object({
   railway_estimate: z.number().nonnegative().optional().default(0),
 });
 
-export type GeneratePrestationInput = z.infer<typeof GeneratePrestationSchema>;
+export type GenerateFacturePrestationInput = z.infer<typeof GenerateFacturePrestationSchema>;
 export type GenerateMaintenanceInput = z.infer<typeof GenerateMaintenanceSchema>;
 export type GenerateContratPrestationInput = z.infer<typeof GenerateContratPrestationSchema>;
 export type GenerateContratMaintenanceInput = z.infer<typeof GenerateContratMaintenanceSchema>;
-export type PrestationInput = z.infer<typeof PrestationInputSchema>;
+export type FacturePrestationInput = z.infer<typeof FacturePrestationInputSchema>;
 export type MaintenanceInput = z.infer<typeof MaintenanceInputSchema>;
 export type DocumentItem = z.infer<typeof DocumentItemSchema>;

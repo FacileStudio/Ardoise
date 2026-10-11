@@ -1,6 +1,6 @@
 import { legalLetDeclarations, legalInvoiceFooter } from './_legal';
 
-export const prestation: string = `#set document(
+export const facture_prestation: string = `#set document(
   title: "Facture",
   author: "{{provider_name}}"
 )

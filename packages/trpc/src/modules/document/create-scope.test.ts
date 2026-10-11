@@ -9,7 +9,7 @@ const invoiceDates = { invoice_date: '2026-01-01', due_date: '2026-02-01' };
 const prestationBase = { ...parties, ...invoiceDates, items };
 
 const endpoints: Array<{ name: string; input: Record<string, unknown> }> = [
-  { name: 'Prestation', input: prestationBase },
+  { name: 'FacturePrestation', input: prestationBase },
   {
     name: 'Maintenance',
     input: {

@@ -102,7 +102,7 @@ PDF.
 | `delete` | mutation | admin | `{ id }` |
 | `types` | query | admin | — the six document types offered in the UI, with French labels |
 | `download` | mutation | admin | `{ id }` |
-| `previewPrestation` / `createPrestation` | mutation | admin | `{ invoice_date, due_date, clientId, providerId, items[], railway_estimate = 0 }` |
+| `previewFacturePrestation` / `createFacturePrestation` | mutation | admin | `{ invoice_date, due_date, clientId, providerId, items[], railway_estimate = 0 }` |
 | `previewMaintenance` / `createMaintenance` | mutation | admin | `{ quote_date, validity_date, maintenance_period, clientId, providerId, items[], railway_estimate = 0 }` |
 | `previewContratPrestation` / `createContratPrestation` | mutation | admin | service contract inputs |
 | `previewContratMaintenance` / `createContratMaintenance` | mutation | admin | maintenance contract inputs |
