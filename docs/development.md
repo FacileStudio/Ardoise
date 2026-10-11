@@ -63,8 +63,34 @@ mise run db:studio                     # Prisma Studio
 cd packages/database
 bun run db:migrate:dev                 # create a migration
 bun run db:migrate:deploy              # apply migrations, what production runs
-bun run db:seed                        # scripts in prisma/seed.ts
+mise run db:seed                       # demo dataset, see below
 ```
+
+### Demo data
+
+`mise run db:seed` fills a development database with a dataset to click through. It **deletes the
+clients, providers, missions, documents, payments and spaces** already there, so use it on a
+development database only. It refuses to run with `NODE_ENV=production`.
+
+The seed goes through the real tRPC routers, so the quotes and invoices carry real numbers, real
+PDFs (stored under the backend `STORAGE_PATH`) and real totals. Each of the eight missions stops at
+a different point of the flow:
+
+| Mission | State |
+|---|---|
+| Refonte du site vitrine | `DRAFT`, four prestations, 30 % deposit, no quote yet |
+| Identité visuelle | `QUOTED`, quote v1 waiting for acceptance |
+| Application de réservation | `ACCEPTED`, ready to invoice |
+| Shooting catalogue | `INVOICED`, deposit paid, balance invoice with a pending payment |
+| Maintenance annuelle 2026 | `PAID`, one full invoice paid |
+| Landing page promotion | `INVOICED`, deposit paid, a prestation added since, so the quote is outdated |
+| Site événementiel | `CANCELLED` |
+| Refonte intranet | `ACCEPTED`, in the "Atelier Nord" space |
+
+Everything but the last mission is in the personal scope, the one shown when no space is selected.
+Log in with `admin@seed.test` / `seed-password-1`, or as the portal client `client@seed.test` /
+the same password. Every administrator already in the database is also added to "Atelier Nord".
+Counters restart at 1, and running the seed twice gives the same result.
 
 `db:generate` deletes `packages/database/src/zod` and regenerates it, then runs
 `scripts/patch-zod-types.ts`. Two generators run: `prisma-client-js` and `zod-prisma-types`.

@@ -24,7 +24,7 @@ depends = ["//:install"]
 run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:migrate:deploy'
 
 [tasks.seed]
-description = "Seed the database"
+description = "Seed a demo dataset: missions at every stage, quotes, invoices, payments (dev only, wipes business data)"
 depends = ["//:install"]
 run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run db:seed'
 

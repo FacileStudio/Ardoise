@@ -83,6 +83,6 @@ depends = [":install"]
 run = 'mise run //packages/database:studio'
 
 [tasks."db:seed"]
-description = "Seed the database"
+description = "Seed a demo dataset: missions at every stage, quotes, invoices, payments (dev only, wipes business data)"
 depends = [":install"]
 run = 'mise run //packages/database:seed'
