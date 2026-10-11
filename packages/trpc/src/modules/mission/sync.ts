@@ -1,17 +1,20 @@
 import type { PrismaClient } from '@repo/database';
 import { logger } from '@repo/logger';
 
-// a mission is paid once every invoice it holds has a paid payment
+// a mission is paid once it is fully invoiced and every invoice has a paid payment
 export async function syncMissionPaid(db: PrismaClient, missionId: string | null) {
   if (!missionId) return;
 
   try {
     const invoices = await db.document.findMany({
       where: { missionId, invoiceNumber: { not: null } },
-      select: { id: true },
+      select: { id: true, invoiceKind: true },
     });
 
     if (invoices.length === 0) return;
+
+    // deposit invoices alone never settle a mission
+    if (invoices.every((invoice) => invoice.invoiceKind === 'DEPOSIT')) return;
 
     const paid = await db.payment.findMany({
       where: { missionId, status: 'PAID', documentId: { in: invoices.map((i) => i.id) } },

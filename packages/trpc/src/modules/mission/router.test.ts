@@ -159,18 +159,24 @@ describe('missionRouter.delete', () => {
 
   it('deletes a mission holding only drafts and quotes', async () => {
     const deleted: any[] = [];
+    const quotesDeleted: any[] = [];
     const caller = callerFor({
+      $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
       mission: {
         findUnique: async () => missionRow,
         delete: async (args: any) => deleted.push(args),
       },
-      document: { count: async () => 0 },
+      document: {
+        count: async () => 0,
+        deleteMany: async (args: any) => quotesDeleted.push(args),
+      },
       payment: { count: async () => 0 },
     });
 
     await caller.delete({ id: 'p-1' });
 
     expect(deleted.length).toBe(1);
+    expect(quotesDeleted[0].where).toEqual({ missionId: 'p-1', type: 'devis' });
   });
 });
 
@@ -246,9 +252,16 @@ describe('missionRouter.createPayment', () => {
 });
 
 describe('mission status sync after a payment', () => {
-  const dbFor = (invoices: string[], paid: string[], updates: any[]) =>
+  const dbFor = (
+    invoices: string[],
+    paid: string[],
+    updates: any[],
+    kinds: Record<string, string> = {}
+  ) =>
     ({
-      document: { findMany: async () => invoices.map((id) => ({ id })) },
+      document: {
+        findMany: async () => invoices.map((id) => ({ id, invoiceKind: kinds[id] ?? null })),
+      },
       payment: { findMany: async () => paid.map((documentId) => ({ documentId })) },
       mission: { updateMany: async (args: any) => updates.push(args) },
     }) as unknown as PrismaClient;
@@ -262,6 +275,25 @@ describe('mission status sync after a payment', () => {
       where: { id: 'p-1', status: 'INVOICED' },
       data: { status: 'PAID' },
     });
+  });
+
+  it('does not settle a mission whose only invoice is a paid deposit', async () => {
+    const updates: any[] = [];
+
+    await syncMissionPaid(dbFor(['d1'], ['d1'], updates, { d1: 'DEPOSIT' }), 'p-1');
+
+    expect(updates.length).toBe(0);
+  });
+
+  it('settles a mission once the deposit and the balance are both paid', async () => {
+    const updates: any[] = [];
+
+    await syncMissionPaid(
+      dbFor(['d1', 'd2'], ['d1', 'd2'], updates, { d1: 'DEPOSIT', d2: 'BALANCE' }),
+      'p-1'
+    );
+
+    expect(updates[0].data).toEqual({ status: 'PAID' });
   });
 
   it('waits while one invoice is still unpaid', async () => {

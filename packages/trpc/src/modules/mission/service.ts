@@ -1,20 +1,17 @@
 import { TRPCError } from '@trpc/server';
-import type {
-  PrismaClient,
-  Prisma,
-  MissionStatus,
-  MissionProviderRole,
-} from '@repo/database';
+import type { PrismaClient, Prisma, MissionStatus, MissionProviderRole } from '@repo/database';
 import type { StripeService } from '@repo/stripe';
 import type { SMTPClient } from '@repo/smtp';
 import type { ServerEnv } from '@repo/env';
 import { paymentService } from '../payment/service';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
+import { loadBilling } from './billing';
 import type {
   CreateMissionInput,
   UpdateMissionInput,
   ListMissionsParams,
   CreateMissionPaymentInput,
+  PrestationLineInput,
   ProviderLink,
 } from './types';
 
@@ -125,44 +122,52 @@ export const missionService = {
   },
 
   getMissionById: async (db: PrismaClient, userId: string, id: string) => {
-    return requireRowScope(
-      db,
-      userId,
-      await db.mission.findUnique({
-        where: { id },
-        include: {
-          ...detail,
-          documents: {
-            select: {
-              id: true,
-              type: true,
-              name: true,
-              invoiceNumber: true,
-              quoteNumber: true,
-              contractRef: true,
-              total: true,
-              pdfUrl: true,
-              createdAt: true,
-            },
-            orderBy: { createdAt: 'asc' },
-          },
-          payments: {
-            select: {
-              id: true,
-              status: true,
-              amount: true,
-              totalWithFees: true,
-              collectionMethod: true,
-              dueDate: true,
-              paidAt: true,
-              documentId: true,
-            },
-            orderBy: { createdAt: 'asc' },
-          },
+    const { state, currentQuote } = await loadBilling(db, userId, id);
+
+    const mission = await db.mission.findUniqueOrThrow({
+      where: { id },
+      include: {
+        ...detail,
+        prestations: {
+          orderBy: { position: 'asc' },
+          include: { provider: { select: { id: true, name: true } } },
         },
-      }),
-      'Mission not found'
-    );
+        documents: {
+          select: {
+            id: true,
+            type: true,
+            name: true,
+            invoiceNumber: true,
+            invoiceKind: true,
+            quoteNumber: true,
+            version: true,
+            acceptedAt: true,
+            dueDate: true,
+            sourceQuoteId: true,
+            contractRef: true,
+            total: true,
+            pdfUrl: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+        payments: {
+          select: {
+            id: true,
+            status: true,
+            amount: true,
+            totalWithFees: true,
+            collectionMethod: true,
+            dueDate: true,
+            paidAt: true,
+            documentId: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    return { ...mission, billing: { ...state, currentQuoteId: currentQuote?.id ?? null } };
   },
 
   createMission: async (db: PrismaClient, data: CreateMissionInput, scope: Scope) => {
@@ -177,6 +182,7 @@ export const missionService = {
         description: data.description?.trim() || null,
         clientId: data.clientId,
         spaceId,
+        depositPercent: data.depositPercent,
         providers: { create: providerRows(data.providers) },
       },
       include: detail,
@@ -200,12 +206,69 @@ export const missionService = {
       data: {
         name: data.name,
         description: data.description === undefined ? undefined : data.description?.trim() || null,
+        depositPercent: data.depositPercent,
         providers: data.providers
           ? { deleteMany: {}, create: providerRows(data.providers) }
           : undefined,
       },
       include: detail,
     });
+  },
+
+  setPrestations: async (
+    db: PrismaClient,
+    userId: string,
+    id: string,
+    lines: PrestationLineInput[]
+  ) => {
+    const { mission, state } = await loadBilling(db, userId, id);
+
+    if (mission.status === 'CANCELLED') {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mission is cancelled' });
+    }
+
+    if (!state.canEditPrestations) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'The prestations are locked once the mission is fully invoiced',
+      });
+    }
+
+    const linked = new Set(mission.providers.map((link) => link.providerId));
+
+    if (lines.some((line) => line.providerId && !linked.has(line.providerId))) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A prestation provider must be linked to the mission',
+      });
+    }
+
+    await db.$transaction([
+      db.prestation.deleteMany({ where: { missionId: id } }),
+      db.prestation.createMany({
+        data: lines.map((line, position) => ({
+          missionId: id,
+          position,
+          description: line.description,
+          quantity: line.quantity,
+          unit: line.unit,
+          unitPrice: line.unitPrice,
+          providerId: line.providerId ?? null,
+        })),
+      }),
+    ]);
+
+    const after = await loadBilling(db, userId, id);
+
+    // a quote that no longer matches the lines sends the mission back to draft
+    if (after.state.quoteOutdated) {
+      await db.mission.updateMany({
+        where: { id, status: { in: ['QUOTED', 'ACCEPTED'] } },
+        data: { status: 'DRAFT' },
+      });
+    }
+
+    return after.mission.prestations;
   },
 
   setStatus: async (db: PrismaClient, userId: string, id: string, status: MissionStatus) => {
@@ -252,11 +315,18 @@ export const missionService = {
 
     const document = await db.document.findFirst({
       where: { id: documentId, missionId: id },
-      select: { id: true },
+      select: { id: true, type: true, invoiceKind: true },
     });
 
     if (!document) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found in this mission' });
+    }
+
+    if (document.type === 'devis' || document.invoiceKind) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A quote or an invoice generated from the mission cannot be detached',
+      });
     }
 
     const settled = await db.payment.count({
@@ -310,8 +380,11 @@ export const missionService = {
       throw new TRPCError({ code: 'CONFLICT', message: 'This invoice already has a payment' });
     }
 
-    // the payment term starts when the payment is requested, not when the invoice was issued
-    const dueDate = input.dueDate ?? new Date(Date.now() + document.paymentTermsDays * DAY_MS);
+    // a generated invoice already prints its due date, an attached one gets a term from today
+    const dueDate =
+      input.dueDate ??
+      document.dueDate ??
+      new Date(Date.now() + document.paymentTermsDays * DAY_MS);
 
     const payment = await paymentService.createPayment(
       db,
@@ -359,7 +432,10 @@ export const missionService = {
       });
     }
 
-    await db.mission.delete({ where: { id } });
+    await db.$transaction([
+      db.document.deleteMany({ where: { missionId: id, type: 'devis' } }),
+      db.mission.delete({ where: { id } }),
+    ]);
 
     return { success: true };
   },

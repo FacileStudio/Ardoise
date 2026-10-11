@@ -1,5 +1,6 @@
 import { router, adminProcedure } from '../../trpc';
 import missionService from './service';
+import { generateQuote, acceptQuote, generateInvoice } from './billing';
 import spaceService from '../space/service';
 import {
   CreateMissionSchema,
@@ -9,6 +10,10 @@ import {
   SetMissionStatusSchema,
   MissionDocumentSchema,
   CreateMissionPaymentSchema,
+  SetPrestationsSchema,
+  GenerateQuoteSchema,
+  AcceptQuoteSchema,
+  GenerateInvoiceSchema,
 } from './types';
 import { dispatchConfiguredWebhook } from '../webhook/service';
 
@@ -54,13 +59,45 @@ export const missionRouter = router({
     return mission;
   }),
 
-  setStatus: adminProcedure.input(SetMissionStatusSchema).mutation(async ({ ctx, input }) => {
-    const mission = await missionService.setStatus(
+  setPrestations: adminProcedure.input(SetPrestationsSchema).mutation(async ({ ctx, input }) => {
+    const prestations = await missionService.setPrestations(
       ctx.db,
       ctx.user.id,
       input.id,
-      input.status
+      input.prestations
     );
+
+    await emit(ctx, 'mission.prestations_updated', { missionId: input.id });
+
+    return prestations;
+  }),
+
+  generateQuote: adminProcedure.input(GenerateQuoteSchema).mutation(async ({ ctx, input }) => {
+    const document = await generateQuote(ctx.db, ctx.storage, ctx.user.id, input);
+
+    await emit(ctx, 'mission.quote_generated', { missionId: input.id, document });
+
+    return document;
+  }),
+
+  acceptQuote: adminProcedure.input(AcceptQuoteSchema).mutation(async ({ ctx, input }) => {
+    const document = await acceptQuote(ctx.db, ctx.user.id, input);
+
+    await emit(ctx, 'mission.quote_accepted', { missionId: input.id, document });
+
+    return document;
+  }),
+
+  generateInvoice: adminProcedure.input(GenerateInvoiceSchema).mutation(async ({ ctx, input }) => {
+    const document = await generateInvoice(ctx.db, ctx.storage, ctx.user.id, input);
+
+    await emit(ctx, 'mission.invoice_generated', { missionId: input.id, document });
+
+    return document;
+  }),
+
+  setStatus: adminProcedure.input(SetMissionStatusSchema).mutation(async ({ ctx, input }) => {
+    const mission = await missionService.setStatus(ctx.db, ctx.user.id, input.id, input.status);
 
     await emit(ctx, 'mission.status_changed', {
       missionId: input.id,
@@ -70,17 +107,13 @@ export const missionRouter = router({
     return mission;
   }),
 
-  attachDocument: adminProcedure
-    .input(MissionDocumentSchema)
-    .mutation(async ({ ctx, input }) => {
-      return missionService.attachDocument(ctx.db, ctx.user.id, input.id, input.documentId);
-    }),
+  attachDocument: adminProcedure.input(MissionDocumentSchema).mutation(async ({ ctx, input }) => {
+    return missionService.attachDocument(ctx.db, ctx.user.id, input.id, input.documentId);
+  }),
 
-  detachDocument: adminProcedure
-    .input(MissionDocumentSchema)
-    .mutation(async ({ ctx, input }) => {
-      return missionService.detachDocument(ctx.db, ctx.user.id, input.id, input.documentId);
-    }),
+  detachDocument: adminProcedure.input(MissionDocumentSchema).mutation(async ({ ctx, input }) => {
+    return missionService.detachDocument(ctx.db, ctx.user.id, input.id, input.documentId);
+  }),
 
   createPayment: adminProcedure
     .input(CreateMissionPaymentSchema)
