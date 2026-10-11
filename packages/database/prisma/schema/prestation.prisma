@@ -1,0 +1,56 @@
+enum PrestationStatus {
+  DRAFT
+  QUOTED
+  ACCEPTED
+  INVOICED
+  PAID
+  CANCELLED
+}
+
+enum PrestationProviderRole {
+  LEAD
+  SUBCONTRACTOR
+}
+
+model Prestation {
+  id String @id @default(cuid())
+
+  name        String
+  description String?
+  status      PrestationStatus @default(DRAFT)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
+  providers PrestationProvider[]
+  documents Document[]
+  payments  Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([spaceId])
+}
+
+model PrestationProvider {
+  id String @id @default(cuid())
+
+  prestationId String
+  prestation   Prestation @relation(fields: [prestationId], references: [id], onDelete: Cascade)
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  role PrestationProviderRole @default(LEAD)
+
+  createdAt DateTime @default(now())
+
+  @@unique([prestationId, providerId])
+  @@index([prestationId])
+  @@index([providerId])
+}

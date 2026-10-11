@@ -32,6 +32,12 @@ model Payment {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
+  prestationId String?
+  prestation   Prestation? @relation(fields: [prestationId], references: [id], onDelete: SetNull)
+
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
   amount           Decimal                 @db.Decimal(10, 2)
   stripeFee        Decimal                 @default(0) @db.Decimal(10, 2)
   totalWithFees    Decimal                 @db.Decimal(10, 2)
@@ -69,6 +75,8 @@ model Payment {
   @@index([collectionMethod])
   @@index([stripePaymentIntentId])
   @@index([spaceId])
+  @@index([prestationId])
+  @@index([documentId])
 }
 
 model PaymentInvoice {
