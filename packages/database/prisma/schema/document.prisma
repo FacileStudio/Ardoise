@@ -12,6 +12,13 @@ enum DocumentType {
   prestation_video
   prestation_formation
   prestation_btp
+  devis
+}
+
+enum InvoiceKind {
+  FULL
+  DEPOSIT
+  BALANCE
 }
 
 model Document {
@@ -79,6 +86,14 @@ model Document {
   missionId     String?
   mission          Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
 
+  version       Int?
+  acceptedAt    DateTime?
+  dueDate       DateTime?
+  invoiceKind   InvoiceKind?
+  sourceQuoteId String?
+  sourceQuote   Document?  @relation("QuoteInvoices", fields: [sourceQuoteId], references: [id], onDelete: SetNull)
+  invoices      Document[] @relation("QuoteInvoices")
+
   payments           Payment[]
   paymentAttachments PaymentDocument[]
 
@@ -89,4 +104,6 @@ model Document {
   @@index([clientName])
   @@index([spaceId])
   @@index([missionId])
+  @@index([sourceQuoteId])
+  @@unique([missionId, version])
 }
