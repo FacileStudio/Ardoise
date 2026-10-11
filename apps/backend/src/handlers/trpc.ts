@@ -8,8 +8,11 @@ export const trpcHandler =
     storage,
     env,
   }: Omit<CreateContextOptions, 'req' | 'resHeaders' | 'info' | 'logger'>) =>
-  (c: Context, next: Next) =>
-    trpcServer({
+  (c: Context, next: Next) => {
+    // @hono/trpc-server overwrites ctx.env with c.env, which is empty under Bun
+    c.env = env;
+
+    return trpcServer({
       router: appRouter,
       createContext: async (opts) => {
         const logger = c.get('logger');
@@ -23,5 +26,6 @@ export const trpcHandler =
         });
       },
     })(c, next);
+  };
 
 export default trpcHandler;
