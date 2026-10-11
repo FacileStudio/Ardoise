@@ -1,5 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import type { PrismaClient, Prisma, PrestationStatus } from '@repo/database';
+import type {
+  PrismaClient,
+  Prisma,
+  PrestationStatus,
+  PrestationProviderRole,
+} from '@repo/database';
 import type { StripeService } from '@repo/stripe';
 import type { SMTPClient } from '@repo/smtp';
 import type { ServerEnv } from '@repo/env';
@@ -67,6 +72,13 @@ async function requireProviders(db: PrismaClient, links: ProviderLink[], spaceId
     throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more providers not found' });
   }
 }
+
+// the web typecheck reads this file without strictNullChecks, where zod makes every key optional
+const providerRows = (links: ProviderLink[]) =>
+  links.map((link) => ({
+    providerId: link.providerId as string,
+    role: link.role as PrestationProviderRole,
+  }));
 
 const detail = {
   client: {
@@ -165,7 +177,7 @@ export const prestationService = {
         description: data.description?.trim() || null,
         clientId: data.clientId,
         spaceId,
-        providers: { create: data.providers },
+        providers: { create: providerRows(data.providers) },
       },
       include: detail,
     });
@@ -188,7 +200,9 @@ export const prestationService = {
       data: {
         name: data.name,
         description: data.description === undefined ? undefined : data.description?.trim() || null,
-        providers: data.providers ? { deleteMany: {}, create: data.providers } : undefined,
+        providers: data.providers
+          ? { deleteMany: {}, create: providerRows(data.providers) }
+          : undefined,
       },
       include: detail,
     });
