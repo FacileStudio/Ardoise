@@ -18,25 +18,13 @@ export const STATUS_VARIANTS: Record<MissionStatus, 'slate' | 'indigo' | 'amber'
 	CANCELLED: 'rose',
 };
 
-// the server owns the transition map, this one only decides which buttons to show
-export const NEXT_STATUSES: Record<MissionStatus, Array<{ status: MissionStatus; label: string }>> = {
-	DRAFT: [{ status: 'QUOTED', label: 'Devis envoyé' }],
-	QUOTED: [
-		{ status: 'ACCEPTED', label: 'Devis accepté' },
-		{ status: 'DRAFT', label: 'Repasser en brouillon' },
-	],
-	ACCEPTED: [{ status: 'INVOICED', label: 'Marquer comme facturée' }],
-	INVOICED: [{ status: 'PAID', label: 'Marquer comme payée' }],
-	PAID: [],
-	CANCELLED: [],
-};
-
 export const ROLE_LABELS: Record<string, string> = {
 	LEAD: 'Principal',
 	SUBCONTRACTOR: 'Sous-traitant',
 };
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+	devis: 'Devis',
 	facture_prestation: 'Facture',
 	maintenance: 'Devis maintenance',
 	contrat_prestation: 'Contrat de prestation',
@@ -78,3 +66,18 @@ export function formatDate(date: Date | string | null | undefined) {
 export function documentNumber(doc: { invoiceNumber?: string | null; quoteNumber?: string | null; contractRef?: string | null }) {
 	return doc.invoiceNumber || doc.quoteNumber || doc.contractRef || '';
 }
+
+export const INVOICE_KIND_LABELS: Record<string, string> = {
+	FULL: 'Facture',
+	DEPOSIT: "Facture d'acompte",
+	BALANCE: 'Facture de solde',
+};
+
+export const CONTRACT_TYPES = [
+	'contrat_prestation',
+	'contrat_maintenance',
+	'back_contractuel',
+	'appel_de_fonds',
+];
+
+export const LIVE_PAYMENT_STATUSES = ['PENDING', 'PAID', 'PAST_DUE'];

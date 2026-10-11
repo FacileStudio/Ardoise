@@ -6,6 +6,7 @@
 	import { Spinner, Button } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
+	import { DOCUMENT_TYPE_LABELS } from '$lib/mission';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
@@ -215,7 +216,7 @@
 									<span class="text-sm font-medium text-foreground">{getDocumentRef(doc)}</span>
 								</td>
 								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{docTypes.find((t) => t.value === doc.type)?.label || doc.type}</span>
+									<span class="text-sm text-muted-foreground">{docTypes.find((t) => t.value === doc.type)?.label || DOCUMENT_TYPE_LABELS[doc.type] || doc.type}</span>
 								</td>
 								<td class="px-4 py-3">
 									<span class="text-sm font-medium text-foreground">{doc.clientName}</span>

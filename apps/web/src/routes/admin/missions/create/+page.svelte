@@ -20,6 +20,7 @@
 	let name = $state('');
 	let description = $state('');
 	let clientId = $state('');
+	let deposit: number | null = $state(null);
 	let linked: Array<{ providerId: string; role: Role }> = $state([]);
 	let newProviderId = $state('');
 	let newRole = $state<Role>('LEAD');
@@ -81,6 +82,7 @@
 				name,
 				description: description || undefined,
 				clientId,
+				depositPercent: deposit || undefined,
 				providers: linked,
 				spaceId: spaceContext.spaceId,
 			});
@@ -107,7 +109,7 @@
 		</button>
 		<h1 class="text-2xl font-bold text-foreground">Nouvelle mission</h1>
 		<p class="text-sm text-muted-foreground mt-1">
-			Vous ajouterez les devis, contrats et factures depuis la mission
+			Vous ajouterez les prestations depuis la mission, puis vous générerez son devis et sa facture
 		</p>
 	</div>
 
@@ -141,6 +143,21 @@
 						<option value={client.id}>{client.companyName}</option>
 					{/each}
 				</select>
+			</div>
+			<div>
+				<div class="text-sm font-medium mb-2">Acompte (%)</div>
+				<input
+					type="number"
+					min="0"
+					max="100"
+					step="0.5"
+					bind:value={deposit}
+					placeholder="Aucun acompte"
+					class="w-full h-9 rounded-md bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+				/>
+				<p class="text-xs text-muted-foreground mt-1">
+					Part du devis facturable en acompte. Laissez vide si la mission n'en prévoit pas.
+				</p>
 			</div>
 		</div>
 
