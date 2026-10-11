@@ -31,7 +31,7 @@ export const serverEnvSchema = baseSchema.extend({
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(8),
 
-  COOKIE_DOMAIN: z.string().min(1),
+  COOKIE_DOMAIN: optionalString,
 
   OIDC_ISSUER: optionalUrl,
   OIDC_CLIENT_ID: optionalString,
