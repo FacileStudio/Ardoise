@@ -58,6 +58,7 @@ export class AuthManager {
       type: 'refresh',
     })
       .setProtectedHeader({ alg: 'HS256' })
+      .setJti(crypto.randomUUID())
       .setIssuedAt()
       .setIssuer(this.issuer)
       .setAudience(this.audience)
