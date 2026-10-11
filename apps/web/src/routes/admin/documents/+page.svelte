@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, Button } from '@repo/ui';
+	import { Pagination, SearchInput, Spinner } from '@repo/ui';
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { DOCUMENT_TYPE_LABELS } from '$lib/mission';
@@ -35,10 +35,11 @@
 	let selectedType = $state<string>('');
 
 	let docTypes: Array<{ value: string; label: string }> = $state([]);
+	let searchTimer: ReturnType<typeof setTimeout>;
 
-	onMount(async () => {
-		await loadDocumentTypes();
-		await loadDocuments(true);
+	onMount(() => {
+		loadDocumentTypes().then(() => loadDocuments(true));
+		return () => clearTimeout(searchTimer);
 	});
 
 	async function loadDocumentTypes() {
@@ -78,10 +79,16 @@
 		}
 	}
 
-	function handleSearch(e: Event) {
-		const target = e.target as HTMLInputElement;
-		searchQuery = target.value;
-		currentPage = 1;
+	function handleSearch() {
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			currentPage = 1;
+			loadDocuments();
+		}, 300);
+	}
+
+	function handlePageChange(page: number) {
+		currentPage = page;
 		loadDocuments();
 	}
 
@@ -167,19 +174,11 @@
 		</header>
 
 		<div class="space-y-3">
-			<div class="relative">
-				<iconify-icon
-					icon="solar:magnifer-linear"
-					width="16"
-					class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-				></iconify-icon>
-				<input
-					type="text"
-					placeholder="Rechercher par référence, client..."
-					class="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-					oninput={handleSearch}
-				/>
-			</div>
+			<SearchInput
+				bind:value={searchQuery}
+				oninput={handleSearch}
+				placeholder="Rechercher par référence, client..."
+			/>
 
 			<div class="flex gap-2 flex-wrap">
 				{#each docTypes as type (type.value)}
@@ -255,21 +254,7 @@
 			</div>
 
 			{#if totalPages > 1}
-				<div class="flex justify-center gap-1">
-					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pg (pg)}
-						<button
-							onclick={() => {
-								currentPage = pg;
-								loadDocuments();
-							}}
-							class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {currentPage === pg
-								? 'bg-primary text-primary-foreground'
-								: 'bg-background text-foreground border border-border hover:bg-muted'}"
-						>
-							{pg}
-						</button>
-					{/each}
-				</div>
+				<Pagination {currentPage} {totalPages} onPageChange={handlePageChange} />
 			{/if}
 		{:else}
 			<div class="text-center py-16">
