@@ -30,12 +30,11 @@ meta to the procedures you want exposed is what fills it in.
 | Procedure | Type | Level | Input |
 |---|---|---|---|
 | `login` | mutation | public | `{ email, password }`, password min 8 |
-| `register` | mutation | public | login fields plus `{ firstName, lastName, confirmPassword }`, refined so the passwords match |
 | `refresh` | mutation | public | `{}` — reads the `refresh_token` cookie |
 | `me` | query | protected | `{}` |
 | `logout` | mutation | protected | `{}` |
 
-`login`, `register` and `refresh` set `auth_token` (15 min, `Path=/`) and `refresh_token` (7
+`login` and `refresh` set `auth_token` (15 min, `Path=/`) and `refresh_token` (7
 days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` clears both.
 `me` returns the context user. This router sits behind the strictest rate-limit bucket.
 
@@ -55,8 +54,6 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 | `adminUpdate` | mutation | admin | `{ id, email?, firstName?, lastName?, role?, password? }` |
 | `delete` | mutation | admin | `{ id }` |
 | `bulkDelete` | mutation | admin | `{ ids: string[] }` |
-
-`create` throws `FORBIDDEN` when `SSO_ONLY` is enabled.
 
 ## `client`
 
@@ -214,10 +211,9 @@ Not tRPC — these exist because of raw bodies, redirects, or callers that canno
 | Method | Path | Auth | What it does |
 |---|---|---|---|
 | `POST` | `/webhook` | Stripe signature | Stripe events. Idempotent via `WebhookEvent` |
-| `GET` | `/auth/config` | none | Whether OIDC is enabled and whether `SSO_ONLY` is on |
+| `GET` | `/auth/config` | none | Whether OIDC is enabled |
 | `GET` | `/auth/oidc` | none | Starts the OIDC authorization flow |
-| `GET` | `/auth/oidc/callback` | none | Exchanges the code, upserts the user, sets auth cookies, redirects to `OIDC_SUCCESS_URL` |
-| `POST` | `/auth/sync-profile` | session | Pushes profile changes to the IdP, rate-limited by `profileSyncedAt` |
+| `GET` | `/auth/oidc/callback` | none | Exchanges the code, signs in an existing user, sets auth cookies, redirects to `OIDC_SUCCESS_URL` with `?oidc=success` or `?error=<code>` |
 | `PUT` | `/storage/*` | `?ticket=` HMAC | Uploads a file body to that key |
 | `GET` | `/storage/*` | `?ticket=` HMAC | Downloads it |
 | `GET` | `/docs` | none | Scalar API reference UI |

@@ -1,7 +1,6 @@
 services:
   ardoise-postgres:
     image: postgres:16-alpine
-    container_name: ardoise-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -18,7 +17,6 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-    container_name: ardoise-backend
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -29,6 +27,12 @@ services:
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3001}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       STORAGE_PATH: /data/uploads
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-}
+      OIDC_SUCCESS_URL: ${OIDC_SUCCESS_URL:-}
     volumes:
       - uploads_data:/data/uploads
     expose:
@@ -44,7 +48,6 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
-    container_name: ardoise-web
     environment:
       NODE_ENV: production
       PORT: 3000

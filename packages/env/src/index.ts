@@ -11,6 +11,10 @@ const urlSchema = (fallback: string) =>
     .default(fallback)
     .transform((url) => url.replace(/\/$/, ''));
 
+const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
+const optionalUrl = z.preprocess(emptyToUndefined, z.string().url().optional());
+const optionalString = z.preprocess(emptyToUndefined, z.string().min(1).optional());
+
 export const publicEnvSchema = baseSchema.extend({
   API_URL: z.string().url().optional(),
 });
@@ -27,15 +31,21 @@ export const serverEnvSchema = baseSchema.extend({
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(8),
 
-  OIDC_ISSUER: z.string().url().optional(),
-  OIDC_CLIENT_ID: z.string().min(1).optional(),
-  OIDC_CLIENT_SECRET: z.string().min(1).optional(),
-  OIDC_REDIRECT_URL: z.string().url().optional(),
-  OIDC_SUCCESS_URL: z.string().url().optional(),
-  SSO_ONLY: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((v) => v === 'true'),
+  COOKIE_DOMAIN: optionalString,
+
+  OIDC_ISSUER: optionalUrl,
+  OIDC_CLIENT_ID: optionalString,
+  OIDC_CLIENT_SECRET: optionalString,
+  OIDC_REDIRECT_URL: optionalUrl,
+  OIDC_SUCCESS_URL: optionalUrl,
+}).superRefine((env, ctx) => {
+  if (env.OIDC_ISSUER && (!env.OIDC_CLIENT_ID || !env.OIDC_CLIENT_SECRET)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['OIDC_CLIENT_ID'],
+      message: 'OIDC_CLIENT_ID and OIDC_CLIENT_SECRET are required when OIDC_ISSUER is set',
+    });
+  }
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

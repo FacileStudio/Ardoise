@@ -26,19 +26,24 @@ falls back — to `postgresql://localhost:5432/ardoise` in the runtime client an
 `postgresql://postgres:postgres@postgres:5432/ardoise` in the Prisma CLI config. Always set it
 explicitly; a typo silently connects somewhere else rather than erroring.
 
-### OIDC
-
-All optional. The OIDC routes register unconditionally but return "not configured" unless the
-first four are present together.
+### Cookies
 
 | Variable | Required | Default | What it does |
 |---|---|---|---|
-| `OIDC_ISSUER` | no | — | Issuer URL, for example `https://porte.facile.studio/application/o/ardoise/` |
-| `OIDC_CLIENT_ID` | no | — | Authentik client id |
-| `OIDC_CLIENT_SECRET` | no | — | Authentik client secret |
-| `OIDC_REDIRECT_URL` | no | — | Must match the callback registered in Authentik |
-| `OIDC_SUCCESS_URL` | no | `FRONTEND_URL` | Where the browser lands after a successful callback |
-| `SSO_ONLY` | no | `false` | Literal string `true` or `false`. When `true`, `user.create` is refused and the login page hides the password form |
+| `COOKIE_DOMAIN` | no | — | Adds `Domain=` to the auth cookies. Set it only when the web app and API are on different subdomains of one base domain (the web server's `/admin` guard reads the cookie). Use the narrowest shared parent, for example `.ardoise.facile.studio` for `ardoise.facile.studio` and `api.ardoise.facile.studio` |
+
+### OIDC
+
+All optional. OIDC turns on when `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set;
+startup fails if the issuer is set without the other two. Empty strings count as unset.
+
+| Variable | Required | Default | What it does |
+|---|---|---|---|
+| `OIDC_ISSUER` | no | — | Issuer URL, for example `https://sso.facile.studio` |
+| `OIDC_CLIENT_ID` | no | — | Client id registered in Registre |
+| `OIDC_CLIENT_SECRET` | no | — | Client secret registered in Registre |
+| `OIDC_REDIRECT_URL` | no | `BACKEND_URL/auth/oidc/callback` | Must match the redirect registered in Registre exactly |
+| `OIDC_SUCCESS_URL` | no | `FRONTEND_URL/login` | Where the browser lands after a successful callback |
 
 ## Web
 

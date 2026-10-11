@@ -1,5 +1,4 @@
 import { router, adminProcedure } from '../../trpc';
-import { TRPCError } from '@trpc/server';
 import { AdminService } from './service';
 import {
   adminListSchema,
@@ -57,9 +56,6 @@ export const adminRouter = router({
   }),
 
   create: adminProcedure.input(adminCreateSchema).mutation(async ({ ctx, input }) => {
-    if (input.entity === 'user' && ctx.env.SSO_ONLY) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'User creation is disabled in SSO-only mode.' });
-    }
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 

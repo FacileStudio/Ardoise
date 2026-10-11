@@ -63,7 +63,7 @@ Postgres 16 through Prisma. The schema is split by concern across `prisma/schema
 
 | Model | Purpose |
 |---|---|
-| `User` | Accounts. `role` is `ADMIN` or `CLIENT`; `status` is `ACTIVE`, `SUSPENDED`, `BANNED` or `PENDING`. Carries ban/suspension fields, `lastLoginAt`, `lastLoginIp` and `profileSyncedAt` |
+| `User` | Accounts. `role` is `ADMIN` or `CLIENT`; `status` is `ACTIVE`, `SUSPENDED`, `BANNED` or `PENDING`. Carries ban/suspension fields, `lastLoginAt`, `lastLoginIp` and `profileSyncedAt` (no longer written since the OIDC profile sync was removed) |
 | `Client` | Billing counterparty — contact name, company, address, SIRET, VAT number, `stripeCustomerId`. Optionally linked one-to-one to a `User` for portal access |
 | `Payment` | A payment request: amount, `stripeFee`, `totalWithFees`, due date, `status`, `frequency` (`ONE_TIME`/`MONTHLY`/`YEARLY`), `collectionMethod` (`STRIPE`/`MANUAL`), Stripe intent/subscription ids, receipt URL and retry counters, reminder counters |
 | `PaymentInvoice` | One row per Stripe invoice on a recurring payment |
@@ -99,15 +99,34 @@ copy-pasted from `MonorepoBoilerplate` and have drifted since; nothing imports t
 
 ### OIDC
 
-`createOIDCRoutes` mounts an optional Authentik client. It activates only when `OIDC_ISSUER`,
-`OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `OIDC_REDIRECT_URL` are all set.
+Optional, invite-only login against any OpenID Connect provider (Registre in production). It
+activates when `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set. Password login
+always stays available.
 
-- `GET /auth/config` reports whether OIDC is enabled and whether `SSO_ONLY` is on, so the login
-  page can hide the password form.
-- `GET /auth/oidc` starts the flow; `GET /auth/oidc/callback` exchanges the code, upserts the
-  local `User`, and issues the same cookies as a password login.
-- `POST /auth/sync-profile` pushes profile changes back, rate-limited by `profileSyncedAt`.
-- With `SSO_ONLY=true`, `user.create` refuses to run.
+Code lives in `apps/backend/src/oidc/`, one job per file:
+
+| File | Job |
+|---|---|
+| `config.ts` | Builds the config from env, with defaults for the redirect and success URLs |
+| `provider.ts` | Discovery and JWKS, cached for an hour, issuer must match `OIDC_ISSUER` |
+| `state.ts` | Signed `oidc_state` cookie holding state, nonce, PKCE verifier and the validated redirect |
+| `flow.ts` | `startLogin` and `finishLogin`: authorization code + PKCE (S256), nonce check, id token verification. No Hono, no Prisma |
+| `identity.ts` | Claims to user. Only existing users can sign in |
+| `avatar.ts` | Copies the `picture` claim into storage when the user has no avatar |
+| `routes.ts` | The three HTTP routes, glue only |
+
+Identity rules, in `identity.ts`:
+
+1. `Account(providerId = issuer, accountId = sub)` is the link. A match signs the user in.
+2. No link: the id token must carry `email_verified: true`, and a `User` with that email must
+   already exist (an admin created it). The link is then written, `emailVerified` becomes true,
+   and legacy `providerId = 'oidc'` rows (which held plaintext tokens) are deleted.
+3. No such user: refused with `not_invited`. A user already linked to a different `sub` for this
+   issuer is refused with `identity_conflict`. Banned or suspended users get `blocked`.
+
+Roles are never read from claims; `User.role` only changes in the admin panel. The browser lands on
+`OIDC_SUCCESS_URL` with `?oidc=success` or `?error=<code>`, and the session cookies are the same
+ones `modules/auth` issues (`issueSession` and `authCookies` in `packages/trpc`).
 
 ## Integrations
 
