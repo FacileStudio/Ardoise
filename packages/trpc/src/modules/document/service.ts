@@ -592,7 +592,7 @@ export async function generateDocument(
       validated = MaintenanceDataSchema.parse(data);
       break;
     case 'devis':
-      validated = DevisDataSchema.parse(data);
+      validated = DevisDataSchema.parse(data) as DocumentData;
       break;
     case 'back_contractuel':
       validated = BackContractuelDataSchema.parse(data);
