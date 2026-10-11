@@ -317,12 +317,13 @@ export const documentRouter = router({
 
   types: adminProcedure.query(() => {
     return [
-      { value: 'facture_prestation', label: 'Facture Prestation' },
-      { value: 'maintenance', label: 'Devis Maintenance' },
-      { value: 'contrat_prestation', label: 'Contrat Prestation' },
-      { value: 'contrat_maintenance', label: 'Contrat Maintenance' },
-      { value: 'back_contractuel', label: 'Back Contractuel (Co-traitance)' },
-      { value: 'appel_de_fonds', label: 'Appel de Fonds Global' },
+      { value: 'devis', label: 'Devis' },
+      { value: 'facture_prestation', label: 'Facture' },
+      { value: 'maintenance', label: 'Devis maintenance' },
+      { value: 'contrat_prestation', label: 'Contrat de prestation' },
+      { value: 'contrat_maintenance', label: 'Contrat de maintenance' },
+      { value: 'back_contractuel', label: 'Back contractuel' },
+      { value: 'appel_de_fonds', label: 'Appel de fonds' },
     ];
   }),
 

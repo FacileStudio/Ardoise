@@ -42,6 +42,7 @@ export const ListPaymentsSchema = z.object({
   limit: z.number().int().positive().max(100).default(20),
   status: PaymentStatusSchema.optional(),
   clientId: z.string().optional(),
+  search: z.string().trim().optional(),
   spaceId: z.string().optional(),
 });
 

@@ -20,6 +20,11 @@ export const paymentRouter = router({
     return paymentService.listPayments(ctx.db, params, scope);
   }),
 
+  stats: adminProcedure.input(SpaceScopeSchema).query(async ({ ctx, input }) => {
+    const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input?.spaceId);
+    return paymentService.paymentStats(ctx.db, scope);
+  }),
+
   getById: adminProcedure.input(GetPaymentByIdSchema).query(async ({ ctx, input }) => {
     return paymentService.getPaymentById(ctx.db, ctx.user.id, input.id);
   }),
