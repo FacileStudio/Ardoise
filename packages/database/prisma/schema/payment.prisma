@@ -32,8 +32,8 @@ model Payment {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
-  prestationId String?
-  prestation   Prestation? @relation(fields: [prestationId], references: [id], onDelete: SetNull)
+  missionId String?
+  mission      Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
 
   documentId String?
   document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
@@ -75,7 +75,7 @@ model Payment {
   @@index([collectionMethod])
   @@index([stripePaymentIntentId])
   @@index([spaceId])
-  @@index([prestationId])
+  @@index([missionId])
   @@index([documentId])
 }
 

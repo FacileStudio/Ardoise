@@ -47,10 +47,10 @@
 	let selectedClientId = $state('');
 	let selectedProviderId = $state('');
 
-	const prestationId = $page.url.searchParams.get('prestationId');
+	const missionId = $page.url.searchParams.get('missionId');
 	const requestedType = $page.url.searchParams.get('type');
-	let prestation: any = $state(null);
-	const backPath = prestationId ? `/admin/prestations/${prestationId}` : '/admin/documents';
+	let mission: any = $state(null);
+	const backPath = missionId ? `/admin/prestations/${missionId}` : '/admin/documents';
 
 	let formData = $state<any>({
 		type: 'facture_prestation',
@@ -113,18 +113,18 @@
 	});
 
 	async function loadPrestation() {
-		if (!prestationId) return;
+		if (!missionId) return;
 
 		try {
-			prestation = await trpc.prestation.getById.query({ id: prestationId });
-			selectedClientId = prestation.clientId;
+			mission = await trpc.mission.getById.query({ id: missionId });
+			selectedClientId = mission.clientId;
 
-			if (prestation.providers.length === 1) {
-				selectedProviderId = prestation.providers[0].providerId;
+			if (mission.providers.length === 1) {
+				selectedProviderId = mission.providers[0].providerId;
 			}
 		} catch (err) {
-			logger.error({ err }, 'Failed to fetch prestation');
-			toast.push('Prestation introuvable', 'error');
+			logger.error({ err }, 'Failed to fetch mission');
+			toast.push('Mission introuvable', 'error');
 		}
 	}
 
@@ -429,7 +429,7 @@
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
 						spaceId: spaceContext.spaceId,
-						prestationId: prestation?.id,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
@@ -444,7 +444,7 @@
 						validity_date: formData.validity_date,
 						maintenance_period: formData.maintenance_period,
 						spaceId: spaceContext.spaceId,
-						prestationId: prestation?.id,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
@@ -458,7 +458,7 @@
 						contract_date: formData.contract_date,
 						quote_number: formData.quote_number,
 						spaceId: spaceContext.spaceId,
-						prestationId: prestation?.id,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						});
@@ -470,7 +470,7 @@
 						contract_date: formData.contract_date,
 						maintenance_period: formData.maintenance_period,
 						spaceId: spaceContext.spaceId,
-						prestationId: prestation?.id,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						});
@@ -483,7 +483,7 @@
 						project_name: formData.project_name,
 						valid_until: formData.valid_until,
 						spaceId: spaceContext.spaceId,
-						prestationId: prestation?.id,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId || undefined,
 						providers: formData.providers,
@@ -500,7 +500,7 @@
 						project_step: formData.project_step,
 						project_name: formData.project_name,
 						spaceId: spaceContext.spaceId,
-						prestationId: prestation?.id,
+						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId || undefined,
 						payment_providers: formData.payment_providers,
@@ -614,7 +614,7 @@
 	);
 	const totalWithRailway = $derived(subtotal + (formData.railway_estimate || 0));
 	const selectedProvider = $derived(providers.find(p => p.id === selectedProviderId));
-	const linkedProviderIds = $derived(new Set((prestation?.providers ?? []).map((link: any) => link.providerId)));
+	const linkedProviderIds = $derived(new Set((mission?.providers ?? []).map((link: any) => link.providerId)));
 	const availableProviders = $derived(
 		linkedProviderIds.size > 0 ? providers.filter((p) => linkedProviderIds.has(p.id)) : providers
 	);
@@ -631,12 +631,12 @@
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			{prestationId ? 'Retour à la prestation' : 'Retour aux documents'}
+			{missionId ? 'Retour à la mission' : 'Retour aux documents'}
 		</button>
 		<h1 class="text-2xl font-bold tracking-tight text-foreground">Créer un document</h1>
 		<p class="text-sm text-muted-foreground mt-1">
-			{#if prestation}
-				Le document sera rattaché à la prestation « {prestation.name} »
+			{#if mission}
+				Le document sera rattaché à la mission « {mission.name} »
 			{:else}
 				Générez une facture, un devis ou un contrat
 			{/if}
@@ -723,7 +723,7 @@
 			<h2 class="text-base font-semibold text-foreground">Client</h2>
 			<select
 				bind:value={selectedClientId}
-				disabled={!!prestation}
+				disabled={!!mission}
 				class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
 			>
 				<option value="">-- Sélectionner un client --</option>

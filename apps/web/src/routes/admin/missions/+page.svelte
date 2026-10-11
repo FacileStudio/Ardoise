@@ -10,16 +10,16 @@
 		STATUS_LABELS,
 		STATUS_VARIANTS,
 		formatDate,
-		type PrestationStatus,
-	} from '$lib/prestation';
+		type MissionStatus,
+	} from '$lib/mission';
 	import 'iconify-icon';
 
 	const limit = 20;
 
 	let pageLoading = $state(true);
-	let prestations: any[] = $state([]);
+	let missions: any[] = $state([]);
 	let searchQuery = $state('');
-	let statusFilter = $state<PrestationStatus | ''>('');
+	let statusFilter = $state<MissionStatus | ''>('');
 	let currentPage = $state(1);
 	let totalPages = $state(1);
 	let total = $state(0);
@@ -27,14 +27,14 @@
 	let searchDebounce: ReturnType<typeof setTimeout>;
 
 	onMount(async () => {
-		await fetchPrestations();
+		await fetchMissions();
 		pageLoading = false;
 		isInitialMount = false;
 	});
 
-	async function fetchPrestations() {
+	async function fetchMissions() {
 		try {
-			const response = await trpc.prestation.list.query({
+			const response = await trpc.mission.list.query({
 				page: currentPage,
 				limit,
 				search: searchQuery || undefined,
@@ -42,11 +42,11 @@
 				spaceId: spaceContext.spaceId,
 			});
 
-			prestations = response.prestations;
+			missions = response.missions;
 			total = response.total;
 			totalPages = response.totalPages;
 		} catch (err) {
-			logger.error({ err }, 'Failed to fetch prestations');
+			logger.error({ err }, 'Failed to fetch missions');
 		}
 	}
 
@@ -56,7 +56,7 @@
 		statusFilter;
 
 		if (!isInitialMount)
-			fetchPrestations();
+			fetchMissions();
 	});
 
 	function handleSearchInput(value: string) {
@@ -67,8 +67,8 @@
 		}, 300);
 	}
 
-	function providerNames(prestation: any) {
-		return prestation.providers.map((link: any) => link.provider.name).join(', ') || '-';
+	function providerNames(mission: any) {
+		return mission.providers.map((link: any) => link.provider.name).join(', ') || '-';
 	}
 </script>
 
@@ -81,17 +81,17 @@
 	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
 		<header class="flex justify-between items-center">
 			<div>
-				<h1 class="text-2xl font-bold text-foreground">Prestations</h1>
+				<h1 class="text-2xl font-bold text-foreground">Missions</h1>
 				<p class="text-sm text-muted-foreground mt-1">
 					Devis, contrats, factures et paiements d'une mission, au même endroit
 				</p>
 			</div>
 			<button
-				onclick={() => goto(resolve('/admin/prestations/create'))}
+				onclick={() => goto(resolve('/admin/missions/create'))}
 				class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90"
 			>
 				<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-				Nouvelle prestation
+				Nouvelle mission
 			</button>
 		</header>
 
@@ -104,7 +104,7 @@
 				></iconify-icon>
 				<input
 					type="text"
-					placeholder="Rechercher une prestation ou un client"
+					placeholder="Rechercher une mission ou un client"
 					class="h-9 w-full rounded-lg bg-muted/40 pl-9 pr-3 text-sm outline-none focus:bg-muted"
 					oninput={(e: any) => handleSearchInput(e.target.value)}
 				/>
@@ -121,13 +121,13 @@
 			</select>
 		</div>
 
-		{#if prestations.length > 0}
+		{#if missions.length > 0}
 			<div class="rounded-xl bg-muted/40 overflow-hidden">
 				<div class="overflow-x-auto">
 					<table class="w-full">
 						<thead>
 							<tr>
-								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Prestation</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Mission</th>
 								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Client</th>
 								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Prestataires</th>
 								<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Statut</th>
@@ -136,23 +136,23 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each prestations as prestation (prestation.id)}
+							{#each missions as mission (mission.id)}
 								<tr
 									class="hover:bg-muted cursor-pointer"
-									onclick={() => goto(resolve(`/admin/prestations/${prestation.id}`))}
+									onclick={() => goto(resolve(`/admin/missions/${mission.id}`))}
 								>
-									<td class="px-4 py-3 font-medium text-foreground">{prestation.name}</td>
-									<td class="px-4 py-3 text-sm text-foreground">{prestation.client.companyName}</td>
-									<td class="px-4 py-3 text-sm text-muted-foreground">{providerNames(prestation)}</td>
+									<td class="px-4 py-3 font-medium text-foreground">{mission.name}</td>
+									<td class="px-4 py-3 text-sm text-foreground">{mission.client.companyName}</td>
+									<td class="px-4 py-3 text-sm text-muted-foreground">{providerNames(mission)}</td>
 									<td class="px-4 py-3">
-										<Badge variant={STATUS_VARIANTS[prestation.status as PrestationStatus]}>
-											{STATUS_LABELS[prestation.status as PrestationStatus]}
+										<Badge variant={STATUS_VARIANTS[mission.status as MissionStatus]}>
+											{STATUS_LABELS[mission.status as MissionStatus]}
 										</Badge>
 									</td>
 									<td class="px-4 py-3 text-sm text-muted-foreground">
-										{prestation._count.documents} doc. · {prestation._count.payments} paiement{prestation._count.payments > 1 ? 's' : ''}
+										{mission._count.documents} doc. · {mission._count.payments} paiement{mission._count.payments > 1 ? 's' : ''}
 									</td>
-									<td class="px-4 py-3 text-sm text-muted-foreground">{formatDate(prestation.createdAt)}</td>
+									<td class="px-4 py-3 text-sm text-muted-foreground">{formatDate(mission.createdAt)}</td>
 								</tr>
 							{/each}
 						</tbody>
@@ -167,7 +167,7 @@
 			{/if}
 
 			<div class="text-sm text-muted-foreground text-center">
-				{prestations.length} sur {total} prestation{total > 1 ? 's' : ''}
+				{missions.length} sur {total} mission{total > 1 ? 's' : ''}
 			</div>
 		{:else}
 			<div class="text-center py-16">
@@ -175,11 +175,11 @@
 					<div class="w-16 h-16 rounded-xl bg-muted/40 flex items-center justify-center text-muted-foreground">
 						<iconify-icon icon="solar:case-round-bold" width="32"></iconify-icon>
 					</div>
-					<h3 class="text-lg font-semibold text-foreground">Aucune prestation</h3>
+					<h3 class="text-lg font-semibold text-foreground">Aucune mission</h3>
 					<p class="text-sm text-muted-foreground max-w-md">
 						{searchQuery || statusFilter
 							? 'Aucun résultat pour ces filtres.'
-							: 'Créez une prestation pour y rassembler les devis, contrats, factures et paiements d\'une mission.'}
+							: 'Créez une mission pour y rassembler les devis, contrats, factures et paiements d\'une mission.'}
 					</p>
 				</div>
 			</div>

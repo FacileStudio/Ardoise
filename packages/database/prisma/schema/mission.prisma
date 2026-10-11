@@ -1,4 +1,4 @@
-enum PrestationStatus {
+enum MissionStatus {
   DRAFT
   QUOTED
   ACCEPTED
@@ -7,17 +7,17 @@ enum PrestationStatus {
   CANCELLED
 }
 
-enum PrestationProviderRole {
+enum MissionProviderRole {
   LEAD
   SUBCONTRACTOR
 }
 
-model Prestation {
+model Mission {
   id String @id @default(cuid())
 
   name        String
   description String?
-  status      PrestationStatus @default(DRAFT)
+  status      MissionStatus @default(DRAFT)
 
   clientId String
   client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
@@ -25,7 +25,7 @@ model Prestation {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
-  providers PrestationProvider[]
+  providers MissionProvider[]
   documents Document[]
   payments  Payment[]
 
@@ -37,20 +37,20 @@ model Prestation {
   @@index([spaceId])
 }
 
-model PrestationProvider {
+model MissionProvider {
   id String @id @default(cuid())
 
-  prestationId String
-  prestation   Prestation @relation(fields: [prestationId], references: [id], onDelete: Cascade)
+  missionId String
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
 
   providerId String
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Restrict)
 
-  role PrestationProviderRole @default(LEAD)
+  role MissionProviderRole @default(LEAD)
 
   createdAt DateTime @default(now())
 
-  @@unique([prestationId, providerId])
-  @@index([prestationId])
+  @@unique([missionId, providerId])
+  @@index([missionId])
   @@index([providerId])
 }

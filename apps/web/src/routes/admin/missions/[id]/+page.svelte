@@ -18,27 +18,27 @@
 		formatEuro,
 		formatDate,
 		documentNumber,
-		type PrestationStatus,
-	} from '$lib/prestation';
+		type MissionStatus,
+	} from '$lib/mission';
 	import 'iconify-icon';
 
 	const LIVE_PAYMENT_STATUSES = ['PENDING', 'PAID', 'PAST_DUE'];
 
-	const prestationId = $derived($page.params.id as string);
+	const missionId = $derived($page.params.id as string);
 
 	let pageLoading = $state(true);
 	let busy = $state(false);
-	let prestation: any = $state(null);
+	let mission: any = $state(null);
 	let collectionMethod = $state<'STRIPE' | 'MANUAL'>('STRIPE');
 
-	const status = $derived(prestation?.status as PrestationStatus | undefined);
-	const invoices = $derived((prestation?.documents ?? []).filter((d: any) => d.invoiceNumber));
+	const status = $derived(mission?.status as MissionStatus | undefined);
+	const invoices = $derived((mission?.documents ?? []).filter((d: any) => d.invoiceNumber));
 	const closed = $derived(status === 'CANCELLED' || status === 'PAID');
 
 	// invoiced is the sum of the invoice totals, paid the sum of the payments already settled
 	const invoicedTotal = $derived(invoices.reduce((sum: number, d: any) => sum + Number(d.total), 0));
 	const paidTotal = $derived(
-		(prestation?.payments ?? [])
+		(mission?.payments ?? [])
 			.filter((p: any) => p.status === 'PAID')
 			.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
 	);
@@ -52,11 +52,11 @@
 
 	async function load() {
 		try {
-			prestation = await trpc.prestation.getById.query({ id: prestationId });
+			mission = await trpc.mission.getById.query({ id: missionId });
 		} catch (err) {
-			logger.error({ err }, 'Failed to fetch prestation');
-			toast.push('Prestation introuvable', 'error');
-			goto(resolve('/admin/prestations'));
+			logger.error({ err }, 'Failed to fetch mission');
+			toast.push('Mission introuvable', 'error');
+			goto(resolve('/admin/missions'));
 		}
 	}
 
@@ -75,33 +75,33 @@
 		}
 	}
 
-	function setStatus(next: PrestationStatus) {
+	function setStatus(next: MissionStatus) {
 		return run(
-			() => trpc.prestation.setStatus.mutate({ id: prestationId, status: next }),
+			() => trpc.mission.setStatus.mutate({ id: missionId, status: next }),
 			'Statut mis à jour',
 			'Erreur lors du changement de statut'
 		);
 	}
 
-	function cancelPrestation() {
-		if (!confirm('Annuler cette prestation ? Cette action est définitive.'))
+	function cancelMission() {
+		if (!confirm('Annuler cette mission ? Cette action est définitive.'))
 			return;
 
 		return setStatus('CANCELLED');
 	}
 
-	async function deletePrestation() {
-		if (!confirm('Supprimer cette prestation ?'))
+	async function deleteMission() {
+		if (!confirm('Supprimer cette mission ?'))
 			return;
 
 		busy = true;
 
 		try {
-			await trpc.prestation.delete.mutate({ id: prestationId });
-			toast.push('Prestation supprimée', 'success');
-			goto(resolve('/admin/prestations'));
+			await trpc.mission.delete.mutate({ id: missionId });
+			toast.push('Mission supprimée', 'success');
+			goto(resolve('/admin/missions'));
 		} catch (err: any) {
-			logger.error({ err }, 'Failed to delete prestation');
+			logger.error({ err }, 'Failed to delete mission');
 			toast.push(err?.message || 'Erreur lors de la suppression', 'error');
 		} finally {
 			busy = false;
@@ -109,11 +109,11 @@
 	}
 
 	function detach(documentId: string) {
-		if (!confirm('Détacher ce document de la prestation ?'))
+		if (!confirm('Détacher ce document de la mission ?'))
 			return;
 
 		return run(
-			() => trpc.prestation.detachDocument.mutate({ id: prestationId, documentId }),
+			() => trpc.mission.detachDocument.mutate({ id: missionId, documentId }),
 			'Document détaché',
 			'Erreur lors du détachement'
 		);
@@ -122,8 +122,8 @@
 	function generatePayment(documentId: string) {
 		return run(
 			() =>
-				trpc.prestation.createPayment.mutate({
-					id: prestationId,
+				trpc.mission.createPayment.mutate({
+					id: missionId,
 					documentId,
 					collectionMethod,
 				}),
@@ -150,17 +150,17 @@
 	}
 
 	function livePaymentFor(documentId: string) {
-		return prestation.payments.find(
+		return mission.payments.find(
 			(p: any) => p.documentId === documentId && LIVE_PAYMENT_STATUSES.includes(p.status)
 		);
 	}
 
 	function addDocumentHref(type: string) {
-		return `/admin/documents/create?prestationId=${prestationId}&type=${type}`;
+		return `/admin/documents/create?missionId=${missionId}&type=${type}`;
 	}
 </script>
 
-{#if pageLoading || !prestation}
+{#if pageLoading || !mission}
 	<div class="flex flex-col items-center justify-center h-screen space-y-4">
 		<Spinner />
 		<p class="text-sm text-muted-foreground">Chargement...</p>
@@ -169,28 +169,28 @@
 	<div class="p-8 max-w-[1100px] mx-auto space-y-6">
 		<div>
 			<button
-				onclick={() => goto(resolve('/admin/prestations'))}
+				onclick={() => goto(resolve('/admin/missions'))}
 				class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 			>
 				<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-				Retour aux prestations
+				Retour aux missions
 			</button>
 
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
 					<div class="flex items-center gap-3">
-						<h1 class="text-2xl font-bold text-foreground">{prestation.name}</h1>
-						<Badge variant={STATUS_VARIANTS[prestation.status as PrestationStatus]}>
-							{STATUS_LABELS[prestation.status as PrestationStatus]}
+						<h1 class="text-2xl font-bold text-foreground">{mission.name}</h1>
+						<Badge variant={STATUS_VARIANTS[mission.status as MissionStatus]}>
+							{STATUS_LABELS[mission.status as MissionStatus]}
 						</Badge>
 					</div>
-					{#if prestation.description}
-						<p class="text-sm text-muted-foreground mt-1 max-w-2xl">{prestation.description}</p>
+					{#if mission.description}
+						<p class="text-sm text-muted-foreground mt-1 max-w-2xl">{mission.description}</p>
 					{/if}
 				</div>
 
 				<div class="flex flex-wrap gap-2">
-					{#each NEXT_STATUSES[prestation.status as PrestationStatus] as next (next.status)}
+					{#each NEXT_STATUSES[mission.status as MissionStatus] as next (next.status)}
 						<button
 							disabled={busy}
 							onclick={() => setStatus(next.status)}
@@ -202,7 +202,7 @@
 					{#if !closed}
 						<button
 							disabled={busy}
-							onclick={cancelPrestation}
+							onclick={cancelMission}
 							class="rounded-md px-4 h-9 text-sm font-medium text-muted-foreground cursor-pointer hover:text-red-600 hover:bg-muted disabled:opacity-50"
 						>
 							Annuler
@@ -210,7 +210,7 @@
 					{/if}
 					<button
 						disabled={busy}
-						onclick={deletePrestation}
+						onclick={deleteMission}
 						class="rounded-md px-3 h-9 text-muted-foreground cursor-pointer hover:text-red-600 hover:bg-muted disabled:opacity-50"
 						title="Supprimer"
 					>
@@ -224,23 +224,23 @@
 			<div class="rounded-xl bg-muted/40 p-4">
 				<div class="text-xs font-medium text-muted-foreground uppercase mb-2">Client</div>
 				<a
-					href={resolve(`/admin/clients/${prestation.client.id}`)}
+					href={resolve(`/admin/clients/${mission.client.id}`)}
 					class="font-medium text-foreground hover:underline"
 				>
-					{prestation.client.companyName}
+					{mission.client.companyName}
 				</a>
 				<div class="text-sm text-muted-foreground">
-					{prestation.client.contactFirstName}
-					{prestation.client.contactLastName}
+					{mission.client.contactFirstName}
+					{mission.client.contactLastName}
 				</div>
-				{#if prestation.client.contactEmail}
-					<div class="text-sm text-muted-foreground">{prestation.client.contactEmail}</div>
+				{#if mission.client.contactEmail}
+					<div class="text-sm text-muted-foreground">{mission.client.contactEmail}</div>
 				{/if}
 			</div>
 
 			<div class="rounded-xl bg-muted/40 p-4">
 				<div class="text-xs font-medium text-muted-foreground uppercase mb-2">Prestataires</div>
-				{#each prestation.providers as link (link.id)}
+				{#each mission.providers as link (link.id)}
 					<div class="text-sm">
 						<span class="font-medium text-foreground">{link.provider.name}</span>
 						<span class="text-muted-foreground"> · {ROLE_LABELS[link.role]}</span>
@@ -261,9 +261,9 @@
 		<section class="rounded-xl bg-muted/40 p-6 space-y-4">
 			<h2 class="text-base font-semibold text-foreground">Documents</h2>
 
-			{#if prestation.documents.length > 0}
+			{#if mission.documents.length > 0}
 				<ul class="space-y-2">
-					{#each prestation.documents as doc (doc.id)}
+					{#each mission.documents as doc (doc.id)}
 						<li class="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2">
 							<div class="min-w-0">
 								<div class="text-sm font-medium text-foreground">
@@ -289,7 +289,7 @@
 									disabled={busy}
 									onclick={() => detach(doc.id)}
 									class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md disabled:opacity-50"
-									title="Détacher de la prestation"
+									title="Détacher de la mission"
 								>
 									<iconify-icon icon="solar:link-broken-bold" width="16"></iconify-icon>
 								</button>
@@ -329,9 +329,9 @@
 				</select>
 			</div>
 
-			{#if prestation.payments.length > 0}
+			{#if mission.payments.length > 0}
 				<ul class="space-y-2">
-					{#each prestation.payments as payment (payment.id)}
+					{#each mission.payments as payment (payment.id)}
 						<li class="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2">
 							<div>
 								<a
@@ -370,7 +370,7 @@
 						</button>
 					</div>
 				{/each}
-				{#if prestation.payments.length === 0 && toBill.length === 0}
+				{#if mission.payments.length === 0 && toBill.length === 0}
 					<p class="text-sm text-muted-foreground">
 						Ajoutez une facture pour pouvoir générer son paiement.
 					</p>

@@ -93,7 +93,7 @@ The web app (`apps/web`) serves both client and admin interfaces from a single S
 
 ### tRPC modules
 
-Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, prestation, payment, settings, document, media, admin, stripe. Three procedure levels: `publicProcedure`, `protectedProcedure`, `adminProcedure`.
+Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe. Three procedure levels: `publicProcedure`, `protectedProcedure`, `adminProcedure`.
 
 ### Authentication
 
@@ -105,11 +105,11 @@ Optional, invite-only SSO in `apps/backend/src/oidc/` (see `docs/architecture.md
 
 ### Prisma
 
-Multi-file schema in `packages/database/prisma/schema/`. Core models: User, Client, Prestation, Payment, Document, Settings, Media. The `@repo/database` package has conditional exports (browser stub vs. real client) to prevent Node.js imports in the browser.
+Multi-file schema in `packages/database/prisma/schema/`. Core models: User, Client, Mission, Payment, Document, Settings, Media. The `@repo/database` package has conditional exports (browser stub vs. real client) to prevent Node.js imports in the browser.
 
 ### Payments flow
 
-Admin creates a prestation for a client, attaches its quotes, contracts and invoice, then generates the payment from the invoice (`prestation.createPayment`). The payment can also be created on its own.
+Admin creates a mission for a client, attaches its quotes, contracts and invoice, then generates the payment from the invoice (`mission.createPayment`). The payment can also be created on its own.
 
 Flow of a payment: admin creates payment -> backend sends email to client -> client clicks payment link -> Stripe checkout -> webhook updates status to PAID -> receipt available.
 

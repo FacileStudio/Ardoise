@@ -1,6 +1,6 @@
-export type PrestationStatus = 'DRAFT' | 'QUOTED' | 'ACCEPTED' | 'INVOICED' | 'PAID' | 'CANCELLED';
+export type MissionStatus = 'DRAFT' | 'QUOTED' | 'ACCEPTED' | 'INVOICED' | 'PAID' | 'CANCELLED';
 
-export const STATUS_LABELS: Record<PrestationStatus, string> = {
+export const STATUS_LABELS: Record<MissionStatus, string> = {
 	DRAFT: 'Brouillon',
 	QUOTED: 'Devis envoyé',
 	ACCEPTED: 'Devis accepté',
@@ -9,7 +9,7 @@ export const STATUS_LABELS: Record<PrestationStatus, string> = {
 	CANCELLED: 'Annulée',
 };
 
-export const STATUS_VARIANTS: Record<PrestationStatus, 'slate' | 'indigo' | 'amber' | 'emerald' | 'rose'> = {
+export const STATUS_VARIANTS: Record<MissionStatus, 'slate' | 'indigo' | 'amber' | 'emerald' | 'rose'> = {
 	DRAFT: 'slate',
 	QUOTED: 'indigo',
 	ACCEPTED: 'indigo',
@@ -19,7 +19,7 @@ export const STATUS_VARIANTS: Record<PrestationStatus, 'slate' | 'indigo' | 'amb
 };
 
 // the server owns the transition map, this one only decides which buttons to show
-export const NEXT_STATUSES: Record<PrestationStatus, Array<{ status: PrestationStatus; label: string }>> = {
+export const NEXT_STATUSES: Record<MissionStatus, Array<{ status: MissionStatus; label: string }>> = {
 	DRAFT: [{ status: 'QUOTED', label: 'Devis envoyé' }],
 	QUOTED: [
 		{ status: 'ACCEPTED', label: 'Devis accepté' },

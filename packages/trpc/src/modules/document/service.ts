@@ -669,7 +669,7 @@ export async function loadDocumentContext(
   clientId: string,
   providerId: string,
   spaceId?: string,
-  prestationId?: string
+  missionId?: string
 ) {
   const scope = await spaceService.resolveScope(db, userId, spaceId);
 
@@ -689,25 +689,25 @@ export async function loadDocumentContext(
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
   }
 
-  if (prestationId) {
-    const prestation = await db.prestation.findFirst({
-      where: { id: prestationId, clientId: client.id, ...scopeWhere(scope) },
+  if (missionId) {
+    const mission = await db.mission.findFirst({
+      where: { id: missionId, clientId: client.id, ...scopeWhere(scope) },
       select: { id: true, status: true },
     });
 
-    if (!prestation) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Prestation not found' });
+    if (!mission) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Mission not found' });
     }
 
-    if (prestation.status === 'CANCELLED') {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Prestation is cancelled' });
+    if (mission.status === 'CANCELLED') {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mission is cancelled' });
     }
   }
 
   const settings = await getSettingsRecord(db);
   const tvaRate = Number(provider.tvaRate || 20);
 
-  return { client, provider, settings, tvaRate, scope, prestationId: prestationId ?? null };
+  return { client, provider, settings, tvaRate, scope, missionId: missionId ?? null };
 }
 
 export function computeInvoiceTotals(
@@ -732,11 +732,11 @@ export function buildDocumentPersistenceBase(
   createdBy: string,
   legalPersistence: ReturnType<typeof buildDocumentLegalPersistence>,
   scope: Scope,
-  prestationId: string | null = null
+  missionId: string | null = null
 ) {
   return {
     ...scopeWhere(scope),
-    prestationId,
+    missionId,
     clientName: documentData.client_name ?? '',
     clientSiret: documentData.client_siret,
     clientAddress: documentData.client_address,

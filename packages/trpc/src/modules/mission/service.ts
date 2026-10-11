@@ -2,8 +2,8 @@ import { TRPCError } from '@trpc/server';
 import type {
   PrismaClient,
   Prisma,
-  PrestationStatus,
-  PrestationProviderRole,
+  MissionStatus,
+  MissionProviderRole,
 } from '@repo/database';
 import type { StripeService } from '@repo/stripe';
 import type { SMTPClient } from '@repo/smtp';
@@ -11,14 +11,14 @@ import type { ServerEnv } from '@repo/env';
 import { paymentService } from '../payment/service';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
 import type {
-  CreatePrestationInput,
-  UpdatePrestationInput,
-  ListPrestationsParams,
-  CreatePrestationPaymentInput,
+  CreateMissionInput,
+  UpdateMissionInput,
+  ListMissionsParams,
+  CreateMissionPaymentInput,
   ProviderLink,
 } from './types';
 
-const TRANSITIONS: Record<PrestationStatus, PrestationStatus[]> = {
+const TRANSITIONS: Record<MissionStatus, MissionStatus[]> = {
   DRAFT: ['QUOTED', 'CANCELLED'],
   QUOTED: ['DRAFT', 'ACCEPTED', 'CANCELLED'],
   ACCEPTED: ['INVOICED', 'CANCELLED'],
@@ -31,19 +31,19 @@ const LIVE_PAYMENT_STATUSES = ['PENDING', 'PAID', 'PAST_DUE'] as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export interface PrestationPaymentDeps {
+export interface MissionPaymentDeps {
   stripe: StripeService | null;
   smtp: SMTPClient | null;
   env: ServerEnv;
   appOrigin: string;
 }
 
-async function requirePrestation(db: PrismaClient, userId: string, id: string) {
+async function requireMission(db: PrismaClient, userId: string, id: string) {
   return requireRowScope(
     db,
     userId,
-    await db.prestation.findUnique({ where: { id } }),
-    'Prestation not found'
+    await db.mission.findUnique({ where: { id } }),
+    'Mission not found'
   );
 }
 
@@ -77,7 +77,7 @@ async function requireProviders(db: PrismaClient, links: ProviderLink[], spaceId
 const providerRows = (links: ProviderLink[]) =>
   links.map((link) => ({
     providerId: link.providerId as string,
-    role: link.role as PrestationProviderRole,
+    role: link.role as MissionProviderRole,
   }));
 
 const detail = {
@@ -91,13 +91,13 @@ const detail = {
     },
   },
   providers: { include: { provider: { select: { id: true, name: true, legalName: true } } } },
-} satisfies Prisma.PrestationInclude;
+} satisfies Prisma.MissionInclude;
 
-export const prestationService = {
-  listPrestations: async (db: PrismaClient, params: ListPrestationsParams, scope: Scope) => {
+export const missionService = {
+  listMissions: async (db: PrismaClient, params: ListMissionsParams, scope: Scope) => {
     const { page, limit, status, clientId, search } = params;
 
-    const where: Prisma.PrestationWhereInput = {
+    const where: Prisma.MissionWhereInput = {
       ...scopeWhere(scope),
       ...(status ? { status } : {}),
       ...(clientId ? { clientId } : {}),
@@ -110,25 +110,25 @@ export const prestationService = {
       ];
     }
 
-    const [prestations, total] = await Promise.all([
-      db.prestation.findMany({
+    const [missions, total] = await Promise.all([
+      db.mission.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         include: { ...detail, _count: { select: { documents: true, payments: true } } },
         orderBy: { createdAt: 'desc' },
       }),
-      db.prestation.count({ where }),
+      db.mission.count({ where }),
     ]);
 
-    return { prestations, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return { missions, total, page, limit, totalPages: Math.ceil(total / limit) };
   },
 
-  getPrestationById: async (db: PrismaClient, userId: string, id: string) => {
+  getMissionById: async (db: PrismaClient, userId: string, id: string) => {
     return requireRowScope(
       db,
       userId,
-      await db.prestation.findUnique({
+      await db.mission.findUnique({
         where: { id },
         include: {
           ...detail,
@@ -161,17 +161,17 @@ export const prestationService = {
           },
         },
       }),
-      'Prestation not found'
+      'Mission not found'
     );
   },
 
-  createPrestation: async (db: PrismaClient, data: CreatePrestationInput, scope: Scope) => {
+  createMission: async (db: PrismaClient, data: CreateMissionInput, scope: Scope) => {
     const { spaceId } = scopeWhere(scope);
 
     await requireClient(db, data.clientId, spaceId);
     await requireProviders(db, data.providers, spaceId);
 
-    return db.prestation.create({
+    return db.mission.create({
       data: {
         name: data.name,
         description: data.description?.trim() || null,
@@ -183,19 +183,19 @@ export const prestationService = {
     });
   },
 
-  updatePrestation: async (
+  updateMission: async (
     db: PrismaClient,
     userId: string,
     id: string,
-    data: Omit<UpdatePrestationInput, 'id'>
+    data: Omit<UpdateMissionInput, 'id'>
   ) => {
-    const existing = await requirePrestation(db, userId, id);
+    const existing = await requireMission(db, userId, id);
 
     if (data.providers) {
       await requireProviders(db, data.providers, existing.spaceId);
     }
 
-    return db.prestation.update({
+    return db.mission.update({
       where: { id },
       data: {
         name: data.name,
@@ -208,55 +208,55 @@ export const prestationService = {
     });
   },
 
-  setStatus: async (db: PrismaClient, userId: string, id: string, status: PrestationStatus) => {
-    const existing = await requirePrestation(db, userId, id);
+  setStatus: async (db: PrismaClient, userId: string, id: string, status: MissionStatus) => {
+    const existing = await requireMission(db, userId, id);
 
     if (!TRANSITIONS[existing.status].includes(status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: `Cannot move a prestation from ${existing.status} to ${status}`,
+        message: `Cannot move a mission from ${existing.status} to ${status}`,
       });
     }
 
-    return db.prestation.update({ where: { id }, data: { status }, include: detail });
+    return db.mission.update({ where: { id }, data: { status }, include: detail });
   },
 
   attachDocument: async (db: PrismaClient, userId: string, id: string, documentId: string) => {
-    const prestation = await requirePrestation(db, userId, id);
+    const mission = await requireMission(db, userId, id);
 
     const document = await db.document.findFirst({
-      where: { id: documentId, spaceId: prestation.spaceId },
-      select: { id: true, prestationId: true },
+      where: { id: documentId, spaceId: mission.spaceId },
+      select: { id: true, missionId: true },
     });
 
     if (!document) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
     }
 
-    if (document.prestationId && document.prestationId !== id) {
+    if (document.missionId && document.missionId !== id) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'Document already belongs to another prestation',
+        message: 'Document already belongs to another mission',
       });
     }
 
     return db.document.update({
       where: { id: documentId },
-      data: { prestationId: id },
-      select: { id: true, prestationId: true },
+      data: { missionId: id },
+      select: { id: true, missionId: true },
     });
   },
 
   detachDocument: async (db: PrismaClient, userId: string, id: string, documentId: string) => {
-    await requirePrestation(db, userId, id);
+    await requireMission(db, userId, id);
 
     const document = await db.document.findFirst({
-      where: { id: documentId, prestationId: id },
+      where: { id: documentId, missionId: id },
       select: { id: true },
     });
 
     if (!document) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found in this prestation' });
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found in this mission' });
     }
 
     const settled = await db.payment.count({
@@ -272,29 +272,29 @@ export const prestationService = {
 
     return db.document.update({
       where: { id: documentId },
-      data: { prestationId: null },
-      select: { id: true, prestationId: true },
+      data: { missionId: null },
+      select: { id: true, missionId: true },
     });
   },
 
   createPayment: async (
     db: PrismaClient,
     userId: string,
-    deps: PrestationPaymentDeps,
-    input: CreatePrestationPaymentInput
+    deps: MissionPaymentDeps,
+    input: CreateMissionPaymentInput
   ) => {
-    const prestation = await requirePrestation(db, userId, input.id);
+    const mission = await requireMission(db, userId, input.id);
 
-    if (prestation.status === 'CANCELLED') {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Prestation is cancelled' });
+    if (mission.status === 'CANCELLED') {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mission is cancelled' });
     }
 
     const document = await db.document.findFirst({
-      where: { id: input.documentId, prestationId: prestation.id },
+      where: { id: input.documentId, missionId: mission.id },
     });
 
     if (!document) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found in this prestation' });
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found in this mission' });
     }
 
     if (!document.invoiceNumber) {
@@ -321,7 +321,7 @@ export const prestationService = {
       deps.env,
       deps.appOrigin,
       {
-        clientId: prestation.clientId,
+        clientId: mission.clientId,
         amount: Number(document.total),
         description: `Facture ${document.invoiceNumber}`,
         reference: document.invoiceNumber,
@@ -330,39 +330,39 @@ export const prestationService = {
         dueDate,
         attachedFiles: [],
         attachedDocumentIds: [document.id],
-        prestationId: prestation.id,
+        missionId: mission.id,
         documentId: document.id,
       }
     );
 
-    // asking for payment on an invoice is what makes an accepted prestation invoiced
-    await db.prestation.updateMany({
-      where: { id: prestation.id, status: 'ACCEPTED' },
+    // asking for payment on an invoice is what makes an accepted mission invoiced
+    await db.mission.updateMany({
+      where: { id: mission.id, status: 'ACCEPTED' },
       data: { status: 'INVOICED' },
     });
 
     return payment;
   },
 
-  deletePrestation: async (db: PrismaClient, userId: string, id: string) => {
-    await requirePrestation(db, userId, id);
+  deleteMission: async (db: PrismaClient, userId: string, id: string) => {
+    await requireMission(db, userId, id);
 
     const [invoices, payments] = await Promise.all([
-      db.document.count({ where: { prestationId: id, invoiceNumber: { not: null } } }),
-      db.payment.count({ where: { prestationId: id } }),
+      db.document.count({ where: { missionId: id, invoiceNumber: { not: null } } }),
+      db.payment.count({ where: { missionId: id } }),
     ]);
 
     if (invoices > 0 || payments > 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Cannot delete a prestation with invoices or payments. Cancel it instead.',
+        message: 'Cannot delete a mission with invoices or payments. Cancel it instead.',
       });
     }
 
-    await db.prestation.delete({ where: { id } });
+    await db.mission.delete({ where: { id } });
 
     return { success: true };
   },
 };
 
-export default prestationService;
+export default missionService;

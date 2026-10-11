@@ -21,7 +21,7 @@ export const CreatePaymentSchema = z.object({
   dueDate: z.coerce.date(),
   attachedFiles: z.array(z.string().url()).optional().default([]),
   attachedDocumentIds: z.array(z.string()).optional().default([]),
-  prestationId: z.string().optional(),
+  missionId: z.string().optional(),
   documentId: z.string().optional(),
 });
 

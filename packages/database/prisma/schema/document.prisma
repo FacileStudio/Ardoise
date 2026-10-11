@@ -76,8 +76,8 @@ model Document {
   spaceId          String?
   space            Space?   @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
-  prestationId     String?
-  prestation       Prestation? @relation(fields: [prestationId], references: [id], onDelete: SetNull)
+  missionId     String?
+  mission          Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
 
   payments           Payment[]
   paymentAttachments PaymentDocument[]
@@ -88,5 +88,5 @@ model Document {
   @@index([providerId])
   @@index([clientName])
   @@index([spaceId])
-  @@index([prestationId])
+  @@index([missionId])
 }

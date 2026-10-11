@@ -12,7 +12,7 @@ import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
-import { syncPrestationPaid } from '../prestation/sync';
+import { syncMissionPaid } from '../mission/sync';
 import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsParams } from './types';
 
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
@@ -282,14 +282,14 @@ export const paymentService = {
       }
     }
 
-    if (data.prestationId) {
-      const prestation = await db.prestation.findFirst({
-        where: { id: data.prestationId, clientId: client.id, spaceId: client.spaceId },
+    if (data.missionId) {
+      const mission = await db.mission.findFirst({
+        where: { id: data.missionId, clientId: client.id, spaceId: client.spaceId },
         select: { id: true },
       });
 
-      if (!prestation) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Prestation not found' });
+      if (!mission) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Mission not found' });
       }
     }
 
@@ -298,7 +298,7 @@ export const paymentService = {
         where: {
           id: data.documentId,
           spaceId: client.spaceId,
-          ...(data.prestationId ? { prestationId: data.prestationId } : {}),
+          ...(data.missionId ? { missionId: data.missionId } : {}),
         },
         select: { id: true },
       });
@@ -426,7 +426,7 @@ export const paymentService = {
       data: {
         clientId: data.clientId,
         spaceId: client.spaceId,
-        prestationId: data.prestationId,
+        missionId: data.missionId,
         documentId: data.documentId,
         amount: feeCalculation.amount,
         stripeFee: useStripe ? feeCalculation.stripeFee : 0,
@@ -518,7 +518,7 @@ export const paymentService = {
     });
 
     if (updated.status === 'PAID') {
-      await syncPrestationPaid(db, updated.prestationId);
+      await syncMissionPaid(db, updated.missionId);
     }
 
     return updated;
@@ -910,7 +910,7 @@ export const paymentService = {
 
         if (updated.count === 0) break;
 
-        await syncPrestationPaid(db, payment.prestationId);
+        await syncMissionPaid(db, payment.missionId);
 
         try {
           await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);
@@ -956,7 +956,7 @@ export const paymentService = {
 
         if (updated.count === 0) break;
 
-        await syncPrestationPaid(db, payment.prestationId);
+        await syncMissionPaid(db, payment.missionId);
 
         try {
           await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);

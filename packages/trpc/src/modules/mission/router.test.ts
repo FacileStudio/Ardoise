@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
-import { prestationRouter } from './router';
-import { syncPrestationPaid } from './sync';
+import { missionRouter } from './router';
+import { syncMissionPaid } from './sync';
 
-const prestationRow = { id: 'p-1', clientId: 'client-1', spaceId: null, status: 'DRAFT' };
+const missionRow = { id: 'p-1', clientId: 'client-1', spaceId: null, status: 'DRAFT' };
 
 const invoice = {
   id: 'doc-1',
-  prestationId: 'p-1',
+  missionId: 'p-1',
   invoiceNumber: 'F-001',
   total: '1200.00',
   paymentTermsDays: 30,
 };
 
 function callerFor(db: Record<string, unknown>) {
-  return prestationRouter.createCaller({
+  return missionRouter.createCaller({
     db: {
       settings: { findUnique: async () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }) },
       ...db,
@@ -31,12 +31,12 @@ function callerFor(db: Record<string, unknown>) {
   } as any);
 }
 
-describe('prestationRouter.create', () => {
+describe('missionRouter.create', () => {
   it('refuses a space the caller is not a member of', async () => {
     const created: any[] = [];
     const caller = callerFor({
       spaceMember: { findUnique: async () => null },
-      prestation: { create: async (args: any) => created.push(args) },
+      mission: { create: async (args: any) => created.push(args) },
     });
 
     await expect(
@@ -50,7 +50,7 @@ describe('prestationRouter.create', () => {
     const created: any[] = [];
     const caller = callerFor({
       client: { findFirst: async () => null },
-      prestation: { create: async (args: any) => created.push(args) },
+      mission: { create: async (args: any) => created.push(args) },
     });
 
     await expect(caller.create({ name: 'Site', clientId: 'client-x' } as any)).rejects.toThrow(
@@ -72,7 +72,7 @@ describe('prestationRouter.create', () => {
     ).rejects.toThrow('A provider can only be linked once');
   });
 
-  it('lands the prestation in the requested space with its providers', async () => {
+  it('lands the mission in the requested space with its providers', async () => {
     const created: any[] = [];
     const where: any[] = [];
     const caller = callerFor({
@@ -84,7 +84,7 @@ describe('prestationRouter.create', () => {
         },
       },
       provider: { count: async () => 1 },
-      prestation: {
+      mission: {
         create: async (args: any) => {
           created.push(args);
           return { id: 'p-1' };
@@ -107,10 +107,10 @@ describe('prestationRouter.create', () => {
   });
 });
 
-describe('prestationRouter.setStatus', () => {
+describe('missionRouter.setStatus', () => {
   const dbAt = (status: string, updated: any[]) => ({
-    prestation: {
-      findUnique: async () => ({ ...prestationRow, status }),
+    mission: {
+      findUnique: async () => ({ ...missionRow, status }),
       update: async (args: any) => updated.push(args),
     },
   });
@@ -120,7 +120,7 @@ describe('prestationRouter.setStatus', () => {
 
     await expect(
       callerFor(dbAt('DRAFT', updated)).setStatus({ id: 'p-1', status: 'PAID' })
-    ).rejects.toThrow('Cannot move a prestation from DRAFT to PAID');
+    ).rejects.toThrow('Cannot move a mission from DRAFT to PAID');
 
     expect(updated.length).toBe(0);
   });
@@ -136,32 +136,32 @@ describe('prestationRouter.setStatus', () => {
   it('treats PAID as final', async () => {
     await expect(
       callerFor(dbAt('PAID', [])).setStatus({ id: 'p-1', status: 'CANCELLED' })
-    ).rejects.toThrow('Cannot move a prestation from PAID to CANCELLED');
+    ).rejects.toThrow('Cannot move a mission from PAID to CANCELLED');
   });
 });
 
-describe('prestationRouter.delete', () => {
-  it('keeps a prestation that holds an issued invoice', async () => {
+describe('missionRouter.delete', () => {
+  it('keeps a mission that holds an issued invoice', async () => {
     const deleted: any[] = [];
     const caller = callerFor({
-      prestation: {
-        findUnique: async () => prestationRow,
+      mission: {
+        findUnique: async () => missionRow,
         delete: async (args: any) => deleted.push(args),
       },
       document: { count: async () => 1 },
       payment: { count: async () => 0 },
     });
 
-    await expect(caller.delete({ id: 'p-1' })).rejects.toThrow('Cannot delete a prestation');
+    await expect(caller.delete({ id: 'p-1' })).rejects.toThrow('Cannot delete a mission');
 
     expect(deleted.length).toBe(0);
   });
 
-  it('deletes a prestation holding only drafts and quotes', async () => {
+  it('deletes a mission holding only drafts and quotes', async () => {
     const deleted: any[] = [];
     const caller = callerFor({
-      prestation: {
-        findUnique: async () => prestationRow,
+      mission: {
+        findUnique: async () => missionRow,
         delete: async (args: any) => deleted.push(args),
       },
       document: { count: async () => 0 },
@@ -174,12 +174,12 @@ describe('prestationRouter.delete', () => {
   });
 });
 
-describe('prestationRouter.createPayment', () => {
+describe('missionRouter.createPayment', () => {
   const input = { id: 'p-1', documentId: 'doc-1', collectionMethod: 'MANUAL' } as const;
 
   const dbWith = (document: any, live: any, created: any[] = [], moved: any[] = []) => ({
-    prestation: {
-      findUnique: async () => prestationRow,
+    mission: {
+      findUnique: async () => missionRow,
       findFirst: async () => ({ id: 'p-1' }),
       updateMany: async (args: any) => moved.push(args),
     },
@@ -215,25 +215,25 @@ describe('prestationRouter.createPayment', () => {
     );
   });
 
-  it('refuses a cancelled prestation', async () => {
+  it('refuses a cancelled mission', async () => {
     const db = dbWith(invoice, null);
-    db.prestation.findUnique = async () => ({ ...prestationRow, status: 'CANCELLED' });
+    db.mission.findUnique = async () => ({ ...missionRow, status: 'CANCELLED' });
 
-    await expect(callerFor(db).createPayment(input)).rejects.toThrow('Prestation is cancelled');
+    await expect(callerFor(db).createPayment(input)).rejects.toThrow('Mission is cancelled');
   });
 
-  it('bills the invoice total and links the payment to its prestation and document', async () => {
+  it('bills the invoice total and links the payment to its mission and document', async () => {
     const created: any[] = [];
 
     await callerFor(dbWith(invoice, null, created)).createPayment(input);
 
     expect(created[0].data.amount).toBe(1200);
-    expect(created[0].data.prestationId).toBe('p-1');
+    expect(created[0].data.missionId).toBe('p-1');
     expect(created[0].data.documentId).toBe('doc-1');
     expect(created[0].data.reference).toBe('F-001');
   });
 
-  it('moves an accepted prestation to invoiced once the payment exists', async () => {
+  it('moves an accepted mission to invoiced once the payment exists', async () => {
     const moved: any[] = [];
 
     await callerFor(dbWith(invoice, null, [], moved)).createPayment(input);
@@ -245,18 +245,18 @@ describe('prestationRouter.createPayment', () => {
   });
 });
 
-describe('prestation status sync after a payment', () => {
+describe('mission status sync after a payment', () => {
   const dbFor = (invoices: string[], paid: string[], updates: any[]) =>
     ({
       document: { findMany: async () => invoices.map((id) => ({ id })) },
       payment: { findMany: async () => paid.map((documentId) => ({ documentId })) },
-      prestation: { updateMany: async (args: any) => updates.push(args) },
+      mission: { updateMany: async (args: any) => updates.push(args) },
     }) as unknown as PrismaClient;
 
-  it('marks the prestation paid once every invoice has a paid payment', async () => {
+  it('marks the mission paid once every invoice has a paid payment', async () => {
     const updates: any[] = [];
 
-    await syncPrestationPaid(dbFor(['d1', 'd2'], ['d1', 'd2'], updates), 'p-1');
+    await syncMissionPaid(dbFor(['d1', 'd2'], ['d1', 'd2'], updates), 'p-1');
 
     expect(updates[0]).toEqual({
       where: { id: 'p-1', status: 'INVOICED' },
@@ -267,23 +267,23 @@ describe('prestation status sync after a payment', () => {
   it('waits while one invoice is still unpaid', async () => {
     const updates: any[] = [];
 
-    await syncPrestationPaid(dbFor(['d1', 'd2'], ['d1'], updates), 'p-1');
+    await syncMissionPaid(dbFor(['d1', 'd2'], ['d1'], updates), 'p-1');
 
     expect(updates.length).toBe(0);
   });
 
-  it('leaves a prestation with no invoice alone', async () => {
+  it('leaves a mission with no invoice alone', async () => {
     const updates: any[] = [];
 
-    await syncPrestationPaid(dbFor([], [], updates), 'p-1');
+    await syncMissionPaid(dbFor([], [], updates), 'p-1');
 
     expect(updates.length).toBe(0);
   });
 
-  it('ignores a payment that belongs to no prestation', async () => {
+  it('ignores a payment that belongs to no mission', async () => {
     const updates: any[] = [];
 
-    await syncPrestationPaid(dbFor(['d1'], ['d1'], updates), null);
+    await syncMissionPaid(dbFor(['d1'], ['d1'], updates), null);
 
     expect(updates.length).toBe(0);
   });

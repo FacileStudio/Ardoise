@@ -7,7 +7,7 @@
 	import { toast } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
-	import { ROLE_LABELS } from '$lib/prestation';
+	import { ROLE_LABELS } from '$lib/mission';
 	import 'iconify-icon';
 
 	type Role = 'LEAD' | 'SUBCONTRACTOR';
@@ -77,7 +77,7 @@
 		submitting = true;
 
 		try {
-			const prestation = await trpc.prestation.create.mutate({
+			const mission = await trpc.mission.create.mutate({
 				name,
 				description: description || undefined,
 				clientId,
@@ -85,10 +85,10 @@
 				spaceId: spaceContext.spaceId,
 			});
 
-			toast.push('Prestation créée', 'success');
-			goto(resolve(`/admin/prestations/${prestation.id}`));
+			toast.push('Mission créée', 'success');
+			goto(resolve(`/admin/missions/${mission.id}`));
 		} catch (err: any) {
-			logger.error({ err }, 'Failed to create prestation');
+			logger.error({ err }, 'Failed to create mission');
 			formMessage = err.message || 'Erreur lors de la création';
 		} finally {
 			submitting = false;
@@ -99,15 +99,15 @@
 <div class="max-w-3xl mx-auto p-6 space-y-6">
 	<div>
 		<button
-			onclick={() => goto(resolve('/admin/prestations'))}
+			onclick={() => goto(resolve('/admin/missions'))}
 			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
 		>
 			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			Retour aux prestations
+			Retour aux missions
 		</button>
-		<h1 class="text-2xl font-bold text-foreground">Nouvelle prestation</h1>
+		<h1 class="text-2xl font-bold text-foreground">Nouvelle mission</h1>
 		<p class="text-sm text-muted-foreground mt-1">
-			Vous ajouterez les devis, contrats et factures depuis la prestation
+			Vous ajouterez les devis, contrats et factures depuis la mission
 		</p>
 	</div>
 
@@ -193,11 +193,11 @@
 		</div>
 
 		<div class="flex justify-end gap-3">
-			<Button type="button" intent="ghost" onclick={() => goto(resolve('/admin/prestations'))}>
+			<Button type="button" intent="ghost" onclick={() => goto(resolve('/admin/missions'))}>
 				Annuler
 			</Button>
 			<Button type="submit" disabled={submitting}>
-				{submitting ? 'Création...' : 'Créer la prestation'}
+				{submitting ? 'Création...' : 'Créer la mission'}
 			</Button>
 		</div>
 	</form>

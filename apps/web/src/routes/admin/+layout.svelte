@@ -8,7 +8,7 @@
     import 'iconify-icon';
 
     const navLinks = [
-        { label: 'Prestations', icon: 'solar:case-round-linear', href: '/admin/prestations' },
+        { label: 'Missions', icon: 'solar:case-round-linear', href: '/admin/missions' },
         { label: $i18n.t('nav.documents'), icon: 'solar:document-linear', href: '/admin/documents' },
         { label: $i18n.t('nav.clients'), icon: 'solar:users-group-two-rounded-linear', href: '/admin/clients' },
         { label: $i18n.t('nav.payments'), icon: 'solar:wallet-linear', href: '/admin/payments' },

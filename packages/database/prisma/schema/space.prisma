@@ -15,7 +15,7 @@ model Space {
   documents   Document[]
   payments    Payment[]
   providers   Provider[]
-  prestations Prestation[]
+  missions Mission[]
 }
 
 model SpaceMember {

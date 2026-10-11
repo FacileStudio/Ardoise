@@ -270,7 +270,7 @@ export const clientService = {
         where: { id },
         include: {
           payments: true,
-          prestations: { select: { id: true }, take: 1 },
+          missions: { select: { id: true }, take: 1 },
         },
       }),
       'Client not found'
@@ -283,10 +283,10 @@ export const clientService = {
       });
     }
 
-    if (existingClient.prestations.length > 0) {
+    if (existingClient.missions.length > 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Cannot delete client with existing prestations. Cancel or delete them first.',
+        message: 'Cannot delete client with existing missions. Cancel or delete them first.',
       });
     }
 

@@ -24,7 +24,7 @@
     }
 
     const items = [
-        { href: '/admin/prestations', label: 'Prestations', icon: 'solar:case-round-linear' },
+        { href: '/admin/missions', label: 'Missions', icon: 'solar:case-round-linear' },
         { href: '/admin/documents', label: 'Documents', icon: 'solar:document-linear' },
         { href: '/admin/clients', label: 'Clients', icon: 'solar:users-group-two-rounded-linear' },
         { href: '/admin/payments', label: 'Payments', icon: 'solar:wallet-linear' },

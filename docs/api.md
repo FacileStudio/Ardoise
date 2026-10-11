@@ -63,7 +63,7 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 | `getById` | query | admin | `{ id }` |
 | `create` | mutation | admin | contact name, `companyName`, optional billing address, `siret`, `tvaIntracom`, plus `createCredentials` and optional `credentialEmail` / `credentialPassword` to provision a portal login |
 | `update` | mutation | admin | `{ id }` plus the same fields, all optional |
-| `delete` | mutation | admin | `{ id }` — refused while the client has payments or prestations |
+| `delete` | mutation | admin | `{ id }` — refused while the client has payments or missions |
 | `me` | query | protected | — the signed-in user's own client record |
 
 ## `payment`
@@ -72,7 +72,7 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 |---|---|---|---|
 | `list` | query | admin | `{ page = 1, limit = 20 (max 100), status?, clientId?, spaceId? }` |
 | `getById` | query | admin | `{ id }` |
-| `create` | mutation | admin | `{ clientId, amount > 0, description, frequency = 'ONE_TIME', collectionMethod = 'STRIPE', reference?, dueDate, attachedFiles = [], attachedDocumentIds = [], prestationId?, documentId? }` — `prestationId` and `documentId` must belong to the client's space |
+| `create` | mutation | admin | `{ clientId, amount > 0, description, frequency = 'ONE_TIME', collectionMethod = 'STRIPE', reference?, dueDate, attachedFiles = [], attachedDocumentIds = [], missionId?, documentId? }` — `missionId` and `documentId` must belong to the client's space |
 | `update` | mutation | admin | `{ id }` plus any of amount, description, dueDate, status, collectionMethod, reference, attachments |
 | `cancel` | mutation | admin | `{ id }` |
 | `sendReminder` | mutation | admin | `{ id }` |
@@ -89,9 +89,9 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 own rate-limit bucket. Stripe normally reaches the plain `POST /webhook` route rather than
 `handleWebhook`.
 
-## `prestation`
+## `mission`
 
-A prestation groups the documents and payments of one job for one client, with one or more providers. Every procedure is admin-only and scoped by space like `client` and `payment`.
+A mission groups the documents and payments of one job for one client, with one or more providers. Every procedure is admin-only and scoped by space like `client` and `payment`.
 
 | Procedure | Type | Level | Input |
 |---|---|---|---|
@@ -110,18 +110,18 @@ a fixed map: `DRAFT` to `QUOTED`, `QUOTED` to `DRAFT` or `ACCEPTED`, `ACCEPTED` 
 `INVOICED` to `PAID`, and any of those but `PAID` to `CANCELLED`. `PAID` and `CANCELLED` are final.
 `role` is `LEAD` or `SUBCONTRACTOR`; a provider can be linked once.
 
-`createPayment` bills one invoice of the prestation through the `payment` service. The amount is
+`createPayment` bills one invoice of the mission through the `payment` service. The amount is
 `Document.total`, the reference is the invoice number, and `dueDate` defaults to the request date
 plus the document's `paymentTermsDays`. It refuses a document that has no `invoiceNumber`, a
-cancelled prestation, and an invoice that already has a `PENDING`, `PAID` or `PAST_DUE` payment. An
-`ACCEPTED` prestation becomes `INVOICED`.
+cancelled mission, and an invoice that already has a `PENDING`, `PAID` or `PAST_DUE` payment. An
+`ACCEPTED` mission becomes `INVOICED`.
 
-A prestation becomes `PAID` by itself when every invoice it holds has a `PAID` payment. That
+A mission becomes `PAID` by itself when every invoice it holds has a `PAID` payment. That
 happens on the Stripe `payment_intent.succeeded` and `invoice.payment_succeeded` events and when an
-admin sets a payment to `PAID` with `payment.update`. Only an `INVOICED` prestation moves.
+admin sets a payment to `PAID` with `payment.update`. Only an `INVOICED` mission moves.
 
-`delete` refuses a prestation that holds an issued invoice or any payment. Quotes and contracts
-are detached, not deleted. `attachDocument` refuses a document that belongs to another prestation.
+`delete` refuses a mission that holds an issued invoice or any payment. Quotes and contracts
+are detached, not deleted. `attachDocument` refuses a document that belongs to another mission.
 
 ## `document`
 
