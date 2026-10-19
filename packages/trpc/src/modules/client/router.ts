@@ -6,6 +6,7 @@ import {
   UpdateClientSchema,
   ListClientsSchema,
   GetByIdSchema,
+  TransferClientSchema,
 } from './types';
 import { dispatchConfiguredWebhook } from '../webhook/service';
 
@@ -48,6 +49,21 @@ export const clientRouter = router({
     });
 
     return client;
+  }),
+
+  transfer: adminProcedure.input(TransferClientSchema).mutation(async ({ ctx, input }) => {
+    const target = await spaceService.resolveScope(ctx.db, ctx.user.id, input.targetSpaceId);
+    const result = await clientService.transferClient(ctx.db, ctx.user.id, input, target);
+
+    await dispatchConfiguredWebhook({
+      db: ctx.db,
+      log: ctx.log,
+      event: result.relocated ? 'client.updated' : 'client.created',
+      actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
+      data: { clientId: result.client.id, client: result.client },
+    });
+
+    return result;
   }),
 
   delete: adminProcedure.input(GetByIdSchema).mutation(async ({ ctx, input }) => {

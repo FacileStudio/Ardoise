@@ -7,12 +7,14 @@
 	import { Badge, Button, Card, Input, Spinner, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
+	import TransferClientModal from '$lib/components/TransferClientModal.svelte';
 	import 'iconify-icon';
 
 	let clientId = $derived($page.params.id);
 	let pageLoading = $state(true);
 	let submitting = $state(false);
 	let client: any = $state(null);
+	let showTransfer = $state(false);
 
 	let formData = $state({
 		contactFirstName: '',
@@ -146,9 +148,19 @@
 				<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
 				Retour aux clients
 			</button>
-			<h1 class="text-2xl font-bold tracking-tight text-foreground">Modifier le client</h1>
-			<p class="text-sm text-muted-foreground mt-1">Modifiez les informations du client</p>
+			<div class="flex items-start justify-between gap-4">
+				<div>
+					<h1 class="text-2xl font-bold tracking-tight text-foreground">Modifier le client</h1>
+					<p class="text-sm text-muted-foreground mt-1">Modifiez les informations du client</p>
+				</div>
+				<Button variant="outline" onclick={() => (showTransfer = true)}>
+					<iconify-icon icon="solar:transfer-horizontal-linear" width="16"></iconify-icon>
+					Copier / déplacer
+				</Button>
+			</div>
 		</div>
+
+		<TransferClientModal bind:open={showTransfer} clientId={client.id} currentSpaceId={client.spaceId ?? null} />
 
 		<div class="grid grid-cols-3 gap-6 mt-6">
 			<div class="col-span-2 space-y-6">

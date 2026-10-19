@@ -2,7 +2,12 @@ import { TRPCError } from '@trpc/server';
 import { type PrismaClient } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
 import { scopeWhere, scopeConnect, requireRowScope, type Scope } from '../space/service';
-import type { CreateClientInput, UpdateClientInput, ListClientsParams } from './types';
+import type {
+  CreateClientInput,
+  UpdateClientInput,
+  ListClientsParams,
+  TransferClientInput,
+} from './types';
 
 function normalizeOptional(value: string | undefined) {
   const trimmed = value?.trim();
@@ -260,6 +265,55 @@ export const clientService = {
     });
 
     return client;
+  },
+
+  transferClient: async (
+    db: PrismaClient,
+    userId: string,
+    input: TransferClientInput,
+    target: Scope
+  ) => {
+    const source = await requireRowScope(
+      db,
+      userId,
+      await db.client.findUnique({
+        where: { id: input.id },
+        include: { _count: { select: { missions: true, payments: true } } },
+      }),
+      'Client not found'
+    );
+
+    const targetSpaceId = target.type === 'space' ? target.spaceId : null;
+    if (source.spaceId === targetSpaceId) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Client is already in this space' });
+    }
+
+    // history stays in the source space, so a client that has any can only be copied
+    const hasHistory = source._count.missions > 0 || source._count.payments > 0;
+    if (input.mode === 'move' && !hasHistory) {
+      const client = await db.client.update({
+        where: { id: source.id },
+        data: { spaceId: targetSpaceId },
+      });
+      return { client, relocated: true };
+    }
+
+    const client = await db.client.create({
+      data: {
+        ...scopeConnect(target),
+        contactFirstName: source.contactFirstName,
+        contactLastName: source.contactLastName,
+        contactEmail: source.contactEmail,
+        companyName: source.companyName,
+        billingAddress: source.billingAddress,
+        billingCity: source.billingCity,
+        billingPostalCode: source.billingPostalCode,
+        billingCountry: source.billingCountry,
+        siret: source.siret,
+        tvaIntracom: source.tvaIntracom,
+      },
+    });
+    return { client, relocated: false };
   },
 
   deleteClient: async (db: PrismaClient, userId: string, id: string) => {

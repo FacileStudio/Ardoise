@@ -31,6 +31,12 @@ export const UpdateClientSchema = z.object({
   tvaIntracom: z.string().optional().nullable(),
 });
 
+export const TransferClientSchema = z.object({
+  id: z.string(),
+  mode: z.enum(['copy', 'move']),
+  targetSpaceId: z.string().nullable(),
+});
+
 export const ListClientsSchema = z.object({
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().max(100).default(10),
@@ -47,3 +53,5 @@ export type UpdateClientInput = z.infer<typeof UpdateClientSchema>;
 export type ListClientsInput = z.infer<typeof ListClientsSchema>;
 export type ListClientsParams = Omit<ListClientsInput, 'spaceId'>;
 export type GetByIdInput = z.infer<typeof GetByIdSchema>;
+
+export type TransferClientInput = z.infer<typeof TransferClientSchema>;
