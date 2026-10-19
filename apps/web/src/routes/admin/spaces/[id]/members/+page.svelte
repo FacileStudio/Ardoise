@@ -19,6 +19,9 @@
     let addRole = $state('MEMBER');
     let addError = $state('');
     let adding = $state(false);
+    let inviteOffer = $state(false);
+    let inviting = $state(false);
+    let inviteNotice = $state('');
 
     let confirmRemove: any = $state(null);
     let showRemoveDialog = $state(false);
@@ -53,13 +56,15 @@
     const isOwner = $derived(space?.role === 'OWNER');
 
     async function addMember() {
-        if (!addUserId.trim()) {
-            addError = $i18n.t('spaces.emailPlaceholder');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addUserId.trim())) {
+            addError = $i18n.t('spaces.emailInvalid');
             return;
         }
 
         adding = true;
         addError = '';
+        inviteOffer = false;
+        inviteNotice = '';
         try {
             await trpc.space.addMember.mutate({
                 spaceId,
@@ -72,9 +77,34 @@
             members = membersData;
         } catch (err: any) {
             logger.error({ err }, 'Failed to add member');
-            addError = err?.message || $i18n.t('common.actions.error');
+            if (err?.data?.code === 'NOT_FOUND') {
+                inviteOffer = true;
+            } else {
+                addError = err?.message || $i18n.t('common.actions.error');
+            }
         } finally {
             adding = false;
+        }
+    }
+
+    async function inviteMember() {
+        inviting = true;
+        try {
+            await trpc.space.inviteMember.mutate({
+                spaceId,
+                email: addUserId.trim(),
+                role: addRole as any,
+            });
+            inviteNotice = $i18n.t('spaces.inviteSent', { email: addUserId.trim() });
+            addError = '';
+            addUserId = '';
+            addRole = 'MEMBER';
+        } catch (err: any) {
+            logger.error({ err }, 'Failed to invite member');
+            addError = err?.message || $i18n.t('common.actions.error');
+        } finally {
+            inviting = false;
+            inviteOffer = false;
         }
     }
 
@@ -176,7 +206,10 @@
                                     type="email"
                                     bind:value={addUserId}
                                     placeholder={$i18n.t('spaces.emailPlaceholder')}
-                                    class="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    oninput={() => { addError = ''; }}
+                                    onkeydown={(e) => { if (e.key === 'Enter' && !adding) addMember(); }}
+                                    aria-invalid={addError ? 'true' : undefined}
+                                    class="flex h-9 w-full rounded-md border bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 {addError ? 'border-fc-danger focus-visible:ring-fc-danger/30' : 'border-input focus-visible:ring-ring'}"
                                 />
                             </div>
                             <div class="w-32">
@@ -199,7 +232,10 @@
                             </button>
                         </div>
                         {#if addError}
-                            <p class="text-sm text-destructive">{addError}</p>
+                            <p class="text-sm text-fc-danger">{addError}</p>
+                        {/if}
+                        {#if inviteNotice}
+                            <p class="text-sm text-muted-foreground">{inviteNotice}</p>
                         {/if}
                     </div>
                 {/if}
@@ -279,6 +315,16 @@
         {/if}
     </div>
 </div>
+
+<ConfirmModal
+    bind:open={inviteOffer}
+    title={$i18n.t('spaces.inviteTitle')}
+    description={$i18n.t('spaces.noUserFound')}
+    confirmLabel={inviting ? $i18n.t('spaces.inviting') : $i18n.t('spaces.sendInvitation')}
+    cancelLabel={$i18n.t('common.buttons.cancel')}
+    onConfirm={inviteMember}
+    onCancel={() => { inviteOffer = false; }}
+/>
 
 <ConfirmModal
     bind:open={showRemoveDialog}

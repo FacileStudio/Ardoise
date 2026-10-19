@@ -30,6 +30,7 @@ model User {
   client         Client?
   documents      Document[]
   spaceMembers   SpaceMember[]
+  invitations    Invitation[]
 
   profileSyncedAt DateTime?
 

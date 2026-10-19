@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { Badge, EmptyState, Spinner } from '@facile/muse';
 	import { SearchInput } from '$lib/ui';
+	import PendingInvitations from '$lib/components/PendingInvitations.svelte';
 	import { logger } from '@repo/logger';
 	import type { User, UserStats } from '$lib/types';
 	import { i18n } from '@repo/i18n/svelte';
@@ -59,7 +60,7 @@
 	};
 
 	const handleToggleRole = async (id: string, currentRole: string) => {
-		const newRole = currentRole === 'ADMIN' ? 'USER' : 'ADMIN';
+		const newRole = currentRole === 'ADMIN' ? 'CLIENT' : 'ADMIN';
 		try {
 			await trpc.user.update.mutate({ id, role: newRole });
 			users = users.map(u => u.id === id ? { ...u, role: newRole } : u);
@@ -107,9 +108,11 @@
 				class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2"
 			>
 				<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
-				Nouvel utilisateur
+				Inviter un utilisateur
 			</button>
 		</header>
+
+		<PendingInvitations />
 
 		{#if stats}
 			<div class="grid grid-cols-2 gap-4">
