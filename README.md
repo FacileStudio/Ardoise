@@ -82,7 +82,7 @@ packages/
   stripe/    Stripe SDK wrapper           smtp/  Nodemailer transport
   storage/   Local filesystem object store, ticket-signed uploads
   admin/     Entity registry powering the generic admin CRUD screens
-  ui/        Shared Svelte components     i18n/  Type-safe en/fr strings
+  i18n/      Type-safe en/fr strings
 docs/        Architecture, configuration, development, deployment, API
 ```
 

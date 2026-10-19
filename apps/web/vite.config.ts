@@ -13,10 +13,10 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.ttf', '**/*.otf'],
   optimizeDeps: {
-    exclude: ['@repo/database', 'pg', '@prisma/client'],
+    exclude: ['@facile/muse', '@repo/database', 'pg', '@prisma/client'],
   },
   ssr: {
-    noExternal: ['@repo/ui', '@repo/trpc-client', '@repo/storage-client', '@repo/database'],
+    noExternal: ['@repo/trpc-client', '@repo/storage-client', '@repo/database'],
     external: ['@prisma/client'],
   },
 });

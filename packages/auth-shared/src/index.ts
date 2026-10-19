@@ -11,9 +11,20 @@ export interface SessionUser {
   coverImageUrl?: string | null;
 }
 
+export const sessionUserSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  firstName: z.string(),
+  lastName: z.string(),
+  role: z.nativeEnum(UserRole),
+  avatarUrl: z.string().nullable().optional(),
+  coverImageUrl: z.string().nullable().optional(),
+});
+
 export interface AuthState {
   user: SessionUser | null;
-  session: { active: boolean } | null;
+  // The token lives only in httpOnly cookies; this tracks whether we believe a session is active.
+  session: boolean;
   loading: boolean;
 }
 
@@ -37,6 +48,7 @@ export const hasAccess = (
   return ROLE_HIERARCHY[user.role] >= ROLE_HIERARCHY[requiredRole];
 };
 
-export const isAdmin = (user: { role: UserRole } | null | undefined) => user?.role === UserRole.ADMIN;
+export const isAdmin = (user: { role: UserRole } | null | undefined) =>
+  user?.role === UserRole.ADMIN;
 
 export * from './store';

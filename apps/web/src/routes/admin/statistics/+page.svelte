@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AreaChart, PieChart, BarChart, LineChart, Spinner, Button } from '@repo/ui';
+	import { BarChart, Button, DonutChart, LineChart, Spinner } from '@facile/muse';
 	import { downloadCSV } from '@repo/utils';
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
@@ -71,10 +71,10 @@
 
 	const paymentStatusDistribution = $derived(() => {
 		return [
-			{ label: 'Payés', value: payments.filter((p) => p.status === 'PAID').length },
-			{ label: 'En attente', value: payments.filter((p) => p.status === 'PENDING').length },
-			{ label: 'Expirés', value: payments.filter((p) => p.status === 'EXPIRED').length },
-			{ label: 'Annulés', value: payments.filter((p) => p.status === 'CANCELLED').length },
+			{ label: 'Payés', value: payments.filter((p) => p.status === 'PAID').length , color: 'var(--color-fc-success)' },
+			{ label: 'En attente', value: payments.filter((p) => p.status === 'PENDING').length , color: 'var(--color-fc-warning)' },
+			{ label: 'Expirés', value: payments.filter((p) => p.status === 'EXPIRED').length , color: 'var(--color-fc-danger)' },
+			{ label: 'Annulés', value: payments.filter((p) => p.status === 'CANCELLED').length , color: 'var(--color-fc-fg-muted)' },
 		];
 	});
 
@@ -155,16 +155,16 @@
 		<div class="grid grid-cols-4 gap-4">
 			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-medium text-green-600 uppercase">
+					<div class="text-xs font-medium text-fc-success uppercase">
 						Revenu total
 					</div>
 					<iconify-icon
 						icon="solar:wallet-money-bold"
-						class="text-green-600"
+						class="text-fc-success"
 						width="20"
 					></iconify-icon>
 				</div>
-				<div class="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
+				<div class="text-2xl font-bold text-fc-success">{formatCurrency(totalRevenue)}</div>
 				<div class="text-xs text-muted-foreground mt-1">
 					{payments.filter((p) => p.status === 'PAID').length} paiements
 				</div>
@@ -172,16 +172,16 @@
 
 			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-medium text-amber-600 uppercase">
+					<div class="text-xs font-medium text-fc-warning uppercase">
 						En attente
 					</div>
 					<iconify-icon
 						icon="solar:clock-circle-bold"
-						class="text-amber-600"
+						class="text-fc-warning"
 						width="20"
 					></iconify-icon>
 				</div>
-				<div class="text-2xl font-bold text-amber-600">{formatCurrency(pendingRevenue)}</div>
+				<div class="text-2xl font-bold text-fc-warning">{formatCurrency(pendingRevenue)}</div>
 				<div class="text-xs text-muted-foreground mt-1">
 					{payments.filter((p) => p.status === 'PENDING').length} factures
 				</div>
@@ -225,13 +225,12 @@
 					<p class="text-xs text-muted-foreground">6 derniers mois</p>
 				</div>
 				{#if monthlyRevenue().length > 0}
-					<AreaChart
-						data={monthlyRevenue()}
-						x="month"
-						y="revenue"
-						color="currentColor"
+					<LineChart
+						area
+						labels={monthlyRevenue().map((d) => d.month)}
+						series={[{ name: 'Revenu', data: monthlyRevenue().map((d) => d.revenue) }]}
 						height={300}
-						formatValue={formatCurrency}
+						yFormat={formatCurrency}
 					/>
 				{:else}
 					<div class="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
@@ -246,13 +245,7 @@
 					<p class="text-xs text-muted-foreground">Répartition par statut</p>
 				</div>
 				{#if paymentStatusDistribution().some((d) => d.value > 0)}
-					<PieChart
-						data={paymentStatusDistribution()}
-						value="value"
-						label="label"
-						colors={['#16a34a', '#d97706', '#dc2626', '#6b7280']}
-						height={300}
-					/>
+					<DonutChart data={paymentStatusDistribution()} size={240} />
 				{:else}
 					<div class="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
 						Aucune donnée
@@ -267,10 +260,8 @@
 				</div>
 				{#if paymentTrend().length > 0}
 					<LineChart
-						data={paymentTrend()}
-						x="month"
-						y="count"
-						color="currentColor"
+						labels={paymentTrend().map((d) => d.month)}
+						series={[{ name: 'Paiements', data: paymentTrend().map((d) => d.count) }]}
 						height={300}
 					/>
 				{:else}
@@ -287,12 +278,10 @@
 				</div>
 				{#if monthlyRevenue().length > 0}
 					<BarChart
-						data={monthlyRevenue()}
-						x="month"
-						y="revenue"
-						color="currentColor"
+						labels={monthlyRevenue().map((d) => d.month)}
+						series={[{ name: 'Revenu', data: monthlyRevenue().map((d) => d.revenue) }]}
 						height={300}
-						formatValue={formatCurrency}
+						yFormat={formatCurrency}
 					/>
 				{:else}
 					<div class="h-[300px] flex items-center justify-center text-muted-foreground text-sm">

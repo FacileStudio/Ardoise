@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { toast } from '@repo/utils';
+	import { toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 
 	interface Provider {
@@ -32,7 +32,7 @@
 			providers = result.data;
 		} catch (error: any) {
 			logger.error('Failed to load providers', error);
-			toast.push('Failed to load providers', 'error');
+			toast.danger('Failed to load providers');
 		} finally {
 			loading = false;
 		}

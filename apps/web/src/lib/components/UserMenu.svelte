@@ -40,7 +40,7 @@
 
             <button
                 on:click={() => { onDelete(); isOpen = false; }}
-                class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-fc-danger hover:bg-fc-danger/10 transition-colors"
             >
                 <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
                 Supprimer définitivement

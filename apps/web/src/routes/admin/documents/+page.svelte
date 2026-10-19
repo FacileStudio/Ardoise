@@ -3,8 +3,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Pagination, SearchInput, Spinner } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Spinner, toast } from '@facile/muse';
+	import { Pagination, SearchInput } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { DOCUMENT_TYPE_LABELS } from '$lib/mission';
 	import { spaceContext } from '$lib/space-context.svelte';
@@ -47,7 +47,7 @@
 			docTypes = await trpc.document.types.query();
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch document types');
-			toast.push('Erreur lors du chargement des types de documents', 'error');
+			toast.danger('Erreur lors du chargement des types de documents');
 		}
 	}
 
@@ -69,7 +69,7 @@
 			totalPages = result.totalPages;
 		} catch (err) {
 			logger.error({ err }, 'Failed to load documents');
-			toast.push('Erreur lors du chargement des documents', 'error');
+			toast.danger('Erreur lors du chargement des documents');
 		} finally {
 			if (isInitialLoad) {
 				pageLoading = false;
@@ -110,7 +110,7 @@
 			URL.revokeObjectURL(url);
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to download document');
-			toast.push('Erreur lors du téléchargement', 'error');
+			toast.danger('Erreur lors du téléchargement');
 		}
 	}
 
@@ -119,11 +119,11 @@
 
 		try {
 			await trpc.document.delete.mutate({ id: documentId });
-			toast.push('Document supprimé avec succès', 'success');
+			toast.success('Document supprimé avec succès');
 			await loadDocuments();
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to delete document');
-			toast.push('Erreur lors de la suppression', 'error');
+			toast.danger('Erreur lors de la suppression');
 		}
 	}
 
@@ -154,7 +154,7 @@
 
 {#if pageLoading}
 	<div class="flex flex-col items-center justify-center h-screen space-y-4">
-		<Spinner size="xl" />
+		<Spinner size="lg" />
 		<p class="text-xs text-muted-foreground">Chargement...</p>
 	</div>
 {:else}
@@ -240,7 +240,7 @@
 										</button>
 										<button
 											onclick={() => handleDelete(doc.id)}
-											class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
+											class="p-1.5 text-fc-danger hover:bg-fc-danger/10 rounded transition-colors"
 											title="Supprimer"
 										>
 											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>

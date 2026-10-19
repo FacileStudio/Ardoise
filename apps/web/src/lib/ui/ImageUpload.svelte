@@ -1,6 +1,6 @@
 <script lang="ts">
     import { uploadFileSimple } from '@repo/storage-client';
-    import { toast } from '@repo/utils';
+    import { toast } from '@facile/muse';
     import { logger } from '@repo/logger';
     import 'iconify-icon';
 
@@ -60,10 +60,10 @@
             const finalUrl = await uploadFileSimple(file, presignedUrl);
 
             value = finalUrl;
-            toast.push("Image envoyée !", "success");
+            toast.success("Image envoyée !");
         } catch (error) {
             logger.error({ err: error }, "Image upload failed");
-            toast.push("Erreur lors de l'upload", "error");
+            toast.danger("Erreur lors de l'upload");
             previewUrl = value;
         } finally {
             uploading = false;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { toast } from '@repo/utils';
+	import { toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 
 	interface Client {
@@ -31,7 +31,7 @@
 			clients = result.data;
 		} catch (error: any) {
 			logger.error('Failed to load clients', error);
-			toast.push('Failed to load clients', 'error');
+			toast.danger('Failed to load clients');
 		} finally {
 			loading = false;
 		}

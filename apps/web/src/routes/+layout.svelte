@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { ToastContainer } from '@repo/ui';
+  import { Toaster } from '@facile/muse';
   import { setLocale } from '@repo/i18n/svelte';
   import { isAdmin } from '@repo/auth-shared';
   import '../app.css';
@@ -41,4 +41,4 @@
   {@render children()}
 {/if}
 
-<ToastContainer />
+<Toaster />

@@ -1,4 +1,4 @@
-import { toast } from '@repo/utils';
+import { toast } from '@facile/muse';
 import { logger } from '@repo/logger';
 
 export async function runAction(
@@ -8,12 +8,12 @@ export async function runAction(
 ): Promise<boolean> {
 	try {
 		await action();
-		toast.push(success, 'success');
+		toast.success(success);
 
 		return true;
 	} catch (err: any) {
 		logger.error({ err }, failure);
-		toast.push(err?.message || failure, 'error');
+		toast.danger(err?.message || failure);
 
 		return false;
 	}

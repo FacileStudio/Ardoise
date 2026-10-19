@@ -3,7 +3,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Button, Pagination, SearchInput } from '@repo/ui';
+	import { Badge, Button } from '@facile/muse';
+	import { Pagination, SearchInput } from '$lib/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
@@ -158,15 +159,15 @@
 	function getStatusColor(status: PaymentStatus) {
 		switch (status) {
 			case 'PAID':
-				return 'emerald';
+				return 'success';
 			case 'PENDING':
-				return 'amber';
+				return 'warning';
 			case 'EXPIRED':
-				return 'rose';
+				return 'danger';
 			case 'CANCELLED':
-				return 'slate';
+				return 'neutral';
 			default:
-				return 'slate';
+				return 'neutral';
 		}
 	}
 
@@ -248,31 +249,31 @@
 	<div class="grid grid-cols-4 gap-4">
 		<div class="rounded-xl border border-border p-4">
 			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-amber-600 uppercase">
+				<div class="text-xs font-medium text-fc-warning uppercase">
 					{$i18n.t('admin.payments.pendingAmount')}
 				</div>
 				<iconify-icon
 					icon="solar:clock-circle-bold"
-					class="text-amber-600"
+					class="text-fc-warning"
 					width="20"
 				></iconify-icon>
 			</div>
-			<div class="text-2xl font-bold text-amber-600">{formatCurrency(stats.totalPending)}</div>
+			<div class="text-2xl font-bold text-fc-warning">{formatCurrency(stats.totalPending)}</div>
 			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.pendingInvoices', { count: stats.countPending })}</div>
 		</div>
 
 		<div class="rounded-xl border border-border p-4">
 			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-green-600 uppercase">
+				<div class="text-xs font-medium text-fc-success uppercase">
 					{$i18n.t('admin.payments.paidThisMonth')}
 				</div>
 				<iconify-icon
 					icon="solar:check-circle-bold"
-					class="text-green-600"
+					class="text-fc-success"
 					width="20"
 				></iconify-icon>
 			</div>
-			<div class="text-2xl font-bold text-green-600">
+			<div class="text-2xl font-bold text-fc-success">
 				{formatCurrency(stats.totalPaidThisMonth)}
 			</div>
 			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.currentMonthRevenue')}</div>
@@ -295,14 +296,14 @@
 
 		<div class="rounded-xl border border-border p-4">
 			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-red-600 uppercase">{$i18n.t('admin.payments.expired')}</div>
+				<div class="text-xs font-medium text-fc-danger uppercase">{$i18n.t('admin.payments.expired')}</div>
 				<iconify-icon
 					icon="solar:hourglass-bold-duotone"
-					class="text-red-600"
+					class="text-fc-danger"
 					width="20"
 				></iconify-icon>
 			</div>
-			<div class="text-2xl font-bold text-red-600">{stats.countExpired}</div>
+			<div class="text-2xl font-bold text-fc-danger">{stats.countExpired}</div>
 			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.overdueInvoices')}</div>
 		</div>
 	</div>
@@ -367,7 +368,7 @@
 										<div class="flex items-center gap-2">
 											<div class="font-medium text-foreground">{payment.description}</div>
 											{#if payment.status === 'EXPIRED'}
-												<Badge variant="error">
+												<Badge tone="danger">
 													{$i18n.t('common.status.expired')}
 												</Badge>
 											{/if}
@@ -401,7 +402,7 @@
 											<div class="text-xs text-muted-foreground flex items-center gap-1">
 												<span>{formatCurrency(Number(payment.amount))}</span>
 												<span>+</span>
-												<span class="text-amber-600 font-medium">
+												<span class="text-fc-warning font-medium">
 													{formatCurrency(Number(payment.stripeFee))} {$i18n.t('admin.payments.table.fees')}
 												</span>
 											</div>
@@ -409,7 +410,7 @@
 									</div>
 								</td>
 								<td class="px-4 py-3">
-									<Badge variant={getStatusColor(payment.status)}>
+									<Badge tone={getStatusColor(payment.status)}>
 										{payment.status}
 									</Badge>
 								</td>
@@ -428,7 +429,7 @@
 												<iconify-icon
 													icon="solar:check-circle-bold"
 													width="14"
-													class="text-green-600"
+													class="text-fc-success"
 												></iconify-icon>
 												{$i18n.t('admin.payments.table.paid')}: {formatDate(payment.paidAt)}
 											</div>
@@ -437,7 +438,7 @@
 												<iconify-icon
 													icon="solar:calendar-bold"
 													width="14"
-													class="text-amber-600"
+													class="text-fc-warning"
 												></iconify-icon>
 												{$i18n.t('admin.payments.table.due')}: {formatDate(payment.dueDate)}
 											</div>
@@ -455,7 +456,7 @@
 													handleCancelPayment(payment.id, payment.description);
 												}}
 												disabled={actionLoading === payment.id}
-												class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+												class="p-2 text-muted-foreground hover:text-fc-danger hover:bg-muted rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 												title={$i18n.t('admin.payments.cancelPayment')}
 											>
 												{#if actionLoading === payment.id}

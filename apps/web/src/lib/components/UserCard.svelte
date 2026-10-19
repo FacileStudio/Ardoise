@@ -1,6 +1,6 @@
 <script lang="ts">
     import { isAdmin } from '@repo/auth-shared';
-    import { Badge } from '@repo/ui';
+    import { Badge } from '@facile/muse';
     import UserMenu from './UserMenu.svelte';
     import type { User } from '$lib/types';
     import 'iconify-icon';
@@ -11,11 +11,11 @@
     export let onChangeRole: (id: string, role: string) => void;
     export let onViewDetails: (id: string) => void;
 
-    function getStatusColor(status: string): 'emerald' | 'slate' {
+    function getStatusColor(status: string): 'success' | 'neutral' {
         switch (status) {
-            case 'ACTIVE': return 'emerald';
-            case 'PENDING': return 'slate';
-            default: return 'slate';
+            case 'ACTIVE': return 'success';
+            case 'PENDING': return 'neutral';
+            default: return 'neutral';
         }
     }
 </script>
@@ -43,7 +43,7 @@
         <div class="overflow-hidden flex-1">
             <div class="flex items-center gap-2 mb-0.5">
                 <h3 class="font-medium text-sm text-foreground truncate">{user.firstName}</h3>
-                <Badge variant={getStatusColor(user.status || 'ACTIVE')}>
+                <Badge tone={getStatusColor(user.status || 'ACTIVE')}>
                     {user.status || 'ACTIVE'}
                 </Badge>
             </div>

@@ -23,8 +23,8 @@
 
     function roleBadgeClass(role: string): string {
         switch (role) {
-            case 'OWNER': return 'bg-amber-500/10 text-amber-600';
-            case 'ADMIN': return 'bg-blue-500/10 text-blue-600';
+            case 'OWNER': return 'bg-fc-warning/10 text-fc-warning';
+            case 'ADMIN': return 'bg-fc-info/10 text-fc-info';
             default: return 'bg-muted text-muted-foreground';
         }
     }

@@ -3,7 +3,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, SearchInput, Badge, EmptyState } from '@repo/ui';
+	import { Badge, EmptyState, Spinner } from '@facile/muse';
+	import { SearchInput } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import type { User, UserStats } from '$lib/types';
 	import { i18n } from '@repo/i18n/svelte';
@@ -70,9 +71,9 @@
 
 	function getStatusColor(status: string) {
 		switch (status) {
-			case 'ACTIVE': return 'emerald';
-			case 'PENDING': return 'slate';
-			default: return 'slate';
+			case 'ACTIVE': return 'success';
+			case 'PENDING': return 'neutral';
+			default: return 'neutral';
 		}
 	}
 
@@ -91,7 +92,7 @@
 
 {#if pageLoading}
 	<div class="flex flex-col items-center justify-center h-screen space-y-4">
-		<Spinner size="xl" />
+		<Spinner size="lg" />
 		<p class="text-xs text-muted-foreground">Chargement...</p>
 	</div>
 {:else}
@@ -121,10 +122,10 @@
 				</div>
 				<div class="rounded-xl border border-border p-4">
 					<div class="flex items-center justify-between mb-1">
-						<div class="text-xs font-medium text-red-600 uppercase tracking-wide">{$i18n.t('admin.users.admin')}</div>
-						<iconify-icon icon="solar:crown-bold" class="text-red-600" width="16"></iconify-icon>
+						<div class="text-xs font-medium text-fc-danger uppercase tracking-wide">{$i18n.t('admin.users.admin')}</div>
+						<iconify-icon icon="solar:crown-bold" class="text-fc-danger" width="16"></iconify-icon>
 					</div>
-					<div class="text-xl font-bold text-red-600">{stats.adminUsers}</div>
+					<div class="text-xl font-bold text-fc-danger">{stats.adminUsers}</div>
 				</div>
 			</div>
 		{/if}
@@ -213,14 +214,14 @@
 									</div>
 								</td>
 								<td class="px-4 py-3">
-									<Badge variant={getStatusColor(user.status || 'ACTIVE')}>
+									<Badge tone={getStatusColor(user.status || 'ACTIVE')}>
 										{user.status || 'ACTIVE'}
 									</Badge>
 								</td>
 								<td class="px-4 py-3">
 									<button
 										onclick={() => handleToggleRole(user.id, user.role)}
-										class="px-2 py-0.5 rounded text-xs font-medium transition-colors {user.role === 'ADMIN' ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-muted text-muted-foreground hover:bg-border'}"
+										class="px-2 py-0.5 rounded text-xs font-medium transition-colors {user.role === 'ADMIN' ? 'bg-fc-danger/10 text-fc-danger hover:bg-fc-danger/10' : 'bg-muted text-muted-foreground hover:bg-border'}"
 									>
 										{user.role}
 									</button>
@@ -235,7 +236,7 @@
 												e.stopPropagation();
 												handleDelete(user.id, `${user.firstName} ${user.lastName}`);
 											}}
-											class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
+											class="p-1.5 text-fc-danger hover:bg-fc-danger/10 rounded transition-colors"
 											title={$i18n.t('admin.users.deleteUser')}
 										>
 											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>

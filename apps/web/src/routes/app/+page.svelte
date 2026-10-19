@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { trpc } from '$lib/trpc';
-  import { Badge, Card, Button } from '@repo/ui';
+  import { Badge, Button, Card } from '@facile/muse';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import 'iconify-icon';
@@ -51,15 +51,15 @@
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return { label: 'En attente', variant: 'amber' as const };
+        return { label: 'En attente', variant: 'warning' as const };
       case 'PAID':
-        return { label: 'Payée', variant: 'emerald' as const };
+        return { label: 'Payée', variant: 'success' as const };
       case 'EXPIRED':
-        return { label: 'Expirée', variant: 'rose' as const };
+        return { label: 'Expirée', variant: 'danger' as const };
       case 'CANCELLED':
-        return { label: 'Annulée', variant: 'slate' as const };
+        return { label: 'Annulée', variant: 'neutral' as const };
       default:
-        return { label: status, variant: 'slate' as const };
+        return { label: status, variant: 'neutral' as const };
     }
   };
 
@@ -106,7 +106,7 @@
       <div class="space-y-4">
         <div class="flex items-center gap-2">
           <h2 class="text-lg font-semibold text-foreground">Factures à payer</h2>
-          <Badge variant="amber">{pendingPayments.length}</Badge>
+          <Badge tone="warning">{pendingPayments.length}</Badge>
         </div>
         <div class="grid grid-cols-1 gap-4">
           {#each pendingPayments as payment (payment.id)}
@@ -117,7 +117,7 @@
                     <h3 class="font-bold text-foreground">
                       {payment.description}
                     </h3>
-                    <Badge variant={getStatusBadge(payment.status).variant}>
+                    <Badge tone={getStatusBadge(payment.status).variant}>
                       {getStatusBadge(payment.status).label}
                     </Badge>
                   </div>
@@ -149,7 +149,7 @@
       <div class="space-y-4">
         <div class="flex items-center gap-2">
           <h2 class="text-lg font-semibold text-foreground">Factures payées</h2>
-          <Badge variant="emerald">{paidPayments.length}</Badge>
+          <Badge tone="success">{paidPayments.length}</Badge>
         </div>
         <div class="grid grid-cols-1 gap-3">
           {#each paidPayments as payment (payment.id)}
@@ -160,7 +160,7 @@
                     <h3 class="font-bold text-foreground">
                       {payment.description}
                     </h3>
-                    <Badge variant="success">
+                    <Badge tone="success">
                       {getStatusBadge(payment.status).label}
                     </Badge>
                   </div>
@@ -200,7 +200,7 @@
                     <h3 class="font-bold text-foreground">
                       {payment.description}
                     </h3>
-                    <Badge variant={getStatusBadge(payment.status).variant}>
+                    <Badge tone={getStatusBadge(payment.status).variant}>
                       {getStatusBadge(payment.status).label}
                     </Badge>
                   </div>

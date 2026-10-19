@@ -3,7 +3,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Pagination, Spinner } from '@repo/ui';
+	import { Badge, Spinner } from '@facile/muse';
+	import { Pagination } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import {
@@ -145,7 +146,7 @@
 									<td class="px-4 py-3 text-sm text-foreground">{mission.client.companyName}</td>
 									<td class="px-4 py-3 text-sm text-muted-foreground">{providerNames(mission)}</td>
 									<td class="px-4 py-3">
-										<Badge variant={STATUS_VARIANTS[mission.status as MissionStatus]}>
+										<Badge tone={STATUS_VARIANTS[mission.status as MissionStatus]}>
 											{STATUS_LABELS[mission.status as MissionStatus]}
 										</Badge>
 									</td>

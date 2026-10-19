@@ -2,8 +2,8 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, Button, Input, ImageUpload } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Button, Input, Spinner, toast } from '@facile/muse';
+	import { ImageUpload } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
@@ -115,19 +115,19 @@
 		clearMessages();
 
 		if (!validateForm()) {
-			toast.push(formMessage, 'error');
+			toast.danger(formMessage);
 			return;
 		}
 
 		try {
 			submitting = true;
 			await trpc.provider.create.mutate({ ...normalizePayload(), spaceId: spaceContext.spaceId });
-			toast.push('Prestataire créé avec succès!', 'success');
+			toast.success('Prestataire créé avec succès!');
 			goto(resolve('/admin/prestataires'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create provider');
 			const message = applyServerErrors(err);
-			toast.push(message, 'error');
+			toast.danger(message);
 		} finally {
 			submitting = false;
 		}
@@ -149,7 +149,7 @@
 
 	<div class="space-y-6">
 		{#if formMessage}
-			<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+			<div class="rounded-lg border border-fc-danger/30 bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">
 				{formMessage}
 			</div>
 		{/if}
@@ -157,10 +157,10 @@
 		<div class="rounded-xl border border-border p-6 space-y-4">
 			<h2 class="text-base font-semibold text-foreground">Informations générales</h2>
 			<div>
-				<div class="text-sm font-medium mb-2">Nom du prestataire <span class="text-red-500">*</span></div>
-				<Input bind:value={formData.name} placeholder="Nom du prestataire" error={!!getFieldError('name')} />
+				<div class="text-sm font-medium mb-2">Nom du prestataire <span class="text-fc-danger">*</span></div>
+				<Input bind:value={formData.name} placeholder="Nom du prestataire" aria-invalid={!!getFieldError('name')} class="aria-invalid:border-fc-danger" />
 				{#if getFieldError('name')}
-					<p class="mt-1 text-xs text-red-600">{getFieldError('name')}</p>
+					<p class="mt-1 text-xs text-fc-danger">{getFieldError('name')}</p>
 				{/if}
 			</div>
 			<div>
@@ -173,18 +173,18 @@
 					<Input bind:value={formData.siret} placeholder="12345678901234" />
 				</div>
 				<div>
-					<div class="text-sm font-medium mb-2">Taux de TVA (%) <span class="text-red-500">*</span></div>
+					<div class="text-sm font-medium mb-2">Taux de TVA (%) <span class="text-fc-danger">*</span></div>
 					<input
 						type="number"
 						step="0.1"
 						min="0"
 						max="100"
 						bind:value={formData.tvaRate}
-						class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary {getFieldError('tvaRate') ? 'border-red-300' : ''}"
+						class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary {getFieldError('tvaRate') ? 'border-fc-danger/30' : ''}"
 						placeholder="20"
 					/>
 					{#if getFieldError('tvaRate')}
-						<p class="mt-1 text-xs text-red-600">{getFieldError('tvaRate')}</p>
+						<p class="mt-1 text-xs text-fc-danger">{getFieldError('tvaRate')}</p>
 					{/if}
 				</div>
 			</div>
@@ -226,9 +226,9 @@
 			<div class="grid grid-cols-2 gap-4">
 				<div>
 					<div class="text-sm font-medium mb-2">Email</div>
-					<Input bind:value={formData.email} type="email" placeholder="contact@example.com" error={!!getFieldError('email')} />
+					<Input bind:value={formData.email} type="email" placeholder="contact@example.com" aria-invalid={!!getFieldError('email')} class="aria-invalid:border-fc-danger" />
 					{#if getFieldError('email')}
-						<p class="mt-1 text-xs text-red-600">{getFieldError('email')}</p>
+						<p class="mt-1 text-xs text-fc-danger">{getFieldError('email')}</p>
 					{/if}
 				</div>
 				<div>
@@ -257,7 +257,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-2">
-			<Button onclick={() => goto(resolve('/admin/prestataires'))} intent="secondary" class="flex-1" disabled={submitting}>
+			<Button onclick={() => goto(resolve('/admin/prestataires'))} variant="outline" class="flex-1" disabled={submitting}>
 				Annuler
 			</Button>
 			<button

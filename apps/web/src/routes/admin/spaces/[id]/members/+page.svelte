@@ -6,7 +6,7 @@
     import { resolve } from '$app/paths';
     import { i18n } from '@repo/i18n/svelte';
     import { logger } from '@repo/logger';
-    import { ConfirmDialog } from '@repo/ui';
+    import { ConfirmModal } from '@facile/muse';
     import authStore from '$lib/auth-store';
     import 'iconify-icon';
 
@@ -132,8 +132,8 @@
 
     function roleBadgeClass(role: string): string {
         switch (role) {
-            case 'OWNER': return 'bg-amber-500/10 text-amber-600';
-            case 'ADMIN': return 'bg-blue-500/10 text-blue-600';
+            case 'OWNER': return 'bg-fc-warning/10 text-fc-warning';
+            case 'ADMIN': return 'bg-fc-info/10 text-fc-info';
             default: return 'bg-muted text-muted-foreground';
         }
     }
@@ -280,24 +280,24 @@
     </div>
 </div>
 
-<ConfirmDialog
-    bind:isOpen={showRemoveDialog}
+<ConfirmModal
+    bind:open={showRemoveDialog}
     title={$i18n.t('spaces.removeMember')}
     description={$i18n.t('spaces.removeConfirm', { name: confirmRemove ? `${confirmRemove.user.firstName} ${confirmRemove.user.lastName}` : '' })}
-    confirmText={$i18n.t('spaces.removeMember')}
-    cancelText={$i18n.t('common.buttons.cancel')}
-    variant="danger"
+    confirmLabel={$i18n.t('spaces.removeMember')}
+    cancelLabel={$i18n.t('common.buttons.cancel')}
+    tone="danger"
     onConfirm={handleRemoveMember}
     onCancel={() => { confirmRemove = null; showRemoveDialog = false; }}
 />
 
-<ConfirmDialog
-    bind:isOpen={showLeaveDialog}
+<ConfirmModal
+    bind:open={showLeaveDialog}
     title={$i18n.t('spaces.leaveSpace')}
     description={$i18n.t('spaces.leaveConfirm')}
-    confirmText={$i18n.t('spaces.leaveSpace')}
-    cancelText={$i18n.t('common.buttons.cancel')}
-    variant="danger"
+    confirmLabel={$i18n.t('spaces.leaveSpace')}
+    cancelLabel={$i18n.t('common.buttons.cancel')}
+    tone="danger"
     onConfirm={handleLeave}
     onCancel={() => { showLeaveDialog = false; }}
 />

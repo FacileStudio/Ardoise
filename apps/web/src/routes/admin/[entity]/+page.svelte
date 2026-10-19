@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { trpc } from '$lib/trpc';
-  import { AdminAutoTable, AdminAutoForm, Drawer, Button, Spinner, Alert, Input } from '@repo/ui';
-  import { toast } from '@repo/utils';
+  import { Alert, Button, Drawer, Input, Spinner, toast } from '@facile/muse';
+  import { AdminAutoForm, AdminAutoTable } from '$lib/ui';
   import { logger } from '@repo/logger';
   import type { EntityConfig, ListResult } from '@repo/admin';
   import { onMount } from 'svelte';
@@ -39,7 +39,7 @@
       config = await trpc.admin.getEntityConfig.query({ entity });
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Failed to load config';
-      toast.push(errorMsg, 'error');
+      toast.danger(errorMsg);
     }
   }
 
@@ -105,10 +105,10 @@
       await trpc.admin.create.mutate({ entity, data: formData });
       showCreateModal = false;
       await loadData();
-      toast.push(`${config?.displayName} created successfully!`, 'success');
+      toast.success(`${config?.displayName} created successfully!`);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Failed to create';
-      toast.push('Failed to create: ' + errorMsg, 'error');
+      toast.danger('Failed to create: ' + errorMsg);
     }
   }
 
@@ -124,10 +124,10 @@
       showEditModal = false;
       selectedItem = null;
       await loadData();
-      toast.push(`${config?.displayName} updated successfully!`, 'success');
+      toast.success(`${config?.displayName} updated successfully!`);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Failed to update';
-      toast.push('Failed to update: ' + errorMsg, 'error');
+      toast.danger('Failed to update: ' + errorMsg);
     }
   }
 
@@ -144,10 +144,10 @@
       showDeleteConfirm = false;
       itemToDelete = null;
       await loadData();
-      toast.push(`${config?.displayName} deleted successfully!`, 'success');
+      toast.success(`${config?.displayName} deleted successfully!`);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Failed to delete';
-      toast.push('Failed to delete: ' + errorMsg, 'error');
+      toast.danger('Failed to delete: ' + errorMsg);
     }
   }
 
@@ -162,7 +162,7 @@
       showEditModal = true;
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Failed to load item';
-      toast.push('Failed to load item: ' + errorMsg, 'error');
+      toast.danger('Failed to load item: ' + errorMsg);
     }
   }
 
@@ -172,7 +172,7 @@
       showViewModal = true;
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Failed to load item';
-      toast.push('Failed to load item: ' + errorMsg, 'error');
+      toast.danger('Failed to load item: ' + errorMsg);
     }
   }
 
@@ -191,7 +191,7 @@
       <p class="text-sm text-muted-foreground mt-1">Manage {config?.displayName || entity} entries</p>
     </div>
     {#if permissions.canCreate}
-      <Button intent="primary" onclick={() => { showCreateModal = true; }}>
+      <Button onclick={() => { showCreateModal = true; }}>
         <iconify-icon icon="mdi:plus" width="16" class="mr-1"></iconify-icon>
         Create {config?.displayName}
       </Button>
@@ -199,12 +199,12 @@
   </div>
 
   {#if !permissions.canRead}
-    <Alert variant="danger">
+    <Alert tone="danger">
       You do not have permission to view this entity.
     </Alert>
   {:else if loading}
     <div class="flex justify-center py-20">
-      <Spinner size="xl" />
+      <Spinner size="lg" />
     </div>
   {:else if config && data}
     <div class="rounded-xl border border-border p-4">
@@ -264,25 +264,25 @@
       {/each}
     </div>
     <div class="flex justify-end p-6 border-t border-border">
-      <Button intent="secondary" onclick={handleCancel}>Close</Button>
+      <Button variant="outline" onclick={handleCancel}>Close</Button>
     </div>
   {/if}
 </Drawer>
 
 <Drawer open={showDeleteConfirm} title="Confirm Delete" onClose={cancelDelete}>
   <div class="text-center p-6">
-    <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
-      <iconify-icon icon="solar:danger-triangle-bold" width="24" class="text-red-600"></iconify-icon>
+    <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-fc-danger/10 flex items-center justify-center">
+      <iconify-icon icon="solar:danger-triangle-bold" width="24" class="text-fc-danger"></iconify-icon>
     </div>
     <h3 class="text-lg font-bold text-foreground mb-2">Delete {config?.displayName}?</h3>
     <p class="text-sm text-muted-foreground mb-6">
       This action cannot be undone. This will permanently delete the {config?.displayName.toLowerCase()} from the database.
     </p>
     <div class="flex gap-3 justify-center">
-      <Button intent="secondary" onclick={cancelDelete}>
+      <Button variant="outline" onclick={cancelDelete}>
         Cancel
       </Button>
-      <Button intent="danger" onclick={confirmDelete}>
+      <Button variant="danger" onclick={confirmDelete}>
         Delete
       </Button>
     </div>

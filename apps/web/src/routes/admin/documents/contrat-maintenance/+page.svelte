@@ -2,8 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Input } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Button, Input, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import ClientSelect from '$lib/components/ClientSelect.svelte';
@@ -24,7 +23,7 @@
 
 	async function handlePreview() {
 		if (!formData.clientId || !formData.providerId) {
-			toast.push('Veuillez sélectionner un client et un prestataire', 'error');
+			toast.danger('Veuillez sélectionner un client et un prestataire');
 			return;
 		}
 
@@ -41,10 +40,10 @@
 
 			previewPdf = result.pdf;
 			showPreview = true;
-			toast.push('Aperçu généré avec succès', 'success');
+			toast.success('Aperçu généré avec succès');
 		} catch (error: any) {
 			logger.error('Failed to preview document', error);
-			toast.push('Échec de la génération de l\'aperçu', 'error');
+			toast.danger('Échec de la génération de l\'aperçu');
 		} finally {
 			generating = false;
 		}
@@ -52,7 +51,7 @@
 
 	async function handleCreate() {
 		if (!formData.clientId || !formData.providerId) {
-			toast.push('Veuillez sélectionner un client et un prestataire', 'error');
+			toast.danger('Veuillez sélectionner un client et un prestataire');
 			return;
 		}
 
@@ -67,11 +66,11 @@
 				providerId: formData.providerId,
 			});
 
-			toast.push('Contrat créé avec succès', 'success');
+			toast.success('Contrat créé avec succès');
 			goto(resolve(`/admin/documents/${result.id}`));
 		} catch (error: any) {
 			logger.error('Failed to create document', error);
-			toast.push('Échec de la création du contrat', 'error');
+			toast.danger('Échec de la création du contrat');
 		} finally {
 			generating = false;
 		}
@@ -125,7 +124,7 @@
 			>
 				{generating ? 'Création...' : 'Créer le contrat'}
 			</button>
-			<Button onclick={() => goto(resolve('/admin/documents'))} intent="secondary">
+			<Button onclick={() => goto(resolve('/admin/documents'))} variant="outline">
 				Annuler
 			</Button>
 		</div>

@@ -21,7 +21,6 @@ COPY packages/trpc-client/package.json ./packages/trpc-client/package.json
 COPY packages/tsconfig/package.json ./packages/tsconfig/package.json
 COPY packages/types/package.json ./packages/types/package.json
 COPY packages/typst/package.json ./packages/typst/package.json
-COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/utils/package.json ./packages/utils/package.json
 
 RUN cat <<'EOF' > package.json
@@ -48,13 +47,12 @@ RUN cat <<'EOF' > package.json
     "packages/tsconfig",
     "packages/types",
     "packages/typst",
-    "packages/ui",
     "packages/utils"
   ]
 }
 EOF
 
-RUN bun -e "const rewrites = new Map([['apps/web/package.json', pkg => { delete pkg.devDependencies['@repo/eslint-config']; delete pkg.devDependencies.eslint; }], ['packages/admin/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth-shared/package.json', pkg => { delete pkg.devDependencies; }], ['packages/crypto/package.json', pkg => { delete pkg.devDependencies; }], ['packages/database/package.json', pkg => { delete pkg.devDependencies; }], ['packages/docuseal/package.json', pkg => { delete pkg.devDependencies; }], ['packages/env/package.json', pkg => { delete pkg.devDependencies; }], ['packages/i18n/package.json', pkg => { delete pkg.devDependencies; }], ['packages/logger/package.json', pkg => { delete pkg.devDependencies; }], ['packages/smtp/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/stripe/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/types/package.json', pkg => { delete pkg.devDependencies; }], ['packages/typst/package.json', pkg => { delete pkg.devDependencies; }], ['packages/ui/package.json', pkg => { delete pkg.devDependencies; }], ['packages/utils/package.json', pkg => { delete pkg.devDependencies; }]]); for (const [file, rewrite] of rewrites) { const pkg = JSON.parse(await Bun.file(file).text()); rewrite(pkg); await Bun.write(file, JSON.stringify(pkg, null, 2) + '\n'); }"
+RUN bun -e "const rewrites = new Map([['apps/web/package.json', pkg => { delete pkg.devDependencies['@repo/eslint-config']; delete pkg.devDependencies.eslint; }], ['packages/admin/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth-shared/package.json', pkg => { delete pkg.devDependencies; }], ['packages/crypto/package.json', pkg => { delete pkg.devDependencies; }], ['packages/database/package.json', pkg => { delete pkg.devDependencies; }], ['packages/docuseal/package.json', pkg => { delete pkg.devDependencies; }], ['packages/env/package.json', pkg => { delete pkg.devDependencies; }], ['packages/i18n/package.json', pkg => { delete pkg.devDependencies; }], ['packages/logger/package.json', pkg => { delete pkg.devDependencies; }], ['packages/smtp/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/stripe/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/types/package.json', pkg => { delete pkg.devDependencies; }], ['packages/typst/package.json', pkg => { delete pkg.devDependencies; }], ['packages/utils/package.json', pkg => { delete pkg.devDependencies; }]]); for (const [file, rewrite] of rewrites) { const pkg = JSON.parse(await Bun.file(file).text()); rewrite(pkg); await Bun.write(file, JSON.stringify(pkg, null, 2) + '\n'); }"
 
 RUN bun install --no-frozen-lockfile --network-concurrency 8
 
@@ -83,7 +81,6 @@ COPY packages/trpc-client ./packages/trpc-client
 COPY packages/tsconfig ./packages/tsconfig
 COPY packages/types ./packages/types
 COPY packages/typst ./packages/typst
-COPY packages/ui ./packages/ui
 COPY packages/utils ./packages/utils
 
 RUN cd apps/web && bun --bun run build

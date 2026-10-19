@@ -13,14 +13,13 @@
     "lint": "svelte-kit sync && eslint src"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.2.8",
-    "@fontsource/poppins": "^5.2.7",
+    "@facile/muse": "github:FacileStudio/muse#v0.7.1",
+    "@repo/admin": "workspace:*",
     "@repo/i18n": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/storage-client": "workspace:*",
     "@repo/trpc-client": "workspace:*",
     "@repo/types": "workspace:*",
-    "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",
     "@stripe/stripe-js": "^8.7.0",
     "@sveltejs/adapter-node": "^5.5.2",

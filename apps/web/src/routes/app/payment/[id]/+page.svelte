@@ -5,7 +5,7 @@
   import { resolve } from '$app/paths';
   import { trpc } from '$lib/trpc';
   import authStore from '$lib/auth-store';
-  import { Card, Button, Badge, Spinner } from '@repo/ui';
+  import { Badge, Button, Card, Spinner } from '@facile/muse';
   import { loadStripe, type Stripe, type StripeElements } from '@stripe/stripe-js';
   import 'iconify-icon';
 
@@ -215,19 +215,19 @@
   function getStatusBadge(status: string) {
     switch (status) {
       case 'PENDING':
-        return { label: 'En attente', variant: 'amber' as const };
+        return { label: 'En attente', variant: 'warning' as const };
       case 'PAID':
-        return { label: 'Payée', variant: 'emerald' as const };
+        return { label: 'Payée', variant: 'success' as const };
       case 'EXPIRED':
-        return { label: 'Expirée', variant: 'rose' as const };
+        return { label: 'Expirée', variant: 'danger' as const };
       case 'FAILED':
-        return { label: 'Échec', variant: 'rose' as const };
+        return { label: 'Échec', variant: 'danger' as const };
       case 'PAST_DUE':
-        return { label: 'En retard', variant: 'amber' as const };
+        return { label: 'En retard', variant: 'warning' as const };
       case 'CANCELLED':
-        return { label: 'Annulée', variant: 'slate' as const };
+        return { label: 'Annulée', variant: 'neutral' as const };
       default:
-        return { label: status, variant: 'slate' as const };
+        return { label: status, variant: 'neutral' as const };
     }
   }
 
@@ -275,7 +275,7 @@
             <h2 class="text-lg font-semibold text-foreground mb-1">Erreur</h2>
             <p class="text-sm text-muted-foreground max-w-md">{error}</p>
           </div>
-          <Button intent="secondary" onclick={() => goto(resolve('/app'))}>
+          <Button variant="outline" onclick={() => goto(resolve('/app'))}>
             <iconify-icon icon="solar:arrow-left-linear" width="16"></iconify-icon>
             Retour aux factures
           </Button>
@@ -283,7 +283,7 @@
       </div>
     {:else if payment}
       <div class="mb-4">
-        <Button intent="ghost" size="sm" onclick={() => goto(resolve('/app'))}>
+        <Button variant="ghost" size="sm" onclick={() => goto(resolve('/app'))}>
           <iconify-icon icon="solar:arrow-left-linear" width="16"></iconify-icon>
           Retour
         </Button>
@@ -348,7 +348,7 @@
                   Facture #{payment.id.slice(0, 8).toUpperCase()}
                 </p>
               </div>
-              <Badge variant={getStatusBadge(payment.status).variant}>
+              <Badge tone={getStatusBadge(payment.status).variant}>
                 {getStatusBadge(payment.status).label}
               </Badge>
             </div>
@@ -410,7 +410,7 @@
                   </p>
                 </div>
                 <Button
-                  intent="secondary"
+                  variant="outline"
                   class="flex-shrink-0"
                   disabled={billingPortalLoading}
                   onclick={() => handleManageSubscription()}
@@ -486,7 +486,7 @@
                       </div>
                       {#if doc.pdfUrl}
                         <Button
-                          intent="secondary"
+                          variant="outline"
                           size="sm"
                           class="flex-shrink-0"
                           onclick={() => handleDownloadDocument(doc)}
@@ -599,7 +599,7 @@
                 </div>
                 <h3 class="text-lg font-semibold text-foreground mb-1">Paiement effectué</h3>
                 <p class="text-sm text-muted-foreground mb-4">Cette facture a déjà été payée</p>
-                <Button intent="primary" onclick={handleDownloadReceipt}>
+                <Button onclick={handleDownloadReceipt}>
                   <iconify-icon icon="solar:download-linear" width="16"></iconify-icon>
                   Télécharger le reçu
                 </Button>

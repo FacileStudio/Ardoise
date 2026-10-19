@@ -1,3 +1,29 @@
-@import '@repo/ui/src/styles/tailwind.css';
+@import '@facile/muse/styles';
 
-@source "../**/*.{svelte,ts,js}";
+@source '../../../node_modules/@facile/muse/src';
+@source '../**/*.{svelte,ts,js}';
+
+@theme inline {
+  --color-background: var(--color-fc-page);
+  --color-foreground: var(--color-fc-fg);
+  --color-card: var(--color-fc-component);
+  --color-card-foreground: var(--color-fc-fg);
+  --color-popover: var(--color-fc-component);
+  --color-popover-foreground: var(--color-fc-fg);
+  --color-primary: var(--color-fc-accent);
+  --color-primary-foreground: var(--color-fc-accent-fg);
+  --color-secondary: var(--color-fc-surface);
+  --color-secondary-foreground: var(--color-fc-fg);
+  --color-muted: var(--color-fc-surface);
+  --color-muted-foreground: var(--color-fc-fg-muted);
+  --color-accent: var(--color-fc-surface);
+  --color-accent-foreground: var(--color-fc-fg);
+  --color-border: var(--color-fc-border);
+  --color-input: var(--color-fc-border);
+  --color-ring: var(--color-fc-ring);
+  --color-destructive: var(--color-fc-danger);
+  --color-danger: var(--color-fc-danger);
+  --color-success: var(--color-fc-success);
+  --color-warning: var(--color-fc-warning);
+  --font-heading: var(--font-fc-title);
+}

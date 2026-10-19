@@ -2,7 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { runAction } from '$lib/mission-actions';
 	import { formatEuro } from '$lib/mission';
-	import { Button } from '@repo/ui';
+	import { Button } from '@facile/muse';
 	import 'iconify-icon';
 
 	interface Props {
@@ -79,7 +79,7 @@
 	<div class="flex items-center justify-between gap-3">
 		<h2 class="text-base font-semibold text-foreground">Prestations</h2>
 		{#if editable}
-			<Button intent="secondary" size="sm" onclick={addRow}>
+			<Button variant="outline" size="sm" onclick={addRow}>
 				<iconify-icon icon="mdi:plus" width="14"></iconify-icon>
 				Ajouter une prestation
 			</Button>
@@ -144,7 +144,7 @@
 						<button
 							type="button"
 							onclick={() => removeRow(index)}
-							class="p-1 text-muted-foreground hover:text-red-600"
+							class="p-1 text-muted-foreground hover:text-fc-danger"
 							title="Retirer"
 						>
 							<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
@@ -165,7 +165,7 @@
 			{/if}
 		</div>
 		{#if editable && dirty && !valid}
-			<p class="text-xs text-red-600">Chaque ligne a besoin d'une description, d'une quantité et d'un prix.</p>
+			<p class="text-xs text-fc-danger">Chaque ligne a besoin d'une description, d'une quantité et d'un prix.</p>
 		{/if}
 	{:else}
 		<p class="text-sm text-muted-foreground">
