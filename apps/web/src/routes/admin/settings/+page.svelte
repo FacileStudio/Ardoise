@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte';
   import { trpc } from '$lib/trpc';
   import { Alert, Button, Input, Spinner } from '@facile/muse';
-  import { ImageUpload } from '$lib/ui';
+  import { ImageUpload, SectionSave } from '$lib/ui';
   import 'iconify-icon';
 
   let loading = $state(true);
@@ -47,6 +47,56 @@
     defaultRecoveryFeeAmount: 40,
     defaultVatExemptionMention: 'TVA non applicable, article 293 B du CGI',
   });
+
+  type SectionKey = 'stripe' | 'smtp' | 'docuseal';
+  type FormKey = keyof typeof formData;
+
+  const sections: Record<SectionKey, { fields: FormKey[]; secrets: FormKey[] }> = {
+    stripe: {
+      fields: ['stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret'],
+      secrets: ['stripeSecretKey', 'stripeWebhookSecret'],
+    },
+    smtp: {
+      fields: ['smtpHost', 'smtpPort', 'smtpUser', 'smtpPass', 'smtpFrom'],
+      secrets: ['smtpPass'],
+    },
+    docuseal: {
+      fields: ['docusealApiUrl', 'docusealApiKey'],
+      secrets: ['docusealApiKey'],
+    },
+  };
+
+  let snapshot = $state.raw<Partial<typeof formData>>({});
+  let sectionStatus = $state<Record<SectionKey, 'idle' | 'saving' | 'saved'>>({
+    stripe: 'idle',
+    smtp: 'idle',
+    docuseal: 'idle',
+  });
+
+  function isDirty(key: SectionKey) {
+    return sections[key].fields.some((field) => formData[field] !== snapshot[field]);
+  }
+
+  async function saveSection(key: SectionKey) {
+    const { fields, secrets } = sections[key];
+    const payload = Object.fromEntries(fields.map((field) => [field, formData[field]]));
+
+    sectionStatus[key] = 'saving';
+    message = null;
+
+    try {
+      await trpc.settings.update.mutate(payload);
+      for (const field of secrets) {
+        (formData[field] as string) = '';
+      }
+      snapshot = { ...snapshot, ...Object.fromEntries(fields.map((field) => [field, formData[field]])) };
+      sectionStatus[key] = 'saved';
+      setTimeout(() => (sectionStatus[key] = 'idle'), 2000);
+    } catch {
+      sectionStatus[key] = 'idle';
+      message = { type: 'error', text: "Impossible d'enregistrer cette section" };
+    }
+  }
 
   type AdminSettings = typeof formData & {
     tvaRate?: number | string;
@@ -98,6 +148,7 @@
         defaultVatExemptionMention: settings.defaultVatExemptionMention || '',
       };
       webhookEventsText = formData.webhookEvents.join('\n');
+      snapshot = $state.snapshot(formData);
     } catch {
       message = { type: 'error', text: 'Impossible de charger les paramètres' };
     } finally {
@@ -124,6 +175,7 @@
       formData.smtpPass = '';
       formData.docusealApiKey = '';
       formData.webhookSecret = '';
+      snapshot = $state.snapshot(formData);
       message = { type: 'success', text: 'Paramètres enregistrés' };
     } catch {
       message = { type: 'error', text: 'Impossible d\'enregistrer les paramètres' };
@@ -231,7 +283,10 @@
       </section>
 
       <section class="rounded-xl border border-border p-6 space-y-4">
-        <h2 class="text-base font-semibold text-foreground">Stripe</h2>
+        <div class="flex items-center justify-between gap-4">
+          <h2 class="text-base font-semibold text-foreground">Stripe</h2>
+          <SectionSave dirty={isDirty('stripe')} status={sectionStatus.stripe} onsave={() => saveSection('stripe')} />
+        </div>
         <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.stripePublishableKey} placeholder="Clé publique pk_..." />
           <Input bind:value={formData.stripeSecretKey} type="password" placeholder="Nouvelle clé secrète sk_..." />
@@ -240,7 +295,10 @@
       </section>
 
       <section id="smtp" class="rounded-xl border border-border p-6 space-y-4">
-        <h2 class="text-base font-semibold text-foreground">SMTP</h2>
+        <div class="flex items-center justify-between gap-4">
+          <h2 class="text-base font-semibold text-foreground">SMTP</h2>
+          <SectionSave dirty={isDirty('smtp')} status={sectionStatus.smtp} onsave={() => saveSection('smtp')} />
+        </div>
         <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.smtpHost} placeholder="Serveur SMTP" />
           <Input bind:value={formData.smtpPort} type="number" placeholder="Port" />
@@ -251,7 +309,10 @@
       </section>
 
       <section class="rounded-xl border border-border p-6 space-y-4">
-        <h2 class="text-base font-semibold text-foreground">DocuSeal</h2>
+        <div class="flex items-center justify-between gap-4">
+          <h2 class="text-base font-semibold text-foreground">DocuSeal</h2>
+          <SectionSave dirty={isDirty('docuseal')} status={sectionStatus.docuseal} onsave={() => saveSection('docuseal')} />
+        </div>
         <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.docusealApiUrl} placeholder="https://docuseal.example.com/api" />
           <Input bind:value={formData.docusealApiKey} type="password" placeholder="Nouvelle clé API" />
