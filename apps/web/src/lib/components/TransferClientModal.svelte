@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { Button, Modal, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { trpc } from '$lib/trpc';
 
-	let { open = $bindable(false), clientId, currentSpaceId } = $props<{
+	let { open = $bindable(false), clientId, currentSpaceId, onDone } = $props<{
 		open: boolean;
 		clientId: string;
 		currentSpaceId: string | null;
+		onDone?: (relocated: boolean) => void;
 	}>();
 
 	let spaces = $state<{ id?: string; name?: string }[]>([]);
@@ -47,12 +46,12 @@
 			open = false;
 			if (relocated) {
 				toast.success('Client déplacé');
-				await goto(resolve('/admin/clients'));
 			} else if (mode === 'move') {
 				toast.success("Client copié : l'historique reste dans l'espace d'origine");
 			} else {
 				toast.success('Client copié');
 			}
+			onDone?.(relocated);
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to transfer client');
 			toast.danger(err.message || 'Échec du transfert');

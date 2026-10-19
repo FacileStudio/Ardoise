@@ -9,6 +9,7 @@
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
+	import TransferClientModal from '$lib/components/TransferClientModal.svelte';
 	import 'iconify-icon';
 
 	let pageLoading = $state(true);
@@ -21,6 +22,8 @@
 	let limit = $state(20);
 
 	let confirmDeleteClient: any = $state(null);
+	let transferClient: any = $state(null);
+	let showTransfer = $state(false);
 	let showDeleteDialog = $state(false);
 	let deleteError = $state('');
 
@@ -297,6 +300,14 @@
 										</button>
 
 										<button
+											onclick={() => { transferClient = client; showTransfer = true; }}
+											class="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+											title="Copier / déplacer"
+										>
+											<iconify-icon icon="solar:transfer-horizontal-linear" width="16"></iconify-icon>
+										</button>
+
+										<button
 											onclick={() => { confirmDeleteClient = client; showDeleteDialog = true; }}
 											class="p-2 text-muted-foreground hover:text-fc-danger hover:bg-muted rounded-md transition-colors"
 											title={$i18n.t('admin.clients.deleteClient')}
@@ -360,3 +371,14 @@
 	onConfirm={handleDeleteClient}
 	onCancel={() => { confirmDeleteClient = null; showDeleteDialog = false; }}
 />
+
+{#if transferClient}
+	{#key transferClient.id}
+		<TransferClientModal
+			bind:open={showTransfer}
+			clientId={transferClient.id}
+			currentSpaceId={transferClient.spaceId ?? null}
+			onDone={() => fetchClients()}
+		/>
+	{/key}
+{/if}

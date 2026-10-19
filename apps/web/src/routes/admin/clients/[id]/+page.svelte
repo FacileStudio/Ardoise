@@ -160,7 +160,12 @@
 			</div>
 		</div>
 
-		<TransferClientModal bind:open={showTransfer} clientId={client.id} currentSpaceId={client.spaceId ?? null} />
+		<TransferClientModal
+			bind:open={showTransfer}
+			clientId={client.id}
+			currentSpaceId={client.spaceId ?? null}
+			onDone={(relocated) => relocated && goto(resolve('/admin/clients'))}
+		/>
 
 		<div class="grid grid-cols-3 gap-6 mt-6">
 			<div class="col-span-2 space-y-6">
