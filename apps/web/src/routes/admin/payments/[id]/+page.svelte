@@ -6,6 +6,7 @@
   import { resolve } from '$app/paths';
   import { Alert, Badge, Button, Card, ConfirmModal, Spinner } from '@facile/muse';
   import { logger } from '@repo/logger';
+  import { isSmtpNotConfigured } from '@repo/trpc-client';
   import { i18n } from '@repo/i18n/svelte';
   import 'iconify-icon';
 
@@ -101,7 +102,7 @@
         reminderSent = false;
       }, 4000);
     } catch (err: any) {
-      reminderError = err?.message || "Echec de l'envoi du rappel";
+      reminderError = isSmtpNotConfigured(err) ? '' : err?.message || "Echec de l'envoi du rappel";
       setTimeout(() => {
         reminderError = '';
       }, 5000);

@@ -1,5 +1,6 @@
 import { toast } from '@facile/muse';
 import { logger } from '@repo/logger';
+import { isSmtpNotConfigured } from '@repo/trpc-client';
 
 export async function runAction(
 	action: () => Promise<unknown>,
@@ -13,7 +14,8 @@ export async function runAction(
 		return true;
 	} catch (err: any) {
 		logger.error({ err }, failure);
-		toast.danger(err?.message || failure);
+		if (!isSmtpNotConfigured(err))
+			toast.danger(err?.message || failure);
 
 		return false;
 	}

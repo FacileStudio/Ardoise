@@ -6,6 +6,7 @@
     import { resolve } from '$app/paths';
     import { i18n } from '@repo/i18n/svelte';
     import { logger } from '@repo/logger';
+    import { isSmtpNotConfigured } from '@repo/trpc-client';
     import { ConfirmModal } from '@facile/muse';
     import authStore from '$lib/auth-store';
     import 'iconify-icon';
@@ -101,7 +102,7 @@
             addRole = 'MEMBER';
         } catch (err: any) {
             logger.error({ err }, 'Failed to invite member');
-            addError = err?.message || $i18n.t('common.actions.error');
+            addError = isSmtpNotConfigured(err) ? '' : err?.message || $i18n.t('common.actions.error');
         } finally {
             inviting = false;
             inviteOffer = false;

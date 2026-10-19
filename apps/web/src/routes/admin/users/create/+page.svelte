@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { Button, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
+	import { isSmtpNotConfigured } from '@repo/trpc-client';
 	import 'iconify-icon';
 
 	let submitting = $state(false);
@@ -26,6 +27,9 @@
 			goto(resolve('/admin/users'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to send invitation');
+
+			if (isSmtpNotConfigured(err))
+				return;
 
 			if (err.message?.includes('already exists'))
 				emailError = 'Un utilisateur avec cet email existe déjà';

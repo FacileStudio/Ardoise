@@ -5,6 +5,7 @@
   import { resolve } from '$app/paths';
   import { Button, Input, Spinner, toast } from '@facile/muse';
   import { logger } from '@repo/logger';
+  import { isSmtpNotConfigured } from '@repo/trpc-client';
   import { i18n } from '@repo/i18n/svelte';
   import { spaceContext } from '$lib/space-context.svelte';
   import 'iconify-icon';
@@ -161,8 +162,8 @@
       goto(resolve('/admin/payments'));
     } catch (err: any) {
       logger.error({ err }, 'Failed to create payment');
-      const message = err.message || 'Erreur lors de la création';
-      toast.danger(message);
+      if (!isSmtpNotConfigured(err))
+        toast.danger(err.message || 'Erreur lors de la création');
     } finally {
       submitting = false;
     }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { trpc } from '$lib/trpc';
   import { Alert, Button, Input, Spinner } from '@facile/muse';
   import { ImageUpload } from '$lib/ui';
@@ -102,6 +102,11 @@
       message = { type: 'error', text: 'Impossible de charger les paramètres' };
     } finally {
       loading = false;
+    }
+
+    if (window.location.hash === '#smtp') {
+      await tick();
+      document.getElementById('smtp')?.scrollIntoView({ block: 'center' });
     }
   }
 
@@ -234,7 +239,7 @@
         </div>
       </section>
 
-      <section class="rounded-xl border border-border p-6 space-y-4">
+      <section id="smtp" class="rounded-xl border border-border p-6 space-y-4">
         <h2 class="text-base font-semibold text-foreground">SMTP</h2>
         <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.smtpHost} placeholder="Serveur SMTP" />

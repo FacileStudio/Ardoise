@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
+	import { isSmtpNotConfigured } from '@repo/trpc-client';
 	import { trpc } from '$lib/trpc';
 	import 'iconify-icon';
 
@@ -28,7 +29,8 @@
 			await load();
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to resend invitation');
-			toast.danger(err.message || 'Échec du renvoi');
+			if (!isSmtpNotConfigured(err))
+				toast.danger(err.message || 'Échec du renvoi');
 		} finally {
 			busyId = '';
 		}

@@ -5,7 +5,13 @@ interface TrpcConfig {
   baseUrl: string;
   onUnauthorized: () => void;
   onTokenRefreshed?: (user: any) => void;
+  onSmtpNotConfigured?: () => void;
 }
+
+const SMTP_NOT_CONFIGURED = 'SMTP is not configured';
+
+export const isSmtpNotConfigured = (err: unknown) =>
+  err instanceof Error && err.message === SMTP_NOT_CONFIGURED;
 
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -76,6 +82,12 @@ export const createUniversalTrpcClient = (config: TrpcConfig) => {
             }
 
             config.onUnauthorized();
+          }
+
+          // 412 for a lone call, 207 when the call shared a batch
+          if (config.onSmtpNotConfigured && (res.status === 412 || res.status === 207)) {
+            const body = await res.clone().text();
+            if (body.includes(SMTP_NOT_CONFIGURED)) config.onSmtpNotConfigured();
           }
 
           return res;

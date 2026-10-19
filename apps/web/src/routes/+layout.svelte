@@ -7,6 +7,7 @@
   import { Toaster } from '@facile/muse';
   import { setLocale } from '@repo/i18n/svelte';
   import { isAdmin } from '@repo/auth-shared';
+  import SmtpRequiredModal from '$lib/components/SmtpRequiredModal.svelte';
   import '../app.css';
 
   let { children } = $props();
@@ -42,3 +43,4 @@
 {/if}
 
 <Toaster />
+<SmtpRequiredModal />
