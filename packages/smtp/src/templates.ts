@@ -37,6 +37,14 @@ export interface PaymentReminderData {
   daysUntilDue?: number;
 }
 
+export interface InvitationData {
+  to: string;
+  inviterName: string;
+  inviteLink: string;
+  spaceName?: string;
+  asAdmin?: boolean;
+}
+
 export class EmailTemplates {
   constructor(private smtpClient: SMTPClient) {}
 
@@ -298,6 +306,57 @@ export class EmailTemplates {
         urgencyLevel === 'urgent'
           ? `URGENT : Paiement à régler - ${formattedAmount}`
           : `Rappel : Paiement à régler - ${formattedAmount}`,
+      html,
+    });
+  }
+
+  async sendInvitation(data: InvitationData): Promise<void> {
+    const { to, inviterName, inviteLink, spaceName, asAdmin } = data;
+    const target = spaceName
+      ? `l'espace « ${escapeHtml(spaceName)} »`
+      : asAdmin
+        ? "l'équipe d'administration"
+        : 'la plateforme';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .button { display: inline-block; background-color: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+    .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Vous êtes invité</h1>
+    </div>
+    <div class="content">
+      <p>Bonjour,</p>
+      <p>${escapeHtml(inviterName)} vous invite à rejoindre ${target}.</p>
+      <p style="text-align: center;">
+        <a href="${escapeHtml(inviteLink)}" class="button">Créer mon compte</a>
+      </p>
+      <p>Ce lien est valable 7 jours. Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur :</p>
+      <p style="word-break: break-all;">${escapeHtml(inviteLink)}</p>
+      <div class="footer">
+        <p>Si vous n'attendiez pas cette invitation, ignorez simplement cet email.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    await this.smtpClient.sendEmail({
+      to,
+      subject: `${inviterName} vous invite`,
       html,
     });
   }

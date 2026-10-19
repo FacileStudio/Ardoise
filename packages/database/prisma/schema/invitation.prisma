@@ -1,0 +1,18 @@
+model Invitation {
+  id          String     @id @default(uuid())
+  email       String
+  tokenHash   String     @unique
+  role        UserRole   @default(CLIENT)
+  spaceId     String?    @db.Text
+  spaceRole   SpaceRole?
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime   @default(now())
+
+  space     Space? @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  invitedBy User   @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([spaceId])
+  @@index([invitedById])
+}
