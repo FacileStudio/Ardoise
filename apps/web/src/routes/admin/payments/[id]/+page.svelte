@@ -4,7 +4,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Spinner, Badge, Card, Button, ConfirmDialog, Alert } from '@repo/ui';
+  import { Alert, Badge, Button, Card, ConfirmModal, Spinner } from '@facile/muse';
   import { logger } from '@repo/logger';
   import { i18n } from '@repo/i18n/svelte';
   import 'iconify-icon';
@@ -133,19 +133,19 @@
   function getStatusColor(status: PaymentStatus) {
     switch (status) {
       case 'PAID':
-        return 'emerald';
+        return 'success';
       case 'PENDING':
-        return 'amber';
+        return 'warning';
       case 'PAST_DUE':
-        return 'amber';
+        return 'warning';
       case 'EXPIRED':
-        return 'rose';
+        return 'danger';
       case 'FAILED':
-        return 'rose';
+        return 'danger';
       case 'CANCELLED':
-        return 'slate';
+        return 'neutral';
       default:
-        return 'slate';
+        return 'neutral';
     }
   }
 
@@ -212,7 +212,7 @@
 <div class="p-6 max-w-5xl mx-auto space-y-6">
   {#if pageLoading}
     <div class="py-20 flex justify-center">
-      <Spinner size="xl" />
+      <Spinner size="lg" />
     </div>
   {:else if payment}
     <header class="flex items-center justify-between">
@@ -230,13 +230,13 @@
         </div>
       </div>
 
-      <Badge variant={getStatusColor(payment.status)}>
+      <Badge tone={getStatusColor(payment.status)}>
         {getStatusLabel(payment.status)}
       </Badge>
     </header>
 
     {#if cancelError}
-      <Alert variant="danger" dismissible>{cancelError}</Alert>
+      <Alert tone="danger">{cancelError}</Alert>
     {/if}
 
     <div class="grid grid-cols-3 gap-6">
@@ -413,7 +413,7 @@
                       {formatDate(invoice.paidAt ?? invoice.createdAt)}
                     </div>
                   </div>
-                  <Badge variant={invoice.status === 'PAID' ? 'emerald' : 'rose'}>
+                  <Badge tone={invoice.status === 'PAID' ? 'success' : 'danger'}>
                     {invoice.status === 'PAID' ? 'Payé' : 'Échec'}
                   </Badge>
                 </div>
@@ -470,7 +470,7 @@
             {/if}
 
             <Button
-              intent="secondary"
+              variant="outline"
               class="w-full"
               onclick={() => goto(resolve('/admin/clients'))}
             >
@@ -485,13 +485,13 @@
             <h2 class="text-base font-semibold text-foreground">Actions</h2>
             <div class="space-y-2">
               {#if reminderSent}
-                <Alert variant="success">Rappel envoye avec succes.</Alert>
+                <Alert tone="success">Rappel envoye avec succes.</Alert>
               {/if}
               {#if reminderError}
-                <Alert variant="danger">{reminderError}</Alert>
+                <Alert tone="danger">{reminderError}</Alert>
               {/if}
               <Button
-                intent="secondary"
+                variant="outline"
                 class="w-full"
                 onclick={handleSendReminder}
                 disabled={reminderLoading}
@@ -509,7 +509,7 @@
                 </p>
               {/if}
 
-              <Button intent="danger" class="w-full" onclick={() => (showCancelDialog = true)}>
+              <Button variant="danger" class="w-full" onclick={() => (showCancelDialog = true)}>
                 <iconify-icon icon="solar:close-circle-bold" width="16"></iconify-icon>
                 Annuler le paiement
               </Button>
@@ -521,7 +521,7 @@
           <div class="rounded-xl border border-border p-6 space-y-4">
             <h2 class="text-base font-semibold text-foreground">Reçu</h2>
             <Button
-              intent="secondary"
+              variant="outline"
               class="w-full"
               onclick={() => void window.open(payment.receiptUrl, '_blank')}
             >
@@ -575,20 +575,20 @@
       ></iconify-icon>
       <h2 class="text-xl font-bold text-foreground mt-4">Paiement introuvable</h2>
       <p class="text-sm text-muted-foreground mt-2">Ce paiement n'existe pas ou a été supprimé.</p>
-      <Button intent="primary" class="mt-6" onclick={() => goto(resolve('/admin/payments'))}>
+      <Button class="mt-6" onclick={() => goto(resolve('/admin/payments'))}>
         Retour aux paiements
       </Button>
     </div>
   {/if}
 </div>
 
-<ConfirmDialog
-  bind:isOpen={showCancelDialog}
+<ConfirmModal
+  bind:open={showCancelDialog}
   title="Annuler le paiement"
   description="Êtes-vous sûr de vouloir annuler ce paiement ? Cette action est irréversible."
-  confirmText="Annuler le paiement"
-  cancelText="Retour"
-  variant="danger"
+  confirmLabel="Annuler le paiement"
+  cancelLabel="Retour"
+  tone="danger"
   onConfirm={handleCancelPayment}
   onCancel={() => (showCancelDialog = false)}
 />

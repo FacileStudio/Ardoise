@@ -6,7 +6,7 @@
     import { resolve } from '$app/paths';
     import { i18n } from '@repo/i18n/svelte';
     import { logger } from '@repo/logger';
-    import { ConfirmDialog } from '@repo/ui';
+    import { ConfirmModal } from '@facile/muse';
     import 'iconify-icon';
 
     let space: any = $state(null);
@@ -163,13 +163,13 @@
     </div>
 </div>
 
-<ConfirmDialog
-    bind:isOpen={showDeleteDialog}
+<ConfirmModal
+    bind:open={showDeleteDialog}
     title={$i18n.t('spaces.deleteSpace')}
     description={$i18n.t('spaces.deleteConfirm', { name: space?.name || '' })}
-    confirmText={$i18n.t('spaces.deleteSpace')}
-    cancelText={$i18n.t('common.buttons.cancel')}
-    variant="danger"
+    confirmLabel={$i18n.t('spaces.deleteSpace')}
+    cancelLabel={$i18n.t('common.buttons.cancel')}
+    tone="danger"
     onConfirm={confirmDelete}
     onCancel={() => { showDeleteDialog = false; }}
 />

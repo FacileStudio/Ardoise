@@ -23,7 +23,7 @@
   <button
     type="button"
     onclick={() => (isOpen = !isOpen)}
-    class="flex items-center justify-between w-full px-4 py-3 bg-white border border-neutral-200 rounded-2xl shadow-sm hover:border-neutral-300 transition-all group"
+    class="flex items-center justify-between w-full px-4 py-3 bg-fc-bg border border-fc-border rounded-2xl shadow-sm hover:border-fc-border transition-all group"
     aria-haspopup="listbox"
     aria-expanded={isOpen}
   >
@@ -32,13 +32,13 @@
         <iconify-icon icon={currentLocale.flag} width="22"></iconify-icon>
       </div>
       <div class="flex flex-col items-start leading-tight">
-        <span class="text-xs font-black uppercase tracking-wider text-neutral-400">Language</span>
-        <span class="text-sm font-bold text-neutral-900">{currentLocale.native}</span>
+        <span class="text-xs font-black uppercase tracking-wider text-fc-fg-muted">Language</span>
+        <span class="text-sm font-bold text-fc-fg">{currentLocale.native}</span>
       </div>
     </div>
     <iconify-icon
       icon="solar:alt-arrow-down-bold-duotone"
-      class="text-neutral-400 transition-transform duration-300 {isOpen ? 'rotate-180' : ''}"
+      class="text-fc-fg-muted transition-transform duration-300 {isOpen ? 'rotate-180' : ''}"
       width="20"
     ></iconify-icon>
   </button>
@@ -47,7 +47,7 @@
     <div
       in:scale={{ start: 0.95, duration: 150 }}
       out:fade={{ duration: 100 }}
-      class="absolute z-50 w-full mt-2 bg-white border border-neutral-200 rounded-[24px] shadow-xl shadow-neutral-200/50 overflow-hidden p-1.5"
+      class="absolute z-50 w-full mt-2 bg-fc-bg border border-fc-border rounded-[24px] shadow-xl shadow-fc-fg/10 overflow-hidden p-1.5"
     >
       <div class="max-h-64 overflow-y-auto custom-scrollbar">
         {#each locales as lang (lang.code)}
@@ -55,8 +55,8 @@
             onclick={() => handleSelect(lang.code)}
             class="flex items-center justify-between w-full px-4 py-3 rounded-[18px] transition-all
             {$locale === lang.code
-              ? 'bg-neutral-900 text-white'
-              : 'text-neutral-600 hover:bg-neutral-100'}"
+              ? 'bg-fc-fg text-white'
+              : 'text-fc-fg-muted hover:bg-fc-surface'}"
           >
             <div class="flex items-center gap-3">
               <iconify-icon icon={lang.flag} width="20"></iconify-icon>

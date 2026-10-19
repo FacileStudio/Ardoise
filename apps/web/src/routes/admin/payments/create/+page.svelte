@@ -3,8 +3,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Spinner, Button, Input } from '@repo/ui';
-  import { toast } from '@repo/utils';
+  import { Button, Input, Spinner, toast } from '@facile/muse';
   import { logger } from '@repo/logger';
   import { i18n } from '@repo/i18n/svelte';
   import { spaceContext } from '$lib/space-context.svelte';
@@ -72,7 +71,7 @@
       clients = result.clients as Client[];
     } catch (err) {
       logger.error({ err }, 'Failed to fetch clients');
-      toast.push('Erreur lors du chargement des clients', 'error');
+      toast.danger('Erreur lors du chargement des clients');
     }
   }
 
@@ -87,7 +86,7 @@
       documents = result.items as Document[];
     } catch (err) {
       logger.error({ err }, 'Failed to fetch documents');
-      toast.push('Erreur lors du chargement des documents', 'error');
+      toast.danger('Erreur lors du chargement des documents');
     }
   }
 
@@ -144,7 +143,7 @@
   async function handleCreate() {
     const validationError = validateForm();
     if (validationError) {
-      toast.push(validationError, 'error');
+      toast.danger(validationError);
       return;
     }
 
@@ -156,17 +155,14 @@
         dueDate: new Date(formData.dueDate),
       });
 
-      toast.push(
-        formData.collectionMethod === 'STRIPE'
+      toast.success(formData.collectionMethod === 'STRIPE'
           ? 'Paiement créé avec succès! Un email a été envoyé au client.'
-          : 'Paiement manuel enregistré avec succès!',
-        'success'
-      );
+          : 'Paiement manuel enregistré avec succès!');
       goto(resolve('/admin/payments'));
     } catch (err: any) {
       logger.error({ err }, 'Failed to create payment');
       const message = err.message || 'Erreur lors de la création';
-      toast.push(message, 'error');
+      toast.danger(message);
     } finally {
       submitting = false;
     }
@@ -451,13 +447,13 @@
     <div class="flex gap-3 pt-2">
       <Button
         onclick={() => goto(resolve('/admin/payments'))}
-        intent="secondary"
+        variant="outline"
         class="flex-1"
         disabled={submitting}
       >
         Annuler
       </Button>
-      <Button onclick={handleCreate} intent="primary" class="flex-1" disabled={submitting}>
+      <Button onclick={handleCreate} class="flex-1" disabled={submitting}>
         {#if submitting}
           <iconify-icon icon="line-md:loading-twotone-loop" width="16"></iconify-icon>
           Création en cours...

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { EntityConfig } from '@repo/admin';
   import { cn } from '@repo/utils';
-  import Toggle from '../../components/atoms/Toggle.svelte';
+  import Toggle from '../Toggle.svelte';
   import 'iconify-icon';
 
   let {
@@ -54,10 +54,10 @@
   };
 </script>
 
-<form onsubmit={handleSubmit} class={cn('space-y-8 bg-white p-6 rounded-3xl', className)}>
-  <div class="border-b border-neutral-100 pb-4">
-    <h3 class="text-lg font-bold text-neutral-900 capitalize">{mode} {config.name}</h3>
-    <p class="text-xs text-neutral-400">Fill in the information below.</p>
+<form onsubmit={handleSubmit} class={cn('space-y-8 bg-fc-bg p-6 rounded-3xl', className)}>
+  <div class="border-b border-fc-border pb-4">
+    <h3 class="text-lg font-bold text-fc-fg capitalize">{mode} {config.name}</h3>
+    <p class="text-xs text-fc-fg-muted">Fill in the information below.</p>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
@@ -65,26 +65,26 @@
       <div class="flex flex-col gap-2 {field.type === 'json' ? 'md:col-span-2' : ''}">
         <label
           for={field.name}
-          class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-neutral-400"
+          class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-fc-fg-muted"
         >
-          <iconify-icon icon={getIcon(field.type)} width="16" class="text-neutral-300"
+          <iconify-icon icon={getIcon(field.type)} width="16" class="text-fc-fg-muted"
           ></iconify-icon>
           {field.label}
-          {#if field.required}<span class="text-red-400">*</span>{/if}
+          {#if field.required}<span class="text-fc-danger">*</span>{/if}
         </label>
 
         <div class="relative">
           {#if field.type === 'boolean'}
             <div class="flex items-center h-11 px-1">
               <Toggle bind:checked={formData[field.name] as boolean} size="md" />
-              <span class="ml-3 text-sm font-medium text-neutral-600">Enable {field.label}</span>
+              <span class="ml-3 text-sm font-medium text-fc-fg-muted">Enable {field.label}</span>
             </div>
           {:else if field.type === 'select'}
             <select
               id={field.name}
               bind:value={formData[field.name]}
               disabled={isSubmitting}
-              class="w-full h-11 px-4 bg-neutral-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black transition-all appearance-none"
+              class="w-full h-11 px-4 bg-fc-surface border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black transition-all appearance-none"
             >
               <option value="">Select {field.label}...</option>
               {#each field.options || [] as opt (opt.value)}
@@ -93,7 +93,7 @@
             </select>
             <iconify-icon
               icon="solar:alt-arrow-down-linear"
-              class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400"
+              class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-fc-fg-muted"
               width="18"
             ></iconify-icon>
           {:else if field.type === 'json'}
@@ -101,7 +101,7 @@
               id={field.name}
               bind:value={formData[field.name]}
               rows="4"
-              class="w-full p-4 bg-neutral-50 border-none rounded-2xl text-sm font-mono focus:ring-2 focus:ring-black transition-all"
+              class="w-full p-4 bg-fc-surface border-none rounded-2xl text-sm font-mono focus:ring-2 focus:ring-black transition-all"
               placeholder={`{"key": "value"}`}
             ></textarea>
           {:else}
@@ -118,15 +118,15 @@
               disabled={isSubmitting}
               placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
               class={cn(
-                'w-full h-11 px-4 bg-neutral-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black transition-all',
-                errors[field.name] && 'ring-2 ring-red-100 bg-red-50/30'
+                'w-full h-11 px-4 bg-fc-surface border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black transition-all',
+                errors[field.name] && 'ring-2 ring-fc-danger/30 bg-fc-danger/30'
               )}
             />
           {/if}
         </div>
 
         {#if errors[field.name]}
-          <span class="text-[10px] font-bold text-red-500 flex items-center gap-1 px-1">
+          <span class="text-[10px] font-bold text-fc-danger flex items-center gap-1 px-1">
             <iconify-icon icon="solar:danger-circle-bold" width="12"></iconify-icon>
             {errors[field.name]}
           </span>
@@ -135,11 +135,11 @@
     {/each}
   </div>
 
-  <div class="flex items-center justify-end gap-3 pt-6 border-top border-neutral-100">
+  <div class="flex items-center justify-end gap-3 pt-6 border-top border-fc-border">
     <button
       type="button"
       onclick={onCancel}
-      class="h-11 px-6 rounded-2xl text-sm font-bold text-neutral-500 hover:bg-neutral-100 transition-all"
+      class="h-11 px-6 rounded-2xl text-sm font-bold text-fc-fg-muted hover:bg-fc-surface transition-all"
     >
       Cancel
     </button>

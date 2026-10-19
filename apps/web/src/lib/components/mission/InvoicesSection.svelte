@@ -11,7 +11,7 @@
 		formatEuro,
 		formatDate,
 	} from '$lib/mission';
-	import { Badge } from '@repo/ui';
+	import { Badge } from '@facile/muse';
 	import 'iconify-icon';
 
 	interface Props {
@@ -143,7 +143,7 @@
 						{#each paymentsOf(invoice.id) as payment (payment.id)}
 							<a href={resolve(`/admin/payments/${payment.id}`)} class="inline-flex items-center gap-1.5 text-xs text-foreground hover:underline">
 								{formatEuro(payment.amount)}
-								<Badge variant={PAYMENT_STATUS_VARIANTS[payment.status] ?? 'slate'}>
+								<Badge tone={PAYMENT_STATUS_VARIANTS[payment.status] ?? 'neutral'}>
 									{PAYMENT_STATUS_LABELS[payment.status] ?? payment.status}
 								</Badge>
 							</a>
@@ -174,7 +174,7 @@
 					class="flex items-center justify-between rounded-md bg-background px-3 py-2 text-sm text-foreground hover:underline"
 				>
 					{formatEuro(payment.amount)}
-					<Badge variant={PAYMENT_STATUS_VARIANTS[payment.status] ?? 'slate'}>
+					<Badge tone={PAYMENT_STATUS_VARIANTS[payment.status] ?? 'neutral'}>
 						{PAYMENT_STATUS_LABELS[payment.status] ?? payment.status}
 					</Badge>
 				</a>

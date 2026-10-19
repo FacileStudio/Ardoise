@@ -3,7 +3,7 @@
 	import { runAction } from '$lib/mission-actions';
 	import { downloadDocument } from '$lib/download-document';
 	import { formatEuro, formatDate } from '$lib/mission';
-	import { Badge } from '@repo/ui';
+	import { Badge } from '@facile/muse';
 	import 'iconify-icon';
 
 	interface Props {
@@ -49,15 +49,15 @@
 
 	function stateOf(quote: any) {
 		if (quote.id !== billing.currentQuoteId)
-			return { label: 'Remplacé', variant: 'slate' as const };
+			return { label: 'Remplacé', variant: 'neutral' as const };
 
 		if (billing.quoteOutdated)
-			return { label: 'Périmé', variant: 'amber' as const };
+			return { label: 'Périmé', variant: 'warning' as const };
 
 		if (quote.acceptedAt)
-			return { label: `Accepté le ${formatDate(quote.acceptedAt)}`, variant: 'emerald' as const };
+			return { label: `Accepté le ${formatDate(quote.acceptedAt)}`, variant: 'success' as const };
 
-		return { label: 'En attente', variant: 'indigo' as const };
+		return { label: 'En attente', variant: 'info' as const };
 	}
 </script>
 
@@ -85,7 +85,7 @@
 	</div>
 
 	{#if billing.quoteOutdated}
-		<p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+		<p class="rounded-md bg-fc-warning/10 px-3 py-2 text-sm text-fc-warning">
 			Les prestations ont changé depuis le dernier devis. Générez un nouveau devis pour pouvoir facturer.
 		</p>
 	{/if}
@@ -105,7 +105,7 @@
 						</div>
 					</div>
 					<div class="flex items-center gap-2">
-						<Badge variant={state.variant}>{state.label}</Badge>
+						<Badge tone={state.variant}>{state.label}</Badge>
 						<button
 							onclick={() => downloadDocument(quote.id)}
 							class="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"

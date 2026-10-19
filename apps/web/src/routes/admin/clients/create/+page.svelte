@@ -2,8 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Input } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Button, Input, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
@@ -82,7 +81,7 @@
 
 	async function handleCreate() {
 		if (!validateForm()) {
-			toast.push(formMessage, 'error');
+			toast.danger(formMessage);
 			return;
 		}
 
@@ -94,7 +93,7 @@
 				contactEmail: formData.contactEmail.trim(),
 				credentialEmail: formData.credentialEmail.trim(),
 			});
-			toast.push('Client créé avec succès!', 'success');
+			toast.success('Client créé avec succès!');
 			goto(resolve('/admin/clients'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create client');
@@ -113,7 +112,7 @@
 				formMessage = message;
 			}
 
-			toast.push(formMessage, 'error');
+			toast.danger(formMessage);
 		} finally {
 			submitting = false;
 		}
@@ -137,7 +136,7 @@
 
 	<div class="space-y-6">
 		{#if formMessage}
-			<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+			<div class="rounded-lg border border-fc-danger/30 bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">
 				{formMessage}
 			</div>
 		{/if}
@@ -146,27 +145,27 @@
 			<h2 class="text-base font-semibold text-foreground">Contact client</h2>
 			<div class="grid grid-cols-2 gap-4">
 				<div>
-					<div class="text-sm font-medium mb-2">Prénom <span class="text-red-500">*</span></div>
-					<Input bind:value={formData.contactFirstName} placeholder="Jean" error={!!getFieldError('contactFirstName')} />
+					<div class="text-sm font-medium mb-2">Prénom <span class="text-fc-danger">*</span></div>
+					<Input bind:value={formData.contactFirstName} placeholder="Jean" aria-invalid={!!getFieldError('contactFirstName')} class="aria-invalid:border-fc-danger" />
 					{#if getFieldError('contactFirstName')}
-						<p class="mt-1 text-xs text-red-600">{getFieldError('contactFirstName')}</p>
+						<p class="mt-1 text-xs text-fc-danger">{getFieldError('contactFirstName')}</p>
 					{/if}
 				</div>
 
 				<div>
-					<div class="text-sm font-medium mb-2">Nom <span class="text-red-500">*</span></div>
-					<Input bind:value={formData.contactLastName} placeholder="Dupont" error={!!getFieldError('contactLastName')} />
+					<div class="text-sm font-medium mb-2">Nom <span class="text-fc-danger">*</span></div>
+					<Input bind:value={formData.contactLastName} placeholder="Dupont" aria-invalid={!!getFieldError('contactLastName')} class="aria-invalid:border-fc-danger" />
 					{#if getFieldError('contactLastName')}
-						<p class="mt-1 text-xs text-red-600">{getFieldError('contactLastName')}</p>
+						<p class="mt-1 text-xs text-fc-danger">{getFieldError('contactLastName')}</p>
 					{/if}
 				</div>
 			</div>
 
 			<div>
 				<div class="text-sm font-medium mb-2">Email de contact</div>
-				<Input bind:value={formData.contactEmail} type="email" placeholder="contact@entreprise.fr" error={!!getFieldError('contactEmail')} />
+				<Input bind:value={formData.contactEmail} type="email" placeholder="contact@entreprise.fr" aria-invalid={!!getFieldError('contactEmail')} class="aria-invalid:border-fc-danger" />
 				{#if getFieldError('contactEmail')}
-					<p class="mt-1 text-xs text-red-600">{getFieldError('contactEmail')}</p>
+					<p class="mt-1 text-xs text-fc-danger">{getFieldError('contactEmail')}</p>
 				{:else}
 					<p class="mt-1 text-xs text-muted-foreground">Utilisé pour le suivi commercial et les paiements Stripe.</p>
 				{/if}
@@ -176,10 +175,10 @@
 		<div class="rounded-xl border border-border p-6 space-y-4">
 			<h2 class="text-base font-semibold text-foreground">Informations entreprise</h2>
 			<div>
-				<div class="text-sm font-medium mb-2">Nom de l'entreprise <span class="text-red-500">*</span></div>
-				<Input bind:value={formData.companyName} placeholder="Entreprise SAS" error={!!getFieldError('companyName')} />
+				<div class="text-sm font-medium mb-2">Nom de l'entreprise <span class="text-fc-danger">*</span></div>
+				<Input bind:value={formData.companyName} placeholder="Entreprise SAS" aria-invalid={!!getFieldError('companyName')} class="aria-invalid:border-fc-danger" />
 				{#if getFieldError('companyName')}
-					<p class="mt-1 text-xs text-red-600">{getFieldError('companyName')}</p>
+					<p class="mt-1 text-xs text-fc-danger">{getFieldError('companyName')}</p>
 				{/if}
 			</div>
 
@@ -226,18 +225,18 @@
 			{#if formData.createCredentials}
 				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<div class="text-sm font-medium mb-2">Email de connexion <span class="text-red-500">*</span></div>
-						<Input bind:value={formData.credentialEmail} type="email" placeholder="login@entreprise.fr" error={!!getFieldError('credentialEmail')} />
+						<div class="text-sm font-medium mb-2">Email de connexion <span class="text-fc-danger">*</span></div>
+						<Input bind:value={formData.credentialEmail} type="email" placeholder="login@entreprise.fr" aria-invalid={!!getFieldError('credentialEmail')} class="aria-invalid:border-fc-danger" />
 						{#if getFieldError('credentialEmail')}
-							<p class="mt-1 text-xs text-red-600">{getFieldError('credentialEmail')}</p>
+							<p class="mt-1 text-xs text-fc-danger">{getFieldError('credentialEmail')}</p>
 						{/if}
 					</div>
 
 					<div>
-						<div class="text-sm font-medium mb-2">Mot de passe <span class="text-red-500">*</span></div>
-						<Input bind:value={formData.credentialPassword} type="password" placeholder="••••••••" error={!!getFieldError('credentialPassword')} />
+						<div class="text-sm font-medium mb-2">Mot de passe <span class="text-fc-danger">*</span></div>
+						<Input bind:value={formData.credentialPassword} type="password" placeholder="••••••••" aria-invalid={!!getFieldError('credentialPassword')} class="aria-invalid:border-fc-danger" />
 						{#if getFieldError('credentialPassword')}
-							<p class="mt-1 text-xs text-red-600">{getFieldError('credentialPassword')}</p>
+							<p class="mt-1 text-xs text-fc-danger">{getFieldError('credentialPassword')}</p>
 						{:else}
 							<p class="mt-1 text-xs text-muted-foreground">Minimum 8 caractères.</p>
 						{/if}
@@ -247,7 +246,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-2">
-			<Button onclick={() => goto(resolve('/admin/clients'))} intent="secondary" class="flex-1" disabled={submitting}>
+			<Button onclick={() => goto(resolve('/admin/clients'))} variant="outline" class="flex-1" disabled={submitting}>
 				Annuler
 			</Button>
 			<button

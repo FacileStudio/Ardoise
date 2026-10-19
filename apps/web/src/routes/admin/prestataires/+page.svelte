@@ -4,8 +4,8 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, Button, Input, Drawer } from '@repo/ui';
-	import { toast, downloadCSV } from '@repo/utils';
+	import { Button, Drawer, Input, Spinner, toast } from '@facile/muse';
+	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
@@ -80,7 +80,7 @@
 			await loadLogos();
 		} catch (err) {
 			logger.error({ err }, 'Failed to load providers');
-			toast.push('Erreur lors du chargement des prestataires', 'error');
+			toast.danger('Erreur lors du chargement des prestataires');
 		} finally {
 			if (isInitialLoad) {
 				pageLoading = false;
@@ -147,20 +147,20 @@
 
 	async function handleCreate() {
 		if (!formData.name) {
-			toast.push('Le nom est requis', 'error');
+			toast.danger('Le nom est requis');
 			return;
 		}
 
 		try {
 			submitting = true;
 			await trpc.provider.create.mutate({ ...formData, spaceId: spaceContext.spaceId });
-			toast.push('Prestataire créé avec succès!', 'success');
+			toast.success('Prestataire créé avec succès!');
 			showCreateDrawer = false;
 			resetForm();
 			await loadProviders();
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create provider');
-			toast.push('Erreur lors de la création', 'error');
+			toast.danger('Erreur lors de la création');
 		} finally {
 			submitting = false;
 		}
@@ -168,7 +168,7 @@
 
 	async function handleUpdate() {
 		if (!editingProvider || !formData.name) {
-			toast.push('Le nom est requis', 'error');
+			toast.danger('Le nom est requis');
 			return;
 		}
 
@@ -178,14 +178,14 @@
 				id: editingProvider.id,
 				data: formData,
 			});
-			toast.push('Prestataire modifié avec succès!', 'success');
+			toast.success('Prestataire modifié avec succès!');
 			showEditDrawer = false;
 			editingProvider = null;
 			resetForm();
 			await loadProviders();
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to update provider');
-			toast.push('Erreur lors de la modification', 'error');
+			toast.danger('Erreur lors de la modification');
 		} finally {
 			submitting = false;
 		}
@@ -196,14 +196,14 @@
 
 		try {
 			await trpc.provider.delete.mutate({ id });
-			toast.push('Prestataire supprimé avec succès', 'success');
+			toast.success('Prestataire supprimé avec succès');
 			await loadProviders();
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to delete provider');
 			if (err.message.includes('associated documents')) {
-				toast.push('Impossible de supprimer: le prestataire a des documents associés', 'error');
+				toast.danger('Impossible de supprimer: le prestataire a des documents associés');
 			} else {
-				toast.push('Erreur lors de la suppression', 'error');
+				toast.danger('Erreur lors de la suppression');
 			}
 		}
 	}
@@ -225,13 +225,13 @@
 		}));
 		const date = new Date().toISOString().split('T')[0];
 		downloadCSV(exportData, `prestataires-${date}`);
-		toast.push('Export réussi!', 'success');
+		toast.success('Export réussi!');
 	}
 </script>
 
 {#if pageLoading}
 	<div class="flex flex-col items-center justify-center h-screen space-y-4">
-		<Spinner size="xl" />
+		<Spinner size="lg" />
 		<p class="text-xs text-muted-foreground">Chargement...</p>
 	</div>
 {:else}
@@ -354,7 +354,7 @@
 										</button>
 										<button
 											onclick={() => handleDelete(provider.id)}
-											class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
+											class="p-1.5 text-fc-danger hover:bg-fc-danger/10 rounded transition-colors"
 											title="Supprimer"
 										>
 											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
@@ -464,7 +464,7 @@
 
 		<div class="flex gap-3 pt-4">
 			<Button onclick={() => { showCreateDrawer = false; }}>Annuler</Button>
-			<Button intent="primary" onclick={handleCreate} disabled={submitting}>
+			<Button onclick={handleCreate} disabled={submitting}>
 				{#if submitting}
 					<Spinner size="sm" />
 				{/if}
@@ -533,7 +533,7 @@
 
 		<div class="flex gap-3 pt-4">
 			<Button onclick={() => { showEditDrawer = false; }}>Annuler</Button>
-			<Button intent="primary" onclick={handleUpdate} disabled={submitting}>
+			<Button onclick={handleUpdate} disabled={submitting}>
 				{#if submitting}
 					<Spinner size="sm" />
 				{/if}

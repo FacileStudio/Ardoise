@@ -74,7 +74,7 @@
 						<button
 							disabled={busy}
 							onclick={() => detach(doc.id)}
-							class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md disabled:opacity-50"
+							class="p-2 text-muted-foreground hover:text-fc-danger hover:bg-muted rounded-md disabled:opacity-50"
 							title="Détacher de la mission"
 						>
 							<iconify-icon icon="solar:link-broken-bold" width="16"></iconify-icon>

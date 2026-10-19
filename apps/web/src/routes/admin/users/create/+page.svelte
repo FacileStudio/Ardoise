@@ -2,8 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Button, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
@@ -54,7 +53,7 @@
 
 	async function handleCreate() {
 		if (!validateForm()) {
-			toast.push('Veuillez corriger les erreurs dans le formulaire', 'error');
+			toast.danger('Veuillez corriger les erreurs dans le formulaire');
 			return;
 		}
 
@@ -68,7 +67,7 @@
 				role: formData.role,
 			});
 
-			toast.push('Utilisateur créé avec succès!', 'success');
+			toast.success('Utilisateur créé avec succès!');
 			goto(resolve('/admin/users'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create user');
@@ -84,7 +83,7 @@
 				message = err.message;
 			}
 
-			toast.push(message, 'error');
+			toast.danger(message);
 		} finally {
 			submitting = false;
 		}
@@ -112,11 +111,11 @@
 				<input
 					type="email"
 					bind:value={formData.email}
-					class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+					class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.email ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 					placeholder="user@example.com"
 				/>
 				{#if errors.email}
-					<p class="text-red-600 text-xs mt-1">{errors.email}</p>
+					<p class="text-fc-danger text-xs mt-1">{errors.email}</p>
 				{/if}
 			</div>
 
@@ -126,11 +125,11 @@
 					<input
 						type="text"
 						bind:value={formData.firstName}
-						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.firstName ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.firstName ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 						placeholder="John"
 					/>
 					{#if errors.firstName}
-						<p class="text-red-600 text-xs mt-1">{errors.firstName}</p>
+						<p class="text-fc-danger text-xs mt-1">{errors.firstName}</p>
 					{/if}
 				</div>
 
@@ -139,11 +138,11 @@
 					<input
 						type="text"
 						bind:value={formData.lastName}
-						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.lastName ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.lastName ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 						placeholder="Doe"
 					/>
 					{#if errors.lastName}
-						<p class="text-red-600 text-xs mt-1">{errors.lastName}</p>
+						<p class="text-fc-danger text-xs mt-1">{errors.lastName}</p>
 					{/if}
 				</div>
 			</div>
@@ -156,11 +155,11 @@
 				<input
 					type="password"
 					bind:value={formData.password}
-					class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+					class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.password ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 					placeholder="Minimum 8 caractères"
 				/>
 				{#if errors.password}
-					<p class="text-red-600 text-xs mt-1">{errors.password}</p>
+					<p class="text-fc-danger text-xs mt-1">{errors.password}</p>
 				{/if}
 			</div>
 
@@ -169,11 +168,11 @@
 				<input
 					type="password"
 					bind:value={formData.confirmPassword}
-					class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+					class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.confirmPassword ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 					placeholder="Confirmez le mot de passe"
 				/>
 				{#if errors.confirmPassword}
-					<p class="text-red-600 text-xs mt-1">{errors.confirmPassword}</p>
+					<p class="text-fc-danger text-xs mt-1">{errors.confirmPassword}</p>
 				{/if}
 			</div>
 		</div>
@@ -204,12 +203,12 @@
 			</div>
 		</div>
 
-		<div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+		<div class="rounded-lg border border-fc-info/30 bg-fc-info/10 p-4">
 			<div class="flex items-start gap-3">
-				<iconify-icon icon="solar:info-circle-bold" class="text-blue-600 mt-0.5" width="18"></iconify-icon>
+				<iconify-icon icon="solar:info-circle-bold" class="text-fc-info mt-0.5" width="18"></iconify-icon>
 				<div class="flex-1">
-					<h3 class="text-sm font-semibold text-blue-900 mb-1">Permissions administrateur</h3>
-					<p class="text-xs text-blue-800">
+					<h3 class="text-sm font-semibold text-fc-info mb-1">Permissions administrateur</h3>
+					<p class="text-xs text-fc-info">
 						Les administrateurs ont accès à toutes les fonctionnalités d'administration, incluant la gestion des clients, paiements, documents et utilisateurs.
 					</p>
 				</div>
@@ -217,7 +216,7 @@
 		</div>
 
 		<div class="flex gap-3 pt-2">
-			<Button onclick={() => goto(resolve('/admin/users'))} intent="secondary" class="flex-1" disabled={submitting}>
+			<Button onclick={() => goto(resolve('/admin/users'))} variant="outline" class="flex-1" disabled={submitting}>
 				Annuler
 			</Button>
 			<button

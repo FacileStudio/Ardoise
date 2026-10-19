@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
-	import { Spinner, Badge, Button } from '@repo/ui';
+	import { Badge, Button, Spinner } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
 
@@ -64,7 +64,7 @@
 		}
 	}
 
-	function getStatusBadge(status: SubmissionStatus): { variant: 'default' | 'success' | 'warning' | 'danger'; label: string } {
+	function getStatusBadge(status: SubmissionStatus): { variant: 'neutral' | 'success' | 'warning' | 'danger'; label: string } {
 		switch (status) {
 			case 'completed':
 				return { variant: 'success', label: 'Signé' };
@@ -76,7 +76,7 @@
 			case 'declined':
 				return { variant: 'danger', label: 'Refusé' };
 			default:
-				return { variant: 'default', label: status };
+				return { variant: 'neutral', label: status };
 		}
 	}
 
@@ -109,7 +109,7 @@
 
 	{#if pageLoading}
 		<div class="flex items-center justify-center py-20">
-			<Spinner size="xl" />
+			<Spinner size="lg" />
 		</div>
 	{:else if submission}
 		<div class="space-y-6">
@@ -121,7 +121,7 @@
 						</h2>
 						<p class="text-xs text-muted-foreground">Référence: #{submission.slug}</p>
 					</div>
-					<Badge variant={getStatusBadge(submission.status).variant} size="lg">
+					<Badge tone={getStatusBadge(submission.status).variant}>
 						{getStatusBadge(submission.status).label}
 					</Badge>
 				</div>
@@ -140,7 +140,6 @@
 				{#if submission.combined_document_url}
 					<div class="mt-6 pt-4 border-t border-border">
 						<Button
-							intent="primary"
 							onclick={() => void window.open(submission.combined_document_url!, '_blank')}
 						>
 							<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
@@ -152,7 +151,7 @@
 				{#if submission.audit_log_url}
 					<div class="mt-3">
 						<Button
-							intent="secondary"
+							variant="outline"
 							onclick={() => void window.open(submission.audit_log_url!, '_blank')}
 						>
 							<iconify-icon icon="solar:document-text-bold" width="16"></iconify-icon>
@@ -182,7 +181,7 @@
 									</div>
 								</div>
 								<div class="text-right">
-									<Badge variant={getStatusBadge(submitter.status).variant}>
+									<Badge tone={getStatusBadge(submitter.status).variant}>
 										{submitter.role}
 									</Badge>
 									<p class="text-xs text-muted-foreground mt-1">
@@ -221,7 +220,7 @@
 					<div class="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
 
 					<div class="relative flex gap-3">
-						<div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 z-10">
+						<div class="w-8 h-8 rounded-full bg-fc-success flex items-center justify-center flex-shrink-0 z-10">
 							<iconify-icon icon="solar:add-circle-bold" width="16" class="text-white"></iconify-icon>
 						</div>
 						<div class="pt-1">
@@ -233,7 +232,7 @@
 					{#each submission.submitters as submitter (submitter.id)}
 						{#if submitter.sent_at}
 							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 z-10">
+								<div class="w-8 h-8 rounded-full bg-fc-info flex items-center justify-center flex-shrink-0 z-10">
 									<iconify-icon icon="solar:letter-bold" width="16" class="text-white"></iconify-icon>
 								</div>
 								<div class="pt-1">
@@ -245,7 +244,7 @@
 
 						{#if submitter.opened_at}
 							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 z-10">
+								<div class="w-8 h-8 rounded-full bg-fc-warning flex items-center justify-center flex-shrink-0 z-10">
 									<iconify-icon icon="solar:eye-bold" width="16" class="text-white"></iconify-icon>
 								</div>
 								<div class="pt-1">
@@ -257,7 +256,7 @@
 
 						{#if submitter.completed_at}
 							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 z-10">
+								<div class="w-8 h-8 rounded-full bg-fc-success flex items-center justify-center flex-shrink-0 z-10">
 									<iconify-icon icon="solar:check-circle-bold" width="16" class="text-white"></iconify-icon>
 								</div>
 								<div class="pt-1">
@@ -269,7 +268,7 @@
 
 						{#if submitter.declined_at}
 							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0 z-10">
+								<div class="w-8 h-8 rounded-full bg-fc-danger flex items-center justify-center flex-shrink-0 z-10">
 									<iconify-icon icon="solar:close-circle-bold" width="16" class="text-white"></iconify-icon>
 								</div>
 								<div class="pt-1">

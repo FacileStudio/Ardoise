@@ -3,13 +3,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import {
-		Alert,
-		Badge,
-		ConfirmDialog,
-		Pagination,
-		Button
-	} from '@repo/ui';
+	import { Alert, Badge, Button, ConfirmModal } from '@facile/muse';
+	import { Pagination } from '$lib/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
@@ -99,11 +94,11 @@
 
 	function getStatusColor(status: string | null) {
 		switch (status) {
-			case 'ACTIVE': return 'emerald';
-			case 'BANNED': return 'rose';
-			case 'SUSPENDED': return 'amber';
-			case 'PENDING': return 'slate';
-			default: return 'slate';
+			case 'ACTIVE': return 'success';
+			case 'BANNED': return 'danger';
+			case 'SUSPENDED': return 'warning';
+			case 'PENDING': return 'neutral';
+			default: return 'neutral';
 		}
 	}
 
@@ -155,7 +150,7 @@
 {:else}
 	<div class="p-8 max-w-[1400px] mx-auto space-y-6">
 		{#if deleteError}
-			<Alert variant="danger" dismissible>{deleteError}</Alert>
+			<Alert tone="danger">{deleteError}</Alert>
 		{/if}
 
 		<header class="flex justify-between items-center">
@@ -190,10 +185,10 @@
 			</div>
 			<div class="rounded-xl border border-border p-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs font-medium text-green-600 uppercase">{$i18n.t('admin.clients.activeClients')}</div>
-					<iconify-icon icon="solar:verified-check-bold" class="text-green-600" width="18"></iconify-icon>
+					<div class="text-xs font-medium text-fc-success uppercase">{$i18n.t('admin.clients.activeClients')}</div>
+					<iconify-icon icon="solar:verified-check-bold" class="text-fc-success" width="18"></iconify-icon>
 				</div>
-				<div class="text-2xl font-bold text-green-600">
+				<div class="text-2xl font-bold text-fc-success">
 					{clients.filter(c => c.user?.status === 'ACTIVE').length}
 				</div>
 			</div>
@@ -262,7 +257,7 @@
 									<div class="font-medium text-foreground flex items-center gap-2">
 										{client.contactFirstName} {client.contactLastName}
 										{#if client.user?.emailVerified}
-											<iconify-icon icon="solar:verified-check-bold" class="text-green-600" width="14"></iconify-icon>
+											<iconify-icon icon="solar:verified-check-bold" class="text-fc-success" width="14"></iconify-icon>
 										{/if}
 									</div>
 									<div class="text-sm text-muted-foreground">{client.contactEmail || 'Aucun email de contact'}</div>
@@ -281,11 +276,11 @@
 								</td>
 								<td class="px-4 py-3">
 									{#if client.user}
-										<Badge variant={getStatusColor(client.user.status)}>
+										<Badge tone={getStatusColor(client.user.status)}>
 											{getStatusLabel(client.user.status)}
 										</Badge>
 									{:else}
-										<Badge variant="slate">Aucun accès</Badge>
+										<Badge tone="neutral">Aucun accès</Badge>
 									{/if}
 								</td>
 								<td class="px-4 py-3 text-sm text-muted-foreground">
@@ -303,7 +298,7 @@
 
 										<button
 											onclick={() => { confirmDeleteClient = client; showDeleteDialog = true; }}
-											class="p-2 text-muted-foreground hover:text-red-600 hover:bg-muted rounded-md transition-colors"
+											class="p-2 text-muted-foreground hover:text-fc-danger hover:bg-muted rounded-md transition-colors"
 											title={$i18n.t('admin.clients.deleteClient')}
 										>
 											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
@@ -355,13 +350,13 @@
 	</div>
 {/if}
 
-<ConfirmDialog
-	bind:isOpen={showDeleteDialog}
+<ConfirmModal
+	bind:open={showDeleteDialog}
 	title={$i18n.t('admin.clients.deleteConfirm.title')}
 	description={$i18n.t('admin.clients.deleteConfirm.description', { companyName: confirmDeleteClient?.companyName || '' })}
-	confirmText={$i18n.t('admin.clients.deleteClient')}
-	cancelText={$i18n.t('common.buttons.cancel')}
-	variant="danger"
+	confirmLabel={$i18n.t('admin.clients.deleteClient')}
+	cancelLabel={$i18n.t('common.buttons.cancel')}
+	tone="danger"
 	onConfirm={handleDeleteClient}
 	onCancel={() => { confirmDeleteClient = null; showDeleteDialog = false; }}
 />

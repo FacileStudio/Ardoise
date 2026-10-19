@@ -4,8 +4,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, Badge, Card, Button, Input } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Badge, Button, Card, Input, Spinner, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
@@ -44,7 +43,7 @@
 			formData.siret = client.siret || '';
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch client');
-			toast.push('Erreur lors du chargement du client', 'error');
+			toast.danger('Erreur lors du chargement du client');
 		} finally {
 			pageLoading = false;
 		}
@@ -63,7 +62,7 @@
 	async function handleUpdate() {
 		const validationError = validateForm();
 		if (validationError) {
-			toast.push(validationError, 'error');
+			toast.danger(validationError);
 			return;
 		}
 
@@ -73,12 +72,12 @@
 				id: clientId,
 				...formData,
 			});
-			toast.push('Client modifié avec succès!', 'success');
+			toast.success('Client modifié avec succès!');
 			await fetchClient();
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to update client');
 			const message = err.message || 'Erreur lors de la modification';
-			toast.push(message, 'error');
+			toast.danger(message);
 		} finally {
 			submitting = false;
 		}
@@ -114,21 +113,21 @@
 
 	function getStatusColor(status: string) {
 		switch (status) {
-			case 'ACTIVE': return 'emerald';
-			case 'PENDING': return 'amber';
-			case 'SUSPENDED': return 'rose';
-			case 'BANNED': return 'rose';
-			default: return 'slate';
+			case 'ACTIVE': return 'success';
+			case 'PENDING': return 'warning';
+			case 'SUSPENDED': return 'danger';
+			case 'BANNED': return 'danger';
+			default: return 'neutral';
 		}
 	}
 
 	function getPaymentStatusColor(status: string) {
 		switch (status) {
-			case 'PAID': return 'emerald';
-			case 'PENDING': return 'amber';
-			case 'EXPIRED': return 'rose';
-			case 'CANCELLED': return 'slate';
-			default: return 'slate';
+			case 'PAID': return 'success';
+			case 'PENDING': return 'warning';
+			case 'EXPIRED': return 'danger';
+			case 'CANCELLED': return 'neutral';
+			default: return 'neutral';
 		}
 	}
 </script>
@@ -136,7 +135,7 @@
 <div class="p-6 max-w-5xl mx-auto">
 	{#if pageLoading}
 		<div class="py-20 flex justify-center">
-			<Spinner size="xl" />
+			<Spinner size="lg" />
 		</div>
 	{:else if client}
 		<div>
@@ -220,12 +219,12 @@
 									<iconify-icon
 										icon={payment.status === 'PAID' ? 'solar:check-circle-bold' : payment.status === 'PENDING' ? 'solar:clock-circle-bold' : 'solar:close-circle-bold'}
 										width="20"
-										class={payment.status === 'PAID' ? 'text-emerald-600' : payment.status === 'PENDING' ? 'text-amber-600' : 'text-red-600'}
+										class={payment.status === 'PAID' ? 'text-fc-success' : payment.status === 'PENDING' ? 'text-fc-warning' : 'text-fc-danger'}
 									></iconify-icon>
 									<div class="flex-1">
 										<div class="flex items-center justify-between mb-0.5">
 											<span class="text-sm font-medium text-foreground">{formatCurrency(payment.totalWithFees)}</span>
-											<Badge variant={getPaymentStatusColor(payment.status)}>{payment.status}</Badge>
+											<Badge tone={getPaymentStatusColor(payment.status)}>{payment.status}</Badge>
 										</div>
 										<div class="text-xs text-muted-foreground">{payment.description}</div>
 										<div class="text-xs text-muted-foreground">
@@ -244,7 +243,7 @@
 				<div class="flex gap-3 pt-2">
 					<Button
 						onclick={() => goto(resolve('/admin/clients'))}
-						intent="secondary"
+						variant="outline"
 						class="flex-1"
 						disabled={submitting}
 					>
@@ -272,18 +271,18 @@
 						<div>
 							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Statut du compte</div>
 							{#if client.user}
-								<Badge variant={getStatusColor(client.user.status)}>
+								<Badge tone={getStatusColor(client.user.status)}>
 									{client.user.status}
 								</Badge>
 							{:else}
-								<Badge variant="slate">Aucun accès</Badge>
+								<Badge tone="neutral">Aucun accès</Badge>
 							{/if}
 						</div>
 
 						{#if client.user?.emailVerified}
 							<div>
 								<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Email vérifié</div>
-								<Badge variant="emerald">Vérifié</Badge>
+								<Badge tone="success">Vérifié</Badge>
 							</div>
 						{/if}
 					</div>

@@ -10,7 +10,7 @@ const webStorage = {
 };
 
 export const authStore = new UniversalAuthStore(
-  { user: null, session: null, loading: true },
+  { user: null, session: false, loading: true },
   webStorage,
   async () => {
     if (browser) {

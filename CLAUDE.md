@@ -13,6 +13,7 @@ Internal payment and invoicing platform for Facile Studio. Clients receive payme
 - **Storage**: S3-compatible (MinIO in dev, configurable)
 - **Email**: Nodemailer over SMTP
 - **Styling**: Tailwind CSS 4
+- **UI**: `@facile/muse` (pinned by tag in `apps/web/package.json`); app-only components in `apps/web/src/lib/ui`
 - **i18n**: Custom type-safe system (en/fr)
 - **Deploy**: Docker Compose / Railway
 
@@ -71,7 +72,6 @@ packages/
   storage-client/ Browser-side upload utilities
   crypto/         Encryption utilities
   i18n/           Type-safe i18n (en/fr)
-  ui/             Shared Svelte components (AutoForm, AutoTable)
   admin/          Admin engine for AutoTable/AutoForm
   typst/          Document generation (placeholder)
   types/          Shared TypeScript types
@@ -139,6 +139,8 @@ See `apps/backend/.env.example` for reference.
 
 ## Gotchas
 
+- `@facile/muse/styles` resets Tailwind's palette: use `fc-*` tokens (`text-fc-danger`, `bg-fc-success/10`), never `red-500` style classes. `app.css` aliases `bg-primary`, `text-muted-foreground` and friends onto `fc-*`
+- `@facile/muse` needs `@source` in `app.css` and `optimizeDeps.exclude` in `vite.config.ts`, or its utilities silently never generate
 - Prisma client must be generated before build/dev/typecheck (Turbo handles this, but manual runs need `mise run //packages/database:generate` first)
 - Browser imports of `@repo/database` get a null stub for `prisma` -- add `@repo/database`, `@prisma/client`, `pg` to Vite `optimizeDeps.exclude`
 - `BACKEND_URL` is passed as `VITE_API_URL` at Docker build time to the web app

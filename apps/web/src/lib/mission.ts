@@ -9,13 +9,13 @@ export const STATUS_LABELS: Record<MissionStatus, string> = {
 	CANCELLED: 'Annulée',
 };
 
-export const STATUS_VARIANTS: Record<MissionStatus, 'slate' | 'indigo' | 'amber' | 'emerald' | 'rose'> = {
-	DRAFT: 'slate',
-	QUOTED: 'indigo',
-	ACCEPTED: 'indigo',
-	INVOICED: 'amber',
-	PAID: 'emerald',
-	CANCELLED: 'rose',
+export const STATUS_VARIANTS: Record<MissionStatus, 'neutral' | 'info' | 'warning' | 'success' | 'danger'> = {
+	DRAFT: 'neutral',
+	QUOTED: 'info',
+	ACCEPTED: 'info',
+	INVOICED: 'warning',
+	PAID: 'success',
+	CANCELLED: 'danger',
 };
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -42,13 +42,13 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
 	CANCELLED: 'Annulé',
 };
 
-export const PAYMENT_STATUS_VARIANTS: Record<string, 'slate' | 'amber' | 'emerald' | 'rose'> = {
-	PENDING: 'amber',
-	PAID: 'emerald',
-	PAST_DUE: 'rose',
-	FAILED: 'rose',
-	EXPIRED: 'slate',
-	CANCELLED: 'slate',
+export const PAYMENT_STATUS_VARIANTS: Record<string, 'neutral' | 'warning' | 'success' | 'danger'> = {
+	PENDING: 'warning',
+	PAID: 'success',
+	PAST_DUE: 'danger',
+	FAILED: 'danger',
+	EXPIRED: 'neutral',
+	CANCELLED: 'neutral',
 };
 
 export function formatEuro(amount: number | string | null | undefined) {

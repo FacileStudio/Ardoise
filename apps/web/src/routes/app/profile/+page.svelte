@@ -1,7 +1,7 @@
 <script lang="ts">
   import { trpc } from '$lib/trpc';
   import { onMount } from 'svelte';
-  import { toast } from '@repo/utils';
+  import { toast } from '@facile/muse';
   import 'iconify-icon';
 
   interface UserData {
@@ -39,7 +39,7 @@
       user = userData;
       client = clientData;
     } catch (err) {
-      toast.push('Erreur de chargement des données', 'error');
+      toast.danger('Erreur de chargement des données');
       console.error(err);
     } finally {
       loading = false;
@@ -129,7 +129,7 @@
             <p class="text-base font-semibold">{formatDate(client.createdAt)}</p>
           </div>
           <div class="flex items-center gap-2 pt-3 border-t border-background/10">
-            <div class="w-2 h-2 rounded-full bg-green-400"></div>
+            <div class="w-2 h-2 rounded-full bg-fc-success"></div>
             <p class="text-sm text-background/80">Compte actif</p>
           </div>
         </div>

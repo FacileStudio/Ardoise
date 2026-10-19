@@ -1,5 +1,5 @@
 import { trpc } from '$lib/trpc';
-import { toast } from '@repo/utils';
+import { toast } from '@facile/muse';
 import { logger } from '@repo/logger';
 
 export async function downloadDocument(documentId: string) {
@@ -15,6 +15,6 @@ export async function downloadDocument(documentId: string) {
 		URL.revokeObjectURL(url);
 	} catch (err) {
 		logger.error({ err }, 'Failed to download document');
-		toast.push('Erreur lors du téléchargement', 'error');
+		toast.danger('Erreur lors du téléchargement');
 	}
 }

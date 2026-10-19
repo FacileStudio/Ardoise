@@ -4,8 +4,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, Button } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Button, Spinner, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
@@ -39,7 +38,7 @@
 			formData.role = user.role;
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch user');
-			toast.push('Erreur lors du chargement de l\'utilisateur', 'error');
+			toast.danger('Erreur lors du chargement de l\'utilisateur');
 		} finally {
 			pageLoading = false;
 		}
@@ -76,7 +75,7 @@
 
 	async function handleUpdate() {
 		if (!validateForm()) {
-			toast.push('Veuillez corriger les erreurs dans le formulaire', 'error');
+			toast.danger('Veuillez corriger les erreurs dans le formulaire');
 			return;
 		}
 
@@ -96,7 +95,7 @@
 
 			await trpc.user.adminUpdate.mutate(updateData);
 
-			toast.push('Utilisateur modifié avec succès!', 'success');
+			toast.success('Utilisateur modifié avec succès!');
 			goto(resolve('/admin/users'));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to update user');
@@ -112,7 +111,7 @@
 				message = err.message;
 			}
 
-			toast.push(message, 'error');
+			toast.danger(message);
 		} finally {
 			submitting = false;
 		}
@@ -131,7 +130,7 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6">
 	{#if pageLoading}
 		<div class="py-20 flex justify-center">
-			<Spinner size="xl" />
+			<Spinner size="lg" />
 		</div>
 	{:else if user}
 		<div>
@@ -156,11 +155,11 @@
 					<input
 						type="email"
 						bind:value={formData.email}
-						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.email ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 						placeholder="user@example.com"
 					/>
 					{#if errors.email}
-						<p class="text-red-600 text-xs mt-1">{errors.email}</p>
+						<p class="text-fc-danger text-xs mt-1">{errors.email}</p>
 					{/if}
 				</div>
 
@@ -170,11 +169,11 @@
 						<input
 							type="text"
 							bind:value={formData.firstName}
-							class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.firstName ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+							class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.firstName ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 							placeholder="John"
 						/>
 						{#if errors.firstName}
-							<p class="text-red-600 text-xs mt-1">{errors.firstName}</p>
+							<p class="text-fc-danger text-xs mt-1">{errors.firstName}</p>
 						{/if}
 					</div>
 
@@ -183,11 +182,11 @@
 						<input
 							type="text"
 							bind:value={formData.lastName}
-							class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.lastName ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+							class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.lastName ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 							placeholder="Doe"
 						/>
 						{#if errors.lastName}
-							<p class="text-red-600 text-xs mt-1">{errors.lastName}</p>
+							<p class="text-fc-danger text-xs mt-1">{errors.lastName}</p>
 						{/if}
 					</div>
 				</div>
@@ -199,8 +198,8 @@
 
 			<div class="rounded-xl border border-border p-6 space-y-4">
 				<h2 class="text-base font-semibold text-foreground">Réinitialiser le mot de passe</h2>
-				<div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
-					<p class="text-xs text-amber-800">
+				<div class="rounded-lg border border-fc-warning/30 bg-fc-warning/10 p-3">
+					<p class="text-xs text-fc-warning">
 						Laissez ces champs vides si vous ne souhaitez pas modifier le mot de passe.
 					</p>
 				</div>
@@ -210,11 +209,11 @@
 					<input
 						type="password"
 						bind:value={formData.password}
-						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.password ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 						placeholder="Minimum 8 caractères"
 					/>
 					{#if errors.password}
-						<p class="text-red-600 text-xs mt-1">{errors.password}</p>
+						<p class="text-fc-danger text-xs mt-1">{errors.password}</p>
 					{/if}
 				</div>
 
@@ -223,11 +222,11 @@
 					<input
 						type="password"
 						bind:value={formData.confirmPassword}
-						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-border focus:border-primary focus:ring-primary/20'}"
+						class="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 transition-colors {errors.confirmPassword ? 'border-fc-danger/30 focus:border-fc-danger focus:ring-fc-danger/30' : 'border-border focus:border-primary focus:ring-primary/20'}"
 						placeholder="Confirmez le mot de passe"
 					/>
 					{#if errors.confirmPassword}
-						<p class="text-red-600 text-xs mt-1">{errors.confirmPassword}</p>
+						<p class="text-fc-danger text-xs mt-1">{errors.confirmPassword}</p>
 					{/if}
 				</div>
 			</div>
@@ -259,7 +258,7 @@
 			</div>
 
 			<div class="flex gap-3 pt-2">
-				<Button onclick={() => goto(resolve('/admin/users'))} intent="secondary" class="flex-1" disabled={submitting}>
+				<Button onclick={() => goto(resolve('/admin/users'))} variant="outline" class="flex-1" disabled={submitting}>
 					Annuler
 				</Button>
 				<button

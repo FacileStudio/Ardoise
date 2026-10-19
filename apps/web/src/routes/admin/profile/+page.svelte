@@ -1,7 +1,7 @@
 <script lang="ts">
 import { trpc } from '$lib/trpc';
 import authStore from '$lib/auth-store';
-import { Modal, Button, Alert } from '@repo/ui';
+import { Alert, Button, Modal } from '@facile/muse';
 import 'iconify-icon';
 
 let showEditForm = $state(false);
@@ -137,7 +137,7 @@ async function changePassword() {
         <div class="rounded-xl border border-border p-6 space-y-6">
 
           {#if editSuccess && !showEditForm}
-            <Alert variant="success" dismissible>
+            <Alert tone="success">
               Profil mis à jour avec succes.
             </Alert>
           {/if}
@@ -145,7 +145,7 @@ async function changePassword() {
           {#if showEditForm}
             <div class="space-y-4">
               {#if editError}
-                <Alert variant="danger">{editError}</Alert>
+                <Alert tone="danger">{editError}</Alert>
               {/if}
 
               <div class="grid md:grid-cols-2 gap-4">
@@ -171,7 +171,7 @@ async function changePassword() {
               </div>
 
               <div class="flex gap-3">
-                <Button intent="secondary" onclick={cancelEdit} disabled={editSaving}>
+                <Button variant="outline" onclick={cancelEdit} disabled={editSaving}>
                   Annuler
                 </Button>
                 <Button onclick={saveProfile} disabled={editSaving || !editFirstName.trim() || !editLastName.trim()}>
@@ -222,7 +222,7 @@ async function changePassword() {
             <div class="flex flex-col md:flex-row gap-3">
               <button
                 onclick={() => authStore.logout()}
-                class="bg-red-50 text-red-600 border border-red-200 py-2 px-4 rounded-md hover:bg-red-100 transition-colors cursor-pointer flex items-center justify-center gap-2 text-sm font-medium"
+                class="bg-fc-danger/10 text-fc-danger border border-fc-danger/30 py-2 px-4 rounded-md hover:bg-fc-danger/10 transition-colors cursor-pointer flex items-center justify-center gap-2 text-sm font-medium"
               >
                 <iconify-icon icon="solar:logout-2-bold" width="16"></iconify-icon>
                 Deconnexion
@@ -261,10 +261,10 @@ async function changePassword() {
 <Modal bind:open={showPasswordModal} title="Changer le mot de passe">
   <div class="space-y-4">
     {#if passwordSuccess}
-      <Alert variant="success">Mot de passe mis à jour avec succes.</Alert>
+      <Alert tone="success">Mot de passe mis à jour avec succes.</Alert>
     {:else}
       {#if passwordError}
-        <Alert variant="danger">{passwordError}</Alert>
+        <Alert tone="danger">{passwordError}</Alert>
       {/if}
 
       <div class="space-y-1">
@@ -301,7 +301,7 @@ async function changePassword() {
       </div>
 
       <div class="flex gap-3 pt-2">
-        <Button intent="secondary" class="flex-1" onclick={() => { showPasswordModal = false; }} disabled={passwordSaving}>
+        <Button variant="outline" class="flex-1" onclick={() => { showPasswordModal = false; }} disabled={passwordSaving}>
           Annuler
         </Button>
         <Button class="flex-1" onclick={changePassword} disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}>

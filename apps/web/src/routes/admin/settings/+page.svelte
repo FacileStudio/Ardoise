@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { trpc } from '$lib/trpc';
-  import { Button, Input, Spinner, Alert, ImageUpload } from '@repo/ui';
+  import { Alert, Button, Input, Spinner } from '@facile/muse';
+  import { ImageUpload } from '$lib/ui';
   import 'iconify-icon';
 
   let loading = $state(true);
@@ -162,7 +163,7 @@
     </header>
 
     {#if message}
-      <Alert variant={message.type === 'success' ? 'success' : 'danger'}>
+      <Alert tone={message.type === 'success' ? 'success' : 'danger'}>
         {message.text}
       </Alert>
     {/if}

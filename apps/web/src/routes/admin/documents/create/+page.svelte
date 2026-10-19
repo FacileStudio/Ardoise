@@ -4,8 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
-	import { Spinner, Button, Input } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Button, Input, Spinner, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
@@ -124,7 +123,7 @@
 			}
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch mission');
-			toast.push('Mission introuvable', 'error');
+			toast.danger('Mission introuvable');
 		}
 	}
 
@@ -168,7 +167,7 @@
 			}
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch document types');
-			toast.push('Erreur lors du chargement des types de documents', 'error');
+			toast.danger('Erreur lors du chargement des types de documents');
 		}
 	}
 
@@ -305,7 +304,7 @@
 		const validationError = validateForm();
 		if (validationError) {
 			formMessage = validationError;
-			toast.push(validationError, 'error');
+			toast.danger(validationError);
 			return;
 		}
 
@@ -403,7 +402,7 @@
 			logger.error({ err }, 'Failed to preview document');
 			const message = err.message || 'Erreur lors de la prévisualisation';
 			formMessage = message;
-			toast.push(message, 'error');
+			toast.danger(message);
 		} finally {
 			generating = false;
 		}
@@ -413,7 +412,7 @@
 		const validationError = validateForm();
 		if (validationError) {
 			formMessage = validationError;
-			toast.push(validationError, 'error');
+			toast.danger(validationError);
 			return;
 		}
 
@@ -519,13 +518,13 @@
 			a.click();
 			URL.revokeObjectURL(url);
 
-			toast.push('Document créé avec succès!', 'success');
+			toast.success('Document créé avec succès!');
 			goto(resolve(backPath as any));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create document');
 			const message = err.message || 'Erreur lors de la création';
 			formMessage = message;
-			toast.push(message, 'error');
+			toast.danger(message);
 		} finally {
 			generating = false;
 		}
@@ -533,7 +532,7 @@
 
 	function addItem() {
 		if (!newItem.description || newItem.price <= 0) {
-			toast.push("Veuillez remplir tous les champs de l'item", 'error');
+			toast.danger("Veuillez remplir tous les champs de l'item");
 			return;
 		}
 		formData.items = [...formData.items, { ...newItem }];
@@ -546,7 +545,7 @@
 
 	function addProvider() {
 		if (!newProvider.id || !newProvider.role || newProvider.amount <= 0) {
-			toast.push('Veuillez sélectionner un prestataire, définir son rôle et son montant', 'error');
+			toast.danger('Veuillez sélectionner un prestataire, définir son rôle et son montant');
 			return;
 		}
 		formData.providers = [...formData.providers, { ...newProvider }];
@@ -559,7 +558,7 @@
 
 	function addFeature() {
 		if (!newFeature.title || !newFeature.desc) {
-			toast.push('Veuillez remplir tous les champs de la feature', 'error');
+			toast.danger('Veuillez remplir tous les champs de la feature');
 			return;
 		}
 		formData.features = [...formData.features, { ...newFeature }];
@@ -572,7 +571,7 @@
 
 	function addPaymentProvider() {
 		if (!newPaymentProvider.id || newPaymentProvider.amount_to_pay <= 0) {
-			toast.push('Veuillez sélectionner un prestataire et définir le montant à verser', 'error');
+			toast.danger('Veuillez sélectionner un prestataire et définir le montant à verser');
 			return;
 		}
 		formData.payment_providers = [...formData.payment_providers, { ...newPaymentProvider }];
@@ -645,7 +644,7 @@
 
 	<div class="space-y-6">
 		{#if formMessage}
-			<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+			<div class="rounded-lg border border-fc-danger/30 bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">
 				{formMessage}
 			</div>
 		{/if}
@@ -732,11 +731,11 @@
 				{/each}
 			</select>
 			{#if selectedClientId}
-				<div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
-					<iconify-icon icon="solar:check-circle-bold" width="16" class="text-emerald-600"></iconify-icon>
+				<div class="p-3 bg-fc-success/10 border border-fc-success/30 rounded-lg flex items-center gap-2">
+					<iconify-icon icon="solar:check-circle-bold" width="16" class="text-fc-success"></iconify-icon>
 					<div>
-						<div class="text-sm font-medium text-emerald-900">{formData.client_name}</div>
-						<div class="text-xs text-emerald-700">
+						<div class="text-sm font-medium text-fc-success">{formData.client_name}</div>
+						<div class="text-xs text-fc-success">
 							{formData.client_address}, {formData.client_city}
 						</div>
 					</div>
@@ -758,22 +757,22 @@
 				</select>
 				{#if selectedProviderId}
 					<div
-						class="p-3 rounded-lg border flex items-start gap-2 {selectedProviderMissingFields.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-muted border-border'}"
+						class="p-3 rounded-lg border flex items-start gap-2 {selectedProviderMissingFields.length > 0 ? 'bg-fc-warning/10 border-fc-warning/30' : 'bg-muted border-border'}"
 					>
 						<iconify-icon
 							icon={selectedProviderMissingFields.length > 0 ? 'solar:danger-triangle-bold' : 'solar:check-circle-bold'}
 							width="16"
-							class={selectedProviderMissingFields.length > 0 ? 'text-amber-600' : 'text-emerald-600'}
+							class={selectedProviderMissingFields.length > 0 ? 'text-fc-warning' : 'text-fc-success'}
 						></iconify-icon>
 						<div class="min-w-0">
-							<div class="text-sm font-medium {selectedProviderMissingFields.length > 0 ? 'text-amber-900' : 'text-foreground'}">
+							<div class="text-sm font-medium {selectedProviderMissingFields.length > 0 ? 'text-fc-warning' : 'text-foreground'}">
 								{formData.provider_name}
 							</div>
-							<div class="text-xs {selectedProviderMissingFields.length > 0 ? 'text-amber-700' : 'text-muted-foreground'}">
+							<div class="text-xs {selectedProviderMissingFields.length > 0 ? 'text-fc-warning' : 'text-muted-foreground'}">
 								TVA: {tvaRate}% - {formData.provider_email || 'email manquant'}
 							</div>
 							{#if selectedProviderMissingFields.length > 0}
-								<p class="mt-1 text-xs font-medium text-amber-800">
+								<p class="mt-1 text-xs font-medium text-fc-warning">
 									Champs manquants: {selectedProviderMissingFields.map((field) => providerFieldLabels[field]).join(', ')}
 								</p>
 							{/if}
@@ -824,7 +823,7 @@
 							<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
 						</div>
 					</div>
-					<Button intent="primary" onclick={addProvider} class="w-full">Ajouter ce prestataire</Button>
+					<Button onclick={addProvider} class="w-full">Ajouter ce prestataire</Button>
 				</div>
 
 				{#if formData.providers.length === 0}
@@ -840,7 +839,7 @@
 									<div class="text-sm font-medium text-foreground">{providerInfo?.name || provider.id} - {provider.role}</div>
 									<div class="text-xs text-muted-foreground">{formatCurrency(provider.amount)} HT</div>
 								</div>
-								<button onclick={() => removeProvider(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+								<button onclick={() => removeProvider(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
 									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 								</button>
 							</div>
@@ -866,7 +865,7 @@
 							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
 						></textarea>
 					</div>
-					<Button intent="primary" onclick={addFeature} class="w-full">Ajouter cette feature</Button>
+					<Button onclick={addFeature} class="w-full">Ajouter cette feature</Button>
 				</div>
 
 				{#if formData.features.length === 0}
@@ -881,7 +880,7 @@
 									<div class="text-sm font-medium text-foreground">{feature.title}</div>
 									<div class="text-xs text-muted-foreground">{feature.desc}</div>
 								</div>
-								<button onclick={() => removeFeature(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+								<button onclick={() => removeFeature(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
 									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 								</button>
 							</div>
@@ -917,7 +916,7 @@
 							<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
 						</div>
 					</div>
-					<Button intent="primary" onclick={addItem} class="w-full">Ajouter cet item</Button>
+					<Button onclick={addItem} class="w-full">Ajouter cet item</Button>
 				</div>
 
 				{#if formData.items.length === 0}
@@ -934,7 +933,7 @@
 										{item.quantity} {item.unit} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)} HT
 									</div>
 								</div>
-								<button onclick={() => removeItem(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+								<button onclick={() => removeItem(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
 									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 								</button>
 							</div>
@@ -981,7 +980,7 @@
 						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Montant à verser (EUR HT) *</div>
 						<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
 					</div>
-					<Button intent="primary" onclick={addPaymentProvider} class="w-full">Ajouter ce prestataire</Button>
+					<Button onclick={addPaymentProvider} class="w-full">Ajouter ce prestataire</Button>
 				</div>
 
 				{#if formData.payment_providers.length === 0}
@@ -997,7 +996,7 @@
 									<div class="text-sm font-medium text-foreground">{providerInfo?.name || provider.id}</div>
 									<div class="text-xs text-muted-foreground">Montant: {formatCurrency(provider.amount_to_pay)} HT</div>
 								</div>
-								<button onclick={() => removePaymentProvider(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+								<button onclick={() => removePaymentProvider(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
 									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 								</button>
 							</div>
@@ -1054,7 +1053,7 @@
 							(TTC: {formatCurrency(newItem.quantity * newItem.price * (1 + tvaRate / 100))})
 						</div>
 					{/if}
-					<Button intent="primary" onclick={addItem} class="w-full">Ajouter cet item</Button>
+					<Button onclick={addItem} class="w-full">Ajouter cet item</Button>
 				</div>
 
 				{#if formData.items.length === 0}
@@ -1071,7 +1070,7 @@
 										{item.quantity} {item.unit} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)} HT
 									</div>
 								</div>
-								<button onclick={() => removeItem(i)} class="p-1 text-red-500 hover:bg-red-50 rounded" aria-label="Supprimer">
+								<button onclick={() => removeItem(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
 									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 								</button>
 							</div>
@@ -1099,14 +1098,14 @@
 
 	<div class="flex gap-3 pt-2">
 		<Button
-			intent="secondary"
+			variant="outline"
 			onclick={() => goto(resolve('/admin/documents'))}
 			class="flex-1"
 			disabled={generating}
 		>
 			Annuler
 		</Button>
-		<Button intent="secondary" onclick={handlePreview} disabled={generating} class="flex-1">
+		<Button variant="outline" onclick={handlePreview} disabled={generating} class="flex-1">
 			{#if generating && !showPreview}
 				<Spinner size="sm" />
 			{:else}
@@ -1114,7 +1113,7 @@
 			{/if}
 			Prévisualiser
 		</Button>
-		<Button intent="primary" onclick={handleCreate} disabled={generating} class="flex-1">
+		<Button onclick={handleCreate} disabled={generating} class="flex-1">
 			{#if generating}
 				<Spinner size="sm" />
 			{:else}

@@ -3,7 +3,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, SearchInput, Badge, EmptyState } from '@repo/ui';
+	import { Badge, EmptyState, Spinner } from '@facile/muse';
+	import { SearchInput } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
@@ -98,7 +99,7 @@
 		}
 	}
 
-	function getStatusBadge(status: SubmissionStatus): { variant: 'default' | 'success' | 'warning' | 'danger'; label: string } {
+	function getStatusBadge(status: SubmissionStatus): { variant: 'neutral' | 'success' | 'warning' | 'danger'; label: string } {
 		switch (status) {
 			case 'completed':
 				return { variant: 'success', label: 'Signé' };
@@ -110,7 +111,7 @@
 			case 'declined':
 				return { variant: 'danger', label: 'Refusé' };
 			default:
-				return { variant: 'default', label: status };
+				return { variant: 'neutral', label: status };
 		}
 	}
 
@@ -173,12 +174,12 @@
 	</header>
 
 	{#if !isConfigured}
-		<div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+		<div class="rounded-lg border border-fc-warning/30 bg-fc-warning/10 p-4">
 			<div class="flex items-start gap-3">
-				<iconify-icon icon="solar:danger-triangle-bold" width="20" class="text-amber-600 flex-shrink-0 mt-0.5"></iconify-icon>
+				<iconify-icon icon="solar:danger-triangle-bold" width="20" class="text-fc-warning flex-shrink-0 mt-0.5"></iconify-icon>
 				<div>
-					<h3 class="text-sm font-semibold text-amber-900 mb-1">DocuSeal non configuré</h3>
-					<p class="text-xs text-amber-800">
+					<h3 class="text-sm font-semibold text-fc-warning mb-1">DocuSeal non configuré</h3>
+					<p class="text-xs text-fc-warning">
 						Pour utiliser la signature de documents, configurez DocuSeal dans les paramètres.
 					</p>
 				</div>
@@ -201,9 +202,9 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-xs font-medium text-muted-foreground mb-1">En attente</p>
-					<p class="text-xl font-bold text-amber-600">{stats.pending}</p>
+					<p class="text-xl font-bold text-fc-warning">{stats.pending}</p>
 				</div>
-				<iconify-icon icon="solar:clock-circle-bold" width="20" class="text-amber-600"></iconify-icon>
+				<iconify-icon icon="solar:clock-circle-bold" width="20" class="text-fc-warning"></iconify-icon>
 			</div>
 		</div>
 
@@ -211,9 +212,9 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-xs font-medium text-muted-foreground mb-1">Signés</p>
-					<p class="text-xl font-bold text-emerald-600">{stats.completed}</p>
+					<p class="text-xl font-bold text-fc-success">{stats.completed}</p>
 				</div>
-				<iconify-icon icon="solar:check-circle-bold" width="20" class="text-emerald-600"></iconify-icon>
+				<iconify-icon icon="solar:check-circle-bold" width="20" class="text-fc-success"></iconify-icon>
 			</div>
 		</div>
 
@@ -221,9 +222,9 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-xs font-medium text-muted-foreground mb-1">Expirés</p>
-					<p class="text-xl font-bold text-red-600">{stats.expired}</p>
+					<p class="text-xl font-bold text-fc-danger">{stats.expired}</p>
 				</div>
-				<iconify-icon icon="solar:hourglass-bold-duotone" width="20" class="text-red-600"></iconify-icon>
+				<iconify-icon icon="solar:hourglass-bold-duotone" width="20" class="text-fc-danger"></iconify-icon>
 			</div>
 		</div>
 	</div>
@@ -247,7 +248,7 @@
 					<button
 						onclick={() => (filters.status = 'pending')}
 						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {filters.status === 'pending'
-							? 'bg-amber-500 text-white'
+							? 'bg-fc-warning text-white'
 							: 'bg-background text-foreground border border-border hover:bg-muted'}"
 					>
 						En attente
@@ -255,7 +256,7 @@
 					<button
 						onclick={() => (filters.status = 'completed')}
 						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {filters.status === 'completed'
-							? 'bg-emerald-500 text-white'
+							? 'bg-fc-success text-white'
 							: 'bg-background text-foreground border border-border hover:bg-muted'}"
 					>
 						Signés
@@ -263,7 +264,7 @@
 					<button
 						onclick={() => (filters.status = 'expired')}
 						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {filters.status === 'expired'
-							? 'bg-red-500 text-white'
+							? 'bg-fc-danger text-white'
 							: 'bg-background text-foreground border border-border hover:bg-muted'}"
 					>
 						Expirés
@@ -274,7 +275,7 @@
 
 		{#if pageLoading}
 			<div class="flex flex-col items-center justify-center py-20 space-y-4">
-				<Spinner size="xl" />
+				<Spinner size="lg" />
 				<p class="text-xs text-muted-foreground">Chargement...</p>
 			</div>
 		{:else if filteredSubmissions.length === 0}
@@ -315,7 +316,7 @@
 									<div class="space-y-1">
 										{#each submission.submitters as submitter (submitter.id)}
 											<div class="flex items-center gap-1">
-												<Badge variant={getStatusBadge(submitter.status).variant} size="sm">
+												<Badge tone={getStatusBadge(submitter.status).variant}>
 													{submitter.role}
 												</Badge>
 												<span class="text-xs text-muted-foreground">
@@ -326,7 +327,7 @@
 									</div>
 								</td>
 								<td class="px-4 py-3">
-									<Badge variant={getStatusBadge(submission.status).variant}>
+									<Badge tone={getStatusBadge(submission.status).variant}>
 										{getStatusBadge(submission.status).label}
 									</Badge>
 								</td>
@@ -345,11 +346,11 @@
 										<button
 											onclick={() => deleteSubmission(submission.id)}
 											disabled={actionLoading === submission.id.toString()}
-											class="p-1.5 rounded hover:bg-red-50 transition-colors text-red-600 disabled:opacity-50"
+											class="p-1.5 rounded hover:bg-fc-danger/10 transition-colors text-fc-danger disabled:opacity-50"
 											title="Supprimer"
 										>
 											{#if actionLoading === submission.id.toString()}
-												<Spinner size={16} />
+												<Spinner size="sm" />
 											{:else}
 												<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
 											{/if}

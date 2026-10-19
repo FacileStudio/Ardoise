@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Spinner } from '@repo/ui';
+	import { Button, Spinner } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import 'iconify-icon';
 
@@ -151,14 +151,14 @@
 
 	{#if pageLoading}
 		<div class="flex items-center justify-center py-20">
-			<Spinner size="xl" />
+			<Spinner size="lg" />
 		</div>
 	{:else}
 		<form onsubmit={handleSubmit} class="space-y-6">
 			<div class="rounded-xl border border-border p-6 space-y-6">
 				<div>
 					<div class="text-sm font-medium mb-2">
-						Template <span class="text-red-500">*</span>
+						Template <span class="text-fc-danger">*</span>
 					</div>
 					<select
 						bind:value={selectedTemplateId}
@@ -171,7 +171,7 @@
 						{/each}
 					</select>
 					{#if templates.length === 0}
-						<p class="text-xs text-amber-600 mt-1">
+						<p class="text-xs text-fc-warning mt-1">
 							Aucun template disponible. Créez d'abord un template dans DocuSeal.
 						</p>
 					{/if}
@@ -182,7 +182,7 @@
 						<div class="flex items-center justify-between">
 							<h3 class="text-base font-semibold text-foreground">Signataires</h3>
 							{#if selectedTemplateId === null}
-								<Button type="button" intent="secondary" size="sm" onclick={addSubmitter}>
+								<Button type="button" variant="outline" size="sm" onclick={addSubmitter}>
 									<iconify-icon icon="solar:add-circle-bold" width="16"></iconify-icon>
 									Ajouter un signataire
 								</Button>
@@ -205,7 +205,7 @@
 										<button
 											type="button"
 											onclick={() => removeSubmitter(index)}
-											class="p-1.5 rounded hover:bg-red-50 text-red-600 transition-colors"
+											class="p-1.5 rounded hover:bg-fc-danger/10 text-fc-danger transition-colors"
 											title="Supprimer"
 										>
 											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
@@ -217,7 +217,7 @@
 									{#if selectedTemplateId === null}
 										<div>
 											<div class="text-sm font-medium mb-1">
-												Rôle <span class="text-red-500">*</span>
+												Rôle <span class="text-fc-danger">*</span>
 											</div>
 											<input
 												type="text"
@@ -241,7 +241,7 @@
 
 									<div>
 										<div class="text-sm font-medium mb-1">
-											Email <span class="text-red-500">*</span>
+											Email <span class="text-fc-danger">*</span>
 										</div>
 										<input
 											type="email"
@@ -324,13 +324,13 @@
 						class="flex-1 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 					>
 						{#if submitLoading}
-							<Spinner size={16} />
+							<Spinner size="sm" />
 						{:else}
 							<iconify-icon icon="solar:pen-new-square-bold" width="16"></iconify-icon>
 						{/if}
 						Créer la demande
 					</button>
-					<Button type="button" intent="secondary" onclick={() => goto(resolve('/admin/sign'))}>
+					<Button type="button" variant="outline" onclick={() => goto(resolve('/admin/sign'))}>
 						Annuler
 					</Button>
 				</div>

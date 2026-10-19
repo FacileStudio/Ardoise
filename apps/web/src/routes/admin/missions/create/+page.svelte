@@ -3,8 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Input } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Button, Input, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import { ROLE_LABELS } from '$lib/mission';
@@ -40,7 +39,7 @@
 			providers = providerResult.providers as unknown as typeof providers;
 		} catch (err) {
 			logger.error({ err }, 'Failed to load clients and providers');
-			toast.push('Erreur lors du chargement', 'error');
+			toast.danger('Erreur lors du chargement');
 		}
 	});
 
@@ -87,7 +86,7 @@
 				spaceId: spaceContext.spaceId,
 			});
 
-			toast.push('Mission créée', 'success');
+			toast.success('Mission créée');
 			goto(resolve(`/admin/missions/${mission.id}`));
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to create mission');
@@ -115,7 +114,7 @@
 
 	<form onsubmit={handleSubmit} class="space-y-6">
 		{#if formMessage}
-			<div class="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{formMessage}</div>
+			<div class="rounded-lg bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">{formMessage}</div>
 		{/if}
 
 		<div class="rounded-xl bg-muted/40 p-6 space-y-4">
@@ -175,7 +174,7 @@
 							<button
 								type="button"
 								onclick={() => removeProvider(link.providerId)}
-								class="p-1 text-muted-foreground hover:text-red-600"
+								class="p-1 text-muted-foreground hover:text-fc-danger"
 								title="Retirer"
 							>
 								<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
@@ -203,14 +202,14 @@
 						<option {value}>{label}</option>
 					{/each}
 				</select>
-				<Button type="button" intent="secondary" onclick={addProvider} disabled={!newProviderId}>
+				<Button type="button" variant="outline" onclick={addProvider} disabled={!newProviderId}>
 					Ajouter
 				</Button>
 			</div>
 		</div>
 
 		<div class="flex justify-end gap-3">
-			<Button type="button" intent="ghost" onclick={() => goto(resolve('/admin/missions'))}>
+			<Button type="button" variant="ghost" onclick={() => goto(resolve('/admin/missions'))}>
 				Annuler
 			</Button>
 			<Button type="submit" disabled={submitting}>

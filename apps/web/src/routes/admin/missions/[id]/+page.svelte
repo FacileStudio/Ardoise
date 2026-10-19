@@ -4,8 +4,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Spinner } from '@repo/ui';
-	import { toast } from '@repo/utils';
+	import { Badge, Spinner, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { runAction } from '$lib/mission-actions';
 	import { STATUS_LABELS, STATUS_VARIANTS, type MissionStatus } from '$lib/mission';
@@ -34,7 +33,7 @@
 			mission = await trpc.mission.getById.query({ id: missionId });
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch mission');
-			toast.push('Mission introuvable', 'error');
+			toast.danger('Mission introuvable');
 			goto(resolve('/admin/missions'));
 		}
 	}
@@ -96,7 +95,7 @@
 				<div>
 					<div class="flex items-center gap-3">
 						<h1 class="text-2xl font-bold text-foreground">{mission.name}</h1>
-						<Badge variant={STATUS_VARIANTS[mission.status as MissionStatus]}>
+						<Badge tone={STATUS_VARIANTS[mission.status as MissionStatus]}>
 							{STATUS_LABELS[mission.status as MissionStatus]}
 						</Badge>
 					</div>
@@ -110,7 +109,7 @@
 						<button
 							disabled={busy}
 							onclick={cancelMission}
-							class="rounded-md px-4 h-9 text-sm font-medium text-muted-foreground cursor-pointer hover:text-red-600 hover:bg-muted disabled:opacity-50"
+							class="rounded-md px-4 h-9 text-sm font-medium text-muted-foreground cursor-pointer hover:text-fc-danger hover:bg-muted disabled:opacity-50"
 						>
 							Annuler la mission
 						</button>
@@ -118,7 +117,7 @@
 					<button
 						disabled={busy}
 						onclick={deleteMission}
-						class="rounded-md px-3 h-9 text-muted-foreground cursor-pointer hover:text-red-600 hover:bg-muted disabled:opacity-50"
+						class="rounded-md px-3 h-9 text-muted-foreground cursor-pointer hover:text-fc-danger hover:bg-muted disabled:opacity-50"
 						title="Supprimer"
 					>
 						<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>

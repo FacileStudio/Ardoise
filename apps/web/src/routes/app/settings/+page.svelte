@@ -1,7 +1,8 @@
 <script lang="ts">
   import authStore from '$lib/auth-store';
   import { trpc } from '$lib/trpc';
-  import { Button, Input, Spinner, Alert, LanguageSwitcher, Avatar } from '@repo/ui';
+  import { Alert, Avatar, Button, Input, Spinner } from '@facile/muse';
+  import { LanguageSwitcher } from '$lib/ui';
   import 'iconify-icon';
   import type { SessionUser } from '@repo/auth-shared';
   import { onMount } from 'svelte';
@@ -101,7 +102,7 @@
   </div>
 
   {#if message}
-    <Alert variant={message.type === 'success' ? 'success' : 'danger'}>
+    <Alert tone={message.type === 'success' ? 'success' : 'danger'}>
       {message.text}
     </Alert>
   {/if}
@@ -110,8 +111,8 @@
     <Avatar
       src={avatarUrl}
       alt={formData.firstName || 'Avatar'}
-      initials={formData.firstName?.[0] || 'U'}
-      size="xl"
+      name={formData.firstName?.[0] || 'U'}
+      size="lg"
     />
     <div>
       <p class="text-base font-semibold text-foreground">
@@ -242,7 +243,7 @@
         <h4 class="text-sm font-semibold text-foreground mb-0.5">Session</h4>
         <p class="text-sm text-muted-foreground">Déconnexion de cet appareil</p>
       </div>
-      <Button intent="danger" onclick={() => authStore.logout()}>
+      <Button variant="danger" onclick={() => authStore.logout()}>
         <iconify-icon icon="solar:logout-2-linear" width="16"></iconify-icon>
         Déconnexion
       </Button>
