@@ -1,5 +1,6 @@
 import {
   TypstGenerator,
+  escapeTypstString,
   facture_prestation,
   devis,
   maintenance,
@@ -483,10 +484,7 @@ const TEMPLATES: Record<DocType, string> = {
   prestation_btp,
 };
 
-// a quote or a backslash inside a Typst string literal would end it early
-export function escapeTypstString(value: unknown): string {
-  return String(value ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
+export { escapeTypstString };
 
 export function formatItems(items: Array<{ description?: string; quantity?: number; unit?: string; price?: number }>): string {
   if (!items || items.length === 0) return '';
@@ -502,14 +500,14 @@ export function formatProviders(providers: Array<{ name: string; role: string; a
   return providers.map((p) => {
     const safeAmount = parseFloat(String(p.amount)) || 0;
     return `(name: "${escapeTypstString(p.name)}", role: "${escapeTypstString(p.role)}", address: "${escapeTypstString(p.address)}", city: "${escapeTypstString(p.city)}", siret: "${escapeTypstString(p.siret)}", email: "${escapeTypstString(p.email)}", amount: ${safeAmount})`;
-  }).join(', ');
+  }).join(', ') + ',';
 }
 
 export function formatFeatures(features: Array<{ title: string; desc: string }>): string {
   if (!features || features.length === 0) return '';
   return features.map((f) => {
     return `(title: "${escapeTypstString(f.title)}", desc: "${escapeTypstString(f.desc)}")`;
-  }).join(', ');
+  }).join(', ') + ',';
 }
 
 export function formatPaymentProviders(providers: Array<{ name: string; iban: string; bic: string; amount_to_pay: number }>): string {
@@ -517,7 +515,7 @@ export function formatPaymentProviders(providers: Array<{ name: string; iban: st
   return providers.map((p) => {
     const safeAmount = parseFloat(String(p.amount_to_pay)) || 0;
     return `(name: "${escapeTypstString(p.name)}", iban: "${escapeTypstString(p.iban)}", bic: "${escapeTypstString(p.bic)}", amount_to_pay: ${safeAmount})`;
-  }).join(', ');
+  }).join(', ') + ',';
 }
 
 // these variables already hold Typst code that the format* helpers escaped

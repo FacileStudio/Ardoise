@@ -4,9 +4,11 @@ import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
+import { escapeTypstString } from './escape';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const COMPILE_TIMEOUT_MS = 60_000;
 const DEFAULT_LOGO_PATH = join(__dirname, 'templates', 'logo.png');
 
 export const ReceiptItemSchema = z.object({
@@ -64,7 +66,10 @@ export class TypstGenerator {
 
     for (const [key, value] of Object.entries(data)) {
       const placeholder = `{{${key}}}`;
-      result = result.replaceAll(placeholder, String(value));
+      result = result.replaceAll(
+        placeholder,
+        key === 'items' ? String(value) : escapeTypstString(value)
+      );
     }
 
     return result;
@@ -76,9 +81,9 @@ export class TypstGenerator {
     }
     const formattedItems = items.map(
       (item) =>
-        `(description: "${item.description}", quantity: ${item.quantity}, unit: "${item.unit}", price: ${item.price})`
+        `(description: "${escapeTypstString(item.description)}", quantity: ${item.quantity}, unit: "${escapeTypstString(item.unit)}", price: ${item.price})`
     );
-    return formattedItems.join(', ');
+    return formattedItems.join(', ') + ',';
   }
 
   generate(data: ReceiptData): Buffer {
@@ -126,7 +131,8 @@ export class TypstGenerator {
       const fontPathArg = existsSync(fontsDir) ? `--font-path "${fontsDir}"` : '';
 
       execSync(`typst compile ${fontPathArg} "${typstPath}" "${pdfPath}"`, {
-        stdio: 'inherit',
+        stdio: 'pipe',
+        timeout: COMPILE_TIMEOUT_MS,
       });
 
       if (!existsSync(pdfPath)) {

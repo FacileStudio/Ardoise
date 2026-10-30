@@ -4,6 +4,9 @@ import type { StorageService } from '@repo/storage';
 import {
   escapeTypstString,
   formatItems,
+  formatProviders,
+  formatFeatures,
+  formatPaymentProviders,
   injectVariables,
   storeDocumentPdf,
   buildDocumentPersistenceBase,
@@ -23,6 +26,18 @@ describe('Typst string escaping', () => {
 
     expect(code).toContain('description: "Site \\"vitrine\\""');
     expect(code).toContain('unit: "j\\""');
+  });
+
+  it('keeps a single provider, feature or payment provider an array', () => {
+    const provider = formatProviders([
+      { name: 'A', role: 'r', address: 'a', city: 'c', siret: 's', email: 'e', amount: 1 },
+    ]);
+    const feature = formatFeatures([{ title: 't', desc: 'd' }]);
+    const payment = formatPaymentProviders([{ name: 'A', iban: 'i', bic: 'b', amount_to_pay: 1 }]);
+
+    for (const code of [provider, feature, payment]) {
+      expect(code.endsWith('),')).toBe(true);
+    }
   });
 
   it('escapes a scalar variable but leaves the generated code alone', () => {

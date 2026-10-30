@@ -12,6 +12,7 @@ import {
   prestation_btp
 } from './templates/services';
 
+export { escapeTypstString } from './escape';
 export { TypstGenerator, type ReceiptData, type ReceiptItem };
 export { facture_prestation, devis, maintenance, contrat_prestation, contrat_maintenance, back_contractuel, appel_de_fonds };
 export { prestation_barman, prestation_design, prestation_dev, prestation_photo, prestation_video, prestation_formation, prestation_btp };
