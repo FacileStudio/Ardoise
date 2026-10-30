@@ -16,10 +16,10 @@ import {
   createLivenessHandler,
   createReadinessHandler,
 } from './handlers/health';
+import { createVersionHandler, resolveVersion } from './handlers/version';
 import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
 
-const VERSION = '1.2.1';
 const app = new Hono();
 
 app.onError((err, c) => {
@@ -69,7 +69,7 @@ app.post('/webhook', createStripeWebhookHandler(storage, env));
 app.get('/docs/openapi.json', openApiHandler);
 app.get('/docs', apiReference({ url: '/docs/openapi.json', pageTitle: 'Ardoise API' }));
 
-app.get('/version', (c) => c.json({ version: VERSION }));
+app.get('/version', createVersionHandler());
 app.get('/health', createHealthCheckHandler({ storage }));
 app.get('/health/live', createLivenessHandler());
 app.get('/health/ready', createReadinessHandler());
@@ -88,7 +88,7 @@ app.all(
   })
 );
 
-app.get('/', (c) => c.json({ message: 'Ardoise API', version: '1.0.3' }));
+app.get('/', (c) => c.json({ message: 'Ardoise API', version: resolveVersion() }));
 
 const port = Number(env.PORT);
 

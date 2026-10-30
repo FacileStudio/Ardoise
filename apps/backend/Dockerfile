@@ -82,7 +82,11 @@ WORKDIR /app
 
 COPY --from=typst /bin/typst /usr/local/bin/typst
 
+ARG VERSION=
+ARG RAILWAY_GIT_COMMIT_SHA=
+
 ENV NODE_ENV=production
+ENV APP_VERSION=${VERSION:-${RAILWAY_GIT_COMMIT_SHA:-dev}}
 
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 --gid nodejs backend

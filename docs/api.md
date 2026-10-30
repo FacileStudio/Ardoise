@@ -304,7 +304,7 @@ Not tRPC — these exist because of raw bodies, redirects, or callers that canno
 | `GET` | `/storage/*` | `?ticket=` HMAC | Downloads it |
 | `GET` | `/docs` | none | Scalar API reference UI |
 | `GET` | `/docs/openapi.json` | none | Generated OpenAPI document |
-| `GET` | `/version` | none | Backend version |
+| `GET` | `/version` | none | `{ "version": "<tag, commit or dev>" }`, stamped at image build |
 | `GET` | `/health` | none | Full probe: `api`, `database`, `storage` with latencies |
 | `GET` | `/health/live` | none | Liveness |
 | `GET` | `/health/ready` | none | Readiness |

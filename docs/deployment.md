@@ -96,7 +96,7 @@ deployed database; it is a development-only shortcut that can drop columns.
 | `GET /health` | Full probe. Reports `healthy`, `degraded` or `unhealthy` with per-service status and latency for `api`, `database` (a `SELECT 1`) and `storage` (a directory listing) |
 | `GET /health/live` | Liveness — the process is up |
 | `GET /health/ready` | Readiness — dependencies are reachable |
-| `GET /version` | Backend version string |
+| `GET /version` | `{ "version" }`: the release tag on a published image, the commit on Railway, `dev` otherwise. Set by the `VERSION` build arg |
 
 Point the container healthcheck at `/health/ready` and the Traefik or uptime probe at `/health`.
 Note that a green `/health` says nothing about the **web** container: it is a separate service on
