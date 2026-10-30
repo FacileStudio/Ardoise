@@ -1,0 +1,22 @@
+# Ardoise coding standard, enforced by filet.
+# https://github.com/FacileStudio/filet
+#
+#   filet check .     the rules
+#   filet roast .     the rules, with commentary
+
+kind: app
+
+ignore:
+  - node_modules
+  - dist
+  - build
+  - coverage
+  - .svelte-kit
+  - .turbo
+
+extensions: [.ts, .svelte, .sh]
+
+architecture:
+  requiredDirs: [apps/backend, apps/web]
+
+failOn: error
