@@ -146,3 +146,19 @@ See `apps/backend/.env.example` for reference.
 - `BACKEND_URL` is passed as `VITE_API_URL` at Docker build time to the web app
 - CORS origins are derived from `FRONTEND_URL` env var
 - Default dev admin: `admin@example.com` / `admin123456789`
+
+## Releasing
+
+Versions follow SemVer, with the root `package.json` `version` as the source of truth. While on `0.x`, a breaking change bumps the minor.
+
+1. Move the `## [Unreleased]` entries of `CHANGELOG.md` under a new `## [X.Y.Z] - YYYY-MM-DD` heading.
+2. Set the same version in the root `package.json`.
+3. Commit, merge to `main`, then tag `vX.Y.Z` and push the tag.
+
+Workflows in `.github/workflows/`:
+
+- `filet.yml`: runs the filet code-quality check on pushes to `main` and on pull requests.
+- `ci.yml`: install, Prisma generate, typecheck and lint on pushes to `main` and on pull requests. `@repo/web` is excluded because its lint (3 errors) and svelte-check already fail on `main`.
+- `release.yml`: on a `v*` tag, checks that the tag equals the `package.json` version and that `CHANGELOG.md` has a matching section, runs the same typecheck and lint, pushes `ghcr.io/facilestudio/ardoise` (backend image, `VERSION` build arg set to the tag) and creates the GitHub release from the changelog section.
+
+A tag does not deploy. `GET /version` returns the `VERSION` build arg, else `RAILWAY_GIT_COMMIT_SHA`, else `dev`.
