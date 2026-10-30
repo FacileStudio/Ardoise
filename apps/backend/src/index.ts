@@ -6,6 +6,7 @@ import { AuthManager } from '@repo/auth';
 import { StorageService } from '@repo/storage';
 import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
+import { createPlumeWebhookHandler } from './handlers/plume';
 import trpcHandler from './handlers/trpc';
 import { openApiHandler } from './handlers/openapi';
 import { apiReference } from '@scalar/hono-api-reference';
@@ -65,6 +66,7 @@ app.options('/webhook', (c) => c.body(null, 204));
 app.options('*', (c) => c.body(null, 204));
 
 app.post('/webhook', createStripeWebhookHandler(storage, env));
+app.post('/webhooks/plume', createPlumeWebhookHandler(env));
 
 app.get('/docs/openapi.json', openApiHandler);
 app.get('/docs', apiReference({ url: '/docs/openapi.json', pageTitle: 'Ardoise API' }));

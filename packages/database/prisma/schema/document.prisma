@@ -21,6 +21,13 @@ enum InvoiceKind {
   BALANCE
 }
 
+enum SignatureStatus {
+  none
+  sent
+  signed
+  declined
+}
+
 model Document {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
@@ -77,6 +84,12 @@ model Document {
   pdfHash          String?
   fileSize         Int?
 
+  signatureStatus  SignatureStatus @default(none)
+  plumeDocumentId  String?
+  plumeUrl         String?
+  signedAt         DateTime?
+  nuageArchivedAt  DateTime?
+
   createdBy        String
   createdByUser    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
@@ -104,6 +117,7 @@ model Document {
   @@index([clientName])
   @@index([spaceId])
   @@index([missionId])
+  @@index([plumeDocumentId])
   @@index([sourceQuoteId])
   @@unique([missionId, version])
 }

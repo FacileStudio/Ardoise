@@ -31,7 +31,15 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import { parseStorageKey } from '../media/service';
+import type { StorageService } from '@repo/storage';
 import { nuageConfigFromEnv, storeContractInNuage } from '@repo/nuage';
+import {
+  PlumeError,
+  contractExternalRef,
+  plumeConfigFromEnv,
+  sendForSignature,
+} from '@repo/plume';
+import { logger } from '@repo/logger';
 import type { ServerEnv } from '@repo/env';
 
 const spaceScoped = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
@@ -51,6 +59,24 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
     code: 'INTERNAL_SERVER_ERROR',
     message: error instanceof Error && error.message ? error.message : fallbackMessage,
   });
+}
+
+const SIGNABLE_TYPES: string[] = ['contrat_prestation', 'contrat_maintenance', 'back_contractuel'];
+
+async function resolveSignatureClient(db: PrismaClient, document: StoredDocument) {
+  if (document.missionId) {
+    const mission = await db.mission.findUnique({
+      where: { id: document.missionId },
+      select: { client: true },
+    });
+    if (mission?.client) return mission.client;
+  }
+
+  const matches = await db.client.findMany({
+    where: { companyName: document.clientName, spaceId: document.spaceId },
+    take: 2,
+  });
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function archiveContract(env: ServerEnv, document: { id: string; name: string }, pdf: Buffer) {
@@ -226,6 +252,83 @@ async function resolveSubProvidersForAppel(
   });
 }
 
+type StoredDocument = NonNullable<Awaited<ReturnType<PrismaClient['document']['findUnique']>>>;
+
+async function loadDocumentPdf(
+  ctx: { db: PrismaClient; storage: StorageService },
+  document: StoredDocument
+): Promise<Buffer> {
+  const storedKey = parseStorageKey(document.pdfUrl);
+
+  if (storedKey) {
+    return Buffer.from(await ctx.storage.download(storedKey));
+  }
+
+  let logoUrl: string | undefined;
+  let bankName = '';
+  let iban = '';
+  let bic = '';
+  if (document.providerId) {
+    const provider = await ctx.db.provider.findFirst({
+      where: { id: document.providerId, spaceId: document.spaceId },
+      select: { logoUrl: true, bankName: true, iban: true, bic: true },
+    });
+    logoUrl = provider?.logoUrl || undefined;
+    bankName = provider?.bankName || '';
+    iban = provider?.iban || '';
+    bic = provider?.bic || '';
+  }
+
+  const documentData = {
+    type: document.type as DocType,
+    invoice_number: document.invoiceNumber || '',
+    invoice_date: document.createdAt.toISOString().split('T')[0],
+    due_date: (document.dueDate ?? document.createdAt).toISOString().split('T')[0],
+    quote_number: document.quoteNumber || '',
+    quote_date: document.createdAt.toISOString().split('T')[0],
+    validity_date: document.createdAt.toISOString().split('T')[0],
+    contract_reference: document.contractRef || '',
+    clientId: '',
+    providerId: document.providerId || undefined,
+    client_name: document.clientName,
+    client_siret: document.clientSiret || '',
+    client_address: document.clientAddress || '',
+    client_city: document.clientCity || '',
+    client_postal_code: document.clientPostalCode || '',
+    client_country: document.clientCountry || '',
+    client_tva_intracom: document.clientTvaIntracom || '',
+    provider_name: document.providerName,
+    provider_legal: document.providerLegal || '',
+    provider_legal_form: document.providerLegalForm || '',
+    provider_share_capital: document.providerShareCapital != null ? Number(document.providerShareCapital) : '',
+    provider_rcs_city: document.providerRcsCity || '',
+    provider_ape_code: document.providerApeCode || '',
+    provider_tva_intracom: document.providerTvaIntracom || '',
+    provider_siret: document.providerSiret || '',
+    provider_address: document.providerAddress || '',
+    provider_city: document.providerCity || '',
+    provider_postal_code: document.providerPostalCode || '',
+    provider_email: document.providerEmail || '',
+    provider_phone: document.providerPhone || '',
+    bank_name: bankName,
+    iban,
+    bic,
+    items: document.items as DocumentData['items'],
+    tva_rate: Number(document.tvaRate || 20),
+    payment_terms_days: document.paymentTermsDays ?? 30,
+    late_fee_rate: document.lateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
+    recovery_fee_amount: document.recoveryFeeAmount != null ? Number(document.recoveryFeeAmount) : 40,
+    vat_exemption_mention: document.vatExemptionMention || '',
+    delivery_date: document.deliveryDate ? document.deliveryDate.toISOString().split('T')[0] : '',
+    railway_estimate: Number(document.railwayEstimate || 0),
+    providers: [],
+    features: [],
+    payment_providers: [],
+  };
+
+  return generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
+}
+
 export const documentRouter = router({
   list: adminProcedure
     .input(
@@ -337,6 +440,108 @@ export const documentRouter = router({
     ];
   }),
 
+  signatureEnabled: adminProcedure.query(({ ctx }) => ({
+    enabled: plumeConfigFromEnv(ctx.env) !== null,
+  })),
+
+  sendForSignature: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const plume = plumeConfigFromEnv(ctx.env);
+      if (!plume) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Plume is not configured on this server.',
+        });
+      }
+
+      const document = await requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.document.findUnique({ where: { id: input.id } }),
+        'Document not found'
+      );
+
+      if (!SIGNABLE_TYPES.includes(document.type)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only contracts can be sent for signature.',
+        });
+      }
+
+      if (document.signatureStatus !== 'none') {
+        const message = {
+          sent: 'This document was already sent for signature.',
+          signed: 'This document is already signed.',
+          declined: 'The signers declined this document.',
+        }[document.signatureStatus];
+        throw new TRPCError({ code: 'CONFLICT', message });
+      }
+
+      const client = await resolveSignatureClient(ctx.db, document);
+      if (!client?.contactEmail) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'The client has no email address, so it cannot be asked to sign.',
+        });
+      }
+      if (!document.providerEmail) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'The provider has no email address, so it cannot be asked to sign.',
+        });
+      }
+
+      const nuage = nuageConfigFromEnv(ctx.env);
+      const externalRef = contractExternalRef(document.id);
+
+      try {
+        const pdf = await loadDocumentPdf(ctx, document);
+        const sent = await sendForSignature(plume, {
+          name: document.name,
+          filename: document.name.endsWith('.pdf') ? document.name : `${document.name}.pdf`,
+          pdf,
+          signers: [
+            {
+              name: `${client.contactFirstName} ${client.contactLastName}`.trim(),
+              email: client.contactEmail,
+              order: 1,
+            },
+            { name: document.providerName, email: document.providerEmail, order: 2 },
+          ],
+          externalRef,
+          nuageSpaceFacileId: nuage?.spaceFacileId,
+          nuageLinkedTo: nuage ? `${externalRef}:signed` : undefined,
+        });
+
+        return await ctx.db.document.update({
+          where: { id: document.id },
+          data: {
+            signatureStatus: 'sent',
+            plumeDocumentId: sent.documentId,
+            plumeUrl: sent.url,
+          },
+          select: {
+            id: true,
+            signatureStatus: true,
+            plumeDocumentId: true,
+            plumeUrl: true,
+            signedAt: true,
+            nuageArchivedAt: true,
+          },
+        });
+      } catch (error) {
+        if (error instanceof PlumeError) {
+          logger.warn({ err: error, documentId: document.id }, 'Plume rejected the document');
+          throw new TRPCError({
+            code: 'BAD_GATEWAY',
+            message: `Could not send the document to Plume: ${error.message}`,
+          });
+        }
+        rethrowUnexpected(error, 'Failed to send the document for signature');
+      }
+    }),
+
   download: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -350,82 +555,9 @@ export const documentRouter = router({
       );
 
       try {
-        const storedKey = parseStorageKey(document.pdfUrl);
+        const pdf = await loadDocumentPdf(ctx, document);
 
-        if (storedKey) {
-          const bytes = await ctx.storage.download(storedKey);
-
-          return { pdf: Buffer.from(bytes).toString('base64'), fileName: document.name };
-        }
-
-        let logoUrl: string | undefined;
-        let bankName = '';
-        let iban = '';
-        let bic = '';
-        if (document.providerId) {
-          const provider = await ctx.db.provider.findFirst({
-            where: { id: document.providerId, spaceId: document.spaceId },
-            select: { logoUrl: true, bankName: true, iban: true, bic: true },
-          });
-          logoUrl = provider?.logoUrl || undefined;
-          bankName = provider?.bankName || '';
-          iban = provider?.iban || '';
-          bic = provider?.bic || '';
-        }
-
-        const documentData = {
-          type: document.type as DocType,
-          invoice_number: document.invoiceNumber || '',
-          invoice_date: document.createdAt.toISOString().split('T')[0],
-          due_date: (document.dueDate ?? document.createdAt).toISOString().split('T')[0],
-          quote_number: document.quoteNumber || '',
-          quote_date: document.createdAt.toISOString().split('T')[0],
-          validity_date: document.createdAt.toISOString().split('T')[0],
-          contract_reference: document.contractRef || '',
-          clientId: '',
-          providerId: document.providerId || undefined,
-          client_name: document.clientName,
-          client_siret: document.clientSiret || '',
-          client_address: document.clientAddress || '',
-          client_city: document.clientCity || '',
-          client_postal_code: document.clientPostalCode || '',
-          client_country: document.clientCountry || '',
-          client_tva_intracom: document.clientTvaIntracom || '',
-          provider_name: document.providerName,
-          provider_legal: document.providerLegal || '',
-          provider_legal_form: document.providerLegalForm || '',
-          provider_share_capital: document.providerShareCapital != null ? Number(document.providerShareCapital) : '',
-          provider_rcs_city: document.providerRcsCity || '',
-          provider_ape_code: document.providerApeCode || '',
-          provider_tva_intracom: document.providerTvaIntracom || '',
-          provider_siret: document.providerSiret || '',
-          provider_address: document.providerAddress || '',
-          provider_city: document.providerCity || '',
-          provider_postal_code: document.providerPostalCode || '',
-          provider_email: document.providerEmail || '',
-          provider_phone: document.providerPhone || '',
-          bank_name: bankName,
-          iban,
-          bic,
-          items: document.items as DocumentData['items'],
-          tva_rate: Number(document.tvaRate || 20),
-          payment_terms_days: document.paymentTermsDays ?? 30,
-          late_fee_rate: document.lateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
-          recovery_fee_amount: document.recoveryFeeAmount != null ? Number(document.recoveryFeeAmount) : 40,
-          vat_exemption_mention: document.vatExemptionMention || '',
-          delivery_date: document.deliveryDate ? document.deliveryDate.toISOString().split('T')[0] : '',
-          railway_estimate: Number(document.railwayEstimate || 0),
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, logoUrl, ctx.storage);
-
-        return {
-          pdf: pdfBuffer.toString('base64'),
-          fileName: document.name,
-        };
+        return { pdf: pdf.toString('base64'), fileName: document.name };
       } catch (error) {
         rethrowUnexpected(error, 'Failed to download document');
       }

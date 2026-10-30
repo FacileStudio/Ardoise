@@ -15,6 +15,7 @@
     "@hono/trpc-server": "^0.4.2",
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/plume": "workspace:*",
     "@repo/trpc": "workspace:*",
     "@repo/types": "workspace:*",
     "@scalar/hono-api-reference": "0.10.19",

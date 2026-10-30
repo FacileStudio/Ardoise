@@ -24,6 +24,7 @@
         "@hono/trpc-server": "^0.4.2",
         "@repo/database": "workspace:*",
         "@repo/logger": "workspace:*",
+        "@repo/plume": "workspace:*",
         "@repo/trpc": "workspace:*",
         "@repo/types": "workspace:*",
         "@scalar/hono-api-reference": "0.10.19",
@@ -221,6 +222,14 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/plume": {
+      "name": "@repo/plume",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@repo/tsconfig": "workspace:*",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/smtp": {
       "name": "@repo/smtp",
       "version": "0.0.0",
@@ -273,6 +282,7 @@
         "@repo/database": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/nuage": "workspace:*",
+        "@repo/plume": "workspace:*",
         "@repo/smtp": "workspace:*",
         "@repo/stripe": "workspace:*",
         "@trpc/server": "^11.9.0",
@@ -602,6 +612,8 @@
     "@repo/logger": ["@repo/logger@workspace:packages/logger"],
 
     "@repo/nuage": ["@repo/nuage@workspace:packages/nuage"],
+
+    "@repo/plume": ["@repo/plume@workspace:packages/plume"],
 
     "@repo/smtp": ["@repo/smtp@workspace:packages/smtp"],
 
