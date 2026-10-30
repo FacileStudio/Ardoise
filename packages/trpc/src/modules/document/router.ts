@@ -31,6 +31,8 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import { parseStorageKey } from '../media/service';
+import { nuageConfigFromEnv, storeContractInNuage } from '@repo/nuage';
+import type { ServerEnv } from '@repo/env';
 
 const spaceScoped = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
   schema.extend({ spaceId: z.string().optional(), missionId: z.string().optional() });
@@ -48,6 +50,14 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
     message: error instanceof Error && error.message ? error.message : fallbackMessage,
+  });
+}
+
+function archiveContract(env: ServerEnv, document: { id: string; name: string }, pdf: Buffer) {
+  void storeContractInNuage(nuageConfigFromEnv(env), {
+    filename: document.name,
+    pdf,
+    linkedTo: `ardoise:contract:${document.id}`,
   });
 }
 
@@ -684,6 +694,8 @@ export const documentRouter = router({
           },
         });
 
+        archiveContract(ctx.env, document, pdfBuffer);
+
         return {
           document,
           pdf: pdfBuffer.toString('base64'),
@@ -863,6 +875,8 @@ export const documentRouter = router({
           },
         });
 
+        archiveContract(ctx.env, document, pdfBuffer);
+
         return {
           document,
           pdf: pdfBuffer.toString('base64'),
@@ -947,6 +961,8 @@ export const documentRouter = router({
             tvaRate,
           },
         });
+
+        archiveContract(ctx.env, document, pdfBuffer);
 
         return {
           document,

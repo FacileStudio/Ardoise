@@ -15,6 +15,9 @@ const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 const optionalUrl = z.preprocess(emptyToUndefined, z.string().url().optional());
 const optionalString = z.preprocess(emptyToUndefined, z.string().min(1).optional());
 
+const nuageKeys = ['NUAGE_URL', 'NUAGE_API_TOKEN', 'NUAGE_SPACE_FACILE_ID'] as const;
+const plumeKeys = ['PLUME_URL', 'PLUME_API_TOKEN', 'PLUME_WEBHOOK_SECRET'] as const;
+
 export const publicEnvSchema = baseSchema.extend({
   API_URL: z.string().url().optional(),
 });
@@ -38,6 +41,21 @@ export const serverEnvSchema = baseSchema.extend({
   OIDC_CLIENT_SECRET: optionalString,
   OIDC_REDIRECT_URL: optionalUrl,
   OIDC_SUCCESS_URL: optionalUrl,
+
+  NUAGE_URL: optionalUrl,
+  NUAGE_API_TOKEN: optionalString,
+  NUAGE_SPACE_FACILE_ID: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^fac_[0-9a-f]{24}$/, 'NUAGE_SPACE_FACILE_ID must be fac_ followed by 24 lowercase hex')
+      .optional()
+  ),
+  NUAGE_SPACE_NAME: optionalString,
+
+  PLUME_URL: optionalUrl,
+  PLUME_API_TOKEN: optionalString,
+  PLUME_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
 }).superRefine((env, ctx) => {
   if (env.OIDC_ISSUER && (!env.OIDC_CLIENT_ID || !env.OIDC_CLIENT_SECRET)) {
     ctx.addIssue({
@@ -45,6 +63,22 @@ export const serverEnvSchema = baseSchema.extend({
       path: ['OIDC_CLIENT_ID'],
       message: 'OIDC_CLIENT_ID and OIDC_CLIENT_SECRET are required when OIDC_ISSUER is set',
     });
+  }
+
+  const groups = [
+    { keys: nuageKeys, prefix: 'NUAGE_*' },
+    { keys: plumeKeys, prefix: 'PLUME_*' },
+  ];
+  for (const { keys, prefix } of groups) {
+    const missing = keys.filter((key) => !env[key]);
+    if (missing.length === 0 || missing.length === keys.length) continue;
+    for (const key of missing) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${key} is required when other ${prefix} variables are set`,
+      });
+    }
   }
 });
 
