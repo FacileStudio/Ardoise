@@ -44,7 +44,7 @@
 	let pageLoading = $state(true);
 	let submission: Submission | null = $state(null);
 
-	const submissionId = $derived(parseInt($page.params.id));
+	const submissionId = $derived(parseInt($page.params.id as string));
 
 	onMount(async () => {
 		await fetchSubmission();
@@ -138,9 +138,10 @@
 				</div>
 
 				{#if submission.combined_document_url}
+					{@const documentUrl = submission.combined_document_url}
 					<div class="mt-6 pt-4 border-t border-border">
 						<Button
-							onclick={() => void window.open(submission.combined_document_url!, '_blank')}
+							onclick={() => void window.open(documentUrl, '_blank')}
 						>
 							<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
 							Télécharger le document signé
@@ -149,10 +150,11 @@
 				{/if}
 
 				{#if submission.audit_log_url}
+					{@const auditLogUrl = submission.audit_log_url}
 					<div class="mt-3">
 						<Button
 							variant="outline"
-							onclick={() => void window.open(submission.audit_log_url!, '_blank')}
+							onclick={() => void window.open(auditLogUrl, '_blank')}
 						>
 							<iconify-icon icon="solar:document-text-bold" width="16"></iconify-icon>
 							Voir le journal d'audit

@@ -42,7 +42,7 @@
 			showPreview = true;
 			toast.success('Aperçu généré avec succès');
 		} catch (error: any) {
-			logger.error('Failed to preview document', error);
+			logger.error({ err: error }, 'Failed to preview document');
 			toast.danger('Échec de la génération de l\'aperçu');
 		} finally {
 			generating = false;
@@ -67,9 +67,9 @@
 			});
 
 			toast.success('Contrat créé avec succès');
-			goto(resolve(`/admin/documents/${result.id}`));
+			goto(resolve(`/admin/documents/${result.document.id}`));
 		} catch (error: any) {
-			logger.error('Failed to create document', error);
+			logger.error({ err: error }, 'Failed to create document');
 			toast.danger('Échec de la création du contrat');
 		} finally {
 			generating = false;

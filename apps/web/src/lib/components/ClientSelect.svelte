@@ -27,10 +27,10 @@
 	async function loadClients() {
 		loading = true;
 		try {
-			const result = await trpc.client.list.query({ limit: 100, offset: 0 });
-			clients = result.data;
+			const result = await trpc.client.list.query({ limit: 100, page: 1 });
+			clients = result.clients;
 		} catch (error: any) {
-			logger.error('Failed to load clients', error);
+			logger.error({ err: error }, 'Failed to load clients');
 			toast.danger('Failed to load clients');
 		} finally {
 			loading = false;

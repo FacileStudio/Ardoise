@@ -47,19 +47,19 @@
   }
 
   interface Settings {
-    companyName?: string;
-    companyLegal?: string;
-    companyAddress?: string;
-    companyCity?: string;
-    companyCountry?: string;
-    companySiret?: string;
-    companyEmail?: string;
-    companyPhone?: string;
-    bankName?: string;
-    iban?: string;
-    bic?: string;
-    logoUrl?: string;
-    stripePublishableKey?: string;
+    companyName?: string | null;
+    companyLegal?: string | null;
+    companyAddress?: string | null;
+    companyCity?: string | null;
+    companyCountry?: string | null;
+    companySiret?: string | null;
+    companyEmail?: string | null;
+    companyPhone?: string | null;
+    bankName?: string | null;
+    iban?: string | null;
+    bic?: string | null;
+    logoUrl?: string | null;
+    stripePublishableKey?: string | null;
   }
 
   let paymentId = '';
@@ -82,7 +82,7 @@
   let elements: StripeElements | null = null;
   let clientSecret = '';
 
-  $: paymentId = $page.params.id;
+  $: paymentId = $page.params.id as string;
 
   onMount(async () => {
     await loadData();

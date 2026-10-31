@@ -5,8 +5,12 @@ import { trpc } from './trpc';
 
 const webStorage = {
   getItem: (key: string) => (browser ? localStorage.getItem(key) : null),
-  setItem: (key: string, val: string) => browser && localStorage.setItem(key, val),
-  removeItem: (key: string) => browser && localStorage.removeItem(key),
+  setItem: (key: string, val: string) => {
+    if (browser) localStorage.setItem(key, val);
+  },
+  removeItem: (key: string) => {
+    if (browser) localStorage.removeItem(key);
+  },
 };
 
 export const authStore = new UniversalAuthStore(
@@ -15,7 +19,7 @@ export const authStore = new UniversalAuthStore(
   async () => {
     if (browser) {
       try {
-        await trpc.auth.logout.mutate();
+        await trpc.auth.logout.mutate({});
       } catch (e) {
         logger.error({ err: e }, 'Logout failed');
       }

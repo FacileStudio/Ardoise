@@ -208,7 +208,12 @@
         </div>
         <div class="grid md:grid-cols-2 gap-4">
           <Input bind:value={formData.companyLegalForm} placeholder="Forme juridique (SAS, SARL, EI...)" />
-          <Input bind:value={formData.companyShareCapital} type="number" step="0.01" placeholder="Capital social (€)" />
+          <Input
+            bind:value={
+              () => formData.companyShareCapital ?? undefined,
+              (v) => (formData.companyShareCapital = v ?? null)
+            }
+            type="number" step="0.01" placeholder="Capital social (€)" />
           <Input bind:value={formData.companyRcsCity} placeholder="RCS — ville d'immatriculation" />
           <Input bind:value={formData.companyApeCode} placeholder="Code APE/NAF (ex: 6201Z)" />
           <Input bind:value={formData.companyTvaIntracom} placeholder="N° TVA intracommunautaire (FR...)" class="md:col-span-2" />

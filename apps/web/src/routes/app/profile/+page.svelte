@@ -8,18 +8,18 @@
     firstName?: string;
     lastName?: string;
     email: string;
-    createdAt: Date;
+    createdAt: string;
     role: string;
   }
 
   interface ClientData {
     id: string;
     companyName: string;
-    billingAddress: string;
-    billingCity: string;
-    billingCountry: string;
-    siret?: string;
-    createdAt: Date;
+    billingAddress: string | null;
+    billingCity: string | null;
+    billingCountry: string | null;
+    siret?: string | null;
+    createdAt: string;
   }
 
   let loading = true;
@@ -46,7 +46,7 @@
     }
   }
 
-  function formatDate(date: Date) {
+  function formatDate(date: string) {
     return new Date(date).toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'long',

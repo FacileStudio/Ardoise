@@ -11,10 +11,10 @@
     description: string;
     status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED' | string;
     dueDate: string | Date;
-    paidAt?: string | Date;
+    paidAt: string | null;
     createdAt: string | Date;
     amount: number | string;
-    receiptUrl?: string | null;
+    receiptUrl: string | null;
   }
 
   let payments: PaymentSummary[] = [];
@@ -165,17 +165,18 @@
                     </Badge>
                   </div>
                   <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-sm text-muted-foreground">
-                    <span>Payée le {formatDate(payment.paidAt)}</span>
+                    <span>Payée le {payment.paidAt ? formatDate(payment.paidAt) : '-'}</span>
                     <span class="hidden md:inline">·</span>
                     <span>Montant : {formatAmount(payment.amount)}</span>
                   </div>
                 </div>
 
                 {#if payment.receiptUrl}
+                  {@const receiptUrl = payment.receiptUrl}
                   <Button
                     variant="outline"
                     size="sm"
-                    onclick={() => void window.open(payment.receiptUrl, '_blank')}
+                    onclick={() => void window.open(receiptUrl, '_blank')}
                   >
                     <iconify-icon icon="solar:download-linear" width="16"></iconify-icon>
                     Télécharger le reçu

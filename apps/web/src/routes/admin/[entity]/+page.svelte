@@ -4,15 +4,16 @@
   import { Alert, Button, Drawer, Input, Spinner, toast } from '@facile/muse';
   import { AdminAutoForm, AdminAutoTable } from '$lib/ui';
   import { logger } from '@repo/logger';
-  import type { EntityConfig, ListResult } from '@repo/admin';
+  import type { ListResult } from '@repo/admin';
+  import type { AdminEntityConfig, AdminEntityItem } from '$lib/types';
   import { onMount } from 'svelte';
   import 'iconify-icon';
 
-  const entity = $page.params.entity;
+  const entity = $page.params.entity as string;
 
-  type EntityItem = Record<string, unknown> & { id: string };
+  type EntityItem = AdminEntityItem;
 
-  let config: EntityConfig | null = null;
+  let config: AdminEntityConfig | null = null;
   let data: ListResult<EntityItem> | null = null;
   let permissions = {
     canCreate: false,
@@ -118,7 +119,7 @@
     try {
       await trpc.admin.update.mutate({
         entity,
-        id: selectedItem.id,
+        id: String(selectedItem.id),
         data: formData,
       });
       showEditModal = false;
@@ -212,7 +213,7 @@
         type="text"
         placeholder="Search..."
         value={searchQuery}
-        on:input={handleSearch}
+        oninput={handleSearch}
       />
     </div>
 

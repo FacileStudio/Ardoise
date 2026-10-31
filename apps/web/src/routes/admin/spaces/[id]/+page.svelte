@@ -13,7 +13,7 @@
     let members: any[] = $state([]);
     let loading = $state(true);
 
-    const spaceId = $derived($page.params.id);
+    const spaceId = $derived($page.params.id as string);
 
     onMount(async () => {
         await loadData();
