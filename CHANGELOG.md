@@ -18,9 +18,18 @@ deploys from the tag. A tag publishes the backend image to
 
 - `apps/web` now compiles with `strict: true`, so the tRPC types it reads from `@repo/trpc` match
   the backend. `typecheck` and `lint` cover `@repo/web` in CI and in the release workflow.
+- The admin and client shells are rebuilt on `@facile/muse`: `SideBar` with collapse, space switcher
+  and a user card that opens Settings, a mobile nav in both areas, a topbar space switcher on
+  mobile, one scroller, no borders. Admin nav order is Statistiques, Missions, Documents,
+  Signatures, Paiements, Clients, Prestataires, Espaces. `/admin` redirects to `/admin/missions`.
+- Icons are bundled (`src/lib/icons/*.json`, regenerate with `bun run icons`) and the iconify CDN
+  script is gone from `app.html`, so the first paint has icons without network.
 
 ### Fixed
 
+- A rate-limited (429) or failing session check no longer redirects to `/login`; the guard shows
+  a 503 page instead, and the `/login` redirect only fires after the server confirms the session.
+  This removes the `/login` and `/admin` redirect loop.
 - Client and provider pickers called a missing `admin.providers` endpoint and an unsupported
   `offset` input, and read the wrong response keys. They now use `provider.list` and `client.list`.
 - Creating a maintenance contract navigated to `/admin/documents/undefined`. It now uses the
