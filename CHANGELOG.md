@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-31
+
 ### Security
 
 - `user.me`, the user lists, the admin entity engine, and the payment and client mutations no longer return password hashes. The user detail no longer returns refresh tokens or provider tokens, and hashes stay out of the audit trail.
@@ -28,6 +30,9 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Fixed
 
+- Session checks (`auth.me`, `auth.refresh`, `auth.logout`) no longer share the five-a-minute login
+  rate limit bucket, which normal page navigation could exhaust and turn into a forced logout.
+  Only `auth.login` keeps it.
 - A Stripe webhook whose processing failed was recorded as handled, so Stripe's redelivery was ignored and the payment stayed pending. The event id is released when processing throws.
 - The payment receipt is marked as sent only after the confirmation email goes out, so a failed send is retried.
 - Concurrent requests could issue the same invoice, quote or contract number. The counter is read and incremented in one statement, and a number is taken only after the client and provider checks pass.
