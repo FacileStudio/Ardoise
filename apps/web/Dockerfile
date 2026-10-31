@@ -12,6 +12,8 @@ COPY packages/docuseal/package.json ./packages/docuseal/package.json
 COPY packages/env/package.json ./packages/env/package.json
 COPY packages/i18n/package.json ./packages/i18n/package.json
 COPY packages/logger/package.json ./packages/logger/package.json
+COPY packages/nuage/package.json ./packages/nuage/package.json
+COPY packages/plume/package.json ./packages/plume/package.json
 COPY packages/smtp/package.json ./packages/smtp/package.json
 COPY packages/storage/package.json ./packages/storage/package.json
 COPY packages/storage-client/package.json ./packages/storage-client/package.json
@@ -38,6 +40,8 @@ RUN cat <<'EOF' > package.json
     "packages/env",
     "packages/i18n",
     "packages/logger",
+    "packages/nuage",
+    "packages/plume",
     "packages/smtp",
     "packages/storage",
     "packages/storage-client",
@@ -52,7 +56,7 @@ RUN cat <<'EOF' > package.json
 }
 EOF
 
-RUN bun -e "const rewrites = new Map([['apps/web/package.json', pkg => { delete pkg.devDependencies['@repo/eslint-config']; delete pkg.devDependencies.eslint; }], ['packages/admin/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth-shared/package.json', pkg => { delete pkg.devDependencies; }], ['packages/crypto/package.json', pkg => { delete pkg.devDependencies; }], ['packages/database/package.json', pkg => { delete pkg.devDependencies; }], ['packages/docuseal/package.json', pkg => { delete pkg.devDependencies; }], ['packages/env/package.json', pkg => { delete pkg.devDependencies; }], ['packages/i18n/package.json', pkg => { delete pkg.devDependencies; }], ['packages/logger/package.json', pkg => { delete pkg.devDependencies; }], ['packages/smtp/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/stripe/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/types/package.json', pkg => { delete pkg.devDependencies; }], ['packages/typst/package.json', pkg => { delete pkg.devDependencies; }], ['packages/utils/package.json', pkg => { delete pkg.devDependencies; }]]); for (const [file, rewrite] of rewrites) { const pkg = JSON.parse(await Bun.file(file).text()); rewrite(pkg); await Bun.write(file, JSON.stringify(pkg, null, 2) + '\n'); }"
+RUN bun -e "const rewrites = new Map([['apps/web/package.json', pkg => { delete pkg.devDependencies['@repo/eslint-config']; delete pkg.devDependencies.eslint; }], ['packages/admin/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth-shared/package.json', pkg => { delete pkg.devDependencies; }], ['packages/crypto/package.json', pkg => { delete pkg.devDependencies; }], ['packages/database/package.json', pkg => { delete pkg.devDependencies; }], ['packages/docuseal/package.json', pkg => { delete pkg.devDependencies; }], ['packages/env/package.json', pkg => { delete pkg.devDependencies; }], ['packages/i18n/package.json', pkg => { delete pkg.devDependencies; }], ['packages/logger/package.json', pkg => { delete pkg.devDependencies; }], ['packages/nuage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/plume/package.json', pkg => { delete pkg.devDependencies; }], ['packages/smtp/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/stripe/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc-client/package.json', pkg => { delete pkg.devDependencies; }], ['packages/types/package.json', pkg => { delete pkg.devDependencies; }], ['packages/typst/package.json', pkg => { delete pkg.devDependencies; }], ['packages/utils/package.json', pkg => { delete pkg.devDependencies; }]]); for (const [file, rewrite] of rewrites) { const pkg = JSON.parse(await Bun.file(file).text()); rewrite(pkg); await Bun.write(file, JSON.stringify(pkg, null, 2) + '\n'); }"
 
 RUN bun install --no-frozen-lockfile --network-concurrency 8
 
@@ -72,6 +76,8 @@ COPY packages/docuseal ./packages/docuseal
 COPY packages/env ./packages/env
 COPY packages/i18n ./packages/i18n
 COPY packages/logger ./packages/logger
+COPY packages/nuage ./packages/nuage
+COPY packages/plume ./packages/plume
 COPY packages/smtp ./packages/smtp
 COPY packages/storage ./packages/storage
 COPY packages/storage-client ./packages/storage-client
