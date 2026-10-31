@@ -1,5 +1,5 @@
 import { mkdir, readdir, stat, unlink, readFile, writeFile } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve, sep } from 'node:path';
 import { existsSync } from 'node:fs';
 import { logger } from '@repo/logger';
 export { createStorageTicket, verifyStorageTicket } from './ticket';
@@ -31,7 +31,12 @@ export class StorageService {
 
   private resolvePath(key: string): string {
     const clean = key.startsWith('/') ? key.slice(1) : key;
-    return join(this.storagePath, clean);
+    const root = resolve(this.storagePath);
+    const full = resolve(join(root, clean));
+    if (full !== root && !full.startsWith(root + sep)) {
+      throw new Error('Invalid storage key');
+    }
+    return full;
   }
 
   async upload(path: string, data: ArrayBuffer | Uint8Array | Buffer, _contentType?: string): Promise<string> {

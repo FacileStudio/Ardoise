@@ -13,7 +13,8 @@
     "./auth/service": "./src/modules/auth/service.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@repo/admin": "workspace:*",

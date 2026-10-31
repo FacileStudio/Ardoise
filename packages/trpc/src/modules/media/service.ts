@@ -6,6 +6,23 @@ import { requireRowScope } from '../space/service';
 
 const NOT_ENTITLED = 'File not found';
 
+export function safeFileName(fileName: string): string {
+  const base = fileName.split(/[\\/]/).pop() ?? '';
+  const clean = base.replace(/[^\w.-]+/g, '_').replace(/^\.+/, '');
+  return clean.slice(-100) || 'file';
+}
+
+function assertOwnedKey(userId: string, data: { url: string; key: string }) {
+  const prefix = `uploads/${userId}/`;
+  const segments = data.key.split('/');
+  if (!data.key.startsWith(prefix) || segments.includes('..') || segments.includes('.')) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid file key' });
+  }
+  if (parseStorageKey(data.url) !== data.key) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The URL does not match the file key' });
+  }
+}
+
 export function parseStorageKey(value: string | null): string | null {
   if (!value) return null;
 
@@ -56,7 +73,7 @@ export const mediaService = {
     appOrigin: string,
     secret: string
   ) => {
-    const fileKey = `uploads/${userId}/${Date.now()}-${data.fileName}`;
+    const fileKey = `uploads/${userId}/${Date.now()}-${safeFileName(data.fileName)}`;
     const baseUrl = appOrigin.replace(/\/$/, '');
     const ticket = createStorageTicket(secret, { method: 'PUT', key: fileKey }, 900);
 
@@ -104,8 +121,9 @@ export const mediaService = {
     userId: string,
     data: { url: string; key: string; size: number }
   ) => {
+    assertOwnedKey(userId, data);
     const oldMedia = await db.media.findUnique({ where: { avatarUserId: userId } });
-    if (oldMedia) await storage.delete(oldMedia.key);
+    if (oldMedia && oldMedia.key !== data.key) await storage.delete(oldMedia.key);
 
     return db.media.upsert({
       where: { avatarUserId: userId },
@@ -132,11 +150,12 @@ export const mediaService = {
   ) => {
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) {
-      throw new Error(`User with ID ${userId} not found.`); // Or a more specific tRPC error
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
     }
 
+    assertOwnedKey(userId, data);
     const oldMedia = await db.media.findUnique({ where: { coverUserId: userId } });
-    if (oldMedia) await storage.delete(oldMedia.key);
+    if (oldMedia && oldMedia.key !== data.key) await storage.delete(oldMedia.key);
 
     return db.media.upsert({
       where: { coverUserId: userId },
