@@ -9,7 +9,7 @@
 
 	function openSettings() {
 		smtpNotice.open = false;
-		window.location.assign(`${resolve('/admin/settings')}#smtp`);
+		window.location.assign(resolve('/admin/settings/email'));
 	}
 </script>
 
@@ -27,16 +27,11 @@
 		</p>
 
 		<div class="flex gap-3">
-			<Button variant="outline" class="flex-1" onclick={() => (smtpNotice.open = false)}>
+			<Button variant="ghost" class="flex-1" onclick={() => (smtpNotice.open = false)}>
 				Fermer
 			</Button>
 			{#if admin}
-				<button
-					onclick={openSettings}
-					class="flex-1 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium"
-				>
-					Configurer le SMTP
-				</button>
+				<Button class="flex-1" onclick={openSettings}>Configurer le SMTP</Button>
 			{/if}
 		</div>
 	</div>
