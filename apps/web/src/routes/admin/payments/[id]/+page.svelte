@@ -64,7 +64,7 @@
     }>;
   }
 
-  let paymentId = $derived($page.params.id);
+  let paymentId = $derived($page.params.id as string);
   let pageLoading = $state(true);
   let actionLoading = $state(false);
   let payment: Payment | null = $state(null);
@@ -519,12 +519,13 @@
         {/if}
 
         {#if payment.receiptUrl}
+          {@const receiptUrl = payment.receiptUrl}
           <div class="rounded-xl border border-border p-6 space-y-4">
             <h2 class="text-base font-semibold text-foreground">Reçu</h2>
             <Button
               variant="outline"
               class="w-full"
-              onclick={() => void window.open(payment.receiptUrl, '_blank')}
+              onclick={() => void window.open(receiptUrl, '_blank')}
             >
               <iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
               Télécharger le reçu

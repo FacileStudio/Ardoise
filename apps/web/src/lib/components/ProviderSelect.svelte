@@ -7,7 +7,7 @@
 	interface Provider {
 		id: string;
 		name: string;
-		tvaRate: number;
+		tvaRate: string;
 	}
 
 	interface Props {
@@ -28,10 +28,10 @@
 	async function loadProviders() {
 		loading = true;
 		try {
-			const result = await trpc.admin.providers.list.query({ limit: 100, offset: 0 });
-			providers = result.data;
+			const result = await trpc.provider.list.query({ limit: 100, page: 1 });
+			providers = result.providers;
 		} catch (error: any) {
-			logger.error('Failed to load providers', error);
+			logger.error({ err: error }, 'Failed to load providers');
 			toast.danger('Failed to load providers');
 		} finally {
 			loading = false;

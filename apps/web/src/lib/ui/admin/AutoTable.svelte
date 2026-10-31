@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { EntityConfig, ListResult } from '@repo/admin';
+  import type { ListResult } from '@repo/admin';
+  import type { AdminEntityConfig } from '$lib/types';
   import { toast } from '@facile/muse';
   import { downloadCSV } from '@repo/utils';
   import Pagination from '../Pagination.svelte';
@@ -7,7 +8,7 @@
   import 'iconify-icon';
 
   interface Props {
-    config: EntityConfig;
+    config: AdminEntityConfig;
     data: ListResult<Record<string, unknown>>;
     onEdit: (_id: string) => void;
     onDelete: (_id: string) => void;

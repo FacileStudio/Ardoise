@@ -31,7 +31,7 @@
     let showLeaveDialog = $state(false);
     let leaveLoading = $state(false);
 
-    const spaceId = $derived($page.params.id);
+    const spaceId = $derived($page.params.id as string);
 
     onMount(() => {
         fetchData();

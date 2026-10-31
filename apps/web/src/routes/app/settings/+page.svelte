@@ -6,6 +6,7 @@
   import 'iconify-icon';
   import type { SessionUser } from '@repo/auth-shared';
   import { onMount } from 'svelte';
+  import { logger } from '@repo/logger';
 
   let saving = $state(false);
   let message = $state<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -20,7 +21,9 @@
         avatarUrl = profile.avatar.url;
         avatarFromSSO = profile.avatar.key.includes('oidc-avatar');
       }
-    } catch {}
+    } catch (e) {
+      logger.error({ err: e }, 'Failed to load profile');
+    }
   });
 
   let formData = $state({
@@ -109,7 +112,7 @@
 
   <div class="flex items-center gap-4">
     <Avatar
-      src={avatarUrl}
+      src={avatarUrl ?? undefined}
       alt={formData.firstName || 'Avatar'}
       name={formData.firstName?.[0] || 'U'}
       size="lg"

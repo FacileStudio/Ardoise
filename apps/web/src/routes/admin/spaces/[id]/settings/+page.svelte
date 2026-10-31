@@ -20,7 +20,7 @@
     let showDeleteDialog = $state(false);
     let deleting = $state(false);
 
-    const spaceId = $derived($page.params.id);
+    const spaceId = $derived($page.params.id as string);
 
     onMount(async () => {
         try {

@@ -7,6 +7,21 @@ module.exports = [
   ...baseConfig,
   ...sveltePlugin.configs['flat/recommended'],
   {
+    files: ['**/*.svelte.ts'],
+    languageOptions: {
+      parser: tsParser,
+      globals: {
+        $state: 'readonly',
+        $derived: 'readonly',
+        $effect: 'readonly',
+        $props: 'readonly',
+        $bindable: 'readonly',
+        $inspect: 'readonly',
+        $host: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/*.svelte'],
     languageOptions: {
       parser: svelteParser,

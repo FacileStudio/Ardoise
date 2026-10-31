@@ -46,20 +46,22 @@
 	}
 
 	function normalizePayload() {
-		const optionalFields = ['legalName', 'siret', 'address', 'city', 'email', 'phone', 'bankName', 'iban', 'bic', 'logoUrl'] as const;
-		const payload = {
-			...formData,
+		const optional = (value: string) => value.trim() || undefined;
+		return {
 			name: formData.name.trim(),
+			legalName: optional(formData.legalName),
+			siret: optional(formData.siret),
+			address: optional(formData.address),
+			city: optional(formData.city),
 			country: formData.country.trim() || 'France',
+			email: optional(formData.email),
+			phone: optional(formData.phone),
+			bankName: optional(formData.bankName),
+			iban: optional(formData.iban),
+			bic: optional(formData.bic),
+			logoUrl: optional(formData.logoUrl),
 			tvaRate: Number(formData.tvaRate),
-		} as Record<string, string | number>;
-
-		for (const field of optionalFields) {
-			const value = String(payload[field] || '').trim();
-			payload[field] = value === '' ? undefined : value;
-		}
-
-		return payload;
+		};
 	}
 
 	function validateForm(): boolean {

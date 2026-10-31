@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { EntityConfig } from '@repo/admin';
+  import type { AdminEntityConfig } from '$lib/types';
   import { cn } from '@repo/utils';
   import Toggle from '../Toggle.svelte';
   import 'iconify-icon';
@@ -12,7 +12,7 @@
     mode = 'create',
     class: className = '',
   }: {
-    config: EntityConfig;
+    config: AdminEntityConfig;
     data?: Record<string, unknown>;
     onSubmit: (_data: Record<string, unknown>) => void;
     onCancel: () => void;
