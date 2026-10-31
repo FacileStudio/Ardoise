@@ -2,6 +2,7 @@ import { router, adminProcedure } from '../../trpc';
 import spaceService, { scopeWhere, requireRowScope } from '../space/service';
 import providerService from './service';
 import { z } from 'zod';
+import type { Prisma } from '@repo/database';
 import { TRPCError } from '@trpc/server';
 
 const emptyStringToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
@@ -47,7 +48,7 @@ export const providerRouter = router({
       const skip = (page - 1) * limit;
 
       const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
-      const where: any = { ...scopeWhere(scope) };
+      const where: Prisma.ProviderWhereInput = { ...scopeWhere(scope) };
 
       if (search) {
         where.OR = [

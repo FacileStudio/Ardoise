@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@repo/database';
 import { AdminEngine, PermissionService, AuditService } from '@repo/admin';
-import type { EntityConfig, AdminContext } from '@repo/admin';
+import type { EntityConfig } from '@repo/admin';
 import {
   MediaCreateInputSchema,
   MediaUpdateInputSchema,

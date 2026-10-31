@@ -54,14 +54,14 @@ export class TypstGenerator {
   private checkTypstInstalled(): void {
     try {
       execSync('typst --version', { stdio: 'ignore' });
-    } catch (error) {
+    } catch {
       throw new Error(
         'Typst CLI is not installed. Please install it from https://github.com/typst/typst or run: brew install typst'
       );
     }
   }
 
-  private replaceTemplate(template: string, data: Record<string, any>): string {
+  private replaceTemplate(template: string, data: Record<string, unknown>): string {
     return template.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (placeholder, key: string) => {
       if (!(key in data)) return placeholder;
       return key === 'items' ? String(data[key]) : escapeTypstString(data[key]);

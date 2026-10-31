@@ -29,7 +29,7 @@ import { generateDocumentWithLogo } from './render';
 import spaceService, { scopeWhere, requireRowScope } from '../space/service';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import type { PrismaClient } from '@repo/database';
+import type { Prisma, PrismaClient } from '@repo/database';
 import { parseStorageKey } from '../media/service';
 import type { StorageService } from '@repo/storage';
 import { nuageConfigFromEnv, storeContractInNuage } from '@repo/nuage';
@@ -345,7 +345,7 @@ export const documentRouter = router({
       const skip = (page - 1) * pageSize;
 
       const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
-      const where: any = { ...scopeWhere(scope) };
+      const where: Prisma.DocumentWhereInput = { ...scopeWhere(scope) };
       if (search) {
         where.OR = [
           { name: { contains: search, mode: 'insensitive' } },
@@ -356,7 +356,7 @@ export const documentRouter = router({
         ];
       }
       if (type) {
-        where.type = type;
+        where.type = type as Prisma.DocumentWhereInput['type'];
       }
 
       const [items, total] = await Promise.all([

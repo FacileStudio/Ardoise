@@ -151,7 +151,7 @@ export const userService = {
         data,
         omit: NO_PASSWORD,
       });
-    } catch (error) {
+    } catch {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to update user',
@@ -203,7 +203,7 @@ export const userService = {
       });
       if (updateData.password) await db.session.deleteMany({ where: { userId } });
       return updated;
-    } catch (error) {
+    } catch {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to update user',
@@ -239,7 +239,7 @@ export const userService = {
         },
         omit: NO_PASSWORD,
       });
-    } catch (error) {
+    } catch {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to update profile',

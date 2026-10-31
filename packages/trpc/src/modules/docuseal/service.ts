@@ -61,8 +61,8 @@ export class DocuSealService {
   async updateSubmitter(id: number, params: {
     email?: string;
     phone?: string;
-    values?: Record<string, any>;
-    metadata?: Record<string, any>;
+    values?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
   }) {
     return this.ensureConfigured().updateSubmitter(id, params);
   }

@@ -102,7 +102,7 @@ export class AuthManager {
         email: payload.email as string,
         role: role as UserRole,
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   }

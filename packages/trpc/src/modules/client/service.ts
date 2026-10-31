@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { type PrismaClient } from '@repo/database';
+import { type Prisma, type PrismaClient } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
 import { scopeWhere, scopeConnect, requireRowScope, type Scope } from '../space/service';
 import type {
@@ -19,7 +19,7 @@ export const clientService = {
     const { page, limit, search } = params;
     const skip = (page - 1) * limit;
 
-    const where: any = { ...scopeWhere(scope) };
+    const where: Prisma.ClientWhereInput = { ...scopeWhere(scope) };
 
     if (search) {
       where.OR = [
@@ -204,7 +204,7 @@ export const clientService = {
       'Client not found'
     );
 
-    const userUpdateData: any = {};
+    const userUpdateData: Prisma.UserUpdateInput = {};
     if (existingClient.userId && data.contactFirstName !== undefined) userUpdateData.firstName = data.contactFirstName;
     if (existingClient.userId && data.contactLastName !== undefined) userUpdateData.lastName = data.contactLastName;
     if (existingClient.userId && data.contactEmail !== undefined && data.contactEmail !== '') {
@@ -225,7 +225,7 @@ export const clientService = {
       userUpdateData.email = data.contactEmail;
     }
 
-    const clientUpdateData: any = {};
+    const clientUpdateData: Prisma.ClientUpdateInput = {};
     if (data.contactFirstName !== undefined) clientUpdateData.contactFirstName = data.contactFirstName;
     if (data.contactLastName !== undefined) clientUpdateData.contactLastName = data.contactLastName;
     if (data.contactEmail !== undefined) clientUpdateData.contactEmail = normalizeOptional(data.contactEmail);

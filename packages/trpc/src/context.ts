@@ -1,6 +1,6 @@
 import { type FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import { prisma } from '@repo/database';
-import { type AuthManager, type TokenUser } from '@repo/auth';
+import { type AuthManager } from '@repo/auth';
 import { type ServerEnv } from '@repo/env';
 import { StorageService } from '@repo/storage';
 import type { Logger } from '@repo/logger';
