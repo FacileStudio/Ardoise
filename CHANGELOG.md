@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-31
+
 ### Added
 
 - Optional Nuage archive: contract PDFs (`contrat_prestation`, `contrat_maintenance`,
