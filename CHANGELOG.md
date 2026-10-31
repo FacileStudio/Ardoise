@@ -14,6 +14,14 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-31
+
+### Changed
+
+- `zod` 3.25 to 4.6.7 in every workspace, with the Prisma zod schemas regenerated. This closes the
+  six remaining `zod` Dependabot alerts (memory exhaustion on oversized arrays and sets, patched
+  only from 4.6.6). `z.record` takes its key schema and `ZodError.issues` replaces `.errors`.
+
 ## [0.5.1] - 2026-10-31
 
 ### Fixed
