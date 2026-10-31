@@ -25,7 +25,13 @@ export function createOIDCRoutes(
   const { authManager, env, storage } = deps;
   const config = oidcConfig(env);
 
-  app.get('/auth/config', (c) => c.json({ oidc_enabled: config !== null }));
+  app.get('/auth/config', (c) =>
+    c.json({
+      oidc_enabled: config !== null,
+      sso_only: env.SSO_ONLY,
+      password_login: !env.SSO_ONLY,
+    })
+  );
 
   if (!config) return;
 
