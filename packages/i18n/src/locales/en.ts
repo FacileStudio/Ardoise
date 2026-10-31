@@ -123,6 +123,12 @@ export const en = {
     statistics: 'Statistics',
     users: 'Users',
     spaces: 'Spaces',
+    missions: 'Missions',
+    signatures: 'Signatures',
+    providers: 'Providers',
+    myInvoices: 'My invoices',
+    personalSpace: 'Personal',
+    manageSpaces: 'Manage spaces',
   },
   spaces: {
     title: 'Spaces',
