@@ -67,7 +67,7 @@
 			});
 
 			toast.success('Contrat créé avec succès');
-			goto(resolve(`/admin/documents/${result.document.id}`));
+			goto(resolve('/admin/documents'));
 		} catch (error: any) {
 			logger.error({ err: error }, 'Failed to create document');
 			toast.danger('Échec de la création du contrat');
