@@ -25,7 +25,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@ardoise-postgres:5432/${POSTGRES_DB:-ardoise}
       ENCRYPTION_SECRET: ${ENCRYPTION_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_MIGRATE_FROM: ${ADMIN_MIGRATE_FROM:-}
+      SSO_ONLY: ${SSO_ONLY:-}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3001}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       STORAGE_PATH: /data/uploads

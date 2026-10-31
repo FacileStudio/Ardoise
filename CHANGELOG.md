@@ -14,6 +14,23 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Added
+
+- `SSO_ONLY` mode: staff (role ADMIN) sign in through SSO only, password login stays for CLIENT accounts. Needs `OIDC_ISSUER`, and `ADMIN_PASSWORD` becomes optional.
+- `ADMIN_MIGRATE_FROM`: with `SSO_ONLY`, the legacy admin is renamed to `ADMIN_EMAIL` (same id, data and linked accounts, sessions revoked), or disabled when `ADMIN_EMAIL` already exists.
+- `GET /auth/config` returns `sso_only` and `password_login`.
+
+### Changed
+
+- With `SSO_ONLY`, the boot-time admin bootstrap never sets a password and never resets other users.
+- The login page shows SSO failures above the form, and labels the password form as client access in SSO-only mode.
+
+### Security
+
+- With `SSO_ONLY`, `auth.login` refuses every non-CLIENT user with the same error and hashing work as a wrong password.
+- `auth.login` now hashes against a decoy for unknown emails, so response time no longer reveals whether an account exists.
+- With `SSO_ONLY`, invitations for staff cannot be created or accepted, so no anonymous visitor can create a staff account with a password.
+
 ## [0.2.1] - 2026-10-31
 
 ### Fixed

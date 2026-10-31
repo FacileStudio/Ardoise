@@ -18,7 +18,9 @@ and exits 1** — the process does not start degraded.
 | `ENCRYPTION_SECRET` | yes | — | Minimum 32 characters. Signs access and refresh JWTs, keys `@repo/crypto`, and signs storage tickets |
 | `STORAGE_PATH` | no | `./data/uploads` | Directory the filesystem object store writes to |
 | `ADMIN_EMAIL` | yes | — | Must be a valid email. The admin account bootstrapped on every startup |
-| `ADMIN_PASSWORD` | yes | — | Minimum 8 characters. Used only when creating that account |
+| `ADMIN_PASSWORD` | unless `SSO_ONLY` | — | Minimum 8 characters. Applied on every startup, ignored when `SSO_ONLY` is true |
+| `SSO_ONLY` | no | `false` | `true` or `1`. Staff sign in with SSO only; requires `OIDC_ISSUER`. See CLAUDE.md |
+| `ADMIN_MIGRATE_FROM` | no | — | Legacy admin email, used only with `SSO_ONLY`. Renamed to `ADMIN_EMAIL`, or disabled when `ADMIN_EMAIL` already exists |
 | `DATABASE_URL` | yes in practice | see below | Postgres connection string. Read directly by `packages/database/src/index.ts` and `prisma.config.ts` |
 
 `DATABASE_URL` is the one variable outside the zod schema, so it does not fail fast. Instead it

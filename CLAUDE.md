@@ -119,11 +119,21 @@ Flow of a payment: admin creates payment -> backend sends email to client -> cli
 
 Pre-signed URL flow: client requests URL via tRPC -> server generates it -> client uploads directly to S3 -> client confirms via tRPC.
 
+### SSO-only mode
+
+`SSO_ONLY=true` (or `1`) makes SSO the only way for staff to sign in. It needs `OIDC_ISSUER` (the backend refuses to boot without it) and makes `ADMIN_PASSWORD` optional.
+
+- `auth.login` refuses every user whose role is not CLIENT with `Invalid credentials`, after the same hashing work as a wrong password. CLIENT logins are unchanged, so the login page keeps its password form, labelled as client access.
+- `invitation.create` and `invitation.accept` refuse ADMIN invitations. Staff are added by an admin through `user.create`, then link by verified email on their first SSO login.
+- `bootstrapAdmin` never sets a real password: the admin has the unusable password `!sso-only`, `ADMIN_EMAIL` is ensured as an active, verified ADMIN, and reruns write nothing.
+- `ADMIN_MIGRATE_FROM=old@example.com` migrates the legacy admin. If no user has `ADMIN_EMAIL`, the legacy user is renamed in one UPDATE (id, data, ownerships and linked accounts kept, sessions deleted). If `ADMIN_EMAIL` already exists, the legacy user is banned, its password cleared and its sessions deleted; the row stays for ownership. No other user is touched.
+- `GET /auth/config` returns `sso_only` and `password_login`.
+
 ## Environment Variables
 
 Schemas defined in `packages/env/src/index.ts`. Each app validates on startup via `check-env`.
 
-Backend requires: `DATABASE_URL`, `ENCRYPTION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `BACKEND_URL`, `FRONTEND_URL`. Stripe/SMTP/company settings are configured in the admin UI, not env vars.
+Backend requires: `DATABASE_URL`, `ENCRYPTION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (unless `SSO_ONLY`), `BACKEND_URL`, `FRONTEND_URL`. Stripe/SMTP/company settings are configured in the admin UI, not env vars.
 
 Web app: `PORT`, `VITE_API_URL` (set from `BACKEND_URL` by Docker Compose).
 
