@@ -72,7 +72,15 @@ function setup(options: Setup = {}) {
       typeof run === 'function'
         ? (run as (tx: unknown) => unknown)(db)
         : Promise.all(run as unknown[]),
-    settings: { findUnique: async () => settings, update: async () => settings },
+    settings: {
+      findUnique: async () => settings,
+      update: async ({ data }: any) => {
+        for (const [field, change] of Object.entries<any>(data)) {
+          (settings as any)[field] += change.increment;
+        }
+        return { ...settings };
+      },
+    },
     mission: {
       findUnique: async () => mission,
       findFirst: async () => ({ id: 'm-1', status: mission.status }),

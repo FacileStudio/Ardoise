@@ -16,7 +16,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "argon2": "^0.44.0",
-    "crypto-es": "^3.1.2"
+    "argon2": "^0.44.0"
   }
 }

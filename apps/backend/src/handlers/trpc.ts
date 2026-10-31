@@ -2,7 +2,7 @@ import { trpcServer } from '@hono/trpc-server';
 import { appRouter, createContext, CreateContextOptions } from '@repo/trpc';
 import { Context, Next } from 'hono';
 
-export const trpcHandler =
+const trpcHandler =
   ({
     authManager,
     storage,

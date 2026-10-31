@@ -5,7 +5,7 @@ import { prisma } from '@repo/database';
 import { logger } from '../lib/logger';
 import type { ServerEnv } from '@repo/env';
 import { getSmtpClient, getStripeService } from '@repo/trpc/settings';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@repo/database';
 
 const isTransientError = (error: unknown): boolean => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {

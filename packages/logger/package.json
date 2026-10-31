@@ -19,7 +19,6 @@
     "pino": "^9.6.0"
   },
   "devDependencies": {
-    "@logtail/pino": "^0.5.0",
     "@repo/tsconfig": "workspace:*",
     "pino-pretty": "^13.0.0",
     "typescript": "^5.7.3"

@@ -16,8 +16,6 @@
   "dependencies": {
     "@repo/auth-shared": "workspace:*",
     "@repo/crypto": "workspace:*",
-    "@repo/database": "workspace:*",
-    "@repo/env": "workspace:*",
     "jose": "^6.1.3"
   }
 }
