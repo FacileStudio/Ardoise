@@ -858,11 +858,6 @@ export const paymentService = {
 
       const receiptUrl = storage.getFileUrl(receiptKey);
 
-      await db.payment.update({
-        where: { id: paymentId },
-        data: { receiptUrl, receiptError: null },
-      });
-
       const emailTemplates = new EmailTemplates(smtpClient);
       await emailTemplates.sendPaymentConfirmation({
         clientEmail: payment.client.contactEmail || payment.client.user?.email || '',
@@ -871,6 +866,11 @@ export const paymentService = {
         clientName: `${payment.client.contactFirstName} ${payment.client.contactLastName}`.trim(),
         paymentDate: payment.paidAt || new Date(),
         invoiceNumber: payment.id,
+      });
+
+      await db.payment.update({
+        where: { id: paymentId },
+        data: { receiptUrl, receiptError: null },
       });
 
       return receiptUrl;
@@ -902,7 +902,12 @@ export const paymentService = {
       throw error;
     }
 
-    await paymentService.processWebhookEvent(db, storage, smtpClient, env, event);
+    try {
+      await paymentService.processWebhookEvent(db, storage, smtpClient, env, event);
+    } catch (error) {
+      await db.webhookEvent.delete({ where: { id: event.id } }).catch(() => {});
+      throw error;
+    }
 
     if (Math.random() < 0.01) {
       const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);

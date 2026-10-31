@@ -8,7 +8,6 @@ import {
   GetPaymentByIdSchema,
   CancelPaymentSchema,
   SpaceScopeSchema,
-  WebhookSchema,
 } from './types';
 import { TRPCError } from '@trpc/server';
 import type Stripe from 'stripe';
@@ -71,24 +70,10 @@ export const paymentRouter = router({
   }),
 
   myPayments: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'You must be logged in to view your payments',
-      });
-    }
-
     return paymentService.listClientPayments(ctx.db, ctx.user.id);
   }),
 
   billingPortal: protectedProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'You must be logged in to manage billing',
-      });
-    }
-
     return paymentService.createBillingPortalSession(
       ctx.db,
       await ctx.getStripe(),
@@ -153,22 +138,6 @@ export const paymentRouter = router({
     }
 
     return { clientSecret };
-  }),
-
-  handleWebhook: publicProcedure.input(WebhookSchema).mutation(async ({ ctx, input }) => {
-    try {
-      const [stripe, smtp] = await Promise.all([ctx.getStripe(), ctx.getSmtp()]);
-      const event = await stripe.constructEvent(input.body, input.signature);
-
-      await paymentService.handleWebhook(ctx.db, ctx.storage, smtp, ctx.env, event);
-
-      return { success: true };
-    } catch (error) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Webhook error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      });
-    }
   }),
 });
 

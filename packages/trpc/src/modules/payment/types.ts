@@ -60,11 +60,6 @@ export const CancelPaymentSchema = z.object({
   id: z.string().min(1, 'Payment ID is required'),
 });
 
-export const WebhookSchema = z.object({
-  signature: z.string().min(1, 'Webhook signature is required'),
-  body: z.string().min(1, 'Webhook body is required'),
-});
-
 export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
 export type PaymentFrequency = z.infer<typeof PaymentFrequencySchema>;
 export type PaymentCollectionMethod = z.infer<typeof PaymentCollectionMethodSchema>;
@@ -74,4 +69,3 @@ export type ListPaymentsInput = z.infer<typeof ListPaymentsSchema>;
 export type ListPaymentsParams = Omit<ListPaymentsInput, 'spaceId'>;
 export type GetPaymentByIdInput = z.infer<typeof GetPaymentByIdSchema>;
 export type CancelPaymentInput = z.infer<typeof CancelPaymentSchema>;
-export type WebhookInput = z.infer<typeof WebhookSchema>;
