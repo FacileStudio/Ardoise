@@ -27,12 +27,19 @@ export interface PlumeSigner {
   order?: number;
 }
 
+export interface PlumeClient {
+  name: string;
+  email: string;
+  company?: string;
+}
+
 export interface SendForSignatureInput {
   name: string;
   filename: string;
   pdf: Uint8Array;
   signers: PlumeSigner[];
   externalRef: string;
+  client?: PlumeClient;
   nuageSpaceFacileId?: string;
   nuageLinkedTo?: string;
 }
@@ -150,6 +157,7 @@ export async function sendForSignature(
       order: signer.order ?? index + 1,
     })),
   };
+  if (input.client) request.client = input.client;
   if (input.nuageSpaceFacileId) request.nuage_space_facile_id = input.nuageSpaceFacileId;
   if (input.nuageLinkedTo) request.nuage_linked_to = input.nuageLinkedTo;
 

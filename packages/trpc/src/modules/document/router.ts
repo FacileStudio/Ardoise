@@ -510,6 +510,11 @@ export const documentRouter = router({
             { name: document.providerName, email: document.providerEmail, order: 2 },
           ],
           externalRef,
+          client: {
+            name: `${client.contactFirstName} ${client.contactLastName}`.trim(),
+            email: client.contactEmail,
+            company: client.companyName,
+          },
           nuageSpaceFacileId: nuage?.spaceFacileId,
           nuageLinkedTo: nuage ? `${externalRef}:signed` : undefined,
         });

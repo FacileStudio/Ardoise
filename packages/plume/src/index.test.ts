@@ -4,6 +4,7 @@ import {
   documentIdFromExternalRef,
   parseSignatureEvent,
   plumeConfigFromEnv,
+  sendForSignature,
   signContractWebhook,
   verifyWebhookSignature,
 } from './index';
@@ -72,5 +73,32 @@ describe('config', () => {
         PLUME_WEBHOOK_SECRET: SECRET,
       })?.url
     ).toBe('https://p.test');
+  });
+});
+
+describe('client link', () => {
+  test('sends the client so Plume files the document under it', async () => {
+    let sent: Record<string, unknown> = {};
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (_url: unknown, init: { body: FormData }) => {
+      sent = JSON.parse(String(init.body.get('request')));
+      return Response.json({ document: { id: 7 } });
+    }) as unknown as typeof fetch;
+    try {
+      await sendForSignature(
+        { url: 'https://plume.test', token: 't', webhookSecret: 'x'.repeat(16) },
+        {
+          name: 'Contract',
+          filename: 'c.pdf',
+          pdf: new Uint8Array([37, 80, 68, 70]),
+          signers: [{ name: 'Ada', email: 'ada@example.com' }],
+          externalRef: 'ardoise:contract:1',
+          client: { name: 'Ada Martin', email: 'ada@example.com', company: 'Acme' },
+        }
+      );
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(sent.client).toEqual({ name: 'Ada Martin', email: 'ada@example.com', company: 'Acme' });
   });
 });

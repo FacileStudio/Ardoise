@@ -254,26 +254,23 @@ Référence: [Statuts cycle de vie](https://libeo.io/fiches-pratiques/statuts-cy
 
 > Plume = plateforme signature électronique de Facile (DocuSign-like, Go + SvelteKit, REST + webhooks HMAC-SHA256).
 
-### 3.1 Ardoise → Plume (push)
+### 3.1 Ardoise → Plume (push) ✅
 
-- [ ] Créer `packages/plume-client` — wrapper REST API Plume
-- [ ] Sur création d'un document Ardoise nécessitant signature (devis, contrat, facture avec acceptation):
-  - Upload PDF vers Plume (`POST /documents`)
-  - Ajouter signataires (`POST /documents/{id}/signers`)
-  - Placer champs signature/date (`POST /documents/{id}/fields`)
-  - Envoyer à signature
-- [ ] Mapping `Document.type === 'CONTRAT' | 'DEVIS'` → workflow Plume automatique
-- [ ] Stocker `Document.plumeId` pour traçabilité
+- [x] `packages/plume` — client REST et helpers webhook (`sendForSignature`, `verifyWebhookSignature`)
+- [x] `document.sendForSignature` envoie le PDF stocké en un appel (`POST /api/documents/signature-requests`): client puis prestataire comme signataires, dans cet ordre
+- [x] Clé de rapprochement `external_ref` = `ardoise:contract:<id>`: un renvoi ne crée pas de doublon côté Plume
+- [x] Le client Ardoise est classé sous le client Plume de même email (créé s'il manque)
+- [x] Seuls les contrats sont signables (`SIGNABLE_TYPES`)
+- [x] `Document.signatureStatus`, `plumeDocumentId` et `plumeUrl` assurent la traçabilité
+- [ ] Étendre aux devis une fois le type Devis créé (4.1)
 
 ### 3.2 Plume → Ardoise (webhooks)
 
-Événements Plume disponibles: `document.{created,sent,completed,declined,deleted}`, `signer.{added,viewed,signed,declined,reminded}`
-
-- [ ] Endpoint Ardoise `POST /webhooks/plume` avec vérification HMAC-SHA256
-- [ ] `document.completed` → marquer devis accepté → générer facture automatiquement
-- [ ] `signer.signed` → audit log + notification
-- [ ] `signer.declined` → notification admin + statut document à `REFUSED`
-- [ ] Rejouer / debug webhooks dans l'admin (table `PlumeWebhookEvent`)
+- [x] `POST /webhooks/plume` vérifie `x-plume-signature-256` (HMAC-SHA256) et rapproche par `external_ref`
+- [x] `document.completed` → `signed`, `document.declined` → `declined`, `document.archived` → `nuageArchivedAt`; un rejeu ne change rien
+- [ ] `document.completed` sur un devis → marquer accepté → générer la facture (dépend de 4.1)
+- [ ] Notification admin sur refus ou signature
+- [ ] Rejouer / déboguer les webhooks reçus dans l'admin
 
 ### 3.3 Auth & identité partagée
 
