@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-31
+
 ## [0.3.0] - 2026-10-31
 
 ### Changed
