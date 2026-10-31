@@ -248,7 +248,7 @@
             <Table class="hidden md:block">
                 <thead>
                     <tr>
-                        <th scope="col">{$i18n.t('spaces.member')}</th>
+                        <th scope="col">Membre</th>
                         <th scope="col">{$i18n.t('spaces.role')}</th>
                         <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
                     </tr>
