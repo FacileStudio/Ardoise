@@ -297,6 +297,7 @@ Not tRPC — these exist because of raw bodies, redirects, or callers that canno
 | Method | Path | Auth | What it does |
 |---|---|---|---|
 | `POST` | `/webhook` | Stripe signature | Stripe events. Idempotent via `WebhookEvent` |
+| `POST` | `/webhooks/plume` | `x-plume-signature-256` HMAC | Plume `document.completed`, `document.declined` and `document.archived` events, matched by `external_ref` `ardoise:contract:<id>`. 404 when Plume is not configured |
 | `GET` | `/auth/config` | none | Whether OIDC is enabled |
 | `GET` | `/auth/oidc` | none | Starts the OIDC authorization flow |
 | `GET` | `/auth/oidc/callback` | none | Exchanges the code, signs in an existing user, sets auth cookies, redirects to `OIDC_SUCCESS_URL` with `?oidc=success` or `?error=<code>` |

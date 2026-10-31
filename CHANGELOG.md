@@ -14,6 +14,27 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Added
+
+- Optional Nuage archive: contract PDFs (`contrat_prestation`, `contrat_maintenance`,
+  `back_contractuel`) are uploaded to a Nuage space when `NUAGE_*` is set, without blocking
+  document creation.
+- Optional Plume signature link: `document.sendForSignature`, `POST /webhooks/plume`, signature
+  columns on `Document` (migration `20261030120000_add_document_signature_link`), and a status
+  badge plus a "send for signature" action on the documents list and the mission page.
+- `docker-compose.yml` passes the `NUAGE_*` and `PLUME_*` variables to the backend.
+
+### Fixed
+
+- A single provider, feature or payment provider no longer breaks the `back_contractuel` and
+  `appel_de_fonds` templates.
+- Typst escaping also covers newlines, tabs and control characters, and the compile has a
+  60 second timeout with piped output.
+
+### Changed
+
+- Both Dockerfiles include the `nuage` and `plume` workspaces.
+
 ## [0.1.0] - 2026-10-30
 
 First versioned release. It records what exists on `main`; earlier work was not

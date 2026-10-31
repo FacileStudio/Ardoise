@@ -45,6 +45,17 @@ startup fails if the issuer is set without the other two. Empty strings count as
 | `OIDC_REDIRECT_URL` | no | `BACKEND_URL/auth/oidc/callback` | Must match the redirect registered in Registre exactly |
 | `OIDC_SUCCESS_URL` | no | `FRONTEND_URL/login` | Where the browser lands after a successful callback |
 
+### Nuage and Plume
+
+Both optional, each all-or-nothing: setting some variables of a group without the others fails the
+boot. Empty values count as unset.
+
+| Variable | Description |
+|---|---|
+| `NUAGE_URL`, `NUAGE_API_TOKEN`, `NUAGE_SPACE_FACILE_ID` | Archive generated contract PDFs in a Nuage space. Fire and forget: a Nuage failure is logged and never blocks document creation |
+| `NUAGE_SPACE_NAME` | Name used when Nuage creates the space. Defaults to `Ardoise` |
+| `PLUME_URL`, `PLUME_API_TOKEN`, `PLUME_WEBHOOK_SECRET` | Send contracts for signature. The secret (16+ characters) signs `POST /webhooks/plume` |
+
 ## Web
 
 | Variable | Required | Default | What it does |

@@ -73,7 +73,9 @@ packages/
   crypto/         Encryption utilities
   i18n/           Type-safe i18n (en/fr)
   admin/          Admin engine for AutoTable/AutoForm
-  typst/          Document generation (placeholder)
+  typst/          Typst document and receipt rendering, string escaping
+  nuage/          Optional contract archive client for Nuage
+  plume/          Optional signature client and webhook helpers for Plume
   types/          Shared TypeScript types
   utils/          Shared utility functions
   logger/         Logging utilities
@@ -146,6 +148,14 @@ See `apps/backend/.env.example` for reference.
 - `BACKEND_URL` is passed as `VITE_API_URL` at Docker build time to the web app
 - CORS origins are derived from `FRONTEND_URL` env var
 - Default dev admin: `admin@example.com` / `admin123456789`
+
+## Nuage and Plume links
+
+Both optional and all-or-nothing (`NUAGE_*`, `PLUME_*`, see `docs/configuration.md`).
+
+- Creating a `contrat_prestation`, `contrat_maintenance` or `back_contractuel` uploads the stored PDF to Nuage, fire and forget, with `linked_to` `ardoise:contract:<id>`.
+- `document.sendForSignature({ id })` sends the stored PDF to Plume with the mission's client and the provider as signers, `external_ref` `ardoise:contract:<id>`, and sets `signatureStatus` to `sent`. `document.signatureEnabled` tells the UI whether Plume is configured.
+- `POST /webhooks/plume` verifies `x-plume-signature-256` and moves the document to `signed` or `declined`, and stamps `nuageArchivedAt` on `document.archived`. Replays change nothing.
 
 ## Releasing
 
