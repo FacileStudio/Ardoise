@@ -8,7 +8,6 @@ import { paymentRouter } from './modules/payment/router';
 import { settingsRouter } from './modules/settings/router';
 import { documentRouter } from './modules/document/router';
 import { providerRouter } from './modules/provider/router';
-import { docusealRouter } from './modules/docuseal/router';
 import { spaceRouter } from './modules/space/router';
 import { missionRouter } from './modules/mission/router';
 import { invitationRouter } from './modules/invitation/router';
@@ -24,7 +23,6 @@ export const appRouter = router({
   settings: settingsRouter,
   document: documentRouter,
   provider: providerRouter,
-  docuseal: docusealRouter,
   space: spaceRouter,
   mission: missionRouter,
   invitation: invitationRouter,
@@ -37,6 +35,5 @@ export { createContext, type Context, type CreateContextOptions } from './contex
 export { publicProcedure, protectedProcedure, adminProcedure } from './trpc';
 export { globalCacheFactory } from './cache';
 export { paymentService } from './modules/payment/service';
-export { DocuSealService } from './modules/docuseal/service';
 export { spaceService } from './modules/space/service';
 export type { Scope } from './modules/space/service';

@@ -199,9 +199,6 @@
 	<Page width="xl">
 		<PageHeader title="Documents" description="Gérez vos factures, devis et contrats">
 			{#snippet actions()}
-				<Button variant="ghost" icon={ardoise.signature} href={resolve('/admin/sign')}>
-					Signatures
-				</Button>
 				<Button href={resolve('/admin/documents/create')} icon={icons.plus}
 					>Créer un document</Button
 				>

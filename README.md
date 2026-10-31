@@ -63,7 +63,7 @@ mise run dev
 | `BACKEND_URL` | Public API origin, also the base for storage URLs |
 | `FRONTEND_URL` | Public web origin, drives the CORS allow-list |
 
-Stripe keys, SMTP credentials, DocuSeal and company details are **not** environment variables —
+Stripe keys, SMTP credentials and company details are **not** environment variables —
 they live in the `Settings` table and are edited in the admin UI.
 
 Full reference: [docs/configuration.md](docs/configuration.md).

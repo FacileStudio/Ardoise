@@ -22,8 +22,6 @@ export const UpdateSettingsSchema = z.object({
   smtpUser: z.string().optional(),
   smtpPass: z.string().optional(),
   smtpFrom: z.string().email().optional().or(z.literal('')),
-  docusealApiUrl: z.string().url().optional().or(z.literal('')),
-  docusealApiKey: z.string().optional(),
   webhookUrl: z.string().url().optional().or(z.literal('')),
   webhookSecret: z.string().optional(),
   webhookEvents: z.array(z.string().min(1)).optional().nullable(),

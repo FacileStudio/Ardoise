@@ -51,8 +51,6 @@
     smtpUser: '',
     smtpPass: '',
     smtpFrom: '',
-    docusealApiUrl: '',
-    docusealApiKey: '',
     webhookUrl: '',
     webhookSecret: '',
     webhookEvents: [] as string[],
@@ -103,11 +101,6 @@
       ? { tone: 'success' as const, label: `Serveur ${formData.smtpHost}` }
       : { tone: 'warning' as const, label: 'Aucun serveur SMTP : les emails ne partent pas' }
   );
-  const docusealStatus = $derived(
-    formData.docusealApiUrl
-      ? { tone: 'success' as const, label: 'Connecté à DocuSeal' }
-      : { tone: 'neutral' as const, label: 'DocuSeal non configuré' }
-  );
   const webhookStatus = $derived(
     formData.webhookUrl
       ? { tone: 'success' as const, label: 'Webhook actif' }
@@ -145,8 +138,6 @@
         smtpUser: settings.smtpUser || '',
         smtpPass: settings.smtpPass || '',
         smtpFrom: settings.smtpFrom || '',
-        docusealApiUrl: settings.docusealApiUrl || '',
-        docusealApiKey: settings.docusealApiKey || '',
         webhookUrl: settings.webhookUrl || '',
         webhookSecret: settings.webhookSecret || '',
         webhookEvents: Array.isArray(settings.webhookEvents) ? settings.webhookEvents : [],
@@ -179,7 +170,6 @@
       formData.stripeSecretKey = '';
       formData.stripeWebhookSecret = '';
       formData.smtpPass = '';
-      formData.docusealApiKey = '';
       formData.webhookSecret = '';
       toast.success('Paramètres enregistrés');
     } catch {
@@ -390,19 +380,6 @@
       {@render saveRow()}
     </SettingsSection>
   {:else if section === 'integrations'}
-    <SettingsSection title="DocuSeal" description="Signature électronique des documents.">
-      <SettingsRow label="État">
-        <StatusDot tone={docusealStatus.tone} label={docusealStatus.label} />
-      </SettingsRow>
-      <SettingsRow label="URL de l'API" stacked>
-        <Field><Input bind:value={formData.docusealApiUrl} placeholder="https://docuseal.example.com/api" class="font-fc-mono" /></Field>
-      </SettingsRow>
-      <SettingsRow label="Clé API" description="Laissez vide pour conserver la clé actuelle." stacked>
-        <SecretField bind:value={formData.docusealApiKey} editable placeholder="Nouvelle clé API" />
-      </SettingsRow>
-      {@render saveRow()}
-    </SettingsSection>
-
     <SettingsSection
       title="Webhooks"
       description="Ardoise envoie des POST avec X-Ardoise-Event, X-Ardoise-Delivery et X-Ardoise-Signature-256 si un secret est défini."

@@ -5,7 +5,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./modules/docuseal/service": "./src/modules/docuseal/service.ts",
     "./settings": "./src/modules/settings/service.ts",
     "./context": "./src/context.ts",
     "./auth/session": "./src/modules/auth/session.ts",

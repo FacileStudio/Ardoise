@@ -50,7 +50,7 @@ a restart.
 3. `createContext` reads the `auth_token` cookie, falling back to an `Authorization: Bearer`
    header, and verifies it with `AuthManager.verifyToken`. The resulting user is attached to the
    context along with `db`, `storage`, `env`, a child logger, the request IP and user agent, and
-   lazy Stripe / SMTP / DocuSeal accessors built from the `Settings` row.
+   lazy Stripe / SMTP accessors built from the `Settings` row.
 4. Three procedure levels apply middleware in order: `publicProcedure` (logging only),
    `protectedProcedure` (adds `isAuthed`), `adminProcedure` (adds `isAdmin`, which calls
    `hasAccess(ctx.user, UserRole.ADMIN)`).
@@ -74,7 +74,7 @@ Postgres 16 through Prisma. The schema is split by concern across `prisma/schema
 | `Document` | A rendered document. `type` is one of fourteen `DocumentType` values. Snapshots both client and provider legal identity at generation time, stores `items` as JSON, decimal `subtotal`/`tva`/`total`, French late-fee and recovery-fee mentions. The PDF is uploaded at creation to `documents/<id>.pdf`, and `pdfUrl` + `pdfHash` point to it: `document.download` serves that file. A `devis` carries a `version` and `acceptedAt`; an invoice built from one carries `invoiceKind` (`FULL`, `DEPOSIT`, `BALANCE`), `sourceQuoteId` and `dueDate` |
 | `Provider` | The issuing legal entity — legal form, share capital, RCS city, APE code, IBAN/BIC, logo, VAT rate |
 | `Space` / `SpaceMember` | Shared workspaces. `SpaceRole` is `OWNER`, `ADMIN` or `MEMBER`. Clients, documents, payments, providers and missions all carry an optional `spaceId` |
-| `Settings` | Singleton row keyed `global`: company identity, Stripe keys, SMTP credentials, DocuSeal credentials, outbound webhook config, bank details, VAT rate, document numbering counters and formats |
+| `Settings` | Singleton row keyed `global`: company identity, Stripe keys, SMTP credentials, outbound webhook config, bank details, VAT rate, document numbering counters and formats |
 | `AdminPermission` | Per-user, per-entity `canCreate` / `canRead` / `canUpdate` / `canDelete` flags for the generic admin engine |
 | `AuditLog` | `CREATE` / `UPDATE` / `DELETE` history written by the admin engine |
 | `Media`, `Session`, `Account`, `Verification`, `WebhookEvent` | Avatars and covers, sessions, linked OIDC accounts, verification tokens, and processed Stripe event ids for idempotency |
@@ -139,8 +139,6 @@ ones `modules/auth` issues (`issueSession` and `authCookies` in `packages/trpc`)
   `payment.getClientSecret` procedure.
 - **SMTP.** Nodemailer, configured from `Settings`. Sends the payment request, reminders, and the
   receipt.
-- **DocuSeal.** Optional e-signature backend, also configured from `Settings`; the `docuseal`
-  module proxies submissions, templates and submitters.
 - **Outbound webhooks.** `Settings.webhookUrl` / `webhookSecret` / `webhookEvents` feed the
   `webhook` service. Events sent today: `client.created`, `client.updated`, `client.deleted`,
   `mission.created`, `mission.updated`, `mission.prestations_updated`,

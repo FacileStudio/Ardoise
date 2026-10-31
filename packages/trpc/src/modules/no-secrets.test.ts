@@ -174,7 +174,6 @@ function caller(targetMember: unknown = { ...member(), role: 'MEMBER', userId: '
     apiOrigin: 'http://api',
     getStripe: async () => stripe,
     getSmtp: async () => smtp,
-    getDocuSeal: async () => ({}),
   } as any);
 }
 

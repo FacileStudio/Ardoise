@@ -91,7 +91,6 @@ edited from `/admin/settings`. Putting them in the environment has no effect.
 - **Stripe** — `stripeSecretKey` (must start `sk_`), `stripePublishableKey` (`pk_`),
   `stripeWebhookSecret` (`whsec_`)
 - **SMTP** — `smtpHost`, `smtpPort`, `smtpUser`, `smtpPass`, `smtpFrom`
-- **DocuSeal** — `docusealApiUrl`, `docusealApiKey`
 - **Outbound webhooks** — `webhookUrl`, `webhookSecret`, `webhookEvents`
 - **Banking** — `bankName`, `iban`, `bic`
 - **Billing defaults** — `tvaRate` (default 20), `defaultPaymentTermsDays` (30),

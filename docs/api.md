@@ -273,23 +273,6 @@ Every procedure is admin-level.
 `data` and `filters` are untyped records — the shape is validated by the entity registry in
 `packages/admin`, not by the tRPC input schema.
 
-## `docuseal`
-
-Proxies a DocuSeal instance configured in `Settings`. All admin-level.
-
-| Procedure | Type | Input |
-|---|---|---|
-| `isConfigured` | query | — |
-| `listSubmissions` | query | `{ limit?, after?, before?, template_id?, status? }?` |
-| `getSubmission` / `deleteSubmission` | query, mutation | `{ id: number }` |
-| `createSubmission` | mutation | `{ template_id, submitters[{ role, email?, phone?, name?, values?, metadata? }], send_email?, send_sms?, reply_to?, message?, metadata? }` |
-| `createSubmissionFromPdf` | mutation | PDF payload plus submitters |
-| `listTemplates` | query | pagination filters |
-| `getTemplate` / `getSubmitter` | query | `{ id: number }` |
-| `updateSubmitter` | mutation | `{ id }` plus submitter fields |
-
-DocuSeal ids are numbers, not the cuid strings used everywhere else in this API.
-
 ## Plain HTTP routes
 
 Not tRPC — these exist because of raw bodies, redirects, or callers that cannot speak tRPC.

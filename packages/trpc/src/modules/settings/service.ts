@@ -5,7 +5,6 @@ import { StripeService } from '@repo/stripe';
 import { SMTPClient } from '@repo/smtp';
 import type { UpdateSettingsInput } from './types';
 import { TRPCError } from '@trpc/server';
-import { DocuSealService } from '../docuseal/service';
 import { CryptoService } from '@repo/crypto';
 import { extname, join } from 'path';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
@@ -19,7 +18,6 @@ export const secretFields = [
   'stripeSecretKey',
   'stripeWebhookSecret',
   'smtpPass',
-  'docusealApiKey',
   'webhookSecret',
 ] as const;
 
@@ -183,16 +181,6 @@ export async function confirmLogoUpload(db: PrismaClient, logoUrl: string) {
   });
 
   return settings;
-}
-
-export async function getDocuSealService(db: PrismaClient) {
-  const settings = await getSettingsRecord(db);
-  const config = settings as unknown as Record<string, unknown>;
-
-  return new DocuSealService(
-    typeof config.docusealApiUrl === 'string' ? config.docusealApiUrl : undefined,
-    typeof config.docusealApiKey === 'string' ? decryptSecret(config.docusealApiKey) : undefined
-  );
 }
 
 export async function getStripeService(db: PrismaClient) {

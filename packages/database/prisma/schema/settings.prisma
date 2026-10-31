@@ -26,8 +26,6 @@ model Settings {
   smtpPass String?
   smtpFrom String?
 
-  docusealApiUrl String?
-  docusealApiKey String?
   webhookUrl    String?
   webhookSecret String?
   webhookEvents String[] @default([])

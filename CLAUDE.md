@@ -79,7 +79,6 @@ packages/
   types/          Shared TypeScript types
   utils/          Shared utility functions
   logger/         Logging utilities
-  docuseal/       DocuSeal integration
   eslint-config/  Shared ESLint config
   tsconfig/       Shared TypeScript configs
 ```

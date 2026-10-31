@@ -4,7 +4,7 @@ import { type AuthManager } from '@repo/auth';
 import { type ServerEnv } from '@repo/env';
 import { StorageService } from '@repo/storage';
 import type { Logger } from '@repo/logger';
-import { getDocuSealService, getSmtpClient, getStripeService } from './modules/settings/service';
+import { getSmtpClient, getStripeService } from './modules/settings/service';
 
 export const AUTH_COOKIE_NAME = 'auth_token';
 export const REFRESH_COOKIE_NAME = 'refresh_token';
@@ -54,7 +54,6 @@ export const createContext = async ({
     resHeaders,
     getStripe: () => getStripeService(prisma),
     getSmtp: () => getSmtpClient(prisma),
-    getDocuSeal: () => getDocuSealService(prisma),
     env,
     apiOrigin,
     appOrigin,
