@@ -3,9 +3,22 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Spinner } from '@facile/muse';
+	import {
+		Alert,
+		Button,
+		Checkbox,
+		Field,
+		Input,
+		Page,
+		PageHeader,
+		Section,
+		Select,
+		Spinner,
+		Textarea,
+		toast,
+	} from '@facile/muse';
+	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
-	import 'iconify-icon';
 
 	interface Template {
 		id: number;
@@ -49,7 +62,7 @@
 			templates = result as Template[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch templates');
-			alert('Erreur lors du chargement des templates');
+			toast.danger('Erreur lors du chargement des templates');
 		} finally {
 			pageLoading = false;
 		}
@@ -75,13 +88,13 @@
 		e.preventDefault();
 
 		if (selectedTemplateId === null) {
-			alert('Veuillez sélectionner un template');
+			toast.danger('Veuillez sélectionner un template');
 			return;
 		}
 
 		const hasEmail = formData.submitters.every((s) => s.email);
 		if (!hasEmail) {
-			alert('Veuillez renseigner tous les emails des signataires');
+			toast.danger('Veuillez renseigner tous les emails des signataires');
 			return;
 		}
 
@@ -105,11 +118,11 @@
 					: undefined,
 			});
 
-			alert('Demande de signature créée avec succès !');
+			toast.success('Demande de signature créée avec succès');
 			goto(resolve('/admin/sign'));
 		} catch (err) {
 			logger.error({ err }, 'Failed to create submission');
-			alert('Erreur lors de la création de la demande de signature');
+			toast.danger('Erreur lors de la création de la demande de signature');
 		} finally {
 			submitLoading = false;
 		}
@@ -132,209 +145,126 @@
 	}
 </script>
 
-<div class="max-w-2xl mx-auto p-6 space-y-6">
-	<div>
-		<button
-			onclick={() => goto(resolve('/admin/sign'))}
-			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-		>
-			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			Retour aux signatures
-		</button>
-		<h1 class="text-2xl font-bold tracking-tight text-foreground">
-			Nouvelle demande de signature
-		</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			Créez une demande de signature à partir d'un template
-		</p>
-	</div>
+<svelte:head>
+	<title>Nouvelle signature - Ardoise</title>
+</svelte:head>
+
+<Page width="md">
+	<PageHeader
+		title="Nouvelle demande de signature"
+		description="Créez une demande de signature à partir d'un template"
+		back={{ href: '/admin/sign', label: 'Retour aux signatures' }}
+	/>
 
 	{#if pageLoading}
-		<div class="flex items-center justify-center py-20">
-			<Spinner size="lg" />
-		</div>
+		<div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
 	{:else}
-		<form onsubmit={handleSubmit} class="space-y-6">
-			<div class="rounded-xl border border-border p-6 space-y-6">
-				<div>
-					<div class="text-sm font-medium mb-2">
-						Template <span class="text-fc-danger">*</span>
-					</div>
-					<select
-						bind:value={selectedTemplateId}
-						class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+		<form onsubmit={handleSubmit} class="flex flex-col gap-10">
+			<Section title="Template" card>
+				<Field label="Template">
+					<Select
+						value={selectedTemplateId === null ? '' : String(selectedTemplateId)}
+						onchange={(e) => {
+							const v = (e.target as HTMLSelectElement).value;
+							selectedTemplateId = v === '' ? null : Number(v);
+						}}
 						required
 					>
-						<option value={null}>Sélectionnez un template</option>
+						<option value="">Sélectionnez un template</option>
 						{#each templates as template (template.id)}
-							<option value={template.id}>{template.name}</option>
+							<option value={String(template.id)}>{template.name}</option>
 						{/each}
-					</select>
-					{#if templates.length === 0}
-						<p class="text-xs text-fc-warning mt-1">
-							Aucun template disponible. Créez d'abord un template dans DocuSeal.
-						</p>
-					{/if}
-				</div>
-
-				{#if formData.submitters.length > 0}
-					<div class="space-y-4">
-						<div class="flex items-center justify-between">
-							<h3 class="text-base font-semibold text-foreground">Signataires</h3>
-							{#if selectedTemplateId === null}
-								<Button type="button" variant="outline" size="sm" onclick={addSubmitter}>
-									<iconify-icon icon="solar:add-circle-bold" width="16"></iconify-icon>
-									Ajouter un signataire
-								</Button>
-							{/if}
-						</div>
-
-						{#each formData.submitters as submitter, index (index)}
-							<div class="bg-muted rounded-lg p-4 space-y-3">
-								<div class="flex items-center justify-between mb-2">
-									<div class="flex items-center gap-2">
-										<div class="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-											{index + 1}
-										</div>
-										<div>
-											<p class="text-sm font-medium text-foreground">Signataire {index + 1}</p>
-											<p class="text-xs text-muted-foreground">Rôle: {submitter.role}</p>
-										</div>
-									</div>
-									{#if selectedTemplateId === null}
-										<button
-											type="button"
-											onclick={() => removeSubmitter(index)}
-											class="p-1.5 rounded hover:bg-fc-danger/10 text-fc-danger transition-colors"
-											title="Supprimer"
-										>
-											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-										</button>
-									{/if}
-								</div>
-
-								<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-									{#if selectedTemplateId === null}
-										<div>
-											<div class="text-sm font-medium mb-1">
-												Rôle <span class="text-fc-danger">*</span>
-											</div>
-											<input
-												type="text"
-												bind:value={submitter.role}
-												class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-												placeholder="Ex: Signataire, Approbateur..."
-												required
-											/>
-										</div>
-									{/if}
-
-									<div>
-										<div class="text-sm font-medium mb-1">Nom</div>
-										<input
-											type="text"
-											bind:value={submitter.name}
-											class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-											placeholder="Nom complet"
-										/>
-									</div>
-
-									<div>
-										<div class="text-sm font-medium mb-1">
-											Email <span class="text-fc-danger">*</span>
-										</div>
-										<input
-											type="email"
-											bind:value={submitter.email}
-											class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-											placeholder="email@example.com"
-											required
-										/>
-									</div>
-
-									{#if formData.send_sms}
-										<div>
-											<div class="text-sm font-medium mb-1">Téléphone</div>
-											<input
-												type="tel"
-												bind:value={submitter.phone}
-												class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-												placeholder="+33 6 00 00 00 00"
-											/>
-										</div>
-									{/if}
-								</div>
-							</div>
-						{/each}
-					</div>
+					</Select>
+				</Field>
+				{#if templates.length === 0}
+					<Alert tone="warning">
+						Aucun template disponible. Créez d'abord un template dans DocuSeal.
+					</Alert>
 				{/if}
+			</Section>
 
-				<div class="space-y-3">
-					<h3 class="text-base font-semibold text-foreground">Options d'envoi</h3>
-
-					<label class="flex items-center gap-3 cursor-pointer">
-						<input
-							type="checkbox"
-							bind:checked={formData.send_email}
-							class="w-4 h-4 rounded border-border"
-						/>
-						<span class="text-sm font-medium text-foreground">Envoyer par email</span>
-					</label>
-
-					<label class="flex items-center gap-3 cursor-pointer">
-						<input
-							type="checkbox"
-							bind:checked={formData.send_sms}
-							class="w-4 h-4 rounded border-border"
-						/>
-						<span class="text-sm font-medium text-foreground">Envoyer par SMS</span>
-					</label>
-				</div>
-
-				{#if formData.send_email}
-					<div class="space-y-3">
-						<h3 class="text-base font-semibold text-foreground">Message personnalisé (optionnel)</h3>
-
-						<div>
-							<div class="text-sm font-medium mb-1">Sujet de l'email</div>
-							<input
-								type="text"
-								bind:value={formData.message.subject}
-								class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-								placeholder="Ex: Veuillez signer ce document"
-							/>
-						</div>
-
-						<div>
-							<div class="text-sm font-medium mb-1">Corps du message</div>
-							<textarea
-								bind:value={formData.message.body}
-								rows="3"
-								class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-								placeholder="Message personnalisé pour les signataires..."
-							></textarea>
-						</div>
-					</div>
-				{/if}
-
-				<div class="flex items-center gap-3 pt-4 border-t border-border">
-					<button
-						type="submit"
-						disabled={submitLoading || selectedTemplateId === null}
-						class="flex-1 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-					>
-						{#if submitLoading}
-							<Spinner size="sm" />
-						{:else}
-							<iconify-icon icon="solar:pen-new-square-bold" width="16"></iconify-icon>
+			{#if formData.submitters.length > 0}
+				<Section title="Signataires">
+					{#snippet actions()}
+						{#if selectedTemplateId === null}
+							<Button type="button" variant="ghost" size="sm" icon={icons.plus} onclick={addSubmitter}>
+								Ajouter un signataire
+							</Button>
 						{/if}
-						Créer la demande
-					</button>
-					<Button type="button" variant="outline" onclick={() => goto(resolve('/admin/sign'))}>
-						Annuler
-					</Button>
-				</div>
+					{/snippet}
+
+					{#each formData.submitters as submitter, index (index)}
+						<Section
+							card
+							title={`Signataire ${index + 1}`}
+							description={submitter.role ? `Rôle : ${submitter.role}` : undefined}
+						>
+							{#snippet actions()}
+								{#if selectedTemplateId === null}
+									<Button
+										type="button"
+										variant="ghost-danger"
+										size="sm"
+										icon={icons.remove}
+										aria-label="Supprimer"
+										onclick={() => removeSubmitter(index)}
+									/>
+								{/if}
+							{/snippet}
+
+							<div class="grid gap-4 sm:grid-cols-2">
+								{#if selectedTemplateId === null}
+									<Field label="Rôle">
+										<Input bind:value={submitter.role} placeholder="Ex: Signataire, Approbateur..." required />
+									</Field>
+								{/if}
+								<Field label="Nom">
+									<Input bind:value={submitter.name} placeholder="Nom complet" />
+								</Field>
+								<Field label="Email">
+									<Input type="email" bind:value={submitter.email} placeholder="email@example.com" required />
+								</Field>
+								{#if formData.send_sms}
+									<Field label="Téléphone">
+										<Input type="tel" bind:value={submitter.phone} placeholder="+33 6 00 00 00 00" />
+									</Field>
+								{/if}
+							</div>
+						</Section>
+					{/each}
+				</Section>
+			{/if}
+
+			<Section title="Options d'envoi" card>
+				<Checkbox bind:checked={formData.send_email} label="Envoyer par email" />
+				<Checkbox bind:checked={formData.send_sms} label="Envoyer par SMS" />
+			</Section>
+
+			{#if formData.send_email}
+				<Section title="Message personnalisé" description="Optionnel" card>
+					<Field label="Sujet de l'email">
+						<Input bind:value={formData.message.subject} placeholder="Ex: Veuillez signer ce document" />
+					</Field>
+					<Field label="Corps du message">
+						<Textarea
+							bind:value={formData.message.body}
+							rows={3}
+							placeholder="Message personnalisé pour les signataires..."
+						/>
+					</Field>
+				</Section>
+			{/if}
+
+			<div class="flex justify-end gap-3">
+				<Button href={resolve('/admin/sign')} variant="ghost">Annuler</Button>
+				<Button
+					type="submit"
+					icon={icons.check}
+					disabled={submitLoading || selectedTemplateId === null}
+				>
+					{submitLoading ? 'Création...' : 'Créer la demande'}
+				</Button>
 			</div>
 		</form>
 	{/if}
-</div>
+</Page>

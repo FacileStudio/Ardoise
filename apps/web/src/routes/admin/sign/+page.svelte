@@ -1,13 +1,25 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, EmptyState, Spinner } from '@facile/muse';
-	import { SearchInput } from '$lib/ui';
+	import {
+		Alert,
+		Badge,
+		Button,
+		Card,
+		ConfirmModal,
+		EmptyState,
+		Input,
+		Page,
+		PageHeader,
+		Spinner,
+		StatCard,
+		Table,
+		Tabs,
+		toast,
+	} from '@facile/muse';
+	import { icons, ardoise } from '$lib/icons';
 	import { logger } from '@repo/logger';
-	import { i18n } from '@repo/i18n/svelte';
-	import 'iconify-icon';
 
 	type SubmissionStatus = 'pending' | 'awaiting' | 'completed' | 'expired' | 'declined';
 
@@ -40,9 +52,20 @@
 	let actionLoading = $state('');
 	let isConfigured = $state(false);
 
-	let filters = $state({
-		status: undefined as SubmissionStatus | undefined,
-	});
+	let status = $state<'all' | SubmissionStatus>('all');
+	let deleting = $state<Submission | null>(null);
+
+	const statusTabs = [
+		{ id: 'all', label: 'Tous' },
+		{ id: 'pending', label: 'En attente' },
+		{ id: 'completed', label: 'Signés' },
+		{ id: 'expired', label: 'Expirés' },
+	];
+
+	function selectStatus(id: string) {
+		status = id as typeof status;
+		fetchSubmissions();
+	}
 
 	let stats = $state({
 		totalSubmissions: 0,
@@ -73,7 +96,7 @@
 		pageLoading = true;
 		try {
 			const result = await trpc.docuseal.listSubmissions.query({
-				status: filters.status,
+				status: status === 'all' ? undefined : status,
 			});
 			submissions = result as Submission[];
 		} catch (err) {
@@ -123,27 +146,24 @@
 		});
 	}
 
-	async function deleteSubmission(id: number) {
-		if (!confirm('Êtes-vous sûr de vouloir supprimer cette demande de signature ?')) return;
+	async function deleteSubmission() {
+		const target = deleting;
+		if (!target) return;
 
-		actionLoading = id.toString();
+		actionLoading = target.id.toString();
 		try {
-			await trpc.docuseal.deleteSubmission.mutate({ id });
+			await trpc.docuseal.deleteSubmission.mutate({ id: target.id });
 			await fetchSubmissions();
 			await calculateStats();
+			toast.success('Demande de signature supprimée');
 		} catch (err) {
 			logger.error({ err }, 'Failed to delete submission');
-			alert('Erreur lors de la suppression de la demande de signature');
+			toast.danger('Erreur lors de la suppression de la demande de signature');
 		} finally {
 			actionLoading = '';
+			deleting = null;
 		}
 	}
-
-	$effect(() => {
-		if (filters.status !== undefined) {
-			fetchSubmissions();
-		}
-	});
 
 	const filteredSubmissions = $derived(
 		submissions.filter((submission) => {
@@ -155,213 +175,144 @@
 	);
 </script>
 
-<div class="p-6 max-w-5xl mx-auto space-y-6">
-	<header class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-foreground">Signature de documents</h1>
-			<p class="text-sm text-muted-foreground mt-1">
-				Gérez les demandes de signature de documents
-			</p>
-		</div>
-		<button
-			onclick={() => goto(resolve('/admin/sign/create'))}
-			disabled={!isConfigured}
-			class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-		>
-			<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
-			Nouvelle signature
-		</button>
-	</header>
+<svelte:head>
+	<title>Signatures - Ardoise</title>
+</svelte:head>
+
+<Page width="xl">
+	<PageHeader title="Signature de documents" description="Gérez les demandes de signature de documents">
+		{#snippet actions()}
+			<Button href={resolve('/admin/sign/create')} icon={icons.plus} disabled={!isConfigured}>
+				Nouvelle signature
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if !isConfigured}
-		<div class="rounded-lg border border-fc-warning/30 bg-fc-warning/10 p-4">
-			<div class="flex items-start gap-3">
-				<iconify-icon icon="solar:danger-triangle-bold" width="20" class="text-fc-warning flex-shrink-0 mt-0.5"></iconify-icon>
-				<div>
-					<h3 class="text-sm font-semibold text-fc-warning mb-1">DocuSeal non configuré</h3>
-					<p class="text-xs text-fc-warning">
-						Pour utiliser la signature de documents, configurez DocuSeal dans les paramètres.
-					</p>
-				</div>
-			</div>
-		</div>
+		<Alert tone="warning" title="DocuSeal non configuré">
+			Pour utiliser la signature de documents, configurez DocuSeal dans les
+			<a href={resolve('/admin/settings/integrations')} class="font-medium underline">réglages</a>.
+		</Alert>
 	{/if}
 
-	<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-xs font-medium text-muted-foreground mb-1">Total</p>
-					<p class="text-xl font-bold text-foreground">{stats.totalSubmissions}</p>
-				</div>
-				<iconify-icon icon="solar:document-text-bold" width="20" class="text-muted-foreground"></iconify-icon>
-			</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-xs font-medium text-muted-foreground mb-1">En attente</p>
-					<p class="text-xl font-bold text-fc-warning">{stats.pending}</p>
-				</div>
-				<iconify-icon icon="solar:clock-circle-bold" width="20" class="text-fc-warning"></iconify-icon>
-			</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-xs font-medium text-muted-foreground mb-1">Signés</p>
-					<p class="text-xl font-bold text-fc-success">{stats.completed}</p>
-				</div>
-				<iconify-icon icon="solar:check-circle-bold" width="20" class="text-fc-success"></iconify-icon>
-			</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-xs font-medium text-muted-foreground mb-1">Expirés</p>
-					<p class="text-xl font-bold text-fc-danger">{stats.expired}</p>
-				</div>
-				<iconify-icon icon="solar:hourglass-bold-duotone" width="20" class="text-fc-danger"></iconify-icon>
-			</div>
-		</div>
+	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<StatCard label="Total" value={stats.totalSubmissions} />
+		<StatCard label="En attente" value={stats.pending} />
+		<StatCard label="Signés" value={stats.completed} />
+		<StatCard label="Expirés" value={stats.expired} />
 	</div>
 
-	<div class="rounded-xl border border-border overflow-hidden">
-		<div class="p-4 border-b border-border">
-			<div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-				<div class="flex-1 w-full sm:max-w-md">
-					<SearchInput bind:value={searchQuery} placeholder="Rechercher par template ou signataire..." />
-				</div>
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<Tabs items={statusTabs} value={status} onChange={selectStatus} label="Filtrer par statut" />
+		<Input
+			bind:value={searchQuery}
+			placeholder="Rechercher par template ou signataire"
+			class="sm:max-w-80"
+		/>
+	</div>
 
-				<div class="flex gap-1 flex-wrap">
-					<button
-						onclick={() => (filters.status = undefined)}
-						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {filters.status === undefined
-							? 'bg-primary text-primary-foreground'
-							: 'bg-background text-foreground border border-border hover:bg-muted'}"
-					>
-						Tous
-					</button>
-					<button
-						onclick={() => (filters.status = 'pending')}
-						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {filters.status === 'pending'
-							? 'bg-fc-warning text-white'
-							: 'bg-background text-foreground border border-border hover:bg-muted'}"
-					>
-						En attente
-					</button>
-					<button
-						onclick={() => (filters.status = 'completed')}
-						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {filters.status === 'completed'
-							? 'bg-fc-success text-white'
-							: 'bg-background text-foreground border border-border hover:bg-muted'}"
-					>
-						Signés
-					</button>
-					<button
-						onclick={() => (filters.status = 'expired')}
-						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {filters.status === 'expired'
-							? 'bg-fc-danger text-white'
-							: 'bg-background text-foreground border border-border hover:bg-muted'}"
-					>
-						Expirés
-					</button>
-				</div>
-			</div>
-		</div>
-
-		{#if pageLoading}
-			<div class="flex flex-col items-center justify-center py-20 space-y-4">
-				<Spinner size="lg" />
-				<p class="text-xs text-muted-foreground">Chargement...</p>
-			</div>
-		{:else if filteredSubmissions.length === 0}
-			<EmptyState
-				icon="solar:document-text-bold"
-				title="Aucune demande de signature"
-				description={searchQuery
-					? 'Aucune demande ne correspond à votre recherche'
-					: 'Créez votre première demande de signature'}
-			/>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="w-full">
-					<thead class="bg-muted">
-						<tr>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Template</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Signataires</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Statut</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Date de création</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-border">
-						{#each filteredSubmissions as submission (submission.id)}
-							<tr class="hover:bg-muted transition-colors">
-								<td class="px-4 py-3">
+	{#if pageLoading}
+		<div class="flex min-h-[30dvh] items-center justify-center"><Spinner size="lg" /></div>
+	{:else if filteredSubmissions.length === 0}
+		<EmptyState
+			icon={ardoise.signature}
+			title="Aucune demande de signature"
+			description={searchQuery
+				? 'Aucune demande ne correspond à votre recherche'
+				: 'Créez votre première demande de signature'}
+		/>
+	{:else}
+		<Table class="hidden md:block">
+			<thead>
+				<tr>
+					<th scope="col">Template</th>
+					<th scope="col">Signataires</th>
+					<th scope="col">Statut</th>
+					<th scope="col">Date de création</th>
+					<th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each filteredSubmissions as submission (submission.id)}
+					<tr>
+						<td>
+							<a
+								href={resolve(`/admin/sign/${submission.id}`)}
+								class="flex flex-col focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+							>
+								<span class="font-medium text-fc-fg">{submission.template?.name || 'Sans template'}</span>
+								<span class="font-fc-mono text-fc-xs text-fc-fg-muted">#{submission.slug}</span>
+							</a>
+						</td>
+						<td>
+							<div class="flex flex-col gap-1">
+								{#each submission.submitters as submitter (submitter.id)}
 									<div class="flex items-center gap-2">
-										<div class="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-											<iconify-icon icon="solar:document-text-bold" width="16" class="text-muted-foreground"></iconify-icon>
-										</div>
-										<div>
-											<p class="text-sm font-medium text-foreground">{submission.template?.name || 'Sans template'}</p>
-											<p class="text-xs text-muted-foreground">#{submission.slug}</p>
-										</div>
+										<Badge tone={getStatusBadge(submitter.status).variant}>{submitter.role}</Badge>
+										<span class="text-fc-xs text-fc-fg-muted">
+											{submitter.name || submitter.email || 'Sans nom'}
+										</span>
 									</div>
-								</td>
-								<td class="px-4 py-3">
-									<div class="space-y-1">
-										{#each submission.submitters as submitter (submitter.id)}
-											<div class="flex items-center gap-1">
-												<Badge tone={getStatusBadge(submitter.status).variant}>
-													{submitter.role}
-												</Badge>
-												<span class="text-xs text-muted-foreground">
-													{submitter.name || submitter.email || 'Sans nom'}
-												</span>
-											</div>
-										{/each}
-									</div>
-								</td>
-								<td class="px-4 py-3">
-									<Badge tone={getStatusBadge(submission.status).variant}>
-										{getStatusBadge(submission.status).label}
-									</Badge>
-								</td>
-								<td class="px-4 py-3">
-									<p class="text-sm text-foreground">{formatDate(submission.created_at)}</p>
-								</td>
-								<td class="px-4 py-3">
-									<div class="flex items-center gap-1">
-										<button
-											onclick={() => goto(resolve(`/admin/sign/${submission.id}`))}
-											class="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-											title="Voir les détails"
-										>
-											<iconify-icon icon="solar:eye-bold" width="16"></iconify-icon>
-										</button>
-										<button
-											onclick={() => deleteSubmission(submission.id)}
-											disabled={actionLoading === submission.id.toString()}
-											class="p-1.5 rounded hover:bg-fc-danger/10 transition-colors text-fc-danger disabled:opacity-50"
-											title="Supprimer"
-										>
-											{#if actionLoading === submission.id.toString()}
-												<Spinner size="sm" />
-											{:else}
-												<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-											{/if}
-										</button>
-									</div>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	</div>
-</div>
+								{/each}
+							</div>
+						</td>
+						<td>
+							<Badge tone={getStatusBadge(submission.status).variant}>
+								{getStatusBadge(submission.status).label}
+							</Badge>
+						</td>
+						<td class="text-fc-fg-muted">{formatDate(submission.created_at)}</td>
+						<td class="text-right">
+							<Button
+								variant="ghost"
+								size="sm"
+								icon={icons.eye}
+								href={resolve(`/admin/sign/${submission.id}`)}
+								aria-label="Voir les détails"
+							/>
+							<Button
+								variant="ghost-danger"
+								size="sm"
+								icon={icons.remove}
+								aria-label="Supprimer"
+								disabled={actionLoading === submission.id.toString()}
+								onclick={() => (deleting = submission)}
+							/>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</Table>
+
+		<div class="flex flex-col gap-3 md:hidden">
+			{#each filteredSubmissions as submission (submission.id)}
+				<Card href={resolve(`/admin/sign/${submission.id}`)} class="flex flex-col gap-2">
+					<div class="flex items-start justify-between gap-3">
+						<div class="flex min-w-0 flex-col">
+							<span class="truncate text-fc-sm font-medium text-fc-fg">
+								{submission.template?.name || 'Sans template'}
+							</span>
+							<span class="text-fc-xs text-fc-fg-muted">{formatDate(submission.created_at)}</span>
+						</div>
+						<Badge tone={getStatusBadge(submission.status).variant}>
+							{getStatusBadge(submission.status).label}
+						</Badge>
+					</div>
+					<span class="truncate text-fc-xs text-fc-fg-muted">
+						{submission.submitters.map((s) => s.name || s.email || 'Sans nom').join(', ')}
+					</span>
+				</Card>
+			{/each}
+		</div>
+	{/if}
+</Page>
+
+<ConfirmModal
+	open={deleting !== null}
+	title="Supprimer cette demande ?"
+	description="Les signataires ne pourront plus signer le document. Cette action est définitive."
+	confirmLabel="Supprimer"
+	tone="danger"
+	onConfirm={deleteSubmission}
+	onCancel={() => (deleting = null)}
+/>

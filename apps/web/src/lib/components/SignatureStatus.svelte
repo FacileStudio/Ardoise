@@ -30,7 +30,7 @@
 	const signedLabel = $derived(signedAt ? new Date(signedAt).toLocaleDateString('fr-FR') : null);
 </script>
 
-<div class="flex flex-wrap items-center gap-2 text-xs">
+<div class="flex flex-wrap items-center gap-2 text-fc-xs">
 	<Badge tone={tones[status]}>
 		{labels[status]}{status === 'signed' && signedLabel ? ` le ${signedLabel}` : ''}
 	</Badge>
@@ -46,6 +46,6 @@
 		</Button>
 	{/if}
 	{#if archived}
-		<span class="text-muted-foreground">Copie signée archivée dans Nuage</span>
+		<span class="text-fc-fg-muted">Copie signée archivée dans Nuage</span>
 	{/if}
 </div>
