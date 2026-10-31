@@ -27,7 +27,7 @@
   onMount(async () => {
     await authStore.init();
     setLocale('fr');
-    verified = await verifySession();
+    if (page.url.pathname === '/login') verified = await verifySession();
   });
 
   $effect(() => {
