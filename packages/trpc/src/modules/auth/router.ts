@@ -12,10 +12,13 @@ function appendCookies(resHeaders: Headers, cookies: string[]) {
 
 export const authRouter = router({
   login: publicProcedure.input(loginSchema).mutation(async ({ ctx, input }) => {
-    const result = await authService.login(ctx.db, ctx.auth, input, {
-      ipAddress: ctx.ipAddress,
-      userAgent: ctx.userAgent,
-    });
+    const result = await authService.login(
+      ctx.db,
+      ctx.auth,
+      input,
+      { ipAddress: ctx.ipAddress, userAgent: ctx.userAgent },
+      { ssoOnly: ctx.env.SSO_ONLY }
+    );
     appendCookies(
       ctx.resHeaders,
       authCookies(result.token, result.refreshToken, cookieOptions(ctx.env))

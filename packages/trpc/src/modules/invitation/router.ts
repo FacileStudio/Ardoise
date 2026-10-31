@@ -11,7 +11,7 @@ import {
 export const invitationRouter = router({
   create: adminProcedure.input(CreateInvitationSchema).mutation(async ({ ctx, input }) => {
     const smtp = await ctx.getSmtp();
-    return invitationService.create(ctx.db, smtp, ctx.appOrigin, ctx.user.id, input);
+    return invitationService.create(ctx.db, smtp, ctx.appOrigin, ctx.user.id, input, ctx.env.SSO_ONLY);
   }),
 
   list: adminProcedure.query(async ({ ctx }) => {
@@ -32,10 +32,13 @@ export const invitationRouter = router({
   }),
 
   accept: publicProcedure.input(AcceptInvitationSchema).mutation(async ({ ctx, input }) => {
-    const result = await invitationService.accept(ctx.db, ctx.auth, input, {
-      ipAddress: ctx.ipAddress,
-      userAgent: ctx.userAgent,
-    });
+    const result = await invitationService.accept(
+      ctx.db,
+      ctx.auth,
+      input,
+      { ipAddress: ctx.ipAddress, userAgent: ctx.userAgent },
+      ctx.env.SSO_ONLY
+    );
     for (const cookie of authCookies(result.token, result.refreshToken, cookieOptions(ctx.env))) {
       ctx.resHeaders.append('Set-Cookie', cookie);
     }

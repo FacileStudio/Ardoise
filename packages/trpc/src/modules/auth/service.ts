@@ -16,14 +16,47 @@ const assertCanLogin = (user: Parameters<typeof loginBlockReason>[0]) => {
   if (reason) throw new TRPCError({ code: 'FORBIDDEN', message: reason });
 };
 
+const decoyHashes = new WeakMap<AuthManager, Promise<string>>();
+
+/**
+ * A real password hash that matches nothing, so refused logins pay the same
+ * verification cost as a wrong password.
+ */
+const decoyHash = (auth: AuthManager) => {
+  let hash = decoyHashes.get(auth);
+  if (!hash) {
+    hash = auth.hashPassword(crypto.randomUUID());
+    decoyHashes.set(auth, hash);
+  }
+  return hash;
+};
+
+export interface LoginOptions {
+  ssoOnly?: boolean;
+}
+
 export const authService = {
-  login: async (db: PrismaClient, auth: AuthManager, input: LoginInput, meta?: SessionMeta) => {
+  /**
+   * Password login. With `ssoOnly`, every non-CLIENT user is refused with the
+   * same error and the same hashing work as a wrong password.
+   */
+  login: async (
+    db: PrismaClient,
+    auth: AuthManager,
+    input: LoginInput,
+    meta?: SessionMeta,
+    options: LoginOptions = {}
+  ) => {
     const user = await db.user.findUnique({
       where: { email: input.email },
       select: { ...sessionUserSelection, ...loginGateSelection, password: true },
     });
 
-    if (!user || !(await auth.verifyPassword(input.password, user.password))) {
+    const refused = !user || (options.ssoOnly === true && user.role !== 'CLIENT');
+    const hash = !user || refused ? await decoyHash(auth) : user.password;
+    const valid = await auth.verifyPassword(input.password, hash);
+
+    if (!user || refused || !valid) {
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid credentials' });
     }
 
