@@ -1,6 +1,6 @@
-import { redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
+import { error, redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
 import { logger } from '@repo/logger';
-import { isAdmin } from '@repo/auth-shared';
+import { isAdmin, type SessionUser } from '@repo/auth-shared';
 import { fetchSessionUser } from '$lib/server/auth';
 import env from '$lib/env';
 
@@ -11,7 +11,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   if (event.url.pathname.startsWith('/admin')) {
     const token = event.cookies.get(AUTH_COOKIE);
-    const user = await fetchSessionUser(token, env.API_URL, event.fetch);
+    let user: SessionUser | null;
+    try {
+      user = await fetchSessionUser(token, env.API_URL, event.fetch);
+    } catch (err) {
+      logger.warn({ err }, 'Session check failed, not signing out');
+      error(503, 'Service temporairement indisponible');
+    }
     event.locals.user = user;
 
     if (!user) {

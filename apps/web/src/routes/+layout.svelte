@@ -1,46 +1,56 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { authStore } from '$lib/auth-store';
+  import { authStore, verifySession } from '$lib/auth-store';
   import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Toaster } from '@facile/muse';
+  import { Spinner, Toaster } from '@facile/muse';
   import { setLocale } from '@repo/i18n/svelte';
   import { isAdmin } from '@repo/auth-shared';
   import SmtpRequiredModal from '$lib/components/SmtpRequiredModal.svelte';
+  import mdi from '$lib/icons/mdi.json';
+  import solar from '$lib/icons/solar.json';
   import '../app.css';
 
   let { children } = $props();
 
+  let verified = $state(false);
+
+  if (browser) {
+    void import('iconify-icon').then(({ addCollection }) => {
+      addCollection(solar);
+      addCollection(mdi);
+    });
+  }
+
   onMount(async () => {
     await authStore.init();
     setLocale('fr');
+    verified = await verifySession();
   });
 
   $effect(() => {
-    if (!$authStore.loading) {
-      const path = page.url.pathname;
-      const user = $authStore.user;
+    if ($authStore.loading) return;
+    const path = page.url.pathname;
+    const user = $authStore.user;
 
-      if ((path.startsWith('/app') || path.startsWith('/admin')) && !user)
-        goto(resolve('/login'));
+    if ((path.startsWith('/app') || path.startsWith('/admin')) && !user) goto(resolve('/login'));
 
-      if (path === '/login' && user)
-        goto(resolve(isAdmin(user) ? '/admin/clients' : '/app'));
+    if (path === '/login' && user && verified)
+      goto(resolve(isAdmin(user) ? '/admin/missions' : '/app'));
 
-      if (path.startsWith('/admin') && user && !isAdmin(user))
-        goto(resolve('/app'));
-    }
+    if (path.startsWith('/admin') && user && !isAdmin(user)) goto(resolve('/app'));
   });
 </script>
 
 {#if $authStore.loading}
-  <div class="h-screen flex items-center justify-center bg-background">
-    <iconify-icon icon="line-md:loading-twotone-loop" width="30" class="text-foreground"></iconify-icon>
+  <div class="flex h-dvh items-center justify-center bg-fc-page">
+    <Spinner />
   </div>
 {:else}
   {@render children()}
 {/if}
 
-<Toaster />
+<Toaster class="pb-28 md:pb-6" />
 <SmtpRequiredModal />
