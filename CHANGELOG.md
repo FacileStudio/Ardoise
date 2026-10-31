@@ -16,6 +16,17 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Changed
 
+- Settings moved to `/admin/settings/[[section]]` and `/app/settings/[[section]]`: muse tabs with real
+  routes (profile, appearance, company, billing, payments, email, integrations, users, advanced for
+  staff; profile and appearance for clients). Secrets use `SecretField`, connection state uses
+  `StatusDot`, logout is a row in Profile. Staff are not offered a password change when the backend
+  reports `sso_only`. `/admin/users` redirects to the users tab; `/admin/profile` and `/app/profile`
+  are gone.
+- Users, spaces, signatures, client home, client payment and legal pages are rebuilt on muse (`Page`,
+  `PageHeader`, `Section`, `Table`, `Field`, `Badge`, `Alert`) with no borders. `ImageUpload` uses the
+  muse `Dropzone`.
+- Removed the unused `UserCard`, `UserMenu`, `Toggle`, `LanguageSwitcher`, `AutoForm`, `AutoTable` and
+  the orphan `/admin/[entity]` route.
 - `apps/web` now compiles with `strict: true`, so the tRPC types it reads from `@repo/trpc` match
   the backend. `typecheck` and `lint` cover `@repo/web` in CI and in the release workflow.
 
