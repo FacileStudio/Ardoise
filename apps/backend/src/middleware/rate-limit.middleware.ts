@@ -1,5 +1,6 @@
 import type { Context, Next } from 'hono';
 import { getConnInfo } from 'hono/bun';
+import { clientIp } from '@repo/trpc/client-ip';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -60,17 +61,13 @@ export class RateLimiter {
 }
 
 function getClientIp(c: Context): string {
+  let peer: string | undefined;
   try {
-    const connInfo = getConnInfo(c);
-    if (connInfo?.remote?.address) {
-      return connInfo.remote.address;
-    }
+    peer = getConnInfo(c)?.remote?.address;
   } catch {
     /* getConnInfo is unavailable outside a Bun server */
   }
-  return (
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
-  );
+  return clientIp(c.req.header('x-forwarded-for'), peer) ?? c.req.header('x-real-ip') ?? 'unknown';
 }
 
 const BUCKETS = {

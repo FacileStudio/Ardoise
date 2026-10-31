@@ -69,4 +69,11 @@ describe('trpc rate limit', () => {
 
     expect((await call(server, '/trpc/auth.login', '198.51.100.1')).status).toBe(200);
   });
+
+  it('does not let a caller pick a fresh identity with a forged first address', async () => {
+    const server = app();
+    for (let i = 0; i < 5; i++) await call(server, '/trpc/auth.login', `10.0.0.${i}, 203.0.113.7`);
+
+    expect((await call(server, '/trpc/auth.login', '10.9.9.9, 203.0.113.7')).status).toBe(429);
+  });
 });

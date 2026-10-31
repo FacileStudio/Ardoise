@@ -1,6 +1,7 @@
 import { type FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import { prisma } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
+import { clientIp } from './client-ip';
 import { type ServerEnv } from '@repo/env';
 import { StorageService } from '@repo/storage';
 import type { Logger } from '@repo/logger';
@@ -36,8 +37,7 @@ export const createContext = async ({
   const token = cookieToken || bearerToken;
   const user = token ? await authManager.verifyToken(token) : null;
   const contextLogger = user ? logger.child({ userId: user.id, email: user.email }) : logger;
-  const ipAddress =
-    req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || undefined;
+  const ipAddress = clientIp(req.headers.get('x-forwarded-for'));
   const userAgent = req.headers.get('user-agent') || undefined;
   const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
   const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host');

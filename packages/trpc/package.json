@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./settings": "./src/modules/settings/service.ts",
     "./context": "./src/context.ts",
+    "./client-ip": "./src/client-ip.ts",
     "./auth/session": "./src/modules/auth/session.ts",
     "./auth/service": "./src/modules/auth/service.ts"
   },

@@ -5,6 +5,7 @@ import type { AuthManager } from '@repo/auth';
 import type { ServerEnv } from '@repo/env';
 import type { StorageService } from '@repo/storage';
 import { authCookies, issueSession } from '@repo/trpc/auth/session';
+import { clientIp } from '@repo/trpc/client-ip';
 import { logger } from '../lib/logger';
 import { adoptPicture } from './avatar';
 import { oidcConfig } from './config';
@@ -69,7 +70,7 @@ export function createOIDCRoutes(
         if (claims.picture) user.avatarUrl ??= await adoptPicture(user.id, claims.picture, storage);
 
         const session = await issueSession(prisma, authManager, user, {
-          ipAddress: c.req.header('x-forwarded-for') || c.req.header('cf-connecting-ip'),
+          ipAddress: clientIp(c.req.header('x-forwarded-for')),
           userAgent: c.req.header('user-agent'),
         });
         for (const value of authCookies(session.token, session.refreshToken, config.cookies)) {
