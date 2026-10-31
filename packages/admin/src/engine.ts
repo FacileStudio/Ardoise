@@ -25,6 +25,18 @@ export class AdminEngine<
     this.auditService = new AuditService(db);
   }
 
+  private hide<T>(record: T): T {
+    const hidden = this.config.hiddenFields;
+    if (!hidden?.length || !record || typeof record !== 'object') return record;
+    const copy = { ...(record as Record<string, unknown>) };
+    for (const field of hidden) delete copy[field];
+    return copy as T;
+  }
+
+  private withoutHidden<T extends Record<string, unknown>>(data: T): T {
+    return this.hide(data);
+  }
+
   async list(
     context: AdminContext,
     options: ListOptions = {}
@@ -68,7 +80,7 @@ export class AdminEngine<
     ]);
 
     return {
-      data,
+      data: data.map((record: TModel) => this.hide(record)),
       total,
       page,
       pageSize,
@@ -83,7 +95,7 @@ export class AdminEngine<
       'read'
     );
 
-    return this.delegate.findUnique({ where: { id } });
+    return this.hide(await this.delegate.findUnique({ where: { id } }));
   }
 
   async create(
@@ -96,7 +108,7 @@ export class AdminEngine<
       'create'
     );
 
-    const validatedData = this.config.schema.create.parse(data);
+    const validatedData = this.config.schema.create.parse(this.withoutHidden(data));
 
     const record = await this.delegate.create({
       data: validatedData,
@@ -112,7 +124,7 @@ export class AdminEngine<
       userAgent: context.userAgent,
     });
 
-    return record;
+    return this.hide(record);
   }
 
   async update(
@@ -126,7 +138,7 @@ export class AdminEngine<
       'update'
     );
 
-    const validatedData = this.config.schema.update.parse(data);
+    const validatedData = this.config.schema.update.parse(this.withoutHidden(data));
 
     const before = await this.delegate.findUnique({ where: { id } });
     if (!before) {
@@ -144,14 +156,14 @@ export class AdminEngine<
       entityId: id,
       action: 'UPDATE',
       changes: {
-        before: before as InputJsonValue,
+        before: this.hide(before) as InputJsonValue,
         after: validatedData as InputJsonValue,
       },
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });
 
-    return record;
+    return this.hide(record);
   }
 
   async delete(context: AdminContext, id: string): Promise<void> {
@@ -173,7 +185,7 @@ export class AdminEngine<
       entity: this.config.name,
       entityId: id,
       action: 'DELETE',
-      changes: before as InputJsonValue,
+      changes: this.hide(before) as InputJsonValue,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });

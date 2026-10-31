@@ -476,7 +476,7 @@ export const paymentService = {
       },
       include: {
         client: {
-          include: { user: true },
+          include: { user: { omit: { password: true } } },
         },
         attachedDocuments: {
           include: {
@@ -540,7 +540,7 @@ export const paymentService = {
       data: updateData,
       include: {
         client: {
-          include: { user: true },
+          include: { user: { omit: { password: true } } },
         },
       },
     });
@@ -596,7 +596,7 @@ export const paymentService = {
       data: { status: 'CANCELLED' },
       include: {
         client: {
-          include: { user: true },
+          include: { user: { omit: { password: true } } },
         },
       },
     });

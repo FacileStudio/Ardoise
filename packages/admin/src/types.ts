@@ -21,6 +21,7 @@ export interface EntityConfig<TModel = Record<string, unknown>, TCreateInput = R
   listFields: string[];
   searchFields?: string[];
   defaultSort?: { field: string; order: 'asc' | 'desc' };
+  hiddenFields?: string[];
 }
 
 export interface FieldConfig {

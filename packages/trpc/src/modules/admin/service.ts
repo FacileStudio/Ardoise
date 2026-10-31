@@ -1,7 +1,12 @@
 import type { PrismaClient } from '@repo/database';
 import { AdminEngine, PermissionService, AuditService } from '@repo/admin';
 import type { EntityConfig, AdminContext } from '@repo/admin';
-import { UserCreateInputSchema, UserUpdateInputSchema } from '@repo/database/zod';
+import {
+  MediaCreateInputSchema,
+  MediaUpdateInputSchema,
+  UserCreateInputSchema,
+  UserUpdateInputSchema,
+} from '@repo/database/zod';
 
 export class AdminService {
   private engines: Map<string, AdminEngine> = new Map();
@@ -32,7 +37,7 @@ export class AdminService {
           type: 'select',
           required: true,
           options: [
-            { value: 'USER', label: 'User' },
+            { value: 'CLIENT', label: 'Client' },
             { value: 'ADMIN', label: 'Admin' },
           ],
         },
@@ -41,14 +46,15 @@ export class AdminService {
       listFields: ['email', 'firstName', 'lastName', 'role', 'createdAt'],
       searchFields: ['email', 'firstName', 'lastName'],
       defaultSort: { field: 'createdAt', order: 'desc' },
+      hiddenFields: ['password'],
     });
 
     this.registerEntity({
       name: 'media',
       displayName: 'Media',
       schema: {
-        create: UserCreateInputSchema,
-        update: UserUpdateInputSchema,
+        create: MediaCreateInputSchema,
+        update: MediaUpdateInputSchema,
       },
       fields: [
         { name: 'url', label: 'URL', type: 'string', required: true },

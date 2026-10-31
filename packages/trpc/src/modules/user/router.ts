@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure, adminProcedure } from '../../trpc';
 import userService from './service';
+import { REFRESH_COOKIE_NAME, extractCookie } from '../../context';
 
 export const userRouter = router({
   me: protectedProcedure.query(async ({ ctx }) => {
@@ -104,7 +105,8 @@ export const userRouter = router({
         ctx.auth,
         ctx.user.id,
         input.currentPassword,
-        input.newPassword
+        input.newPassword,
+        extractCookie(ctx.req?.headers.get('cookie') ?? null, REFRESH_COOKIE_NAME)
       );
     }),
 

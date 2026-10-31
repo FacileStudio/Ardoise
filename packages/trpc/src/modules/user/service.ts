@@ -1,6 +1,8 @@
 import { TRPCError } from '@trpc/server';
-import { type PrismaClient } from '@repo/database';
+import { type PrismaClient, type Prisma, type UserRole } from '@repo/database';
 import { type AuthManager } from '@repo/auth';
+
+const NO_PASSWORD = { password: true } as const;
 
 export const userService = {
   createUser: async (
@@ -35,6 +37,7 @@ export const userService = {
         lastName: data.lastName,
         role: data.role,
       },
+      omit: NO_PASSWORD,
     });
   },
 
@@ -45,6 +48,7 @@ export const userService = {
         avatar: true,
         coverImage: true,
       },
+      omit: NO_PASSWORD,
     });
 
     if (!user) {
@@ -63,10 +67,10 @@ export const userService = {
       role?: 'all' | 'admin' | 'user';
     }
   ) => {
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
 
     if (filters?.role && filters.role !== 'all') {
-      where.role = filters.role.toUpperCase();
+      where.role = filters.role.toUpperCase() as UserRole;
     }
 
     return await db.user.findMany({
@@ -74,6 +78,7 @@ export const userService = {
       include: {
         avatar: true,
       },
+      omit: NO_PASSWORD,
       orderBy: { createdAt: 'desc' },
     });
   },
@@ -95,15 +100,19 @@ export const userService = {
         sessions: {
           orderBy: { createdAt: 'desc' },
           take: 5,
+          omit: { token: true },
         },
         auditLogs: {
           orderBy: { createdAt: 'desc' },
           take: 20,
         },
-        accounts: true,
+        accounts: {
+          omit: { accessToken: true, refreshToken: true, idToken: true, password: true },
+        },
         adminPermissions: true,
         documents: true,
       },
+      omit: NO_PASSWORD,
     });
 
     if (!user) {
@@ -140,6 +149,7 @@ export const userService = {
       return await db.user.update({
         where: { id: userId },
         data,
+        omit: NO_PASSWORD,
       });
     } catch (error) {
       throw new TRPCError({
@@ -161,7 +171,7 @@ export const userService = {
       password?: string;
     }
   ) => {
-    const updateData: any = {};
+    const updateData: Prisma.UserUpdateInput = {};
 
     if (data.email) {
       const existingUser = await db.user.findUnique({
@@ -186,10 +196,13 @@ export const userService = {
     }
 
     try {
-      return await db.user.update({
+      const updated = await db.user.update({
         where: { id: userId },
         data: updateData,
+        omit: NO_PASSWORD,
       });
+      if (updateData.password) await db.session.deleteMany({ where: { userId } });
+      return updated;
     } catch (error) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -202,6 +215,7 @@ export const userService = {
   deleteUser: async (db: PrismaClient, userId: string) => {
     return await db.user.delete({
       where: { id: userId },
+      omit: NO_PASSWORD,
     });
   },
 
@@ -223,6 +237,7 @@ export const userService = {
           firstName: data.firstName,
           lastName: data.lastName,
         },
+        omit: NO_PASSWORD,
       });
     } catch (error) {
       throw new TRPCError({
@@ -237,7 +252,8 @@ export const userService = {
     auth: AuthManager,
     userId: string,
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
+    keepRefreshToken?: string | null
   ) => {
     const user = await db.user.findUnique({ where: { id: userId } });
 
@@ -259,10 +275,21 @@ export const userService = {
 
     const hashedPassword = await auth.hashPassword(newPassword);
 
-    return await db.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
-    });
+    const [updated] = await db.$transaction([
+      db.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+        omit: NO_PASSWORD,
+      }),
+      db.session.deleteMany({
+        where: {
+          userId,
+          ...(keepRefreshToken ? { token: { not: keepRefreshToken } } : {}),
+        },
+      }),
+    ]);
+
+    return updated;
   },
 
   deleteOwnAccount: async (db: PrismaClient, userId: string) => {
@@ -277,6 +304,7 @@ export const userService = {
 
     return await db.user.delete({
       where: { id: userId },
+      omit: NO_PASSWORD,
     });
   },
 };
