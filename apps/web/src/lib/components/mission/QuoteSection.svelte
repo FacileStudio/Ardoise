@@ -3,8 +3,8 @@
 	import { runAction } from '$lib/mission-actions';
 	import { downloadDocument } from '$lib/download-document';
 	import { formatEuro, formatDate } from '$lib/mission';
-	import { Badge } from '@facile/muse';
-	import 'iconify-icon';
+	import { Alert, Badge, Button, Section } from '@facile/muse';
+	import { icons } from '$lib/icons';
 
 	interface Props {
 		mission: any;
@@ -61,65 +61,54 @@
 	}
 </script>
 
-<section class="rounded-xl bg-muted/40 p-6 space-y-4">
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h2 class="text-base font-semibold text-foreground">Devis</h2>
-		<div class="flex flex-wrap gap-2">
-			{#if billing.canAcceptQuote}
-				<button
-					disabled={busy}
-					onclick={accept}
-					class="rounded-md bg-background px-3 h-8 text-xs font-medium text-foreground cursor-pointer hover:bg-muted disabled:opacity-50"
-				>
-					Marquer le devis comme accepté
-				</button>
-			{/if}
-			<button
-				disabled={busy || !billing.canGenerateQuote}
-				onclick={generate}
-				class="bg-primary text-primary-foreground rounded-md px-3 h-8 text-xs font-medium cursor-pointer hover:opacity-90 disabled:opacity-50"
-			>
-				{quotes.length === 0 ? 'Générer le devis' : 'Générer un nouveau devis'}
-			</button>
-		</div>
-	</div>
+<Section title="Devis" card>
+	{#snippet actions()}
+		{#if billing.canAcceptQuote}
+			<Button variant="ghost" size="sm" disabled={busy} onclick={accept}>
+				Marquer le devis comme accepté
+			</Button>
+		{/if}
+		<Button size="sm" disabled={busy || !billing.canGenerateQuote} onclick={generate}>
+			{quotes.length === 0 ? 'Générer le devis' : 'Générer un nouveau devis'}
+		</Button>
+	{/snippet}
 
 	{#if billing.quoteOutdated}
-		<p class="rounded-md bg-fc-warning/10 px-3 py-2 text-sm text-fc-warning">
+		<Alert tone="warning">
 			Les prestations ont changé depuis le dernier devis. Générez un nouveau devis pour pouvoir facturer.
-		</p>
+		</Alert>
 	{/if}
 
 	{#if quotes.length > 0}
-		<ul class="space-y-2">
+		<ul class="flex flex-col gap-2">
 			{#each quotes as quote (quote.id)}
 				{@const state = stateOf(quote)}
-				<li class="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2">
+				<li class="flex items-center justify-between gap-3 rounded-fc-md bg-fc-surface px-3 py-2">
 					<div class="min-w-0">
-						<div class="text-sm font-medium text-foreground">
+						<div class="text-fc-sm font-medium text-fc-fg">
 							Devis v{quote.version}
-							<span class="text-muted-foreground font-normal"> · {quote.quoteNumber}</span>
+							<span class="font-normal text-fc-fg-muted"> · {quote.quoteNumber}</span>
 						</div>
-						<div class="text-xs text-muted-foreground">
+						<div class="text-fc-xs text-fc-fg-muted">
 							{formatDate(quote.createdAt)} · {formatEuro(quote.total)} TTC
 						</div>
 					</div>
 					<div class="flex items-center gap-2">
 						<Badge tone={state.variant}>{state.label}</Badge>
-						<button
+						<Button
+							variant="ghost"
+							size="sm"
+							icon={icons.download}
+							aria-label="Télécharger"
 							onclick={() => downloadDocument(quote.id)}
-							class="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
-							title="Télécharger"
-						>
-							<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
-						</button>
+						/>
 					</div>
 				</li>
 			{/each}
 		</ul>
 	{:else if mission.prestations.length === 0}
-		<p class="text-sm text-muted-foreground">Ajoutez des prestations pour générer un devis.</p>
+		<p class="text-fc-sm text-fc-fg-muted">Ajoutez des prestations pour générer un devis.</p>
 	{:else}
-		<p class="text-sm text-muted-foreground">Aucun devis pour l'instant.</p>
+		<p class="text-fc-sm text-fc-fg-muted">Aucun devis pour l'instant.</p>
 	{/if}
-</section>
+</Section>

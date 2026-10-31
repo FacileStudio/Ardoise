@@ -3,11 +3,22 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Input, toast } from '@facile/muse';
+	import {
+		Alert,
+		Button,
+		Field,
+		Input,
+		Page,
+		PageHeader,
+		Section,
+		Select,
+		Textarea,
+		toast,
+	} from '@facile/muse';
+	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import { ROLE_LABELS } from '$lib/mission';
-	import 'iconify-icon';
 
 	type Role = 'LEAD' | 'SUBCONTRACTOR';
 
@@ -19,7 +30,7 @@
 	let name = $state('');
 	let description = $state('');
 	let clientId = $state('');
-	let deposit: number | null = $state(null);
+	let deposit = $state('');
 	let linked: Array<{ providerId: string; role: Role }> = $state([]);
 	let newProviderId = $state('');
 	let newRole = $state<Role>('LEAD');
@@ -81,7 +92,7 @@
 				name,
 				description: description || undefined,
 				clientId,
-				depositPercent: deposit || undefined,
+				depositPercent: deposit ? Number(deposit) : undefined,
 				providers: linked,
 				spaceId: spaceContext.spaceId,
 			});
@@ -97,124 +108,95 @@
 	}
 </script>
 
-<div class="max-w-3xl mx-auto p-6 space-y-6">
-	<div>
-		<button
-			onclick={() => goto(resolve('/admin/missions'))}
-			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-		>
-			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			Retour aux missions
-		</button>
-		<h1 class="text-2xl font-bold text-foreground">Nouvelle mission</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			Vous ajouterez les prestations depuis la mission, puis vous générerez son devis et sa facture
-		</p>
-	</div>
+<svelte:head><title>Nouvelle mission - Ardoise</title></svelte:head>
 
-	<form onsubmit={handleSubmit} class="space-y-6">
+<Page width="md">
+	<PageHeader
+		title="Nouvelle mission"
+		description="Vous ajouterez les prestations depuis la mission, puis vous générerez son devis et sa facture"
+		back={{ href: resolve('/admin/missions'), label: 'Retour aux missions' }}
+	/>
+
+	<form onsubmit={handleSubmit} class="flex flex-col gap-6">
 		{#if formMessage}
-			<div class="rounded-lg bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">{formMessage}</div>
+			<Alert tone="danger">{formMessage}</Alert>
 		{/if}
 
-		<div class="rounded-xl bg-muted/40 p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Mission</h2>
-			<div>
-				<div class="text-sm font-medium mb-2">Nom</div>
+		<Section title="Mission" card>
+			<Field label="Nom">
 				<Input bind:value={name} placeholder="Ex: Refonte du site vitrine" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Description</div>
-				<textarea
-					bind:value={description}
-					rows="3"
-					class="w-full rounded-md bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-				></textarea>
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Client</div>
-				<select
-					bind:value={clientId}
-					class="w-full h-9 rounded-md bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-				>
+			</Field>
+			<Field label="Description">
+				<Textarea bind:value={description} rows={3} />
+			</Field>
+			<Field label="Client">
+				<Select bind:value={clientId}>
 					<option value="">-- Sélectionner un client --</option>
 					{#each clients as client (client.id)}
 						<option value={client.id}>{client.companyName}</option>
 					{/each}
-				</select>
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Acompte (%)</div>
-				<input
+				</Select>
+			</Field>
+			<Field
+				label="Acompte (%)"
+				helper="Part du devis facturable en acompte. Laissez vide si la mission n'en prévoit pas."
+			>
+				<Input
 					type="number"
 					min="0"
 					max="100"
 					step="0.5"
 					bind:value={deposit}
 					placeholder="Aucun acompte"
-					class="w-full h-9 rounded-md bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
 				/>
-				<p class="text-xs text-muted-foreground mt-1">
-					Part du devis facturable en acompte. Laissez vide si la mission n'en prévoit pas.
-				</p>
-			</div>
-		</div>
+			</Field>
+		</Section>
 
-		<div class="rounded-xl bg-muted/40 p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Prestataires</h2>
-
+		<Section title="Prestataires" card>
 			{#if linked.length > 0}
-				<ul class="space-y-2">
+				<ul class="flex flex-col gap-2">
 					{#each linked as link (link.providerId)}
-						<li class="flex items-center justify-between rounded-md bg-background px-3 py-2 text-sm">
+						<li class="flex items-center justify-between rounded-fc-md bg-fc-surface px-3 py-2 text-fc-sm">
 							<span>
-								<span class="font-medium text-foreground">{providerName(link.providerId)}</span>
-								<span class="text-muted-foreground"> · {ROLE_LABELS[link.role]}</span>
+								<span class="font-medium text-fc-fg">{providerName(link.providerId)}</span>
+								<span class="text-fc-fg-muted"> · {ROLE_LABELS[link.role]}</span>
 							</span>
-							<button
+							<Button
 								type="button"
+								variant="ghost-danger"
+								size="sm"
+								icon={icons.remove}
+								aria-label="Retirer"
 								onclick={() => removeProvider(link.providerId)}
-								class="p-1 text-muted-foreground hover:text-fc-danger"
-								title="Retirer"
-							>
-								<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-							</button>
+							/>
 						</li>
 					{/each}
 				</ul>
 			{/if}
 
-			<div class="flex gap-2">
-				<select
-					bind:value={newProviderId}
-					class="flex-1 h-9 rounded-md bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-				>
+			<div class="flex flex-col gap-2 sm:flex-row">
+				<Select bind:value={newProviderId} aria-label="Prestataire" class="sm:flex-1">
 					<option value="">-- Ajouter un prestataire --</option>
 					{#each availableProviders as provider (provider.id)}
 						<option value={provider.id}>{provider.name}</option>
 					{/each}
-				</select>
-				<select
-					bind:value={newRole}
-					class="h-9 rounded-md bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-				>
+				</Select>
+				<Select bind:value={newRole} aria-label="Rôle" class="sm:w-48">
 					{#each Object.entries(ROLE_LABELS) as [value, label] (value)}
 						<option {value}>{label}</option>
 					{/each}
-				</select>
-				<Button type="button" variant="outline" onclick={addProvider} disabled={!newProviderId}>
+				</Select>
+				<Button type="button" variant="ghost" size="lg" onclick={addProvider} disabled={!newProviderId}>
 					Ajouter
 				</Button>
 			</div>
-		</div>
+		</Section>
 
 		<div class="flex justify-end gap-3">
-			<Button type="button" variant="ghost" onclick={() => goto(resolve('/admin/missions'))}>
-				Annuler
-			</Button>
+			<Button href={resolve('/admin/missions')} variant="ghost">Annuler</Button>
 			<Button type="submit" disabled={submitting}>
 				{submitting ? 'Création...' : 'Créer la mission'}
 			</Button>
 		</div>
 	</form>
-</div>
+</Page>

@@ -4,7 +4,8 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Spinner, toast } from '@facile/muse';
+	import { Badge, Button, ConfirmModal, Page, PageHeader, Spinner, toast } from '@facile/muse';
+	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
 	import { runAction } from '$lib/mission-actions';
 	import { STATUS_LABELS, STATUS_VARIANTS, type MissionStatus } from '$lib/mission';
@@ -13,12 +14,13 @@
 	import QuoteSection from '$lib/components/mission/QuoteSection.svelte';
 	import InvoicesSection from '$lib/components/mission/InvoicesSection.svelte';
 	import DocumentsSection from '$lib/components/mission/DocumentsSection.svelte';
-	import 'iconify-icon';
 
 	const missionId = $derived($page.params.id as string);
 
 	let pageLoading = $state(true);
 	let busy = $state(false);
+	let confirmCancel = $state(false);
+	let confirmDelete = $state(false);
 	let mission: any = $state(null);
 
 	const closed = $derived(mission?.status === 'CANCELLED' || mission?.status === 'PAID');
@@ -39,9 +41,6 @@
 	}
 
 	async function cancelMission() {
-		if (!confirm('Annuler cette mission ? Cette action est définitive.'))
-			return;
-
 		busy = true;
 
 		const ok = await runAction(
@@ -57,9 +56,6 @@
 	}
 
 	async function deleteMission() {
-		if (!confirm('Supprimer cette mission ?'))
-			return;
-
 		busy = true;
 
 		const ok = await runAction(
@@ -75,61 +71,62 @@
 	}
 </script>
 
+<svelte:head><title>{mission?.name ?? 'Mission'} - Ardoise</title></svelte:head>
+
 {#if pageLoading || !mission}
-	<div class="flex flex-col items-center justify-center h-screen space-y-4">
-		<Spinner />
-		<p class="text-sm text-muted-foreground">Chargement...</p>
+	<div class="flex min-h-[40dvh] items-center justify-center">
+		<Spinner size="lg" />
 	</div>
 {:else}
-	<div class="p-8 max-w-[1100px] mx-auto space-y-6">
-		<div>
-			<button
-				onclick={() => goto(resolve('/admin/missions'))}
-				class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-			>
-				<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-				Retour aux missions
-			</button>
-
-			<div class="flex flex-wrap items-start justify-between gap-4">
-				<div>
-					<div class="flex items-center gap-3">
-						<h1 class="text-2xl font-bold text-foreground">{mission.name}</h1>
-						<Badge tone={STATUS_VARIANTS[mission.status as MissionStatus]}>
-							{STATUS_LABELS[mission.status as MissionStatus]}
-						</Badge>
-					</div>
-					{#if mission.description}
-						<p class="text-sm text-muted-foreground mt-1 max-w-2xl">{mission.description}</p>
-					{/if}
-				</div>
-
-				<div class="flex flex-wrap gap-2">
-					{#if !closed}
-						<button
-							disabled={busy}
-							onclick={cancelMission}
-							class="rounded-md px-4 h-9 text-sm font-medium text-muted-foreground cursor-pointer hover:text-fc-danger hover:bg-muted disabled:opacity-50"
-						>
-							Annuler la mission
-						</button>
-					{/if}
-					<button
-						disabled={busy}
-						onclick={deleteMission}
-						class="rounded-md px-3 h-9 text-muted-foreground cursor-pointer hover:text-fc-danger hover:bg-muted disabled:opacity-50"
-						title="Supprimer"
-					>
-						<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-					</button>
-				</div>
-			</div>
-		</div>
+	<Page width="lg">
+		<PageHeader
+			title={mission.name}
+			description={mission.description || undefined}
+			back={{ href: resolve('/admin/missions'), label: 'Retour aux missions' }}
+		>
+			{#snippet actions()}
+				<Badge tone={STATUS_VARIANTS[mission.status as MissionStatus]}>
+					{STATUS_LABELS[mission.status as MissionStatus]}
+				</Badge>
+				{#if !closed}
+					<Button variant="ghost" disabled={busy} onclick={() => (confirmCancel = true)}>
+						Annuler la mission
+					</Button>
+				{/if}
+				<Button
+					variant="ghost-danger"
+					icon={icons.remove}
+					aria-label="Supprimer la mission"
+					disabled={busy}
+					onclick={() => (confirmDelete = true)}
+				/>
+			{/snippet}
+		</PageHeader>
 
 		<MissionSummary {mission} onChange={load} />
 		<PrestationsEditor {mission} onChange={load} />
 		<QuoteSection {mission} onChange={load} />
 		<InvoicesSection {mission} onChange={load} />
 		<DocumentsSection {mission} onChange={load} />
-	</div>
+	</Page>
 {/if}
+
+<ConfirmModal
+	bind:open={confirmCancel}
+	tone="danger"
+	title="Annuler cette mission ?"
+	description="La mission passe en statut annulée et ne peut plus être modifiée. Les documents et paiements déjà créés sont conservés."
+	confirmLabel="Annuler la mission"
+	cancelLabel="Garder la mission"
+	onConfirm={cancelMission}
+/>
+
+<ConfirmModal
+	bind:open={confirmDelete}
+	tone="danger"
+	title="Supprimer cette mission ?"
+	description="La mission est supprimée définitivement. Ses prestations sont perdues; les documents et paiements liés ne sont plus rattachés à une mission."
+	confirmLabel="Supprimer la mission"
+	cancelLabel="Garder la mission"
+	onConfirm={deleteMission}
+/>
