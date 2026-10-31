@@ -71,7 +71,9 @@
 </script>
 
 <div class="flex w-full max-w-md flex-col gap-2">
-    <span class="text-fc-sm font-medium text-fc-fg">{label}</span>
+    {#if label}
+        <span class="text-fc-sm font-medium text-fc-fg">{label}</span>
+    {/if}
 
     {#if previewUrl}
         <div class="relative flex h-48 w-full items-center justify-center overflow-hidden rounded-fc-md bg-fc-surface">

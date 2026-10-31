@@ -129,7 +129,7 @@
       </div>
     </SettingsRow>
     <SettingsRow
-      label="Nom"
+      label="Nom complet"
       description={nameLocked ? 'Fourni par le SSO, il se met à jour à chaque connexion.' : undefined}
       stacked
     >

@@ -260,7 +260,7 @@
       <SettingsRow label="Raison sociale" stacked>
         <Field><Input bind:value={formData.companyLegal} /></Field>
       </SettingsRow>
-      <SettingsRow label="Adresse" stacked>
+      <SettingsRow label="Localisation" stacked>
         <div class="grid gap-4 sm:grid-cols-3">
           <Field label="Adresse" class="sm:col-span-3"><Input bind:value={formData.companyAddress} /></Field>
           <Field label="Ville"><Input bind:value={formData.companyCity} /></Field>
@@ -275,7 +275,7 @@
         </div>
       </SettingsRow>
       <SettingsRow label="Logo" stacked>
-        <ImageUpload bind:value={formData.logoUrl} label="Logo de l'entreprise" {getPresignedUrl} {trpc} />
+        <ImageUpload bind:value={formData.logoUrl} label="" {getPresignedUrl} {trpc} />
       </SettingsRow>
       {@render saveRow()}
     </SettingsSection>
