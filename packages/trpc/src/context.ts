@@ -54,7 +54,7 @@ export const createContext = async ({
     resHeaders,
     getStripe: () => getStripeService(prisma),
     getSmtp: () => getSmtpClient(prisma),
-    docuseal: await getDocuSealService(prisma),
+    getDocuSeal: () => getDocuSealService(prisma),
     env,
     apiOrigin,
     appOrigin,

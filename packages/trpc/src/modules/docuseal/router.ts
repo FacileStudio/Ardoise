@@ -4,12 +4,16 @@ import {
   submissionStatusSchema,
 } from '@repo/docuseal';
 
+const docusealProcedure = adminProcedure.use(async ({ ctx, next }) =>
+  next({ ctx: { ...ctx, docuseal: await ctx.getDocuSeal() } })
+);
+
 export const docusealRouter = router({
-  isConfigured: adminProcedure.query(async ({ ctx }) => {
+  isConfigured: docusealProcedure.query(async ({ ctx }) => {
     return ctx.docuseal.isConfigured();
   }),
 
-  listSubmissions: adminProcedure
+  listSubmissions: docusealProcedure
     .input(
       z.object({
         limit: z.number().optional(),
@@ -23,13 +27,13 @@ export const docusealRouter = router({
       return ctx.docuseal.listSubmissions(input);
     }),
 
-  getSubmission: adminProcedure
+  getSubmission: docusealProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return ctx.docuseal.getSubmission(input.id);
     }),
 
-  createSubmission: adminProcedure
+  createSubmission: docusealProcedure
     .input(
       z.object({
         template_id: z.number(),
@@ -57,7 +61,7 @@ export const docusealRouter = router({
       return ctx.docuseal.createSubmission(input);
     }),
 
-  createSubmissionFromPdf: adminProcedure
+  createSubmissionFromPdf: docusealProcedure
     .input(
       z.object({
         name: z.string(),
@@ -84,13 +88,13 @@ export const docusealRouter = router({
       return ctx.docuseal.createSubmissionFromPdf(input);
     }),
 
-  deleteSubmission: adminProcedure
+  deleteSubmission: docusealProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.docuseal.deleteSubmission(input.id);
     }),
 
-  listTemplates: adminProcedure
+  listTemplates: docusealProcedure
     .input(
       z.object({
         limit: z.number().optional(),
@@ -103,19 +107,19 @@ export const docusealRouter = router({
       return ctx.docuseal.listTemplates(input);
     }),
 
-  getTemplate: adminProcedure
+  getTemplate: docusealProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return ctx.docuseal.getTemplate(input.id);
     }),
 
-  getSubmitter: adminProcedure
+  getSubmitter: docusealProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return ctx.docuseal.getSubmitter(input.id);
     }),
 
-  updateSubmitter: adminProcedure
+  updateSubmitter: docusealProcedure
     .input(
       z.object({
         id: z.number(),
