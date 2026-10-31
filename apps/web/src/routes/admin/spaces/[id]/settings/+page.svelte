@@ -6,13 +6,24 @@
     import { resolve } from '$app/paths';
     import { i18n } from '@repo/i18n/svelte';
     import { logger } from '@repo/logger';
-    import { ConfirmModal } from '@facile/muse';
-    import 'iconify-icon';
+    import {
+        Button,
+        ConfirmModal,
+        EmptyState,
+        Field,
+        Input,
+        Page,
+        PageHeader,
+        Section,
+        Spinner,
+        Textarea,
+        toast,
+    } from '@facile/muse';
+    import { icons } from '$lib/icons';
 
     let space: any = $state(null);
     let loading = $state(true);
     let saving = $state(false);
-    let message = $state('');
 
     let name = $state('');
     let description = $state('');
@@ -41,19 +52,16 @@
         if (!name.trim()) return;
 
         saving = true;
-        message = '';
         try {
             await trpc.space.update.mutate({
                 id: spaceId,
                 name: name.trim(),
                 description: description.trim() || null,
             });
-            message = $i18n.t('admin.settings.actions.saved');
-            setTimeout(() => { message = ''; }, 3000);
+            toast.success($i18n.t('admin.settings.actions.saved'));
         } catch (err: any) {
             logger.error({ err }, 'Failed to update space');
-            message = err?.message || $i18n.t('common.actions.error');
-            setTimeout(() => { message = ''; }, 5000);
+            toast.danger(err?.message || $i18n.t('common.actions.error'));
         } finally {
             saving = false;
         }
@@ -66,102 +74,67 @@
             await goto(resolve('/admin/spaces'));
         } catch (err: any) {
             logger.error({ err }, 'Failed to delete space');
-            message = err?.message || $i18n.t('common.actions.error');
+            toast.danger(err?.message || $i18n.t('common.actions.error'));
             showDeleteDialog = false;
-            setTimeout(() => { message = ''; }, 5000);
         } finally {
             deleting = false;
         }
     }
 </script>
 
-<div class="flex h-full flex-col">
-    <div class="border-b border-border px-4 py-4 md:px-8 md:py-5">
-        <div class="flex items-center gap-3">
-            <a href={resolve(`/admin/spaces/${spaceId}`)} class="text-muted-foreground transition-colors hover:text-foreground" aria-label="Back to space">
-                <iconify-icon icon="solar:arrow-left-linear" width="20"></iconify-icon>
-            </a>
-            <div>
-                <h1 class="text-lg font-semibold">{$i18n.t('spaces.settings')}</h1>
-                {#if space}
-                    <p class="mt-0.5 text-sm text-muted-foreground">{space.name}</p>
-                {/if}
-            </div>
-        </div>
-    </div>
+<svelte:head>
+    <title>{$i18n.t('spaces.settings')} - Ardoise</title>
+</svelte:head>
 
-    <div class="flex-1 overflow-auto px-4 py-6 md:px-8">
-        {#if loading}
-            <div class="flex items-center justify-center py-20">
-                <div class="h-6 w-6 animate-spin rounded-full border-2 border-foreground border-t-transparent"></div>
-            </div>
-        {:else if !space}
-            <div class="flex flex-col items-center justify-center py-20 text-center">
-                <p class="text-sm text-muted-foreground">Space not found</p>
-            </div>
-        {:else}
-            <div class="max-w-xl space-y-8">
-                {#if canManage}
-                    <div class="space-y-4">
-                        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">General</h2>
-                        <div>
-                            <label for="space-name" class="mb-1.5 block text-sm font-medium">
-                                {$i18n.t('spaces.name')}
-                            </label>
-                            <input
-                                id="space-name"
-                                type="text"
-                                bind:value={name}
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                        </div>
-                        <div>
-                            <label for="space-desc" class="mb-1.5 block text-sm font-medium">
-                                {$i18n.t('spaces.description')}
-                            </label>
-                            <textarea
-                                id="space-desc"
-                                bind:value={description}
-                                placeholder={$i18n.t('spaces.descriptionPlaceholder')}
-                                rows="3"
-                                class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                            ></textarea>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <button
-                                class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                onclick={saveSettings}
-                                disabled={saving}
-                            >
-                                {saving ? $i18n.t('spaces.saving') : $i18n.t('spaces.save')}
-                            </button>
-                            {#if message}
-                                <span class="text-sm text-muted-foreground">{message}</span>
-                            {/if}
-                        </div>
-                    </div>
-                {/if}
+<Page width="md">
+    {#if loading}
+        <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
+    {:else if !space}
+        <EmptyState icon={icons.usersGroup} title="Espace introuvable">
+            <Button href={resolve('/admin/spaces')} variant="ghost">{$i18n.t('spaces.title')}</Button>
+        </EmptyState>
+    {:else}
+        <PageHeader
+            title={$i18n.t('spaces.settings')}
+            description={space.name}
+            back={{ href: `/admin/spaces/${spaceId}`, label: space.name }}
+        />
 
-                {#if isOwner}
-                    <div class="space-y-4 border-t border-border pt-8">
-                        <h2 class="text-sm font-semibold uppercase tracking-wider text-destructive">{$i18n.t('spaces.deleteSpace')}</h2>
-                        <p class="text-sm text-muted-foreground">
-                            {$i18n.t('spaces.deleteConfirm', { name: space.name })}
-                        </p>
-                        <button
-                            class="inline-flex h-9 items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
-                            onclick={() => { showDeleteDialog = true; }}
-                            disabled={deleting}
-                        >
-                            <iconify-icon icon="solar:trash-bin-2-linear" width="16"></iconify-icon>
-                            {$i18n.t('spaces.deleteSpace')}
-                        </button>
-                    </div>
-                {/if}
-            </div>
+        {#if canManage}
+            <Section title="Général" card>
+                <Field label={$i18n.t('spaces.name')}>
+                    <Input bind:value={name} />
+                </Field>
+                <Field label={$i18n.t('spaces.description')}>
+                    <Textarea bind:value={description} rows={3} placeholder={$i18n.t('spaces.descriptionPlaceholder')} />
+                </Field>
+                <div>
+                    <Button icon={icons.check} onclick={saveSettings} disabled={saving || !name.trim()}>
+                        {saving ? $i18n.t('spaces.saving') : $i18n.t('spaces.save')}
+                    </Button>
+                </div>
+            </Section>
         {/if}
-    </div>
-</div>
+
+        {#if isOwner}
+            <Section title={$i18n.t('spaces.deleteSpace')} card>
+                <p class="text-fc-sm text-fc-fg-muted">
+                    {$i18n.t('spaces.deleteConfirm', { name: space.name })}
+                </p>
+                <div>
+                    <Button
+                        variant="danger"
+                        icon={icons.remove}
+                        onclick={() => { showDeleteDialog = true; }}
+                        disabled={deleting}
+                    >
+                        {$i18n.t('spaces.deleteSpace')}
+                    </Button>
+                </div>
+            </Section>
+        {/if}
+    {/if}
+</Page>
 
 <ConfirmModal
     bind:open={showDeleteDialog}
