@@ -821,3 +821,36 @@ describe('spaceService.delete', () => {
     expect(await spaceService.delete(db, 'user-1', 'space-a')).toEqual({ success: true });
   });
 });
+
+describe('spaceService owner protection', () => {
+  function ownerDb(updates: unknown[]) {
+    return {
+      spaceMember: {
+        findUnique: async () => ({ role: 'OWNER' }),
+        update: async (args: unknown) => {
+          updates.push(args);
+          return {};
+        },
+      },
+    } as unknown as PrismaClient;
+  }
+
+  it('refuses an owner demoting themselves', async () => {
+    const updates: unknown[] = [];
+
+    await expect(
+      spaceService.updateMemberRole(ownerDb(updates), 'owner-1', {
+        spaceId: 'space-1',
+        userId: 'owner-1',
+        role: 'MEMBER',
+      })
+    ).rejects.toThrow("Cannot change the owner's role");
+    expect(updates).toHaveLength(0);
+  });
+
+  it('refuses the owner leaving the space', async () => {
+    await expect(spaceService.leave(ownerDb([]), 'owner-1', 'space-1')).rejects.toThrow(
+      'Owner cannot leave the space'
+    );
+  });
+});
