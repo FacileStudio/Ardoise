@@ -10,7 +10,7 @@ try {
 
   if (error instanceof ZodError) {
     console.error('\nMissing or invalid environment variables:');
-    error.errors.forEach(err => {
+    error.issues.forEach(err => {
       console.error(`  - ${err.path.join('.')}: ${err.message}`);
     });
   } else if (error instanceof Error) {

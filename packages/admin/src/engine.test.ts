@@ -7,7 +7,7 @@ import type { EntityConfig } from './types';
 const config: EntityConfig = {
   name: 'user',
   displayName: 'User',
-  schema: { create: z.record(z.unknown()), update: z.record(z.unknown()) },
+  schema: { create: z.record(z.string(), z.unknown()), update: z.record(z.string(), z.unknown()) },
   fields: [],
   listFields: ['email'],
   hiddenFields: ['password'],
