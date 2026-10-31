@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { runAction } from '$lib/mission-actions';
 	import { ROLE_LABELS, formatEuro } from '$lib/mission';
+	import { Button, Card, Input } from '@facile/muse';
 
 	interface Props {
 		mission: any;
@@ -21,7 +22,9 @@
 	const invoices = $derived(mission.documents.filter((d: any) => d.invoiceNumber));
 
 	// invoiced is the sum of the invoice totals, paid the sum of the payments already settled
-	const invoicedTotal = $derived(invoices.reduce((sum: number, d: any) => sum + Number(d.total), 0));
+	const invoicedTotal = $derived(
+		invoices.reduce((sum: number, d: any) => sum + Number(d.total), 0)
+	);
 	const paidTotal = $derived(
 		mission.payments
 			.filter((p: any) => p.status === 'PAID')
@@ -45,79 +48,74 @@
 
 		saving = false;
 
-		if (ok)
-			await onChange();
+		if (ok) await onChange();
 	}
 </script>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-	<div class="rounded-xl bg-muted/40 p-4">
-		<div class="text-xs font-medium text-muted-foreground uppercase mb-2">Client</div>
+<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+	<Card class="flex flex-col gap-1">
+		<span class="text-fc-xs font-medium uppercase text-fc-fg-muted">Client</span>
 		<a
 			href={resolve(`/admin/clients/${mission.client.id}`)}
-			class="font-medium text-foreground hover:underline"
+			class="w-fit font-medium text-fc-fg hover:underline"
 		>
 			{mission.client.companyName}
 		</a>
-		<div class="text-sm text-muted-foreground">
+		<span class="text-fc-sm text-fc-fg-muted">
 			{mission.client.contactFirstName}
 			{mission.client.contactLastName}
-		</div>
+		</span>
 		{#if mission.client.contactEmail}
-			<div class="text-sm text-muted-foreground">{mission.client.contactEmail}</div>
+			<span class="text-fc-sm text-fc-fg-muted">{mission.client.contactEmail}</span>
 		{/if}
-	</div>
+	</Card>
 
-	<div class="rounded-xl bg-muted/40 p-4">
-		<div class="text-xs font-medium text-muted-foreground uppercase mb-2">Prestataires</div>
+	<Card class="flex flex-col gap-1">
+		<span class="text-fc-xs font-medium uppercase text-fc-fg-muted">Prestataires</span>
 		{#each mission.providers as link (link.id)}
-			<div class="text-sm">
-				<span class="font-medium text-foreground">{link.provider.name}</span>
-				<span class="text-muted-foreground"> · {ROLE_LABELS[link.role]}</span>
+			<div class="text-fc-sm">
+				<span class="font-medium text-fc-fg">{link.provider.name}</span>
+				<span class="text-fc-fg-muted"> · {ROLE_LABELS[link.role]}</span>
 			</div>
 		{:else}
-			<div class="text-sm text-muted-foreground">Aucun prestataire</div>
+			<span class="text-fc-sm text-fc-fg-muted">Aucun prestataire</span>
 		{/each}
-	</div>
+	</Card>
 
-	<div class="rounded-xl bg-muted/40 p-4 space-y-1">
-		<div class="text-xs font-medium text-muted-foreground uppercase mb-2">Facturation</div>
-		<div class="text-sm flex justify-between">
-			<span class="text-muted-foreground">Facturé</span>
-			<span class="font-medium text-foreground">{formatEuro(invoicedTotal)}</span>
+	<Card class="flex flex-col gap-1">
+		<span class="text-fc-xs font-medium uppercase text-fc-fg-muted">Facturation</span>
+		<div class="flex justify-between text-fc-sm">
+			<span class="text-fc-fg-muted">Facturé</span>
+			<span class="font-medium text-fc-fg">{formatEuro(invoicedTotal)}</span>
 		</div>
-		<div class="text-sm flex justify-between">
-			<span class="text-muted-foreground">Encaissé</span>
-			<span class="font-medium text-foreground">{formatEuro(paidTotal)}</span>
+		<div class="flex justify-between text-fc-sm">
+			<span class="text-fc-fg-muted">Encaissé</span>
+			<span class="font-medium text-fc-fg">{formatEuro(paidTotal)}</span>
 		</div>
-		<div class="text-sm flex justify-between">
-			<span class="text-muted-foreground">Reste à payer</span>
-			<span class="font-medium text-foreground">{formatEuro(remainingTotal)}</span>
+		<div class="flex justify-between text-fc-sm">
+			<span class="text-fc-fg-muted">Reste à payer</span>
+			<span class="font-medium text-fc-fg">{formatEuro(remainingTotal)}</span>
 		</div>
 		<div class="flex items-center justify-between gap-2 pt-2">
-			<label for="deposit" class="text-sm text-muted-foreground">Acompte (%)</label>
+			<label for="deposit" class="text-fc-sm text-fc-fg-muted">Acompte (%)</label>
 			<div class="flex items-center gap-2">
-				<input
+				<Input
 					id="deposit"
 					type="number"
 					min="0"
 					max="100"
 					step="0.5"
-					bind:value={deposit}
+					value={deposit ?? ''}
+					oninput={(e) =>
+						(deposit = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}
 					disabled={!editable}
 					placeholder="Aucun"
-					class="h-8 w-20 rounded-md bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+					class="h-8 w-24 px-2 text-fc-sm"
 				/>
 				{#if dirty && editable}
-					<button
-						disabled={saving}
-						onclick={saveDeposit}
-						class="bg-primary text-primary-foreground rounded-md px-3 h-8 text-xs font-medium cursor-pointer hover:opacity-90 disabled:opacity-50"
-					>
-						OK
-					</button>
+					<Button size="sm" disabled={saving} onclick={saveDeposit}>OK</Button>
 				{/if}
 			</div>
 		</div>
-	</div>
+	</Card>
 </div>

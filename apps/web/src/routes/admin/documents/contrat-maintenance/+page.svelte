@@ -2,7 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Input, toast } from '@facile/muse';
+	import { Button, Field, Input, Page, PageHeader, Section, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import ClientSelect from '$lib/components/ClientSelect.svelte';
@@ -43,7 +43,7 @@
 			toast.success('Aperçu généré avec succès');
 		} catch (error: any) {
 			logger.error({ err: error }, 'Failed to preview document');
-			toast.danger('Échec de la génération de l\'aperçu');
+			toast.danger("Échec de la génération de l'aperçu");
 		} finally {
 			generating = false;
 		}
@@ -77,57 +77,42 @@
 	}
 </script>
 
-<div class="max-w-2xl mx-auto p-6 space-y-6">
-	<div>
-		<button
-			onclick={() => goto(resolve('/admin/documents'))}
-			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-		>
-			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			Retour aux documents
-		</button>
-		<h1 class="text-2xl font-bold tracking-tight text-foreground">Nouveau Contrat de Maintenance</h1>
-		<p class="text-sm text-muted-foreground mt-1">Créer un contrat de maintenance (sans lignes de facturation)</p>
-	</div>
+<svelte:head><title>Nouveau contrat de maintenance - Ardoise</title></svelte:head>
 
-	<div class="rounded-xl border border-border p-6 space-y-4">
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<div>
-				<div class="text-sm font-medium mb-2">Référence du contrat *</div>
+<Page width="md">
+	<PageHeader
+		title="Nouveau contrat de maintenance"
+		description="Créer un contrat de maintenance (sans lignes de facturation)"
+		back={{ href: resolve('/admin/documents'), label: 'Retour aux documents' }}
+	/>
+
+	<Section card>
+		<div class="grid gap-4 md:grid-cols-2">
+			<Field label="Référence du contrat *">
 				<Input bind:value={formData.contract_reference} placeholder="CTR-001" />
-			</div>
-
-			<div>
-				<div class="text-sm font-medium mb-2">Date du contrat *</div>
+			</Field>
+			<Field label="Date du contrat *">
 				<Input type="date" bind:value={formData.contract_date} />
-			</div>
-
-			<div>
-				<div class="text-sm font-medium mb-2">Période de maintenance *</div>
+			</Field>
+			<Field label="Période de maintenance *">
 				<Input bind:value={formData.maintenance_period} placeholder="12 mois" />
-			</div>
+			</Field>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+		<div class="grid gap-4 md:grid-cols-2">
 			<ClientSelect bind:value={formData.clientId} />
 			<ProviderSelect bind:value={formData.providerId} />
 		</div>
+	</Section>
 
-		<div class="flex gap-3 pt-4">
-			<Button onclick={handlePreview} disabled={generating}>
-				{generating ? 'Génération...' : 'Aperçu'}
-			</Button>
-			<button
-				onclick={handleCreate}
-				disabled={generating}
-				class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50"
-			>
-				{generating ? 'Création...' : 'Créer le contrat'}
-			</button>
-			<Button onclick={() => goto(resolve('/admin/documents'))} variant="outline">
-				Annuler
-			</Button>
-		</div>
+	<div class="flex justify-end gap-3">
+		<Button href={resolve('/admin/documents')} variant="ghost">Annuler</Button>
+		<Button variant="ghost" onclick={handlePreview} disabled={generating}>
+			{generating ? 'Génération...' : 'Aperçu'}
+		</Button>
+		<Button onclick={handleCreate} disabled={generating}>
+			{generating ? 'Création...' : 'Créer le contrat'}
+		</Button>
 	</div>
 
 	<PdfPreviewModal
@@ -136,4 +121,4 @@
 		title="Aperçu du contrat de maintenance"
 		onclose={() => (showPreview = false)}
 	/>
-</div>
+</Page>

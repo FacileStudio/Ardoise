@@ -2,13 +2,23 @@
   import { trpc } from '$lib/trpc';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Alert, Badge, Button, Card, ConfirmModal, Spinner } from '@facile/muse';
+  import {
+    Alert,
+    Badge,
+    Button,
+    ConfirmModal,
+    EmptyState,
+    Icon,
+    Page,
+    PageHeader,
+    Section,
+    Spinner,
+  } from '@facile/muse';
+  import { icons, ardoise } from '$lib/icons';
   import { logger } from '@repo/logger';
   import { isSmtpNotConfigured } from '@repo/trpc-client';
   import { i18n } from '@repo/i18n/svelte';
-  import 'iconify-icon';
 
   type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED' | 'FAILED' | 'PAST_DUE';
   type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
@@ -210,207 +220,147 @@
   }
 </script>
 
-<div class="p-6 max-w-5xl mx-auto space-y-6">
-  {#if pageLoading}
-    <div class="py-20 flex justify-center">
-      <Spinner size="lg" />
-    </div>
-  {:else if payment}
-    <header class="flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <button
-          onclick={() => goto(resolve('/admin/payments'))}
-          class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-          aria-label="Retour aux paiements"
-        >
-          <iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-        </button>
-        <div>
-          <h1 class="text-2xl font-bold tracking-tight text-foreground">Détails du paiement</h1>
-          <p class="text-xs text-muted-foreground mt-1">#{payment.id.slice(0, 8)}</p>
-        </div>
-      </div>
+<svelte:head><title>Détails du paiement - Ardoise</title></svelte:head>
 
-      <Badge tone={getStatusColor(payment.status)}>
-        {getStatusLabel(payment.status)}
-      </Badge>
-    </header>
+{#snippet meta(label: string, value: string)}
+  <div class="flex flex-col gap-1">
+    <span class="text-fc-xs text-fc-fg-muted">{label}</span>
+    <span class="text-fc-sm font-medium text-fc-fg">{value}</span>
+  </div>
+{/snippet}
+
+{#snippet step(icon: string, tone: string, title: string, date: Date | string)}
+  <div class="flex items-start gap-3">
+    <div class="flex size-8 shrink-0 items-center justify-center rounded-fc-pill {tone}">
+      <Icon {icon} size={16} />
+    </div>
+    <div class="flex-1">
+      <div class="text-fc-sm font-medium text-fc-fg">{title}</div>
+      <div class="text-fc-xs text-fc-fg-muted">{formatDate(date)}</div>
+    </div>
+  </div>
+{/snippet}
+
+{#if pageLoading}
+  <div class="flex min-h-[40dvh] items-center justify-center">
+    <Spinner size="lg" />
+  </div>
+{:else if payment}
+  {@const status = payment.status}
+  <Page width="lg">
+    <PageHeader
+      title="Détails du paiement"
+      description="#{payment.id.slice(0, 8)}"
+      back={{ href: resolve('/admin/payments'), label: 'Retour aux paiements' }}
+    >
+      {#snippet actions()}
+        <Badge tone={getStatusColor(status)}>{getStatusLabel(status)}</Badge>
+      {/snippet}
+    </PageHeader>
 
     {#if cancelError}
       <Alert tone="danger">{cancelError}</Alert>
     {/if}
 
-    <div class="grid grid-cols-3 gap-6">
-      <div class="col-span-2 space-y-6">
-        <div class="rounded-xl border border-border p-6 space-y-4">
-          <h2 class="text-base font-semibold text-foreground">Informations du paiement</h2>
+    <div class="grid gap-6 lg:grid-cols-3">
+      <div class="flex flex-col gap-6 lg:col-span-2">
+        <Section title="Informations du paiement" card>
+          {@render meta('Description', payment.description)}
 
-          <div>
-            <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-              Description
-            </div>
-            <div class="text-sm font-medium text-foreground">{payment.description}</div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Montant
-              </div>
-              <div class="text-xl font-bold text-foreground">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="flex flex-col gap-1">
+              <span class="text-fc-xs text-fc-fg-muted">Montant</span>
+              <span class="text-fc-xl font-semibold text-fc-fg">
                 {formatCurrency(Number(payment.amount))}
-              </div>
+              </span>
             </div>
 
             {#if payment.stripeFee && Number(payment.stripeFee) > 0}
-              <div>
-                <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                  Frais Stripe
-                </div>
-                <div class="text-xl font-bold text-warning">
+              <div class="flex flex-col gap-1">
+                <span class="text-fc-xs text-fc-fg-muted">Frais Stripe</span>
+                <span class="text-fc-xl font-semibold text-fc-warning">
                   {formatCurrency(Number(payment.stripeFee))}
-                </div>
+                </span>
               </div>
             {/if}
           </div>
 
           {#if payment.totalWithFees && Number(payment.totalWithFees) > Number(payment.amount)}
-            <div class="bg-muted p-4 rounded-lg">
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Montant total (avec frais)
-              </div>
-              <div class="text-2xl font-bold text-foreground">
+            <div class="flex flex-col gap-1 rounded-fc-md bg-fc-surface p-4">
+              <span class="text-fc-xs text-fc-fg-muted">Montant total (avec frais)</span>
+              <span class="text-fc-2xl font-semibold text-fc-fg">
                 {formatCurrency(Number(payment.totalWithFees))}
-              </div>
+              </span>
             </div>
           {/if}
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Fréquence
-              </div>
-              <div class="text-sm font-medium text-foreground">
-                {getFrequencyLabel(payment.frequency)}
-              </div>
-            </div>
-
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Mode
-              </div>
-              <div class="text-sm font-medium text-foreground">
-                {payment.collectionMethod === 'MANUAL' ? 'Manuel' : 'Stripe'}
-              </div>
-            </div>
-
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Date d'échéance
-              </div>
-              <div class="text-sm font-medium text-foreground">
-                {formatDateShort(payment.dueDate)}
-              </div>
-            </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            {@render meta('Fréquence', getFrequencyLabel(payment.frequency))}
+            {@render meta('Mode', payment.collectionMethod === 'MANUAL' ? 'Manuel' : 'Stripe')}
+            {@render meta("Date d'échéance", formatDateShort(payment.dueDate))}
           </div>
 
           {#if payment.reference}
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Référence
-              </div>
-              <div class="text-sm font-medium text-foreground">{payment.reference}</div>
-            </div>
+            {@render meta('Référence', payment.reference)}
           {/if}
 
           {#if payment.paidAt}
-            <div class="bg-success/10 p-4 rounded-lg border border-success/30">
-              <div class="text-xs font-medium text-success uppercase tracking-wide mb-1">
-                Payé le
-              </div>
-              <div class="text-sm font-medium text-success">
-                {formatDate(payment.paidAt)}
-              </div>
-            </div>
+            <Alert tone="success" title="Payé le">{formatDate(payment.paidAt)}</Alert>
           {/if}
-        </div>
+        </Section>
 
         {#if payment.attachedFiles && payment.attachedFiles.length > 0}
-          <div class="rounded-xl border border-border p-6 space-y-4">
-            <h2 class="text-base font-semibold text-foreground">Fichiers joints</h2>
-            <div class="space-y-1">
+          <Section title="Fichiers joints" card>
+            <div class="flex flex-col gap-1">
               {#each payment.attachedFiles as file (file)}
-                <div class="flex items-center gap-3 p-2 bg-muted rounded-lg">
-                  <iconify-icon icon="solar:file-bold" width="16" class="text-muted-foreground"
-                  ></iconify-icon>
-                  <span class="flex-1 text-sm font-medium text-foreground">{file}</span>
-                  <button
-                    class="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground"
+                <div class="flex items-center gap-3 rounded-fc-md bg-fc-surface p-2">
+                  <Icon icon={ardoise.document} size={16} class="text-fc-fg-muted" />
+                  <span class="flex-1 text-fc-sm font-medium text-fc-fg">{file}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={icons.download}
                     aria-label="Télécharger le fichier"
-                  >
-                    <iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
-                  </button>
+                  />
                 </div>
               {/each}
             </div>
-          </div>
+          </Section>
         {/if}
 
-        <div class="rounded-xl border border-border p-6 space-y-4">
-          <h2 class="text-base font-semibold text-foreground">Chronologie</h2>
-          <div class="space-y-3">
-            {#if payment.paidAt}
-              <div class="flex items-start gap-3">
-                <div
-                  class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center shrink-0"
-                >
-                  <iconify-icon icon="solar:check-circle-bold" width="16" class="text-success"
-                  ></iconify-icon>
-                </div>
-                <div class="flex-1">
-                  <div class="text-sm font-medium text-foreground">Paiement reçu</div>
-                  <div class="text-xs text-muted-foreground">{formatDate(payment.paidAt)}</div>
-                </div>
-              </div>
-            {/if}
-
-            <div class="flex items-start gap-3">
-              <div
-                class="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center shrink-0"
-              >
-                <iconify-icon icon="solar:calendar-bold" width="16" class="text-warning"
-                ></iconify-icon>
-              </div>
-              <div class="flex-1">
-                <div class="text-sm font-medium text-foreground">Échéance</div>
-                <div class="text-xs text-muted-foreground">{formatDate(payment.dueDate)}</div>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-3">
-              <div class="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <iconify-icon icon="solar:add-circle-bold" width="16" class="text-muted-foreground"
-                ></iconify-icon>
-              </div>
-              <div class="flex-1">
-                <div class="text-sm font-medium text-foreground">Paiement créé</div>
-                <div class="text-xs text-muted-foreground">{formatDate(payment.createdAt)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Section title="Chronologie" card>
+          {#if payment.paidAt}
+            {@render step(
+              icons.check,
+              'bg-fc-success/10 text-fc-success',
+              'Paiement reçu',
+              payment.paidAt
+            )}
+          {/if}
+          {@render step(
+            icons.calendar,
+            'bg-fc-warning/10 text-fc-warning',
+            'Échéance',
+            payment.dueDate
+          )}
+          {@render step(
+            icons.plus,
+            'bg-fc-surface text-fc-fg-muted',
+            'Paiement créé',
+            payment.createdAt
+          )}
+        </Section>
 
         {#if payment.frequency !== 'ONE_TIME' && payment.invoices && payment.invoices.length > 0}
-          <div class="rounded-xl border border-border p-6 space-y-4">
-            <h2 class="text-base font-semibold text-foreground">Historique des prélèvements</h2>
-            <div class="space-y-2">
+          <Section title="Historique des prélèvements" card>
+            <div class="flex flex-col gap-2">
               {#each payment.invoices as invoice (invoice.id)}
-                <div class="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div class="flex items-center gap-3 rounded-fc-md bg-fc-surface p-3">
                   <div class="flex-1">
-                    <div class="text-sm font-medium text-foreground">
+                    <div class="text-fc-sm font-medium text-fc-fg">
                       {formatCurrency(Number(invoice.amount))}
                     </div>
-                    <div class="text-xs text-muted-foreground">
+                    <div class="text-fc-xs text-fc-fg-muted">
                       {formatDate(invoice.paidAt ?? invoice.createdAt)}
                     </div>
                   </div>
@@ -420,174 +370,147 @@
                 </div>
               {/each}
             </div>
-          </div>
+          </Section>
         {/if}
       </div>
 
-      <div class="space-y-6">
-        <div class="rounded-xl border border-border p-6 space-y-4">
-          <h2 class="text-base font-semibold text-foreground">Client</h2>
-          <div class="space-y-3">
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Entreprise
-              </div>
-              <div class="text-sm font-medium text-foreground">{payment.client.companyName}</div>
-            </div>
+      <div class="flex flex-col gap-6">
+        <Section title="Client" card>
+          {@render meta('Entreprise', payment.client.companyName)}
 
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Contact
-              </div>
-              <div class="text-sm font-medium text-foreground">
-                {payment.client.contactFirstName}
-                {payment.client.contactLastName}
-              </div>
-              <div class="text-xs text-muted-foreground">
-                {payment.client.contactEmail ||
-                  payment.client.user?.email ||
-                  'Aucun email de contact'}
-              </div>
-            </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-fc-xs text-fc-fg-muted">Contact</span>
+            <span class="text-fc-sm font-medium text-fc-fg">
+              {payment.client.contactFirstName}
+              {payment.client.contactLastName}
+            </span>
+            <span class="text-fc-xs text-fc-fg-muted">
+              {payment.client.contactEmail ||
+                payment.client.user?.email ||
+                'Aucun email de contact'}
+            </span>
+          </div>
 
-            <div>
-              <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Adresse
-              </div>
-              <div class="text-xs text-muted-foreground">
-                <div>{payment.client.billingAddress}</div>
-                <div>{payment.client.billingCity}</div>
-                <div>{payment.client.billingCountry}</div>
-              </div>
-            </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-fc-xs text-fc-fg-muted">Adresse</span>
+            <span class="text-fc-xs text-fc-fg-muted">
+              {payment.client.billingAddress}<br />
+              {payment.client.billingCity}<br />
+              {payment.client.billingCountry}
+            </span>
+          </div>
 
-            {#if payment.client.siret}
-              <div>
-                <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                  SIRET
-                </div>
-                <div class="font-mono text-xs text-muted-foreground">{payment.client.siret}</div>
-              </div>
+          {#if payment.client.siret}
+            <div class="flex flex-col gap-1">
+              <span class="text-fc-xs text-fc-fg-muted">SIRET</span>
+              <span class="font-mono text-fc-xs text-fc-fg-muted">{payment.client.siret}</span>
+            </div>
+          {/if}
+
+          <Button
+            variant="ghost"
+            class="w-full"
+            icon={icons.eye}
+            href={resolve(`/admin/clients/${payment.client.id}`)}
+          >
+            Voir le client
+          </Button>
+        </Section>
+
+        {#if payment.status === 'PENDING'}
+          <Section title="Actions" card>
+            {#if reminderSent}
+              <Alert tone="success">Rappel envoyé avec succès.</Alert>
+            {/if}
+            {#if reminderError}
+              <Alert tone="danger">{reminderError}</Alert>
+            {/if}
+            <Button
+              variant="ghost"
+              class="w-full"
+              icon={icons.mail}
+              onclick={handleSendReminder}
+              disabled={reminderLoading}
+            >
+              Envoyer un rappel
+            </Button>
+            {#if payment.lastReminderSentAt}
+              <p class="text-center text-fc-xs text-fc-fg-muted">
+                Dernier rappel : {formatDateShort(payment.lastReminderSentAt)}
+              </p>
             {/if}
 
             <Button
-              variant="outline"
+              variant="danger"
               class="w-full"
-              onclick={() => goto(resolve('/admin/clients'))}
+              icon={icons.revoke}
+              onclick={() => (showCancelDialog = true)}
             >
-              <iconify-icon icon="solar:eye-bold" width="14"></iconify-icon>
-              Voir le client
+              Annuler le paiement
             </Button>
-          </div>
-        </div>
-
-        {#if payment.status === 'PENDING'}
-          <div class="rounded-xl border border-border p-6 space-y-4">
-            <h2 class="text-base font-semibold text-foreground">Actions</h2>
-            <div class="space-y-2">
-              {#if reminderSent}
-                <Alert tone="success">Rappel envoye avec succes.</Alert>
-              {/if}
-              {#if reminderError}
-                <Alert tone="danger">{reminderError}</Alert>
-              {/if}
-              <Button
-                variant="outline"
-                class="w-full"
-                onclick={handleSendReminder}
-                disabled={reminderLoading}
-              >
-                {#if reminderLoading}
-                  <iconify-icon icon="line-md:loading-twotone-loop" width="16"></iconify-icon>
-                {:else}
-                  <iconify-icon icon="solar:letter-bold" width="16"></iconify-icon>
-                {/if}
-                Envoyer un rappel
-              </Button>
-              {#if payment.lastReminderSentAt}
-                <p class="text-xs text-muted-foreground text-center">
-                  Dernier rappel : {formatDateShort(payment.lastReminderSentAt)}
-                </p>
-              {/if}
-
-              <Button variant="danger" class="w-full" onclick={() => (showCancelDialog = true)}>
-                <iconify-icon icon="solar:close-circle-bold" width="16"></iconify-icon>
-                Annuler le paiement
-              </Button>
-            </div>
-          </div>
+          </Section>
         {/if}
 
         {#if payment.receiptUrl}
           {@const receiptUrl = payment.receiptUrl}
-          <div class="rounded-xl border border-border p-6 space-y-4">
-            <h2 class="text-base font-semibold text-foreground">Reçu</h2>
+          <Section title="Reçu" card>
             <Button
-              variant="outline"
+              variant="ghost"
               class="w-full"
+              icon={icons.download}
               onclick={() => void window.open(receiptUrl, '_blank')}
             >
-              <iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
               Télécharger le reçu
             </Button>
-          </div>
+          </Section>
         {/if}
 
         {#if payment.stripePaymentIntentId || payment.stripeSubscriptionId}
-          <div class="rounded-xl border border-border p-6 space-y-4">
-            <h2 class="text-base font-semibold text-foreground">Stripe</h2>
-            <div class="space-y-3">
-              {#if payment.stripePaymentIntentId}
-                <div>
-                  <div
-                    class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1"
-                  >
-                    Payment Intent
-                  </div>
-                  <div
-                    class="text-xs font-mono text-muted-foreground bg-muted p-2 rounded-lg break-all"
-                  >
-                    {payment.stripePaymentIntentId}
-                  </div>
-                </div>
-              {/if}
+          <Section title="Stripe" card>
+            {#if payment.stripePaymentIntentId}
+              <div class="flex flex-col gap-1">
+                <span class="text-fc-xs text-fc-fg-muted">Payment Intent</span>
+                <span
+                  class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted"
+                >
+                  {payment.stripePaymentIntentId}
+                </span>
+              </div>
+            {/if}
 
-              {#if payment.stripeSubscriptionId}
-                <div>
-                  <div
-                    class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1"
-                  >
-                    Subscription
-                  </div>
-                  <div
-                    class="text-xs font-mono text-muted-foreground bg-muted p-2 rounded-lg break-all"
-                  >
-                    {payment.stripeSubscriptionId}
-                  </div>
-                </div>
-              {/if}
-            </div>
-          </div>
+            {#if payment.stripeSubscriptionId}
+              <div class="flex flex-col gap-1">
+                <span class="text-fc-xs text-fc-fg-muted">Subscription</span>
+                <span
+                  class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted"
+                >
+                  {payment.stripeSubscriptionId}
+                </span>
+              </div>
+            {/if}
+          </Section>
         {/if}
       </div>
     </div>
-  {:else}
-    <div class="text-center py-20">
-      <iconify-icon icon="solar:document-bold" width="48" class="text-muted-foreground"
-      ></iconify-icon>
-      <h2 class="text-xl font-bold text-foreground mt-4">Paiement introuvable</h2>
-      <p class="text-sm text-muted-foreground mt-2">Ce paiement n'existe pas ou a été supprimé.</p>
-      <Button class="mt-6" onclick={() => goto(resolve('/admin/payments'))}>
-        Retour aux paiements
-      </Button>
-    </div>
-  {/if}
-</div>
+  </Page>
+{:else}
+  <Page width="lg">
+    <EmptyState
+      icon={ardoise.payment}
+      title="Paiement introuvable"
+      description="Ce paiement n'existe pas ou a été supprimé."
+    >
+      <Button href={resolve('/admin/payments')}>Retour aux paiements</Button>
+    </EmptyState>
+  </Page>
+{/if}
 
 <ConfirmModal
   bind:open={showCancelDialog}
   title="Annuler le paiement"
-  description="Êtes-vous sûr de vouloir annuler ce paiement ? Cette action est irréversible."
+  description={payment?.collectionMethod === 'MANUAL'
+    ? 'Le paiement manuel est marqué comme annulé. Cette action est irréversible.'
+    : "Le lien de paiement Stripe envoyé au client cesse de fonctionner et l'intention de paiement est annulée. Cette action est irréversible."}
   confirmLabel="Annuler le paiement"
   cancelLabel="Retour"
   tone="danger"

@@ -4,12 +4,32 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
-	import { Button, Input, Spinner, toast } from '@facile/muse';
+	import {
+		Alert,
+		Button,
+		Drawer,
+		Field,
+		Icon,
+		Input,
+		Page,
+		PageHeader,
+		Section,
+		Select,
+		Spinner,
+		Textarea,
+		toast,
+	} from '@facile/muse';
+	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
-	import 'iconify-icon';
 
-	type DocType = 'facture_prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
+	type DocType =
+		| 'facture_prestation'
+		| 'maintenance'
+		| 'contrat_prestation'
+		| 'contrat_maintenance'
+		| 'back_contractuel'
+		| 'appel_de_fonds';
 
 	interface Client {
 		id: string;
@@ -157,8 +177,6 @@
 		}
 	});
 
-
-
 	async function loadDocumentTypes() {
 		try {
 			docTypes = await trpc.document.types.query();
@@ -173,7 +191,11 @@
 
 	async function loadClients() {
 		try {
-			const result = await trpc.client.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
+			const result = await trpc.client.list.query({
+				page: 1,
+				limit: 100,
+				spaceId: spaceContext.spaceId,
+			});
 			clients = result.clients as unknown as Client[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch clients');
@@ -182,10 +204,14 @@
 
 	async function loadProviders() {
 		try {
-			const result = await trpc.provider.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
+			const result = await trpc.provider.list.query({
+				page: 1,
+				limit: 100,
+				spaceId: spaceContext.spaceId,
+			});
 			providers = result.providers as unknown as Provider[];
 		} catch (err) {
-			logger.error({ err}, 'Failed to fetch providers');
+			logger.error({ err }, 'Failed to fetch providers');
 		}
 	}
 
@@ -256,7 +282,7 @@
 				return 'Veuillez saisir une référence globale';
 			}
 			if (!formData.project_step) {
-				return 'Veuillez saisir l\'étape du projet (ex: Acompte 30%)';
+				return "Veuillez saisir l'étape du projet (ex: Acompte 30%)";
 			}
 			if (!formData.project_name) {
 				return 'Veuillez saisir un nom de projet';
@@ -271,7 +297,10 @@
 			return 'Veuillez sélectionner un prestataire';
 		}
 
-		const providerValidationMessage = getProviderValidationMessage(selectedProvider, formData.type as DocType);
+		const providerValidationMessage = getProviderValidationMessage(
+			selectedProvider,
+			formData.type as DocType
+		);
 		if (providerValidationMessage) {
 			return providerValidationMessage;
 		}
@@ -322,7 +351,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -335,7 +364,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -347,7 +376,7 @@
 						spaceId: spaceContext.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'contrat_maintenance':
@@ -358,7 +387,7 @@
 						spaceId: spaceContext.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'back_contractuel':
@@ -373,7 +402,7 @@
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
-						});
+					});
 					break;
 
 				case 'appel_de_fonds':
@@ -387,7 +416,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						payment_providers: formData.payment_providers,
-						});
+					});
 					break;
 
 				default:
@@ -429,7 +458,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -443,7 +472,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -456,7 +485,7 @@
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'contrat_maintenance':
@@ -468,7 +497,7 @@
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'back_contractuel':
@@ -484,7 +513,7 @@
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
-						});
+					});
 					break;
 
 				case 'appel_de_fonds':
@@ -499,7 +528,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						payment_providers: formData.payment_providers,
-						});
+					});
 					break;
 
 				default:
@@ -575,7 +604,9 @@
 	}
 
 	function removePaymentProvider(index: number) {
-		formData.payment_providers = formData.payment_providers.filter((_: any, i: number) => i !== index);
+		formData.payment_providers = formData.payment_providers.filter(
+			(_: any, i: number) => i !== index
+		);
 	}
 
 	function base64ToBlob(base64: string, contentType: string): Blob {
@@ -608,546 +639,415 @@
 		formData.items.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0)
 	);
 	const totalWithRailway = $derived(subtotal + (formData.railway_estimate || 0));
-	const selectedProvider = $derived(providers.find(p => p.id === selectedProviderId));
-	const linkedProviderIds = $derived(new Set((mission?.providers ?? []).map((link: any) => link.providerId)));
+	const selectedProvider = $derived(providers.find((p) => p.id === selectedProviderId));
+	const linkedProviderIds = $derived(
+		new Set((mission?.providers ?? []).map((link: any) => link.providerId))
+	);
 	const availableProviders = $derived(
 		linkedProviderIds.size > 0 ? providers.filter((p) => linkedProviderIds.has(p.id)) : providers
 	);
-	const selectedProviderMissingFields = $derived(getMissingProviderFields(selectedProvider, formData.type as DocType));
+	const selectedProviderMissingFields = $derived(
+		getMissingProviderFields(selectedProvider, formData.type as DocType)
+	);
 	const tvaRate = $derived(selectedProvider?.tvaRate || 20);
 	const tva = $derived(totalWithRailway * (tvaRate / 100));
 	const total = $derived(totalWithRailway + tva);
 </script>
 
-<div class="max-w-3xl mx-auto p-6 space-y-6">
-	<div>
-		<button
-			onclick={() => goto(resolve(backPath as any))}
-			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-		>
-			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			{missionId ? 'Retour à la mission' : 'Retour aux documents'}
-		</button>
-		<h1 class="text-2xl font-bold tracking-tight text-foreground">Créer un document</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			{#if mission}
-				Le document sera rattaché à la mission « {mission.name} »
-			{:else}
-				Générez une facture, un devis ou un contrat
-			{/if}
-		</p>
-	</div>
+<svelte:head><title>Créer un document - Ardoise</title></svelte:head>
 
-	<div class="space-y-6">
-		{#if formMessage}
-			<div class="rounded-lg border border-fc-danger/30 bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">
-				{formMessage}
-			</div>
-		{/if}
-
-		<div class="rounded-xl border border-border p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Type de document</h2>
-			<select
-				bind:value={formData.type}
-				class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-			>
-				{#each docTypes as type (type.value)}
-					<option value={type.value}>{type.label}</option>
-				{/each}
-			</select>
-
-			<div class="grid grid-cols-3 gap-4">
-				{#if formData.type === 'facture_prestation'}
-					<div>
-						<div class="text-sm font-medium mb-2">N° Facture</div>
-						<Input bind:value={formData.invoice_number} />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Date Facture</div>
-						<Input type="date" bind:value={formData.invoice_date} />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Date Échéance</div>
-						<Input type="date" bind:value={formData.due_date} />
-					</div>
-				{:else if formData.type === 'maintenance'}
-					<div>
-						<div class="text-sm font-medium mb-2">N° Devis</div>
-						<Input bind:value={formData.quote_number} />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Date Devis</div>
-						<Input type="date" bind:value={formData.quote_date} />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Validité</div>
-						<Input type="date" bind:value={formData.validity_date} />
-					</div>
-				{:else if formData.type === 'back_contractuel'}
-					<div>
-						<div class="text-sm font-medium mb-2">Référence Contrat</div>
-						<Input bind:value={formData.contract_reference} />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Date Contrat</div>
-						<Input type="date" bind:value={formData.contract_date} />
-					</div>
-				{:else if formData.type === 'appel_de_fonds'}
-					<div>
-						<div class="text-sm font-medium mb-2">Date Facture</div>
-						<Input type="date" bind:value={formData.invoice_date} />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Date Échéance</div>
-						<Input type="date" bind:value={formData.due_date} />
-					</div>
-				{:else}
-					<div>
-						<div class="text-sm font-medium mb-2">Référence Contrat</div>
-						<Input bind:value={formData.contract_reference} />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Date Contrat</div>
-						<Input type="date" bind:value={formData.contract_date} />
-					</div>
-				{/if}
-			</div>
+{#snippet entryRow(title: string, subtitle: string, onremove: () => void)}
+	<div class="flex items-start gap-3 rounded-fc-md bg-fc-surface p-3">
+		<div class="min-w-0 flex-1">
+			<div class="text-fc-sm font-medium text-fc-fg">{title}</div>
+			<div class="text-fc-xs text-fc-fg-muted">{subtitle}</div>
 		</div>
-
-		<div class="rounded-xl border border-border p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Client</h2>
-			<select
-				bind:value={selectedClientId}
-				disabled={!!mission}
-				class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
-			>
-				<option value="">-- Sélectionner un client --</option>
-				{#each clients as client (client.id)}
-					<option value={client.id}>{client.companyName}</option>
-				{/each}
-			</select>
-			{#if selectedClientId}
-				<div class="p-3 bg-fc-success/10 border border-fc-success/30 rounded-lg flex items-center gap-2">
-					<iconify-icon icon="solar:check-circle-bold" width="16" class="text-fc-success"></iconify-icon>
-					<div>
-						<div class="text-sm font-medium text-fc-success">{formData.client_name}</div>
-						<div class="text-xs text-fc-success">
-							{formData.client_address}, {formData.client_city}
-						</div>
-					</div>
-				</div>
-			{/if}
-		</div>
-
-		{#if formData.type !== 'back_contractuel' && formData.type !== 'appel_de_fonds'}
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Prestataire</h2>
-				<select
-					bind:value={selectedProviderId}
-					class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-				>
-					<option value="">-- Sélectionner un prestataire --</option>
-					{#each availableProviders as provider (provider.id)}
-						<option value={provider.id}>{provider.name}</option>
-					{/each}
-				</select>
-				{#if selectedProviderId}
-					<div
-						class="p-3 rounded-lg border flex items-start gap-2 {selectedProviderMissingFields.length > 0 ? 'bg-fc-warning/10 border-fc-warning/30' : 'bg-muted border-border'}"
-					>
-						<iconify-icon
-							icon={selectedProviderMissingFields.length > 0 ? 'solar:danger-triangle-bold' : 'solar:check-circle-bold'}
-							width="16"
-							class={selectedProviderMissingFields.length > 0 ? 'text-fc-warning' : 'text-fc-success'}
-						></iconify-icon>
-						<div class="min-w-0">
-							<div class="text-sm font-medium {selectedProviderMissingFields.length > 0 ? 'text-fc-warning' : 'text-foreground'}">
-								{formData.provider_name}
-							</div>
-							<div class="text-xs {selectedProviderMissingFields.length > 0 ? 'text-fc-warning' : 'text-muted-foreground'}">
-								TVA: {tvaRate}% - {formData.provider_email || 'email manquant'}
-							</div>
-							{#if selectedProviderMissingFields.length > 0}
-								<p class="mt-1 text-xs font-medium text-fc-warning">
-									Champs manquants: {selectedProviderMissingFields.map((field) => providerFieldLabels[field]).join(', ')}
-								</p>
-							{/if}
-						</div>
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		{#if formData.type === 'back_contractuel'}
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Informations du projet</h2>
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-medium mb-2">Nom du projet</div>
-						<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Date de validité</div>
-						<Input type="date" bind:value={formData.valid_until} />
-					</div>
-				</div>
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Prestataires (Co-traitance)</h2>
-				<div class="space-y-3 p-4 bg-muted rounded-lg">
-					<div class="text-sm font-medium">Ajouter un prestataire</div>
-					<div>
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prestataire *</div>
-						<select
-							bind:value={newProvider.id}
-							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-						>
-							<option value="">-- Choisir un prestataire --</option>
-							{#each providers as provider (provider.id)}
-								<option value={provider.id}>{provider.name}</option>
-							{/each}
-						</select>
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Rôle *</div>
-							<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Montant HT (EUR) *</div>
-							<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
-						</div>
-					</div>
-					<Button onclick={addProvider} class="w-full">Ajouter ce prestataire</Button>
-				</div>
-
-				{#if formData.providers.length === 0}
-					<div class="text-center py-8 text-muted-foreground">
-						<p class="text-xs">Aucun prestataire ajouté</p>
-					</div>
-				{:else}
-					<div class="space-y-2">
-						{#each formData.providers as provider, i (i)}
-							{@const providerInfo = providers.find(p => p.id === provider.id)}
-							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-medium text-foreground">{providerInfo?.name || provider.id} - {provider.role}</div>
-									<div class="text-xs text-muted-foreground">{formatCurrency(provider.amount)} HT</div>
-								</div>
-								<button onclick={() => removeProvider(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
-									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-								</button>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Périmètre de la mission (Features)</h2>
-				<div class="space-y-3 p-4 bg-muted rounded-lg">
-					<div class="text-sm font-medium">Ajouter une feature</div>
-					<div>
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Titre</div>
-						<Input bind:value={newFeature.title} placeholder="Ex: Design UI/UX" />
-					</div>
-					<div>
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</div>
-						<textarea
-							bind:value={newFeature.desc}
-							rows="2"
-							placeholder="Ex: Création d'une identité visuelle moderne et responsive..."
-							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-						></textarea>
-					</div>
-					<Button onclick={addFeature} class="w-full">Ajouter cette feature</Button>
-				</div>
-
-				{#if formData.features.length === 0}
-					<div class="text-center py-8 text-muted-foreground">
-						<p class="text-xs">Aucune feature ajoutée</p>
-					</div>
-				{:else}
-					<div class="space-y-2">
-						{#each formData.features as feature, i (i)}
-							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-medium text-foreground">{feature.title}</div>
-									<div class="text-xs text-muted-foreground">{feature.desc}</div>
-								</div>
-								<button onclick={() => removeFeature(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
-									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-								</button>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Items de facturation (Prestations)</h2>
-				<div class="space-y-3 p-4 bg-muted rounded-lg">
-					<div class="text-sm font-medium">Ajouter un item</div>
-					<div>
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</div>
-						<textarea
-							placeholder="Ex: Développement d'un site web vitrine responsive..."
-							bind:value={newItem.description}
-							rows="2"
-							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-						></textarea>
-					</div>
-					<div class="grid grid-cols-3 gap-3">
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Quantité</div>
-							<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Unité</div>
-							<Input placeholder="jour" bind:value={newItem.unit} />
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prix HT (EUR)</div>
-							<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
-						</div>
-					</div>
-					<Button onclick={addItem} class="w-full">Ajouter cet item</Button>
-				</div>
-
-				{#if formData.items.length === 0}
-					<div class="text-center py-8 text-muted-foreground">
-						<p class="text-xs">Aucun item ajouté</p>
-					</div>
-				{:else}
-					<div class="space-y-2">
-						{#each formData.items as item, i (i)}
-							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-medium text-foreground">{item.description}</div>
-									<div class="text-xs text-muted-foreground">
-										{item.quantity} {item.unit} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)} HT
-									</div>
-								</div>
-								<button onclick={() => removeItem(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
-									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-								</button>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{:else if formData.type === 'appel_de_fonds'}
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Informations de l'appel de fonds</h2>
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-medium mb-2">Référence globale</div>
-						<Input bind:value={formData.global_invoice_ref} placeholder="Ex: ADF-001" />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Étape du projet</div>
-						<Input bind:value={formData.project_step} placeholder="Ex: Acompte 30%" />
-					</div>
-					<div class="col-span-2">
-						<div class="text-sm font-medium mb-2">Nom du projet</div>
-						<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
-					</div>
-				</div>
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Prestataires à payer (IBAN/BIC)</h2>
-				<div class="space-y-3 p-4 bg-muted rounded-lg">
-					<div class="text-sm font-medium">Ajouter un prestataire</div>
-					<div>
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prestataire *</div>
-						<select
-							bind:value={newPaymentProvider.id}
-							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-						>
-							<option value="">-- Choisir un prestataire --</option>
-							{#each providers as provider (provider.id)}
-								<option value={provider.id}>{provider.name}</option>
-							{/each}
-						</select>
-					</div>
-					<div>
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Montant à verser (EUR HT) *</div>
-						<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
-					</div>
-					<Button onclick={addPaymentProvider} class="w-full">Ajouter ce prestataire</Button>
-				</div>
-
-				{#if formData.payment_providers.length === 0}
-					<div class="text-center py-8 text-muted-foreground">
-						<p class="text-xs">Aucun prestataire ajouté</p>
-					</div>
-				{:else}
-					<div class="space-y-2">
-						{#each formData.payment_providers as provider, i (i)}
-							{@const providerInfo = providers.find(p => p.id === provider.id)}
-							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-medium text-foreground">{providerInfo?.name || provider.id}</div>
-									<div class="text-xs text-muted-foreground">Montant: {formatCurrency(provider.amount_to_pay)} HT</div>
-								</div>
-								<button onclick={() => removePaymentProvider(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
-									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-								</button>
-							</div>
-						{/each}
-					</div>
-
-					<div class="p-4 bg-muted rounded-lg flex justify-between items-center">
-						<div class="text-sm font-medium text-muted-foreground">TOTAL HT</div>
-						<div class="text-lg font-bold text-foreground">
-							{formatCurrency(formData.payment_providers.reduce((sum: number, p: any) => sum + p.amount_to_pay, 0))}
-						</div>
-					</div>
-				{/if}
-			</div>
-		{:else if formData.type === 'facture_prestation' || formData.type === 'maintenance'}
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<div class="flex justify-between items-center">
-					<h2 class="text-base font-semibold text-foreground">Items de facturation</h2>
-					{#if formData.items.length > 0}
-						<span class="text-sm font-medium text-foreground">
-							Total: {formatCurrency(total)} TTC
-						</span>
-					{/if}
-				</div>
-
-				<div class="space-y-3 p-4 bg-muted rounded-lg">
-					<div class="text-sm font-medium">Ajouter un item</div>
-					<div>
-						<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</div>
-						<textarea
-							placeholder="Ex: Développement d'un site web vitrine responsive..."
-							bind:value={newItem.description}
-							rows="2"
-							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-						></textarea>
-					</div>
-					<div class="grid grid-cols-3 gap-3">
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Quantité</div>
-							<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Unité</div>
-							<Input placeholder="jour" bind:value={newItem.unit} />
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prix HT (EUR)</div>
-							<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
-						</div>
-					</div>
-					{#if newItem.description && newItem.quantity > 0 && newItem.price > 0}
-						<div class="p-2 bg-background rounded border border-border text-xs text-muted-foreground">
-							{newItem.quantity} {newItem.unit} x {formatCurrency(newItem.price)} = {formatCurrency(newItem.quantity * newItem.price)} HT
-							(TTC: {formatCurrency(newItem.quantity * newItem.price * (1 + tvaRate / 100))})
-						</div>
-					{/if}
-					<Button onclick={addItem} class="w-full">Ajouter cet item</Button>
-				</div>
-
-				{#if formData.items.length === 0}
-					<div class="text-center py-8 text-muted-foreground">
-						<p class="text-xs">Aucun item ajouté</p>
-					</div>
-				{:else}
-					<div class="space-y-2">
-						{#each formData.items as item, i (i)}
-							<div class="flex items-start gap-3 p-3 border border-border rounded-lg">
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-medium text-foreground">{item.description}</div>
-									<div class="text-xs text-muted-foreground">
-										{item.quantity} {item.unit} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)} HT
-									</div>
-								</div>
-								<button onclick={() => removeItem(i)} class="p-1 text-fc-danger hover:bg-fc-danger/10 rounded" aria-label="Supprimer">
-									<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-								</button>
-							</div>
-						{/each}
-					</div>
-
-					<div class="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg text-sm">
-						<div>
-							<div class="text-xs font-medium text-muted-foreground mb-1">Sous-total HT</div>
-							<div class="font-bold text-foreground">{formatCurrency(subtotal)}</div>
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground mb-1">TVA ({tvaRate}%)</div>
-							<div class="font-bold text-foreground">{formatCurrency(tva)}</div>
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground mb-1">Total TTC</div>
-							<div class="font-bold text-foreground">{formatCurrency(total)}</div>
-						</div>
-					</div>
-				{/if}
-			</div>
-		{/if}
-	</div>
-
-	<div class="flex gap-3 pt-2">
 		<Button
-			variant="outline"
-			onclick={() => goto(resolve('/admin/documents'))}
-			class="flex-1"
-			disabled={generating}
+			variant="ghost-danger"
+			size="sm"
+			icon={icons.remove}
+			aria-label="Supprimer"
+			onclick={onremove}
+		/>
+	</div>
+{/snippet}
+
+{#snippet emptyHint(text: string)}
+	<p class="py-6 text-center text-fc-xs text-fc-fg-muted">{text}</p>
+{/snippet}
+
+{#snippet itemForm(showTtc: boolean)}
+	<div class="flex flex-col gap-3 rounded-fc-md bg-fc-surface p-4">
+		<span class="text-fc-sm font-medium text-fc-fg">Ajouter un item</span>
+		<Field label="Description">
+			<Textarea
+				placeholder="Ex: Développement d'un site web vitrine responsive..."
+				bind:value={newItem.description}
+				rows={2}
+			/>
+		</Field>
+		<div class="grid gap-3 sm:grid-cols-3">
+			<Field label="Quantité">
+				<Input type="number" placeholder="1" bind:value={newItem.quantity} min="1" />
+			</Field>
+			<Field label="Unité">
+				<Input placeholder="jour" bind:value={newItem.unit} />
+			</Field>
+			<Field label="Prix HT (EUR)">
+				<Input type="number" placeholder="500" bind:value={newItem.price} min="0" step="0.01" />
+			</Field>
+		</div>
+		{#if showTtc && newItem.description && newItem.quantity > 0 && newItem.price > 0}
+			<p class="text-fc-xs text-fc-fg-muted">
+				{newItem.quantity}
+				{newItem.unit} x {formatCurrency(newItem.price)} = {formatCurrency(
+					newItem.quantity * newItem.price
+				)} HT (TTC: {formatCurrency(newItem.quantity * newItem.price * (1 + tvaRate / 100))})
+			</p>
+		{/if}
+		<Button onclick={addItem} variant="ghost" class="w-full">Ajouter cet item</Button>
+	</div>
+{/snippet}
+
+{#snippet itemList()}
+	{#if formData.items.length === 0}
+		{@render emptyHint('Aucun item ajouté')}
+	{:else}
+		<div class="flex flex-col gap-2">
+			{#each formData.items as item, i (i)}
+				{@render entryRow(
+					item.description,
+					`${item.quantity} ${item.unit} x ${formatCurrency(item.price)} = ${formatCurrency(item.quantity * item.price)} HT`,
+					() => removeItem(i)
+				)}
+			{/each}
+		</div>
+	{/if}
+{/snippet}
+
+<Page width="md">
+	<PageHeader
+		title="Créer un document"
+		description={mission
+			? `Le document sera rattaché à la mission « ${mission.name} »`
+			: 'Générez une facture, un devis ou un contrat'}
+		back={{
+			href: resolve(backPath as any),
+			label: missionId ? 'Retour à la mission' : 'Retour aux documents',
+		}}
+	/>
+
+	{#if formMessage}
+		<Alert tone="danger">{formMessage}</Alert>
+	{/if}
+
+	<Section title="Type de document" card>
+		<Select bind:value={formData.type} aria-label="Type de document">
+			{#each docTypes as type (type.value)}
+				<option value={type.value}>{type.label}</option>
+			{/each}
+		</Select>
+
+		<div class="grid gap-4 sm:grid-cols-3">
+			{#if formData.type === 'facture_prestation'}
+				<Field label="N° Facture">
+					<Input bind:value={formData.invoice_number} />
+				</Field>
+				<Field label="Date Facture">
+					<Input type="date" bind:value={formData.invoice_date} />
+				</Field>
+				<Field label="Date Échéance">
+					<Input type="date" bind:value={formData.due_date} />
+				</Field>
+			{:else if formData.type === 'maintenance'}
+				<Field label="N° Devis">
+					<Input bind:value={formData.quote_number} />
+				</Field>
+				<Field label="Date Devis">
+					<Input type="date" bind:value={formData.quote_date} />
+				</Field>
+				<Field label="Validité">
+					<Input type="date" bind:value={formData.validity_date} />
+				</Field>
+			{:else if formData.type === 'back_contractuel'}
+				<Field label="Référence Contrat">
+					<Input bind:value={formData.contract_reference} />
+				</Field>
+				<Field label="Date Contrat">
+					<Input type="date" bind:value={formData.contract_date} />
+				</Field>
+			{:else if formData.type === 'appel_de_fonds'}
+				<Field label="Date Facture">
+					<Input type="date" bind:value={formData.invoice_date} />
+				</Field>
+				<Field label="Date Échéance">
+					<Input type="date" bind:value={formData.due_date} />
+				</Field>
+			{:else}
+				<Field label="Référence Contrat">
+					<Input bind:value={formData.contract_reference} />
+				</Field>
+				<Field label="Date Contrat">
+					<Input type="date" bind:value={formData.contract_date} />
+				</Field>
+			{/if}
+		</div>
+	</Section>
+
+	<Section title="Client" card>
+		<Select bind:value={selectedClientId} disabled={!!mission} aria-label="Client">
+			<option value="">-- Sélectionner un client --</option>
+			{#each clients as client (client.id)}
+				<option value={client.id}>{client.companyName}</option>
+			{/each}
+		</Select>
+		{#if selectedClientId}
+			<Alert tone="success">
+				<div class="font-medium">{formData.client_name}</div>
+				<div class="text-fc-xs">{formData.client_address}, {formData.client_city}</div>
+			</Alert>
+		{/if}
+	</Section>
+
+	{#if formData.type !== 'back_contractuel' && formData.type !== 'appel_de_fonds'}
+		<Section title="Prestataire" card>
+			<Select bind:value={selectedProviderId} aria-label="Prestataire">
+				<option value="">-- Sélectionner un prestataire --</option>
+				{#each availableProviders as provider (provider.id)}
+					<option value={provider.id}>{provider.name}</option>
+				{/each}
+			</Select>
+			{#if selectedProviderId}
+				<Alert tone={selectedProviderMissingFields.length > 0 ? 'warning' : 'neutral'}>
+					<div class="font-medium">{formData.provider_name}</div>
+					<div class="text-fc-xs">
+						TVA: {tvaRate}% - {formData.provider_email || 'email manquant'}
+					</div>
+					{#if selectedProviderMissingFields.length > 0}
+						<p class="mt-1 text-fc-xs font-medium">
+							Champs manquants: {selectedProviderMissingFields
+								.map((field) => providerFieldLabels[field])
+								.join(', ')}
+						</p>
+					{/if}
+				</Alert>
+			{/if}
+		</Section>
+	{/if}
+
+	{#if formData.type === 'back_contractuel'}
+		<Section title="Informations du projet" card>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="Nom du projet">
+					<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
+				</Field>
+				<Field label="Date de validité">
+					<Input type="date" bind:value={formData.valid_until} />
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Prestataires (Co-traitance)" card>
+			<div class="flex flex-col gap-3 rounded-fc-md bg-fc-surface p-4">
+				<span class="text-fc-sm font-medium text-fc-fg">Ajouter un prestataire</span>
+				<Field label="Prestataire *">
+					<Select bind:value={newProvider.id}>
+						<option value="">-- Choisir un prestataire --</option>
+						{#each providers as provider (provider.id)}
+							<option value={provider.id}>{provider.name}</option>
+						{/each}
+					</Select>
+				</Field>
+				<div class="grid gap-3 sm:grid-cols-2">
+					<Field label="Rôle *">
+						<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
+					</Field>
+					<Field label="Montant HT (EUR) *">
+						<Input
+							type="number"
+							bind:value={newProvider.amount}
+							placeholder="Ex: 5000"
+							min="0"
+							step="0.01"
+						/>
+					</Field>
+				</div>
+				<Button onclick={addProvider} variant="ghost" class="w-full">Ajouter ce prestataire</Button>
+			</div>
+
+			{#if formData.providers.length === 0}
+				{@render emptyHint('Aucun prestataire ajouté')}
+			{:else}
+				<div class="flex flex-col gap-2">
+					{#each formData.providers as provider, i (i)}
+						{@const providerInfo = providers.find((p) => p.id === provider.id)}
+						{@render entryRow(
+							`${providerInfo?.name || provider.id} - ${provider.role}`,
+							`${formatCurrency(provider.amount)} HT`,
+							() => removeProvider(i)
+						)}
+					{/each}
+				</div>
+			{/if}
+		</Section>
+
+		<Section title="Périmètre de la mission (Features)" card>
+			<div class="flex flex-col gap-3 rounded-fc-md bg-fc-surface p-4">
+				<span class="text-fc-sm font-medium text-fc-fg">Ajouter une feature</span>
+				<Field label="Titre">
+					<Input bind:value={newFeature.title} placeholder="Ex: Design UI/UX" />
+				</Field>
+				<Field label="Description">
+					<Textarea
+						bind:value={newFeature.desc}
+						rows={2}
+						placeholder="Ex: Création d'une identité visuelle moderne et responsive..."
+					/>
+				</Field>
+				<Button onclick={addFeature} variant="ghost" class="w-full">Ajouter cette feature</Button>
+			</div>
+
+			{#if formData.features.length === 0}
+				{@render emptyHint('Aucune feature ajoutée')}
+			{:else}
+				<div class="flex flex-col gap-2">
+					{#each formData.features as feature, i (i)}
+						{@render entryRow(feature.title, feature.desc, () => removeFeature(i))}
+					{/each}
+				</div>
+			{/if}
+		</Section>
+
+		<Section title="Items de facturation (Prestations)" card>
+			{@render itemForm(false)}
+			{@render itemList()}
+		</Section>
+	{:else if formData.type === 'appel_de_fonds'}
+		<Section title="Informations de l'appel de fonds" card>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="Référence globale">
+					<Input bind:value={formData.global_invoice_ref} placeholder="Ex: ADF-001" />
+				</Field>
+				<Field label="Étape du projet">
+					<Input bind:value={formData.project_step} placeholder="Ex: Acompte 30%" />
+				</Field>
+				<Field label="Nom du projet" class="sm:col-span-2">
+					<Input bind:value={formData.project_name} placeholder="Ex: Site web vitrine" />
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Prestataires à payer (IBAN/BIC)" card>
+			<div class="flex flex-col gap-3 rounded-fc-md bg-fc-surface p-4">
+				<span class="text-fc-sm font-medium text-fc-fg">Ajouter un prestataire</span>
+				<Field label="Prestataire *">
+					<Select bind:value={newPaymentProvider.id}>
+						<option value="">-- Choisir un prestataire --</option>
+						{#each providers as provider (provider.id)}
+							<option value={provider.id}>{provider.name}</option>
+						{/each}
+					</Select>
+				</Field>
+				<Field label="Montant à verser (EUR HT) *">
+					<Input
+						type="number"
+						bind:value={newPaymentProvider.amount_to_pay}
+						placeholder="Ex: 1500"
+						min="0"
+						step="0.01"
+					/>
+				</Field>
+				<Button onclick={addPaymentProvider} variant="ghost" class="w-full">
+					Ajouter ce prestataire
+				</Button>
+			</div>
+
+			{#if formData.payment_providers.length === 0}
+				{@render emptyHint('Aucun prestataire ajouté')}
+			{:else}
+				<div class="flex flex-col gap-2">
+					{#each formData.payment_providers as provider, i (i)}
+						{@const providerInfo = providers.find((p) => p.id === provider.id)}
+						{@render entryRow(
+							providerInfo?.name || provider.id,
+							`Montant: ${formatCurrency(provider.amount_to_pay)} HT`,
+							() => removePaymentProvider(i)
+						)}
+					{/each}
+				</div>
+
+				<div class="flex items-center justify-between rounded-fc-md bg-fc-surface p-4">
+					<span class="text-fc-sm font-medium text-fc-fg-muted">TOTAL HT</span>
+					<span class="text-fc-lg font-semibold text-fc-fg">
+						{formatCurrency(
+							formData.payment_providers.reduce((sum: number, p: any) => sum + p.amount_to_pay, 0)
+						)}
+					</span>
+				</div>
+			{/if}
+		</Section>
+	{:else if formData.type === 'facture_prestation' || formData.type === 'maintenance'}
+		<Section title="Items de facturation" card>
+			{#snippet actions()}
+				{#if formData.items.length > 0}
+					<span class="text-fc-sm font-medium text-fc-fg">Total: {formatCurrency(total)} TTC</span>
+				{/if}
+			{/snippet}
+
+			{@render itemForm(true)}
+			{@render itemList()}
+
+			{#if formData.items.length > 0}
+				<div class="grid gap-4 rounded-fc-md bg-fc-surface p-4 text-fc-sm sm:grid-cols-3">
+					<div class="flex flex-col gap-1">
+						<span class="text-fc-xs text-fc-fg-muted">Sous-total HT</span>
+						<span class="font-semibold text-fc-fg">{formatCurrency(subtotal)}</span>
+					</div>
+					<div class="flex flex-col gap-1">
+						<span class="text-fc-xs text-fc-fg-muted">TVA ({tvaRate}%)</span>
+						<span class="font-semibold text-fc-fg">{formatCurrency(tva)}</span>
+					</div>
+					<div class="flex flex-col gap-1">
+						<span class="text-fc-xs text-fc-fg-muted">Total TTC</span>
+						<span class="font-semibold text-fc-fg">{formatCurrency(total)}</span>
+					</div>
+				</div>
+			{/if}
+		</Section>
+	{/if}
+
+	<div class="flex flex-wrap justify-end gap-3">
+		<Button href={resolve('/admin/documents')} variant="ghost" disabled={generating}>Annuler</Button
 		>
-			Annuler
-		</Button>
-		<Button variant="outline" onclick={handlePreview} disabled={generating} class="flex-1">
+		<Button variant="ghost" onclick={handlePreview} disabled={generating}>
 			{#if generating && !showPreview}
 				<Spinner size="sm" />
 			{:else}
-				<iconify-icon icon="solar:eye-bold" width="16"></iconify-icon>
+				<Icon icon={icons.eye} size={16} />
 			{/if}
 			Prévisualiser
 		</Button>
-		<Button onclick={handleCreate} disabled={generating} class="flex-1">
+		<Button onclick={handleCreate} disabled={generating}>
 			{#if generating}
 				<Spinner size="sm" />
 			{:else}
-				<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
+				<Icon icon={icons.download} size={16} />
 			{/if}
 			Créer et télécharger
 		</Button>
 	</div>
-</div>
+</Page>
 
-{#if showPreview}
-	<div
-		class="fixed inset-0 bg-black/50 z-50"
-		onclick={() => (showPreview = false)}
-		role="presentation"
-	></div>
-	<div
-		class="fixed top-0 right-0 h-full w-[800px] bg-background shadow-2xl z-50 flex flex-col"
-	>
-		<div class="flex items-center justify-between p-4 border-b border-border">
-			<div>
-				<h3 class="text-base font-semibold text-foreground">Aperçu du document</h3>
-				<p class="text-xs text-muted-foreground">Vérifiez les détails avant de créer</p>
-			</div>
-			<button
-				onclick={() => (showPreview = false)}
-				class="p-1.5 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground"
-				aria-label="Fermer l'aperçu"
-			>
-				<iconify-icon icon="solar:close-circle-bold" width="20"></iconify-icon>
-			</button>
-		</div>
-		<div class="flex-1 overflow-hidden p-4 bg-muted">
-			<iframe
-				src="data:application/pdf;base64,{previewPdf}"
-				class="w-full h-full rounded-lg border border-border"
-				title="Aperçu du document PDF"
-			></iframe>
-		</div>
-	</div>
-{/if}
+<Drawer
+	bind:open={showPreview}
+	title="Aperçu du document"
+	description="Vérifiez les détails avant de créer"
+	showClose
+	onClose={() => (showPreview = false)}
+>
+	<iframe
+		src="data:application/pdf;base64,{previewPdf}"
+		class="h-[65dvh] w-full rounded-fc-md bg-fc-surface"
+		title="Aperçu du document PDF"
+	></iframe>
+</Drawer>

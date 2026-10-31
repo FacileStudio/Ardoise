@@ -1,19 +1,38 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Button } from '@facile/muse';
+	import {
+		Badge,
+		Button,
+		Card,
+		ConfirmModal,
+		EmptyState,
+		Page,
+		PageHeader,
+		Spinner,
+		StatCard,
+		Table,
+		Tabs,
+		toast,
+	} from '@facile/muse';
+	import { icons, ardoise } from '$lib/icons';
 	import { Pagination, SearchInput } from '$lib/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import { PAYMENT_STATUS_LABELS } from '$lib/mission';
-	import 'iconify-icon';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'PAST_DUE' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
-	const STATUSES: PaymentStatus[] = ['PENDING', 'PAID', 'PAST_DUE', 'FAILED', 'EXPIRED', 'CANCELLED'];
+	const STATUSES: PaymentStatus[] = [
+		'PENDING',
+		'PAID',
+		'PAST_DUE',
+		'FAILED',
+		'EXPIRED',
+		'CANCELLED',
+	];
 	const PAGE_SIZE = 20;
 	type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
 
@@ -55,6 +74,14 @@
 	let searchQuery = $state('');
 	let status = $state<PaymentStatus | undefined>(undefined);
 	let actionLoading = $state('');
+	let cancelTarget: Payment | null = $state(null);
+	let confirmCancel = $state(false);
+
+	const statusTabs = [
+		{ id: 'ALL', label: $i18n.t('admin.payments.allStatus') },
+		...STATUSES.map((value) => ({ id: value, label: PAYMENT_STATUS_LABELS[value] })),
+	];
+	let statusTab = $state('ALL');
 	let searchTimer: ReturnType<typeof setTimeout>;
 
 	let stats = $state({
@@ -125,9 +152,14 @@
 		fetchPayments();
 	}
 
-	async function handleCancelPayment(id: string, description: string) {
-		if (!confirm($i18n.t('admin.payments.cancelConfirm', { description })))
-			return;
+	function askCancel(payment: Payment) {
+		cancelTarget = payment;
+		confirmCancel = true;
+	}
+
+	async function handleCancelPayment() {
+		if (!cancelTarget) return;
+		const id = cancelTarget.id;
 
 		try {
 			actionLoading = id;
@@ -135,24 +167,10 @@
 			await Promise.all([fetchPayments(), fetchStats()]);
 		} catch (err) {
 			logger.error({ err }, 'Failed to cancel payment');
-			alert('Failed to cancel payment');
+			toast.danger("Impossible d'annuler le paiement");
 		} finally {
 			actionLoading = '';
-		}
-	}
-
-	async function handleMarkExpired() {
-		if (!confirm('Mark all overdue pending payments as expired?')) return;
-
-		try {
-			actionLoading = 'expire';
-			await trpc.payment.markExpired.mutate({ spaceId: spaceContext.spaceId });
-			await Promise.all([fetchPayments(), fetchStats()]);
-		} catch (err) {
-			logger.error({ err }, 'Failed to mark expired payments');
-			alert('Failed to mark expired payments');
-		} finally {
-			actionLoading = '';
+			cancelTarget = null;
 		}
 	}
 
@@ -201,306 +219,253 @@
 	}
 
 	function handleExportCSV() {
-		const csvData = payments.map(payment => ({
-			'ID': payment.id,
-			'Description': payment.description,
-			'Client': payment.client.companyName,
-			'Montant': formatCurrency(Number(payment.totalWithFees || payment.amount)),
+		const csvData = payments.map((payment) => ({
+			ID: payment.id,
+			Description: payment.description,
+			Client: payment.client.companyName,
+			Montant: formatCurrency(Number(payment.totalWithFees || payment.amount)),
 			'Frais Stripe': payment.stripeFee ? formatCurrency(Number(payment.stripeFee)) : '0,00 €',
-			'Statut': payment.status,
-			'Fréquence': getFrequencyLabel(payment.frequency),
+			Statut: payment.status,
+			Fréquence: getFrequencyLabel(payment.frequency),
 			'Date création': formatDate(payment.createdAt),
 			'Date échéance': formatDate(payment.dueDate),
-			'Date paiement': payment.paidAt ? formatDate(payment.paidAt) : '-'
+			'Date paiement': payment.paidAt ? formatDate(payment.paidAt) : '-',
 		}));
 		downloadCSV(csvData, 'paiements');
 	}
 </script>
 
+<svelte:head><title>Paiements - Ardoise</title></svelte:head>
+
 {#if pageLoading}
-	<div class="flex flex-col items-center justify-center h-screen space-y-4">
-		<iconify-icon icon="svg-spinners:blocks-shuffle-3" width="40" class="text-foreground"></iconify-icon>
-		<p class="text-sm text-muted-foreground">Chargement...</p>
+	<div class="flex min-h-[40dvh] items-center justify-center">
+		<Spinner size="lg" />
 	</div>
 {:else}
-	<div class="p-8 max-w-[1600px] mx-auto space-y-6">
-		<header class="flex items-center justify-between">
-			<div>
-				<h1 class="text-2xl font-bold tracking-tight text-foreground">{$i18n.t('admin.payments.title')}</h1>
-				<p class="text-sm text-muted-foreground mt-1">{$i18n.t('admin.payments.subtitle')}</p>
-			</div>
-		<div class="flex gap-3">
-			{#if payments.length > 0}
-				<Button onclick={handleExportCSV}>
-					<iconify-icon icon="solar:file-download-bold" width="18"></iconify-icon>
-					<span>Exporter CSV</span>
+	<Page width="xl">
+		<PageHeader
+			title={$i18n.t('admin.payments.title')}
+			description={$i18n.t('admin.payments.subtitle')}
+		>
+			{#snippet actions()}
+				{#if payments.length > 0}
+					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}
+						>Exporter CSV</Button
+					>
+				{/if}
+				<Button href={resolve('/admin/payments/create')} icon={icons.plus}>
+					{$i18n.t('admin.payments.createPayment')}
 				</Button>
-			{/if}
-			<button
-				onclick={() => goto(resolve('/admin/payments/create'))}
-				class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
-			>
-				<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-				{$i18n.t('admin.payments.createPayment')}
-			</button>
-		</div>
-	</header>
+			{/snippet}
+		</PageHeader>
 
-	<div class="grid grid-cols-4 gap-4">
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-fc-warning uppercase">
-					{$i18n.t('admin.payments.pendingAmount')}
-				</div>
-				<iconify-icon
-					icon="solar:clock-circle-bold"
-					class="text-fc-warning"
-					width="20"
-				></iconify-icon>
-			</div>
-			<div class="text-2xl font-bold text-fc-warning">{formatCurrency(stats.totalPending)}</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.pendingInvoices', { count: stats.countPending })}</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-fc-success uppercase">
-					{$i18n.t('admin.payments.paidThisMonth')}
-				</div>
-				<iconify-icon
-					icon="solar:check-circle-bold"
-					class="text-fc-success"
-					width="20"
-				></iconify-icon>
-			</div>
-			<div class="text-2xl font-bold text-fc-success">
-				{formatCurrency(stats.totalPaidThisMonth)}
-			</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.currentMonthRevenue')}</div>
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<StatCard
+				label={$i18n.t('admin.payments.pendingAmount')}
+				value={formatCurrency(stats.totalPending)}
+				delta={$i18n.t('admin.payments.pendingInvoices', { count: stats.countPending })}
+			/>
+			<StatCard
+				label={$i18n.t('admin.payments.paidThisMonth')}
+				value={formatCurrency(stats.totalPaidThisMonth)}
+				delta={$i18n.t('admin.payments.currentMonthRevenue')}
+			/>
+			<StatCard
+				label={$i18n.t('admin.payments.pendingCount')}
+				value={stats.countPending}
+				delta={$i18n.t('admin.payments.awaitingPayment')}
+			/>
+			<StatCard
+				label={$i18n.t('admin.payments.expired')}
+				value={stats.countExpired}
+				delta={$i18n.t('admin.payments.overdueInvoices')}
+			/>
 		</div>
 
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-muted-foreground uppercase">
-					{$i18n.t('admin.payments.pendingCount')}
-				</div>
-				<iconify-icon
-					icon="solar:document-bold"
-					class="text-muted-foreground"
-					width="20"
-				></iconify-icon>
-			</div>
-			<div class="text-2xl font-bold text-foreground">{stats.countPending}</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.awaitingPayment')}</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-4">
-			<div class="flex items-center justify-between mb-2">
-				<div class="text-xs font-medium text-fc-danger uppercase">{$i18n.t('admin.payments.expired')}</div>
-				<iconify-icon
-					icon="solar:hourglass-bold-duotone"
-					class="text-fc-danger"
-					width="20"
-				></iconify-icon>
-			</div>
-			<div class="text-2xl font-bold text-fc-danger">{stats.countExpired}</div>
-			<div class="text-xs text-muted-foreground mt-1">{$i18n.t('admin.payments.overdueInvoices')}</div>
-		</div>
-	</div>
-
-	<div class="space-y-4">
 		<SearchInput
 			bind:value={searchQuery}
 			oninput={handleSearch}
 			placeholder={$i18n.t('admin.payments.searchPlaceholder')}
 		/>
 
-		<div class="flex gap-2 flex-wrap">
-			{#each [undefined, ...STATUSES] as option (option ?? 'ALL')}
-				<button
-					onclick={() => setStatus(option)}
-					class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {status === option
-						? 'bg-foreground text-background'
-						: 'border border-border text-muted-foreground hover:bg-muted'}"
-				>
-					{option ? PAYMENT_STATUS_LABELS[option] : $i18n.t('admin.payments.allStatus')}
-				</button>
-			{/each}
-		</div>
-	</div>
+		<Tabs
+			label="Filtrer par statut"
+			items={statusTabs}
+			bind:value={statusTab}
+			onChange={(id) => setStatus(id === 'ALL' ? undefined : (id as PaymentStatus))}
+		/>
 
-	{#if payments.length > 0}
-		<div class="rounded-xl border border-border overflow-hidden">
-			<div class="overflow-x-auto">
-				<table class="w-full">
-					<thead class="border-b border-border">
+		{#if payments.length > 0}
+			<div class="hidden md:block">
+				<Table>
+					<thead>
 						<tr>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('admin.payments.table.payment')}</th
-							>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('admin.payments.table.client')}</th
-							>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('admin.payments.table.amount')}</th
-							>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('admin.payments.table.status')}</th
-							>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('admin.payments.table.frequency')}</th
-							>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{$i18n.t('admin.payments.table.date')}</th
-							>
-							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase"
-								>{$i18n.t('admin.payments.table.actions')}</th
-							>
+							<th scope="col">{$i18n.t('admin.payments.table.payment')}</th>
+							<th scope="col">{$i18n.t('admin.payments.table.client')}</th>
+							<th scope="col">{$i18n.t('admin.payments.table.amount')}</th>
+							<th scope="col">{$i18n.t('admin.payments.table.status')}</th>
+							<th scope="col">{$i18n.t('admin.payments.table.frequency')}</th>
+							<th scope="col">{$i18n.t('admin.payments.table.date')}</th>
+							<th scope="col" aria-label={$i18n.t('admin.payments.table.actions')}></th>
 						</tr>
 					</thead>
-					<tbody class="divide-y divide-border">
+					<tbody>
 						{#each payments as payment (payment.id)}
-							<tr
-								class="hover:bg-muted/50 transition-colors cursor-pointer"
-								onclick={() => goto(resolve(`/admin/payments/${payment.id}`))}
-							>
-								<td class="px-4 py-3">
-									<div class="space-y-1">
-										<div class="flex items-center gap-2">
-											<div class="font-medium text-foreground">{payment.description}</div>
-											{#if payment.status === 'EXPIRED'}
-												<Badge tone="danger">
-													{$i18n.t('common.status.expired')}
-												</Badge>
-											{/if}
-										</div>
-										<div class="text-xs text-muted-foreground font-mono">#{payment.id.slice(0, 8)}</div>
+							<tr>
+								<td>
+									<div class="flex flex-col gap-1">
+										<a
+											href={resolve(`/admin/payments/${payment.id}`)}
+											class="rounded-fc-xs font-medium text-fc-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+										>
+											{payment.description}
+										</a>
+										<span class="font-mono text-fc-xs text-fc-fg-muted"
+											>#{payment.id.slice(0, 8)}</span
+										>
 										{#if payment.attachedFiles.length > 0}
-											<div class="flex items-center gap-1 text-xs text-muted-foreground">
-												<iconify-icon icon="solar:paperclip-bold" width="14"></iconify-icon>
-												{payment.attachedFiles.length} {payment.attachedFiles.length > 1
+											<span class="text-fc-xs text-fc-fg-muted">
+												{payment.attachedFiles.length}
+												{payment.attachedFiles.length > 1
 													? $i18n.t('admin.payments.files')
 													: $i18n.t('admin.payments.file')}
-											</div>
+											</span>
 										{/if}
 									</div>
 								</td>
-								<td class="px-4 py-3">
-									<div class="space-y-0.5">
-										<div class="font-medium text-foreground">{payment.client.companyName}</div>
-										<div class="text-sm text-muted-foreground">
+								<td>
+									<div class="flex flex-col">
+										<span class="font-medium text-fc-fg">{payment.client.companyName}</span>
+										<span class="text-fc-sm text-fc-fg-muted">
 											{payment.client.contactFirstName}
 											{payment.client.contactLastName}
-										</div>
+										</span>
 									</div>
 								</td>
-								<td class="px-4 py-3">
-									<div class="space-y-0.5">
-										<div class="font-semibold text-foreground">
+								<td>
+									<div class="flex flex-col">
+										<span class="font-semibold text-fc-fg">
 											{formatCurrency(Number(payment.totalWithFees || payment.amount))}
-										</div>
+										</span>
 										{#if payment.stripeFee && Number(payment.stripeFee) > 0}
-											<div class="text-xs text-muted-foreground flex items-center gap-1">
-												<span>{formatCurrency(Number(payment.amount))}</span>
-												<span>+</span>
-												<span class="text-fc-warning font-medium">
-													{formatCurrency(Number(payment.stripeFee))} {$i18n.t('admin.payments.table.fees')}
+											<span class="text-fc-xs text-fc-fg-muted">
+												{formatCurrency(Number(payment.amount))} +
+												<span class="font-medium text-fc-warning">
+													{formatCurrency(Number(payment.stripeFee))}
+													{$i18n.t('admin.payments.table.fees')}
 												</span>
-											</div>
+											</span>
 										{/if}
 									</div>
 								</td>
-								<td class="px-4 py-3">
-									<Badge tone={getStatusColor(payment.status)}>
-										{payment.status}
-									</Badge>
+								<td>
+									<Badge tone={getStatusColor(payment.status)}
+										>{PAYMENT_STATUS_LABELS[payment.status]}</Badge
+									>
 								</td>
-								<td class="px-4 py-3">
-									<div class="space-y-0.5">
-										<div class="text-sm text-foreground">{getFrequencyLabel(payment.frequency)}</div>
-										<div class="text-xs text-muted-foreground">
+								<td>
+									<div class="flex flex-col">
+										<span class="text-fc-fg">{getFrequencyLabel(payment.frequency)}</span>
+										<span class="text-fc-xs text-fc-fg-muted">
 											{payment.collectionMethod === 'MANUAL' ? 'Manuel' : 'Stripe'}
-										</div>
+										</span>
 									</div>
 								</td>
-								<td class="px-4 py-3">
-									<div class="space-y-0.5">
-										{#if payment.status === 'PAID' && payment.paidAt}
-											<div class="text-sm text-muted-foreground flex items-center gap-1">
-												<iconify-icon
-													icon="solar:check-circle-bold"
-													width="14"
-													class="text-fc-success"
-												></iconify-icon>
-												{$i18n.t('admin.payments.table.paid')}: {formatDate(payment.paidAt)}
-											</div>
-										{:else if payment.status === 'PENDING'}
-											<div class="text-sm text-muted-foreground flex items-center gap-1">
-												<iconify-icon
-													icon="solar:calendar-bold"
-													width="14"
-													class="text-fc-warning"
-												></iconify-icon>
-												{$i18n.t('admin.payments.table.due')}: {formatDate(payment.dueDate)}
-											</div>
-										{:else}
-											<div class="text-sm text-muted-foreground">{formatDate(payment.createdAt)}</div>
-										{/if}
-									</div>
+								<td class="text-fc-sm text-fc-fg-muted">
+									{#if payment.status === 'PAID' && payment.paidAt}
+										{$i18n.t('admin.payments.table.paid')}: {formatDate(payment.paidAt)}
+									{:else if payment.status === 'PENDING'}
+										{$i18n.t('admin.payments.table.due')}: {formatDate(payment.dueDate)}
+									{:else}
+										{formatDate(payment.createdAt)}
+									{/if}
 								</td>
-								<td class="px-4 py-3">
+								<td>
 									<div class="flex items-center justify-end gap-1">
 										{#if payment.status === 'PENDING'}
-											<button
-												onclick={(e) => {
-													e.stopPropagation();
-													handleCancelPayment(payment.id, payment.description);
-												}}
+											<Button
+												variant="ghost-danger"
+												size="sm"
+												icon={icons.revoke}
+												aria-label={$i18n.t('admin.payments.cancelPayment')}
 												disabled={actionLoading === payment.id}
-												class="p-2 text-muted-foreground hover:text-fc-danger hover:bg-muted rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-												title={$i18n.t('admin.payments.cancelPayment')}
-											>
-												{#if actionLoading === payment.id}
-													<iconify-icon icon="line-md:loading-twotone-loop" width="16"></iconify-icon>
-												{:else}
-													<iconify-icon icon="solar:close-circle-bold" width="16"></iconify-icon>
-												{/if}
-											</button>
+												onclick={() => askCancel(payment)}
+											/>
 										{/if}
 									</div>
 								</td>
 							</tr>
 						{/each}
 					</tbody>
-				</table>
+				</Table>
 			</div>
-		</div>
 
-			<div class="text-sm text-muted-foreground text-center">
-				{$i18n.t('admin.payments.showing', { count: payments.length, total: total })}
+			<div class="flex flex-col gap-2 md:hidden">
+				{#each payments as payment (payment.id)}
+					<Card class="flex flex-col gap-3">
+						<a
+							href={resolve(`/admin/payments/${payment.id}`)}
+							class="flex min-w-0 flex-col gap-1 rounded-fc-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+						>
+							<span class="truncate text-fc-sm font-medium text-fc-fg">{payment.description}</span>
+							<span class="truncate text-fc-xs text-fc-fg-muted">{payment.client.companyName}</span>
+						</a>
+						<div class="flex items-center justify-between gap-2">
+							<div class="flex items-center gap-2">
+								<span class="text-fc-sm font-semibold text-fc-fg">
+									{formatCurrency(Number(payment.totalWithFees || payment.amount))}
+								</span>
+								<Badge tone={getStatusColor(payment.status)}
+									>{PAYMENT_STATUS_LABELS[payment.status]}</Badge
+								>
+							</div>
+							{#if payment.status === 'PENDING'}
+								<Button
+									variant="ghost-danger"
+									size="lg"
+									icon={icons.revoke}
+									aria-label={$i18n.t('admin.payments.cancelPayment')}
+									disabled={actionLoading === payment.id}
+									onclick={() => askCancel(payment)}
+								/>
+							{/if}
+						</div>
+					</Card>
+				{/each}
 			</div>
+
+			<p class="text-center text-fc-sm text-fc-fg-muted">
+				{$i18n.t('admin.payments.showing', { count: payments.length, total: total })}
+			</p>
 
 			{#if totalPages > 1}
 				<Pagination currentPage={page} {totalPages} onPageChange={handlePageChange} />
 			{/if}
 		{:else}
-			<div class="text-center py-16">
-				<div class="flex flex-col items-center gap-4">
-					<div class="w-16 h-16 rounded-xl border border-border flex items-center justify-center text-muted-foreground">
-						<iconify-icon icon="solar:wallet-money-bold" width="32"></iconify-icon>
-					</div>
-					<h3 class="text-lg font-semibold text-foreground">{$i18n.t('admin.payments.noPaymentsFound')}</h3>
-					<p class="text-sm text-muted-foreground max-w-md">{$i18n.t('admin.payments.tryAdjustingFilters')}</p>
-					{#if !searchQuery && !status}
-						<button
-							onclick={() => goto(resolve('/admin/payments/create'))}
-							class="bg-primary text-primary-foreground rounded-md px-4 h-9 text-sm font-medium flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity mt-2"
-						>
-							<iconify-icon icon="mdi:plus" width="18"></iconify-icon>
-							<span>{$i18n.t('admin.payments.createPayment')}</span>
-						</button>
-					{/if}
-				</div>
-			</div>
+			<EmptyState
+				icon={ardoise.payment}
+				title={$i18n.t('admin.payments.noPaymentsFound')}
+				description={$i18n.t('admin.payments.tryAdjustingFilters')}
+			>
+				{#if !searchQuery && !status}
+					<Button href={resolve('/admin/payments/create')} icon={icons.plus}>
+						{$i18n.t('admin.payments.createPayment')}
+					</Button>
+				{/if}
+			</EmptyState>
 		{/if}
-	</div>
+	</Page>
 {/if}
+
+<ConfirmModal
+	bind:open={confirmCancel}
+	tone="danger"
+	title={$i18n.t('admin.payments.cancelPayment')}
+	description={$i18n.t('admin.payments.cancelConfirm', {
+		description: cancelTarget?.description ?? '',
+	})}
+	confirmLabel={$i18n.t('admin.payments.cancelPayment')}
+	cancelLabel="Garder le paiement"
+	onConfirm={handleCancelPayment}
+	onCancel={() => (cancelTarget = null)}
+/>

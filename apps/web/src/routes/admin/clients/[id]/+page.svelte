@@ -4,11 +4,22 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Button, Card, Input, Spinner, toast } from '@facile/muse';
+	import {
+		Badge,
+		Button,
+		EmptyState,
+		Field,
+		Icon,
+		Input,
+		Page,
+		PageHeader,
+		Section,
+		Spinner,
+		toast,
+	} from '@facile/muse';
+	import { icons, ardoise } from '$lib/icons';
 	import { logger } from '@repo/logger';
-	import { i18n } from '@repo/i18n/svelte';
 	import TransferClientModal from '$lib/components/TransferClientModal.svelte';
-	import 'iconify-icon';
 
 	let clientId = $derived($page.params.id as string);
 	let pageLoading = $state(true);
@@ -57,7 +68,7 @@
 		if (formData.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
 			return "Format d'email invalide";
 		}
-		if (!formData.companyName.trim()) return 'Le nom de l\'entreprise est requis';
+		if (!formData.companyName.trim()) return "Le nom de l'entreprise est requis";
 		return null;
 	}
 
@@ -115,50 +126,54 @@
 
 	function getStatusColor(status: string) {
 		switch (status) {
-			case 'ACTIVE': return 'success';
-			case 'PENDING': return 'warning';
-			case 'SUSPENDED': return 'danger';
-			case 'BANNED': return 'danger';
-			default: return 'neutral';
+			case 'ACTIVE':
+				return 'success';
+			case 'PENDING':
+				return 'warning';
+			case 'SUSPENDED':
+				return 'danger';
+			case 'BANNED':
+				return 'danger';
+			default:
+				return 'neutral';
 		}
 	}
 
 	function getPaymentStatusColor(status: string) {
 		switch (status) {
-			case 'PAID': return 'success';
-			case 'PENDING': return 'warning';
-			case 'EXPIRED': return 'danger';
-			case 'CANCELLED': return 'neutral';
-			default: return 'neutral';
+			case 'PAID':
+				return 'success';
+			case 'PENDING':
+				return 'warning';
+			case 'EXPIRED':
+				return 'danger';
+			case 'CANCELLED':
+				return 'neutral';
+			default:
+				return 'neutral';
 		}
 	}
 </script>
 
-<div class="p-6 max-w-5xl mx-auto">
-	{#if pageLoading}
-		<div class="py-20 flex justify-center">
-			<Spinner size="lg" />
-		</div>
-	{:else if client}
-		<div>
-			<button
-				onclick={() => goto(resolve('/admin/clients'))}
-				class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-			>
-				<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-				Retour aux clients
-			</button>
-			<div class="flex items-start justify-between gap-4">
-				<div>
-					<h1 class="text-2xl font-bold tracking-tight text-foreground">Modifier le client</h1>
-					<p class="text-sm text-muted-foreground mt-1">Modifiez les informations du client</p>
-				</div>
-				<Button variant="outline" onclick={() => (showTransfer = true)}>
-					<iconify-icon icon="solar:transfer-horizontal-linear" width="16"></iconify-icon>
+<svelte:head><title>Modifier le client - Ardoise</title></svelte:head>
+
+{#if pageLoading}
+	<div class="flex min-h-[40dvh] items-center justify-center">
+		<Spinner size="lg" />
+	</div>
+{:else if client}
+	<Page width="lg">
+		<PageHeader
+			title="Modifier le client"
+			description="Modifiez les informations du client"
+			back={{ href: resolve('/admin/clients'), label: 'Retour aux clients' }}
+		>
+			{#snippet actions()}
+				<Button variant="ghost" icon={ardoise.transfer} onclick={() => (showTransfer = true)}>
 					Copier / déplacer
 				</Button>
-			</div>
-		</div>
+			{/snippet}
+		</PageHeader>
 
 		<TransferClientModal
 			bind:open={showTransfer}
@@ -167,188 +182,170 @@
 			onDone={(relocated) => relocated && goto(resolve('/admin/clients'))}
 		/>
 
-		<div class="grid grid-cols-3 gap-6 mt-6">
-			<div class="col-span-2 space-y-6">
-				<div class="rounded-xl border border-border p-6 space-y-4">
-					<h2 class="text-base font-semibold text-foreground">Informations entreprise</h2>
-					<div>
-						<div class="text-sm font-medium mb-2">Nom de l'entreprise *</div>
+		<div class="grid gap-6 lg:grid-cols-3">
+			<div class="flex flex-col gap-6 lg:col-span-2">
+				<Section title="Informations entreprise" card>
+					<Field label="Nom de l'entreprise *">
 						<Input bind:value={formData.companyName} placeholder="Entreprise SAS" />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">SIRET</div>
+					</Field>
+					<Field label="SIRET">
 						<Input bind:value={formData.siret} placeholder="12345678901234" />
-					</div>
-				</div>
+					</Field>
+				</Section>
 
-				<div class="rounded-xl border border-border p-6 space-y-4">
-					<h2 class="text-base font-semibold text-foreground">Adresse de facturation</h2>
-					<div>
-						<div class="text-sm font-medium mb-2">Adresse</div>
+				<Section title="Adresse de facturation" card>
+					<Field label="Adresse">
 						<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
-					</div>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<div class="text-sm font-medium mb-2">Ville</div>
+					</Field>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<Field label="Ville">
 							<Input bind:value={formData.billingCity} placeholder="Paris" />
-						</div>
-						<div>
-							<div class="text-sm font-medium mb-2">Pays</div>
+						</Field>
+						<Field label="Pays">
 							<Input bind:value={formData.billingCountry} placeholder="France" />
-						</div>
+						</Field>
 					</div>
-				</div>
+				</Section>
 
-				<div class="rounded-xl border border-border p-6 space-y-4">
-					<h2 class="text-base font-semibold text-foreground">Informations utilisateur</h2>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<div class="text-sm font-medium mb-2">Prénom *</div>
+				<Section title="Informations utilisateur" card>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<Field label="Prénom *">
 							<Input bind:value={formData.contactFirstName} placeholder="Jean" />
-						</div>
-						<div>
-							<div class="text-sm font-medium mb-2">Nom *</div>
+						</Field>
+						<Field label="Nom *">
 							<Input bind:value={formData.contactLastName} placeholder="Dupont" />
-						</div>
+						</Field>
 					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Email de contact</div>
+					<Field
+						label="Email de contact"
+						helper={client.user?.email ? `Email de connexion : ${client.user.email}` : undefined}
+					>
 						<Input
 							bind:value={formData.contactEmail}
 							type="email"
 							placeholder="jean.dupont@entreprise.fr"
 						/>
-						{#if client.user?.email}
-							<p class="mt-1 text-xs text-muted-foreground">Email de connexion: {client.user.email}</p>
-						{/if}
-					</div>
-				</div>
+					</Field>
+				</Section>
 
 				{#if client.payments && client.payments.length > 0}
-					<div class="rounded-xl border border-border p-6 space-y-4">
-						<div class="flex items-center justify-between">
-							<h2 class="text-base font-semibold text-foreground">Paiements</h2>
-							<span class="text-xs text-muted-foreground">{client.payments.length} {client.payments.length > 1 ? 'paiements' : 'paiement'}</span>
-						</div>
-						<div class="space-y-2">
+					<Section
+						title="Paiements"
+						description="{client.payments.length} {client.payments.length > 1
+							? 'paiements'
+							: 'paiement'}"
+						card
+					>
+						<div class="flex flex-col gap-2">
 							{#each client.payments as payment (payment.id)}
-								<button type="button" class="w-full text-left flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted transition-colors" onclick={() => goto(resolve(`/admin/payments/${payment.id}`))}>
-									<iconify-icon
-										icon={payment.status === 'PAID' ? 'solar:check-circle-bold' : payment.status === 'PENDING' ? 'solar:clock-circle-bold' : 'solar:close-circle-bold'}
-										width="20"
-										class={payment.status === 'PAID' ? 'text-fc-success' : payment.status === 'PENDING' ? 'text-fc-warning' : 'text-fc-danger'}
-									></iconify-icon>
-									<div class="flex-1">
-										<div class="flex items-center justify-between mb-0.5">
-											<span class="text-sm font-medium text-foreground">{formatCurrency(payment.totalWithFees)}</span>
+								<a
+									href={resolve(`/admin/payments/${payment.id}`)}
+									class="flex items-center gap-4 rounded-fc-md bg-fc-surface p-3 transition-colors hover:bg-fc-surface/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+								>
+									<Icon
+										icon={payment.status === 'PAID'
+											? icons.check
+											: payment.status === 'PENDING'
+												? icons.clock
+												: icons.error}
+										size={20}
+										class={payment.status === 'PAID'
+											? 'text-fc-success'
+											: payment.status === 'PENDING'
+												? 'text-fc-warning'
+												: 'text-fc-danger'}
+									/>
+									<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+										<div class="flex items-center justify-between gap-2">
+											<span class="text-fc-sm font-medium text-fc-fg"
+												>{formatCurrency(payment.totalWithFees)}</span
+											>
 											<Badge tone={getPaymentStatusColor(payment.status)}>{payment.status}</Badge>
 										</div>
-										<div class="text-xs text-muted-foreground">{payment.description}</div>
-										<div class="text-xs text-muted-foreground">
-											Due: {formatDateShort(payment.dueDate)}
+										<span class="truncate text-fc-xs text-fc-fg-muted">{payment.description}</span>
+										<span class="text-fc-xs text-fc-fg-muted">
+											Échéance : {formatDateShort(payment.dueDate)}
 											{#if payment.paidAt}
-												 - Paid: {formatDateShort(payment.paidAt)}
+												- Payé : {formatDateShort(payment.paidAt)}
 											{/if}
-										</div>
+										</span>
 									</div>
-								</button>
+								</a>
 							{/each}
 						</div>
-					</div>
+					</Section>
 				{/if}
 
-				<div class="flex gap-3 pt-2">
-					<Button
-						onclick={() => goto(resolve('/admin/clients'))}
-						variant="outline"
-						class="flex-1"
-						disabled={submitting}
+				<div class="flex justify-end gap-3">
+					<Button href={resolve('/admin/clients')} variant="ghost" disabled={submitting}
+						>Annuler</Button
 					>
-						Annuler
+					<Button onclick={handleUpdate} disabled={submitting}>
+						{submitting ? 'Modification en cours...' : 'Modifier le client'}
 					</Button>
-					<button
-						onclick={handleUpdate}
-						disabled={submitting}
-						class="flex-1 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-					>
-						{#if submitting}
-							<iconify-icon icon="line-md:loading-twotone-loop" width="16"></iconify-icon>
-							Modification en cours...
-						{:else}
-							Modifier le client
-						{/if}
-					</button>
 				</div>
 			</div>
 
-			<div class="space-y-6">
-				<div class="rounded-xl border border-border p-6 space-y-4">
-					<h2 class="text-base font-semibold text-foreground">Statut</h2>
-					<div class="space-y-3">
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Statut du compte</div>
-							{#if client.user}
-								<Badge tone={getStatusColor(client.user.status)}>
-									{client.user.status}
-								</Badge>
-							{:else}
-								<Badge tone="neutral">Aucun accès</Badge>
-							{/if}
-						</div>
-
-						{#if client.user?.emailVerified}
-							<div>
-								<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Email vérifié</div>
-								<Badge tone="success">Vérifié</Badge>
-							</div>
+			<div class="flex flex-col gap-6">
+				<Section title="Statut" card>
+					<div class="flex flex-col gap-1">
+						<span class="text-fc-xs text-fc-fg-muted">Statut du compte</span>
+						{#if client.user}
+							<Badge tone={getStatusColor(client.user.status)}>{client.user.status}</Badge>
+						{:else}
+							<Badge tone="neutral">Aucun accès</Badge>
 						{/if}
 					</div>
-				</div>
+					{#if client.user?.emailVerified}
+						<div class="flex flex-col gap-1">
+							<span class="text-fc-xs text-fc-fg-muted">Email vérifié</span>
+							<Badge tone="success">Vérifié</Badge>
+						</div>
+					{/if}
+				</Section>
 
-				<div class="rounded-xl border border-border p-6 space-y-4">
-					<h2 class="text-base font-semibold text-foreground">Dates</h2>
-					<div class="space-y-3">
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Créé le</div>
-							<div class="text-sm font-medium text-foreground">{formatDate(client.createdAt)}</div>
-						</div>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Dernière modification</div>
-							<div class="text-sm font-medium text-foreground">{formatDate(client.updatedAt)}</div>
-						</div>
-						{#if client.user?.lastLoginAt}
-							<div>
-								<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Dernière connexion</div>
-								<div class="text-sm font-medium text-foreground">{formatDate(client.user.lastLoginAt)}</div>
-							</div>
-						{/if}
+				<Section title="Dates" card>
+					<div class="flex flex-col gap-1">
+						<span class="text-fc-xs text-fc-fg-muted">Créé le</span>
+						<span class="text-fc-sm font-medium text-fc-fg">{formatDate(client.createdAt)}</span>
 					</div>
-				</div>
+					<div class="flex flex-col gap-1">
+						<span class="text-fc-xs text-fc-fg-muted">Dernière modification</span>
+						<span class="text-fc-sm font-medium text-fc-fg">{formatDate(client.updatedAt)}</span>
+					</div>
+					{#if client.user?.lastLoginAt}
+						<div class="flex flex-col gap-1">
+							<span class="text-fc-xs text-fc-fg-muted">Dernière connexion</span>
+							<span class="text-fc-sm font-medium text-fc-fg"
+								>{formatDate(client.user.lastLoginAt)}</span
+							>
+						</div>
+					{/if}
+				</Section>
 
 				{#if client.stripeCustomerId}
-					<div class="rounded-xl border border-border p-6 space-y-4">
-						<h2 class="text-base font-semibold text-foreground">Stripe</h2>
-						<div>
-							<div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Customer ID</div>
-							<div class="text-xs font-mono text-muted-foreground bg-muted p-2 rounded-lg break-all">
+					<Section title="Stripe" card>
+						<div class="flex flex-col gap-1">
+							<span class="text-fc-xs text-fc-fg-muted">Customer ID</span>
+							<span
+								class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted"
+							>
 								{client.stripeCustomerId}
-							</div>
+							</span>
 						</div>
-					</div>
+					</Section>
 				{/if}
 			</div>
 		</div>
-	{:else}
-		<div class="text-center py-20">
-			<iconify-icon icon="solar:buildings-2-bold" width="48" class="text-muted-foreground"></iconify-icon>
-			<h2 class="text-xl font-bold text-foreground mt-4">Client introuvable</h2>
-			<p class="text-sm text-muted-foreground mt-2">Ce client n'existe pas ou a été supprimé.</p>
-			<button
-				onclick={() => goto(resolve('/admin/clients'))}
-				class="mt-6 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium"
-			>
-				Retour aux clients
-			</button>
-		</div>
-	{/if}
-</div>
+	</Page>
+{:else}
+	<Page width="lg">
+		<EmptyState
+			icon={ardoise.company}
+			title="Client introuvable"
+			description="Ce client n'existe pas ou a été supprimé."
+		>
+			<Button href={resolve('/admin/clients')}>Retour aux clients</Button>
+		</EmptyState>
+	</Page>
+{/if}

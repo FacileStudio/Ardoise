@@ -4,10 +4,19 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Input, Spinner, toast } from '@facile/muse';
+	import {
+		Alert,
+		Button,
+		Field,
+		Input,
+		Page,
+		PageHeader,
+		Section,
+		Spinner,
+		toast,
+	} from '@facile/muse';
 	import { ImageUpload } from '$lib/ui';
 	import { logger } from '@repo/logger';
-	import 'iconify-icon';
 
 	let providerId = $derived($page.params.id as string);
 	let pageLoading = $state(true);
@@ -38,7 +47,7 @@
 	async function getPresignedUrl(filename: string, folder: string) {
 		const result = await trpc.media.getUploadUrl.mutate({
 			fileName: filename,
-			fileType: 'image/*'
+			fileType: 'image/*',
 		});
 		return result.uploadUrl;
 	}
@@ -157,7 +166,7 @@
 			submitting = true;
 			await trpc.provider.update.mutate({
 				id: providerId,
-				data: normalizePayload()
+				data: normalizePayload(),
 			});
 			toast.success('Prestataire modifié avec succès!');
 			goto(resolve('/admin/prestataires'));
@@ -171,143 +180,106 @@
 	}
 </script>
 
-<div class="max-w-2xl mx-auto p-6 space-y-6">
-	{#if pageLoading}
-		<div class="py-20 flex justify-center">
-			<Spinner size="lg" />
-		</div>
-	{:else}
-		<div>
-			<button
-				onclick={() => goto(resolve('/admin/prestataires'))}
-				class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
+<svelte:head><title>Modifier le prestataire - Ardoise</title></svelte:head>
+
+{#if pageLoading}
+	<div class="flex min-h-[40dvh] items-center justify-center">
+		<Spinner size="lg" />
+	</div>
+{:else}
+	<Page width="lg">
+		<PageHeader
+			title="Modifier le prestataire"
+			description="Modifiez les informations du prestataire"
+			back={{ href: resolve('/admin/prestataires'), label: 'Retour aux prestataires' }}
+		/>
+
+		{#if formMessage}
+			<Alert tone="danger">{formMessage}</Alert>
+		{/if}
+
+		<Section title="Informations générales" card>
+			<Field label="Nom du prestataire *" error={getFieldError('name')}>
+				<Input bind:value={formData.name} placeholder="Nom du prestataire" />
+			</Field>
+			<Field label="Raison sociale">
+				<Input bind:value={formData.legalName} placeholder="ex: Facile Studio SAS" />
+			</Field>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="SIRET">
+					<Input bind:value={formData.siret} placeholder="12345678901234" />
+				</Field>
+				<Field label="Taux de TVA (%) *" error={getFieldError('tvaRate')}>
+					<Input
+						type="number"
+						step="0.1"
+						min="0"
+						max="100"
+						bind:value={formData.tvaRate}
+						placeholder="20"
+					/>
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Logo" card>
+			<ImageUpload
+				bind:value={formData.logoUrl}
+				label="Logo du prestataire"
+				{getPresignedUrl}
+				{trpc}
+			/>
+			<p class="text-fc-xs text-fc-fg-muted">
+				Format recommandé: PNG ou SVG avec fond transparent, 512x512px minimum
+			</p>
+		</Section>
+
+		<Section title="Adresse" card>
+			<Field label="Adresse">
+				<Input bind:value={formData.address} placeholder="123 rue de la Paix" />
+			</Field>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="Ville">
+					<Input bind:value={formData.city} placeholder="Paris" />
+				</Field>
+				<Field label="Pays">
+					<Input bind:value={formData.country} placeholder="France" />
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Contact" card>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="Email" error={getFieldError('email')}>
+					<Input bind:value={formData.email} type="email" placeholder="contact@example.com" />
+				</Field>
+				<Field label="Téléphone">
+					<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Informations bancaires" card>
+			<Field label="Nom de la banque">
+				<Input bind:value={formData.bankName} placeholder="BNP Paribas" />
+			</Field>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="IBAN">
+					<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
+				</Field>
+				<Field label="BIC">
+					<Input bind:value={formData.bic} placeholder="BNPAFRPPXXX" />
+				</Field>
+			</div>
+		</Section>
+
+		<div class="flex justify-end gap-3">
+			<Button href={resolve('/admin/prestataires')} variant="ghost" disabled={submitting}
+				>Annuler</Button
 			>
-				<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-				Retour aux prestataires
-			</button>
-			<h1 class="text-2xl font-bold tracking-tight text-foreground">Modifier le prestataire</h1>
-			<p class="text-sm text-muted-foreground mt-1">Modifiez les informations du prestataire</p>
+			<Button onclick={handleUpdate} disabled={submitting}>
+				{submitting ? 'Modification en cours...' : 'Modifier le prestataire'}
+			</Button>
 		</div>
-
-		<div class="space-y-6">
-			{#if formMessage}
-				<div class="rounded-lg border border-fc-danger/30 bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">
-					{formMessage}
-				</div>
-			{/if}
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Informations générales</h2>
-				<div>
-					<div class="text-sm font-medium mb-2">Nom du prestataire <span class="text-fc-danger">*</span></div>
-					<Input bind:value={formData.name} placeholder="Nom du prestataire" aria-invalid={!!getFieldError('name')} class="aria-invalid:border-fc-danger" />
-					{#if getFieldError('name')}
-						<p class="mt-1 text-xs text-fc-danger">{getFieldError('name')}</p>
-					{/if}
-				</div>
-				<div>
-					<div class="text-sm font-medium mb-2">Raison sociale</div>
-					<Input bind:value={formData.legalName} placeholder="ex: Facile Studio SAS" />
-				</div>
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-medium mb-2">SIRET</div>
-						<Input bind:value={formData.siret} placeholder="12345678901234" />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Taux de TVA (%) <span class="text-fc-danger">*</span></div>
-						<input
-							type="number"
-							step="0.1"
-							min="0"
-							max="100"
-							bind:value={formData.tvaRate}
-							class="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary {getFieldError('tvaRate') ? 'border-fc-danger/30' : ''}"
-							placeholder="20"
-						/>
-						{#if getFieldError('tvaRate')}
-							<p class="mt-1 text-xs text-fc-danger">{getFieldError('tvaRate')}</p>
-						{/if}
-					</div>
-				</div>
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Logo</h2>
-				<ImageUpload bind:value={formData.logoUrl} label="Logo du prestataire" {getPresignedUrl} {trpc} />
-				<p class="text-xs text-muted-foreground">Format recommandé: PNG ou SVG avec fond transparent, 512x512px minimum</p>
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Adresse</h2>
-				<div>
-					<div class="text-sm font-medium mb-2">Adresse</div>
-					<Input bind:value={formData.address} placeholder="123 rue de la Paix" />
-				</div>
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-medium mb-2">Ville</div>
-						<Input bind:value={formData.city} placeholder="Paris" />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Pays</div>
-						<Input bind:value={formData.country} placeholder="France" />
-					</div>
-				</div>
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Contact</h2>
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-medium mb-2">Email</div>
-						<Input bind:value={formData.email} type="email" placeholder="contact@example.com" aria-invalid={!!getFieldError('email')} class="aria-invalid:border-fc-danger" />
-						{#if getFieldError('email')}
-							<p class="mt-1 text-xs text-fc-danger">{getFieldError('email')}</p>
-						{/if}
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">Téléphone</div>
-						<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
-					</div>
-				</div>
-			</div>
-
-			<div class="rounded-xl border border-border p-6 space-y-4">
-				<h2 class="text-base font-semibold text-foreground">Informations bancaires</h2>
-				<div>
-					<div class="text-sm font-medium mb-2">Nom de la banque</div>
-					<Input bind:value={formData.bankName} placeholder="BNP Paribas" />
-				</div>
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-medium mb-2">IBAN</div>
-						<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
-					</div>
-					<div>
-						<div class="text-sm font-medium mb-2">BIC</div>
-						<Input bind:value={formData.bic} placeholder="BNPAFRPPXXX" />
-					</div>
-				</div>
-			</div>
-
-			<div class="flex gap-3 pt-2">
-				<Button onclick={() => goto(resolve('/admin/prestataires'))} variant="outline" class="flex-1" disabled={submitting}>
-					Annuler
-				</Button>
-				<button
-					onclick={handleUpdate}
-					disabled={submitting}
-					class="flex-1 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-				>
-					{#if submitting}
-						<iconify-icon icon="line-md:loading-twotone-loop" width="16"></iconify-icon>
-						Modification en cours...
-					{:else}
-						Modifier le prestataire
-					{/if}
-				</button>
-			</div>
-		</div>
-	{/if}
-</div>
+	</Page>
+{/if}
