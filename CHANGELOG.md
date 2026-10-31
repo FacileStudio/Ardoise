@@ -14,6 +14,34 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Security
+
+- `user.me`, the user lists, the admin entity engine, and the payment and client mutations no longer return password hashes. The user detail no longer returns refresh tokens or provider tokens, and hashes stay out of the audit trail.
+- Changing or resetting a password revokes the other sessions of that user.
+- Avatar and cover updates only accept keys under the caller's own upload folder, upload names are sanitized, and the storage layer refuses keys that leave its root. A replace no longer deletes the file it points back to.
+- tRPC batches are rate limited per procedure and per bucket. One batched request used to carry any number of login attempts.
+- Invitation `revoke` and `resend` require admin rights in the invitation's space.
+- `settings.get` (public) returns an allow list. Numbering counters, number formats and fee defaults are no longer exposed.
+- Refresh token rotation is atomic, so two concurrent refreshes with one cookie no longer both succeed.
+- Request logs redact `ticket`, `code`, `state` and `token` query parameters. Health checks no longer return raw driver errors.
+- The OIDC avatar fetch rejects IPv4-mapped IPv6 and carrier-grade NAT addresses. The webhook, DocuSeal and OIDC calls time out.
+
+### Fixed
+
+- A Stripe webhook whose processing failed was recorded as handled, so Stripe's redelivery was ignored and the payment stayed pending. The event id is released when processing throws.
+- The payment receipt is marked as sent only after the confirmation email goes out, so a failed send is retried.
+- Concurrent requests could issue the same invoice, quote or contract number. The counter is read and incremented in one statement, and a number is taken only after the client and provider checks pass.
+- User text such as `{{items}}` in a document was expanded into Typst code by a second substitution pass. Templates are substituted once and compiled directly.
+- The admin entity form offered the role `USER`, which the database rejects. It now offers `CLIENT`. The media entity validated with the user schema.
+- `/health` walked the whole storage tree on every probe. It now checks that the storage root is reachable.
+
+### Changed
+
+- Removed the unused `payment.handleWebhook` tRPC procedure. Stripe posts to `/webhook`.
+- Removed unused dependencies (`bcrypt`, `bcryptjs`, `jsonwebtoken`, `crypto-es`, `@faker-js/faker`, `@logtail/pino`, `@react-native/eslint-config`), dead modules and unused storage methods. The backend now declares `jose` and `zod`.
+- DocuSeal settings load only for DocuSeal procedures instead of on every request.
+- The general rate limit is 300 procedure calls per minute per client, counted per procedure instead of per path.
+
 ## [0.2.2] - 2026-10-31
 
 ### Added
