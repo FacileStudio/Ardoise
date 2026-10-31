@@ -19,7 +19,7 @@ export const invitationRouter = router({
   }),
 
   revoke: adminProcedure.input(InvitationIdSchema).mutation(async ({ ctx, input }) => {
-    return invitationService.revoke(ctx.db, input.id);
+    return invitationService.revoke(ctx.db, ctx.user.id, input.id);
   }),
 
   resend: adminProcedure.input(InvitationIdSchema).mutation(async ({ ctx, input }) => {

@@ -176,8 +176,8 @@ async function createSpecializedPrestation(
   typeSpecificData: Record<string, unknown>,
   ctx: any
 ) {
-  const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
   const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
+  const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
 
   const documentData = {
     type,
@@ -603,8 +603,8 @@ export const documentRouter = router({
     .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
+        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
 
         const documentData = {
           type: 'facture_prestation' as const,
@@ -695,8 +695,8 @@ export const documentRouter = router({
     .input(spaceScoped(MaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
+        const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
 
         const documentData = {
           type: 'maintenance' as const,

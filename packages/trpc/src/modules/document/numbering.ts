@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@repo/database';
+import { Prisma, type PrismaClient } from '@repo/database';
 
 type DocumentType = 'invoice' | 'quote' | 'contract';
 
@@ -41,29 +41,19 @@ export async function generateNextDocumentNumber(
 ): Promise<string> {
   const config = typeConfig[type];
 
-  return await db.$transaction(async (tx) => {
-    const settings = await tx.settings.findUnique({
+  try {
+    const settings = await db.settings.update({
       where: { id: 'global' },
+      data: { [config.counterField]: { increment: 1 } },
     });
 
-    if (!settings) {
+    return formatNumber(settings[config.formatField], settings[config.counterField] - 1);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       throw new Error('Settings not found. Please initialize settings first.');
     }
-
-    const currentNumber = settings[config.counterField];
-    const format = settings[config.formatField];
-
-    const formattedNumber = formatNumber(format, currentNumber);
-
-    await tx.settings.update({
-      where: { id: 'global' },
-      data: {
-        [config.counterField]: { increment: 1 },
-      },
-    });
-
-    return formattedNumber;
-  });
+    throw error;
+  }
 }
 
 export async function previewDocumentNumber(

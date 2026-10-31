@@ -60,6 +60,26 @@ async function findPending(db: PrismaClient, token: string) {
   return invitation;
 }
 
+async function requireManageable<T extends { spaceId: string | null }>(
+  db: PrismaClient,
+  userId: string,
+  invitation: T | null
+): Promise<T> {
+  if (!invitation) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Invitation not found' });
+  }
+  if (!invitation.spaceId) return invitation;
+
+  const member = await db.spaceMember.findUnique({
+    where: { spaceId_userId: { spaceId: invitation.spaceId, userId } },
+    select: { role: true },
+  });
+  if (!member || member.role === 'MEMBER') {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Invitation not found' });
+  }
+  return invitation;
+}
+
 async function deliver(
   smtp: SMTPClient,
   appOrigin: string,
@@ -145,8 +165,15 @@ export const invitationService = {
     });
   },
 
-  async revoke(db: PrismaClient, id: string) {
-    await db.invitation.deleteMany({ where: { id } });
+  async revoke(db: PrismaClient, userId: string, id: string) {
+    const invitation = await db.invitation.findUnique({
+      where: { id },
+      select: { spaceId: true },
+    });
+    if (invitation) {
+      await requireManageable(db, userId, invitation);
+      await db.invitation.deleteMany({ where: { id } });
+    }
     return { success: true };
   },
 
@@ -158,13 +185,14 @@ export const invitationService = {
     id: string
   ) {
     const inviter = await loadInviter(db, inviterId);
-    const invitation = await db.invitation.findUnique({
-      where: { id },
-      include: { space: { select: { name: true } } },
-    });
-    if (!invitation) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Invitation not found' });
-    }
+    const invitation = await requireManageable(
+      db,
+      inviterId,
+      await db.invitation.findUnique({
+        where: { id },
+        include: { space: { select: { name: true } } },
+      })
+    );
 
     const token = randomBytes(32).toString('hex');
     await db.invitation.update({
