@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge } from '@facile/muse';
+	import { Badge, Button } from '@facile/muse';
 
 	type Status = 'none' | 'sent' | 'signed' | 'declined';
 	type Tone = 'neutral' | 'info' | 'success' | 'danger';
@@ -35,14 +35,15 @@
 		{labels[status]}{status === 'signed' && signedLabel ? ` le ${signedLabel}` : ''}
 	</Badge>
 	{#if plumeUrl && status !== 'none'}
-		<a
+		<Button
+			variant="ghost"
+			size="sm"
 			href={plumeUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="text-muted-foreground underline hover:text-foreground"
 		>
 			Voir dans Plume
-		</a>
+		</Button>
 	{/if}
 	{#if archived}
 		<span class="text-muted-foreground">Copie signée archivée dans Nuage</span>

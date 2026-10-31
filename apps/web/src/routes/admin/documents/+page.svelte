@@ -7,7 +7,7 @@
 	import { Pagination, SearchInput } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { DOCUMENT_TYPE_LABELS } from '$lib/mission';
-	import { SIGNABLE_TYPES, loadSignatureEnabled } from '$lib/signature.svelte';
+	import { SIGNABLE_TYPES, loadSignatureEnabled } from '$lib/signature';
 	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
 	import SendForSignature from '$lib/components/SendForSignature.svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
