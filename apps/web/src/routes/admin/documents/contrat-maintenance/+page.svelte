@@ -43,7 +43,7 @@
 			toast.success('Aperçu généré avec succès');
 		} catch (error: any) {
 			logger.error({ err: error }, 'Failed to preview document');
-			toast.danger('Échec de la génération de l\'aperçu');
+			toast.danger("Échec de la génération de l'aperçu");
 		} finally {
 			generating = false;
 		}

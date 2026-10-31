@@ -23,7 +23,13 @@
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
 
-	type DocType = 'facture_prestation' | 'maintenance' | 'contrat_prestation' | 'contrat_maintenance' | 'back_contractuel' | 'appel_de_fonds';
+	type DocType =
+		| 'facture_prestation'
+		| 'maintenance'
+		| 'contrat_prestation'
+		| 'contrat_maintenance'
+		| 'back_contractuel'
+		| 'appel_de_fonds';
 
 	interface Client {
 		id: string;
@@ -171,8 +177,6 @@
 		}
 	});
 
-
-
 	async function loadDocumentTypes() {
 		try {
 			docTypes = await trpc.document.types.query();
@@ -187,7 +191,11 @@
 
 	async function loadClients() {
 		try {
-			const result = await trpc.client.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
+			const result = await trpc.client.list.query({
+				page: 1,
+				limit: 100,
+				spaceId: spaceContext.spaceId,
+			});
 			clients = result.clients as unknown as Client[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch clients');
@@ -196,10 +204,14 @@
 
 	async function loadProviders() {
 		try {
-			const result = await trpc.provider.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId });
+			const result = await trpc.provider.list.query({
+				page: 1,
+				limit: 100,
+				spaceId: spaceContext.spaceId,
+			});
 			providers = result.providers as unknown as Provider[];
 		} catch (err) {
-			logger.error({ err}, 'Failed to fetch providers');
+			logger.error({ err }, 'Failed to fetch providers');
 		}
 	}
 
@@ -270,7 +282,7 @@
 				return 'Veuillez saisir une référence globale';
 			}
 			if (!formData.project_step) {
-				return 'Veuillez saisir l\'étape du projet (ex: Acompte 30%)';
+				return "Veuillez saisir l'étape du projet (ex: Acompte 30%)";
 			}
 			if (!formData.project_name) {
 				return 'Veuillez saisir un nom de projet';
@@ -285,7 +297,10 @@
 			return 'Veuillez sélectionner un prestataire';
 		}
 
-		const providerValidationMessage = getProviderValidationMessage(selectedProvider, formData.type as DocType);
+		const providerValidationMessage = getProviderValidationMessage(
+			selectedProvider,
+			formData.type as DocType
+		);
 		if (providerValidationMessage) {
 			return providerValidationMessage;
 		}
@@ -336,7 +351,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -349,7 +364,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -361,7 +376,7 @@
 						spaceId: spaceContext.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'contrat_maintenance':
@@ -372,7 +387,7 @@
 						spaceId: spaceContext.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'back_contractuel':
@@ -387,7 +402,7 @@
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
-						});
+					});
 					break;
 
 				case 'appel_de_fonds':
@@ -401,7 +416,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						payment_providers: formData.payment_providers,
-						});
+					});
 					break;
 
 				default:
@@ -443,7 +458,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -457,7 +472,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
-							railway_estimate: Number(formData.railway_estimate || 0),
+						railway_estimate: Number(formData.railway_estimate || 0),
 					});
 					break;
 
@@ -470,7 +485,7 @@
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'contrat_maintenance':
@@ -482,7 +497,7 @@
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
-						});
+					});
 					break;
 
 				case 'back_contractuel':
@@ -498,7 +513,7 @@
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
-						});
+					});
 					break;
 
 				case 'appel_de_fonds':
@@ -513,7 +528,7 @@
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						payment_providers: formData.payment_providers,
-						});
+					});
 					break;
 
 				default:
@@ -589,7 +604,9 @@
 	}
 
 	function removePaymentProvider(index: number) {
-		formData.payment_providers = formData.payment_providers.filter((_: any, i: number) => i !== index);
+		formData.payment_providers = formData.payment_providers.filter(
+			(_: any, i: number) => i !== index
+		);
 	}
 
 	function base64ToBlob(base64: string, contentType: string): Blob {
@@ -622,12 +639,16 @@
 		formData.items.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0)
 	);
 	const totalWithRailway = $derived(subtotal + (formData.railway_estimate || 0));
-	const selectedProvider = $derived(providers.find(p => p.id === selectedProviderId));
-	const linkedProviderIds = $derived(new Set((mission?.providers ?? []).map((link: any) => link.providerId)));
+	const selectedProvider = $derived(providers.find((p) => p.id === selectedProviderId));
+	const linkedProviderIds = $derived(
+		new Set((mission?.providers ?? []).map((link: any) => link.providerId))
+	);
 	const availableProviders = $derived(
 		linkedProviderIds.size > 0 ? providers.filter((p) => linkedProviderIds.has(p.id)) : providers
 	);
-	const selectedProviderMissingFields = $derived(getMissingProviderFields(selectedProvider, formData.type as DocType));
+	const selectedProviderMissingFields = $derived(
+		getMissingProviderFields(selectedProvider, formData.type as DocType)
+	);
 	const tvaRate = $derived(selectedProvider?.tvaRate || 20);
 	const tva = $derived(totalWithRailway * (tvaRate / 100));
 	const total = $derived(totalWithRailway + tva);
@@ -678,8 +699,10 @@
 		</div>
 		{#if showTtc && newItem.description && newItem.quantity > 0 && newItem.price > 0}
 			<p class="text-fc-xs text-fc-fg-muted">
-				{newItem.quantity} {newItem.unit} x {formatCurrency(newItem.price)} = {formatCurrency(newItem.quantity * newItem.price)} HT
-				(TTC: {formatCurrency(newItem.quantity * newItem.price * (1 + tvaRate / 100))})
+				{newItem.quantity}
+				{newItem.unit} x {formatCurrency(newItem.price)} = {formatCurrency(
+					newItem.quantity * newItem.price
+				)} HT (TTC: {formatCurrency(newItem.quantity * newItem.price * (1 + tvaRate / 100))})
 			</p>
 		{/if}
 		<Button onclick={addItem} variant="ghost" class="w-full">Ajouter cet item</Button>
@@ -802,7 +825,9 @@
 					</div>
 					{#if selectedProviderMissingFields.length > 0}
 						<p class="mt-1 text-fc-xs font-medium">
-							Champs manquants: {selectedProviderMissingFields.map((field) => providerFieldLabels[field]).join(', ')}
+							Champs manquants: {selectedProviderMissingFields
+								.map((field) => providerFieldLabels[field])
+								.join(', ')}
 						</p>
 					{/if}
 				</Alert>
@@ -838,7 +863,13 @@
 						<Input bind:value={newProvider.role} placeholder="Ex: Développeur Full-Stack" />
 					</Field>
 					<Field label="Montant HT (EUR) *">
-						<Input type="number" bind:value={newProvider.amount} placeholder="Ex: 5000" min="0" step="0.01" />
+						<Input
+							type="number"
+							bind:value={newProvider.amount}
+							placeholder="Ex: 5000"
+							min="0"
+							step="0.01"
+						/>
 					</Field>
 				</div>
 				<Button onclick={addProvider} variant="ghost" class="w-full">Ajouter ce prestataire</Button>
@@ -918,7 +949,13 @@
 					</Select>
 				</Field>
 				<Field label="Montant à verser (EUR HT) *">
-					<Input type="number" bind:value={newPaymentProvider.amount_to_pay} placeholder="Ex: 1500" min="0" step="0.01" />
+					<Input
+						type="number"
+						bind:value={newPaymentProvider.amount_to_pay}
+						placeholder="Ex: 1500"
+						min="0"
+						step="0.01"
+					/>
 				</Field>
 				<Button onclick={addPaymentProvider} variant="ghost" class="w-full">
 					Ajouter ce prestataire
@@ -942,7 +979,9 @@
 				<div class="flex items-center justify-between rounded-fc-md bg-fc-surface p-4">
 					<span class="text-fc-sm font-medium text-fc-fg-muted">TOTAL HT</span>
 					<span class="text-fc-lg font-semibold text-fc-fg">
-						{formatCurrency(formData.payment_providers.reduce((sum: number, p: any) => sum + p.amount_to_pay, 0))}
+						{formatCurrency(
+							formData.payment_providers.reduce((sum: number, p: any) => sum + p.amount_to_pay, 0)
+						)}
 					</span>
 				</div>
 			{/if}
@@ -978,7 +1017,8 @@
 	{/if}
 
 	<div class="flex flex-wrap justify-end gap-3">
-		<Button href={resolve('/admin/documents')} variant="ghost" disabled={generating}>Annuler</Button>
+		<Button href={resolve('/admin/documents')} variant="ghost" disabled={generating}>Annuler</Button
+		>
 		<Button variant="ghost" onclick={handlePreview} disabled={generating}>
 			{#if generating && !showPreview}
 				<Spinner size="sm" />

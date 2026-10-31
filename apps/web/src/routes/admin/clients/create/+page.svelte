@@ -2,7 +2,17 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Button, Checkbox, Field, Input, Page, PageHeader, Section, toast } from '@facile/muse';
+	import {
+		Alert,
+		Button,
+		Checkbox,
+		Field,
+		Input,
+		Page,
+		PageHeader,
+		Section,
+		toast,
+	} from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
@@ -186,7 +196,11 @@
 		{#if formData.createCredentials}
 			<div class="grid gap-4 sm:grid-cols-2">
 				<Field label="Email de connexion *" error={getFieldError('credentialEmail')}>
-					<Input bind:value={formData.credentialEmail} type="email" placeholder="login@entreprise.fr" />
+					<Input
+						bind:value={formData.credentialEmail}
+						type="email"
+						placeholder="login@entreprise.fr"
+					/>
 				</Field>
 				<Field
 					label="Mot de passe *"

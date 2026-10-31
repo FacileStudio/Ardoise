@@ -14,7 +14,7 @@
 	async function getPresignedUrl(filename: string, folder: string) {
 		const result = await trpc.media.getUploadUrl.mutate({
 			fileName: filename,
-			fileType: 'image/*'
+			fileType: 'image/*',
 		});
 		return result.uploadUrl;
 	}
@@ -160,7 +160,14 @@
 				<Input bind:value={formData.siret} placeholder="12345678901234" />
 			</Field>
 			<Field label="Taux de TVA (%) *" error={getFieldError('tvaRate')}>
-				<Input type="number" step="0.1" min="0" max="100" bind:value={formData.tvaRate} placeholder="20" />
+				<Input
+					type="number"
+					step="0.1"
+					min="0"
+					max="100"
+					bind:value={formData.tvaRate}
+					placeholder="20"
+				/>
 			</Field>
 		</div>
 	</Section>
@@ -217,7 +224,9 @@
 	</Section>
 
 	<div class="flex justify-end gap-3">
-		<Button href={resolve('/admin/prestataires')} variant="ghost" disabled={submitting}>Annuler</Button>
+		<Button href={resolve('/admin/prestataires')} variant="ghost" disabled={submitting}
+			>Annuler</Button
+		>
 		<Button onclick={handleCreate} disabled={submitting}>
 			{submitting ? 'Création en cours...' : 'Créer le prestataire'}
 		</Button>

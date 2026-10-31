@@ -54,7 +54,6 @@
 	let deleteTarget: Document | null = $state(null);
 	let confirmDelete = $state(false);
 
-
 	let signatureEnabled = $state(false);
 	let docTypes: Array<{ value: string; label: string }> = $state([]);
 	let searchTimer: ReturnType<typeof setTimeout>;
@@ -203,7 +202,9 @@
 				<Button variant="ghost" icon={ardoise.signature} href={resolve('/admin/sign')}>
 					Signatures
 				</Button>
-				<Button href={resolve('/admin/documents/create')} icon={icons.plus}>Créer un document</Button>
+				<Button href={resolve('/admin/documents/create')} icon={icons.plus}
+					>Créer un document</Button
+				>
 			{/snippet}
 		</PageHeader>
 
@@ -255,7 +256,8 @@
 								<td class="font-medium text-fc-fg">{formatCurrency(doc.total)}</td>
 								<td class="text-fc-fg-muted">{formatDate(doc.createdAt)}</td>
 								<td class="text-fc-fg-muted">
-									{doc.createdByUser.firstName} {doc.createdByUser.lastName}
+									{doc.createdByUser.firstName}
+									{doc.createdByUser.lastName}
 								</td>
 								<td>
 									<div class="flex items-center justify-end gap-1">
@@ -293,7 +295,8 @@
 					<Card class="flex flex-col gap-3">
 						<div class="flex items-start justify-between gap-2">
 							<div class="flex min-w-0 flex-col">
-								<span class="truncate text-fc-sm font-medium text-fc-fg">{getDocumentRef(doc)}</span>
+								<span class="truncate text-fc-sm font-medium text-fc-fg">{getDocumentRef(doc)}</span
+								>
 								<span class="truncate text-fc-xs text-fc-fg-muted">
 									{typeLabel(doc.type)} - {doc.clientName}
 								</span>

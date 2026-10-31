@@ -17,12 +17,7 @@
 	import { Pagination, SearchInput } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
-	import {
-		STATUS_LABELS,
-		STATUS_VARIANTS,
-		formatDate,
-		type MissionStatus,
-	} from '$lib/mission';
+	import { STATUS_LABELS, STATUS_VARIANTS, formatDate, type MissionStatus } from '$lib/mission';
 
 	const limit = 20;
 
@@ -72,8 +67,7 @@
 		searchQuery;
 		statusFilter;
 
-		if (!isInitialMount)
-			fetchMissions();
+		if (!isInitialMount) fetchMissions();
 	});
 
 	function handleStatusChange(id: string) {
@@ -156,7 +150,10 @@
 									</Badge>
 								</td>
 								<td class="text-fc-fg-muted">
-									{mission._count.documents} doc. · {mission._count.payments} paiement{mission._count.payments > 1 ? 's' : ''}
+									{mission._count.documents} doc. · {mission._count.payments} paiement{mission
+										._count.payments > 1
+										? 's'
+										: ''}
 								</td>
 								<td class="text-fc-fg-muted">{formatDate(mission.createdAt)}</td>
 							</tr>
@@ -197,7 +194,9 @@
 					: "Créez une mission pour y rassembler les devis, contrats, factures et paiements d'une mission."}
 			>
 				{#if !searchQuery && !statusFilter}
-					<Button href={resolve('/admin/missions/create')} icon={icons.plus}>Nouvelle mission</Button>
+					<Button href={resolve('/admin/missions/create')} icon={icons.plus}
+						>Nouvelle mission</Button
+					>
 				{/if}
 			</EmptyState>
 		{/if}

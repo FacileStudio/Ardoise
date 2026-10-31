@@ -171,14 +171,15 @@
         dueDate: new Date(formData.dueDate),
       });
 
-      toast.success(formData.collectionMethod === 'STRIPE'
+      toast.success(
+        formData.collectionMethod === 'STRIPE'
           ? 'Paiement créé avec succès! Un email a été envoyé au client.'
-          : 'Paiement manuel enregistré avec succès!');
+          : 'Paiement manuel enregistré avec succès!'
+      );
       goto(resolve('/admin/payments'));
     } catch (err: any) {
       logger.error({ err }, 'Failed to create payment');
-      if (!isSmtpNotConfigured(err))
-        toast.danger(err.message || 'Erreur lors de la création');
+      if (!isSmtpNotConfigured(err)) toast.danger(err.message || 'Erreur lors de la création');
     } finally {
       submitting = false;
     }
@@ -343,7 +344,11 @@
               ? 'bg-fc-surface'
               : ''}"
           >
-            <Checkbox checked={selected} onchange={() => toggleDocument(doc.id)} aria-label={doc.name} />
+            <Checkbox
+              checked={selected}
+              onchange={() => toggleDocument(doc.id)}
+              aria-label={doc.name}
+            />
             <div class="min-w-0 flex-1">
               <div class="truncate text-fc-sm font-medium text-fc-fg">{doc.name}</div>
               <div class="truncate text-fc-xs text-fc-fg-muted">

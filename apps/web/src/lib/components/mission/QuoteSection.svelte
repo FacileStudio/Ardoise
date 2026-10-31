@@ -17,7 +17,9 @@
 
 	const billing = $derived(mission.billing);
 	const quotes = $derived(
-		mission.documents.filter((d: any) => d.type === 'devis').sort((a: any, b: any) => b.version - a.version)
+		mission.documents
+			.filter((d: any) => d.type === 'devis')
+			.sort((a: any, b: any) => b.version - a.version)
 	);
 
 	async function act(action: () => Promise<unknown>, success: string, failure: string) {
@@ -27,8 +29,7 @@
 
 		busy = false;
 
-		if (ok)
-			await onChange();
+		if (ok) await onChange();
 	}
 
 	function generate() {
@@ -51,8 +52,7 @@
 		if (quote.id !== billing.currentQuoteId)
 			return { label: 'Remplacé', variant: 'neutral' as const };
 
-		if (billing.quoteOutdated)
-			return { label: 'Périmé', variant: 'warning' as const };
+		if (billing.quoteOutdated) return { label: 'Périmé', variant: 'warning' as const };
 
 		if (quote.acceptedAt)
 			return { label: `Accepté le ${formatDate(quote.acceptedAt)}`, variant: 'success' as const };
@@ -75,7 +75,8 @@
 
 	{#if billing.quoteOutdated}
 		<Alert tone="warning">
-			Les prestations ont changé depuis le dernier devis. Générez un nouveau devis pour pouvoir facturer.
+			Les prestations ont changé depuis le dernier devis. Générez un nouveau devis pour pouvoir
+			facturer.
 		</Alert>
 	{/if}
 

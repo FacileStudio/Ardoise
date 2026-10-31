@@ -59,8 +59,7 @@
 	}
 
 	function addProvider() {
-		if (!newProviderId)
-			return;
+		if (!newProviderId) return;
 
 		linked = [...linked, { providerId: newProviderId, role: newRole }];
 		newProviderId = '';
@@ -156,7 +155,9 @@
 			{#if linked.length > 0}
 				<ul class="flex flex-col gap-2">
 					{#each linked as link (link.providerId)}
-						<li class="flex items-center justify-between rounded-fc-md bg-fc-surface px-3 py-2 text-fc-sm">
+						<li
+							class="flex items-center justify-between rounded-fc-md bg-fc-surface px-3 py-2 text-fc-sm"
+						>
 							<span>
 								<span class="font-medium text-fc-fg">{providerName(link.providerId)}</span>
 								<span class="text-fc-fg-muted"> · {ROLE_LABELS[link.role]}</span>
@@ -186,7 +187,13 @@
 						<option {value}>{label}</option>
 					{/each}
 				</Select>
-				<Button type="button" variant="ghost" size="lg" onclick={addProvider} disabled={!newProviderId}>
+				<Button
+					type="button"
+					variant="ghost"
+					size="lg"
+					onclick={addProvider}
+					disabled={!newProviderId}
+				>
 					Ajouter
 				</Button>
 			</div>

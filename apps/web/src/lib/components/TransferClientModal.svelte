@@ -4,7 +4,12 @@
 	import { logger } from '@repo/logger';
 	import { trpc } from '$lib/trpc';
 
-	let { open = $bindable(false), clientId, currentSpaceId, onDone } = $props<{
+	let {
+		open = $bindable(false),
+		clientId,
+		currentSpaceId,
+		onDone,
+	} = $props<{
 		open: boolean;
 		clientId: string;
 		currentSpaceId: string | null;
@@ -32,8 +37,7 @@
 	});
 
 	async function submit() {
-		if (!target)
-			return;
+		if (!target) return;
 
 		submitting = true;
 		try {
@@ -82,8 +86,8 @@
 		</Field>
 
 		<p class="text-fc-xs text-fc-fg-muted">
-			Seules les informations du client sont reprises. Ses missions, paiements et documents restent dans l'espace d'origine.
-			Un client qui a déjà un historique est copié plutôt que déplacé.
+			Seules les informations du client sont reprises. Ses missions, paiements et documents restent
+			dans l'espace d'origine. Un client qui a déjà un historique est copié plutôt que déplacé.
 		</p>
 
 		<div class="flex justify-end gap-3">

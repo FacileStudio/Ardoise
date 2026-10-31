@@ -92,13 +92,16 @@
 		} catch (err: any) {
 			logger.error({ err }, 'Failed to delete client');
 			if (err?.message?.includes('existing payments')) {
-				deleteError = 'Impossible de supprimer un client avec des paiements existants. Veuillez d\'abord supprimer les paiements.';
+				deleteError =
+					"Impossible de supprimer un client avec des paiements existants. Veuillez d'abord supprimer les paiements.";
 			} else {
 				deleteError = 'Echec de la suppression du client: ' + (err?.message || 'Erreur inconnue');
 			}
 			confirmDeleteClient = null;
 			showDeleteDialog = false;
-			setTimeout(() => { deleteError = ''; }, 6000);
+			setTimeout(() => {
+				deleteError = '';
+			}, 6000);
 		}
 	}
 
@@ -109,21 +112,31 @@
 
 	function getStatusColor(status: string | null) {
 		switch (status) {
-			case 'ACTIVE': return 'success';
-			case 'BANNED': return 'danger';
-			case 'SUSPENDED': return 'warning';
-			case 'PENDING': return 'neutral';
-			default: return 'neutral';
+			case 'ACTIVE':
+				return 'success';
+			case 'BANNED':
+				return 'danger';
+			case 'SUSPENDED':
+				return 'warning';
+			case 'PENDING':
+				return 'neutral';
+			default:
+				return 'neutral';
 		}
 	}
 
 	function getStatusLabel(status: string | null) {
 		switch (status) {
-			case 'ACTIVE': return $i18n.t('common.status.active');
-			case 'BANNED': return $i18n.t('common.status.banned');
-			case 'SUSPENDED': return $i18n.t('common.status.suspended');
-			case 'PENDING': return $i18n.t('common.status.pending');
-			default: return $i18n.t('common.status.active');
+			case 'ACTIVE':
+				return $i18n.t('common.status.active');
+			case 'BANNED':
+				return $i18n.t('common.status.banned');
+			case 'SUSPENDED':
+				return $i18n.t('common.status.suspended');
+			case 'PENDING':
+				return $i18n.t('common.status.pending');
+			default:
+				return $i18n.t('common.status.active');
 		}
 	}
 
@@ -151,17 +164,17 @@
 	}
 
 	function handleExportCSV() {
-		const csvData = clients.map(client => ({
-			'Nom': `${client.contactFirstName} ${client.contactLastName}`,
+		const csvData = clients.map((client) => ({
+			Nom: `${client.contactFirstName} ${client.contactLastName}`,
 			'Email contact': client.contactEmail || '',
 			'Email connexion': client.user?.email || '',
-			'Entreprise': client.companyName || '',
-			'SIRET': client.siret || '',
-			'Adresse': client.billingAddress || '',
-			'Ville': client.billingCity || '',
-			'Pays': client.billingCountry || '',
+			Entreprise: client.companyName || '',
+			SIRET: client.siret || '',
+			Adresse: client.billingAddress || '',
+			Ville: client.billingCity || '',
+			Pays: client.billingCountry || '',
 			'Statut accès': client.user?.status || 'AUCUN ACCÈS',
-			'Date création': new Date(client.createdAt).toLocaleDateString('fr-FR')
+			'Date création': new Date(client.createdAt).toLocaleDateString('fr-FR'),
 		}));
 		downloadCSV(csvData, 'clients');
 	}
@@ -179,10 +192,15 @@
 			<Alert tone="danger">{deleteError}</Alert>
 		{/if}
 
-		<PageHeader title={$i18n.t('admin.clients.title')} description={$i18n.t('admin.clients.subtitle')}>
+		<PageHeader
+			title={$i18n.t('admin.clients.title')}
+			description={$i18n.t('admin.clients.subtitle')}
+		>
 			{#snippet actions()}
 				{#if clients.length > 0}
-					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}>Exporter CSV</Button>
+					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}
+						>Exporter CSV</Button
+					>
 				{/if}
 				<Button href={resolve('/admin/clients/create')} icon={icons.plus}>
 					{$i18n.t('admin.clients.newClient')}
@@ -230,7 +248,10 @@
 										<span class="truncate font-medium text-fc-fg">{client.companyName}</span>
 										<span class="text-fc-xs text-fc-fg-muted">
 											{#if client.payments?.length > 0}
-												{client.payments.length} {client.payments.length !== 1 ? $i18n.t('admin.clients.payments') : $i18n.t('admin.clients.payment')}
+												{client.payments.length}
+												{client.payments.length !== 1
+													? $i18n.t('admin.clients.payments')
+													: $i18n.t('admin.clients.payment')}
 											{:else}
 												{$i18n.t('admin.clients.noPaymentsYet')}
 											{/if}
@@ -240,13 +261,16 @@
 								<td>
 									<div class="flex flex-col">
 										<span class="font-medium text-fc-fg">
-											{client.contactFirstName} {client.contactLastName}
+											{client.contactFirstName}
+											{client.contactLastName}
 										</span>
 										<span class="text-fc-sm text-fc-fg-muted">
 											{client.contactEmail || 'Aucun email de contact'}
 										</span>
 										{#if client.user?.email}
-											<span class="text-fc-xs text-fc-fg-muted">Accès client : {client.user.email}</span>
+											<span class="text-fc-xs text-fc-fg-muted"
+												>Accès client : {client.user.email}</span
+											>
 										{/if}
 									</div>
 								</td>
@@ -307,7 +331,8 @@
 						>
 							<span class="truncate text-fc-sm font-medium text-fc-fg">{client.companyName}</span>
 							<span class="truncate text-fc-xs text-fc-fg-muted">
-								{client.contactFirstName} {client.contactLastName}
+								{client.contactFirstName}
+								{client.contactLastName}
 								{#if client.billingCity}- {client.billingCity}{/if}
 							</span>
 						</a>
@@ -353,7 +378,9 @@
 			<EmptyState
 				icon={ardoise.client}
 				title={$i18n.t('admin.clients.noClientsFound')}
-				description={searchQuery ? $i18n.t('admin.clients.tryAdjustingSearch') : $i18n.t('admin.clients.getStarted')}
+				description={searchQuery
+					? $i18n.t('admin.clients.tryAdjustingSearch')
+					: $i18n.t('admin.clients.getStarted')}
 			>
 				{#if !searchQuery}
 					<Button href={resolve('/admin/clients/create')} icon={icons.plus}>
@@ -368,12 +395,17 @@
 <ConfirmModal
 	bind:open={showDeleteDialog}
 	title={$i18n.t('admin.clients.deleteConfirm.title')}
-	description={$i18n.t('admin.clients.deleteConfirm.description', { companyName: confirmDeleteClient?.companyName || '' })}
+	description={$i18n.t('admin.clients.deleteConfirm.description', {
+		companyName: confirmDeleteClient?.companyName || '',
+	})}
 	confirmLabel={$i18n.t('admin.clients.deleteClient')}
 	cancelLabel={$i18n.t('common.buttons.cancel')}
 	tone="danger"
 	onConfirm={handleDeleteClient}
-	onCancel={() => { confirmDeleteClient = null; showDeleteDialog = false; }}
+	onCancel={() => {
+		confirmDeleteClient = null;
+		showDeleteDialog = false;
+	}}
 />
 
 {#if transferClient}

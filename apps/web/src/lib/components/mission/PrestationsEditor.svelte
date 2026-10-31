@@ -39,7 +39,9 @@
 		rows.every((r) => r.description.trim() && (r.quantity ?? 0) > 0 && (r.unitPrice ?? -1) >= 0)
 	);
 	// the total excluding tax is the sum of quantity times unit price over every line
-	const totalHt = $derived(rows.reduce((sum, r) => sum + (r.quantity ?? 0) * (r.unitPrice ?? 0), 0));
+	const totalHt = $derived(
+		rows.reduce((sum, r) => sum + (r.quantity ?? 0) * (r.unitPrice ?? 0), 0)
+	);
 
 	function addRow() {
 		rows.push({ description: '', quantity: 1, unit: 'jour', unitPrice: 0, providerId: '' });
@@ -70,8 +72,7 @@
 
 		saving = false;
 
-		if (ok)
-			await onChange();
+		if (ok) await onChange();
 	}
 </script>
 
@@ -107,7 +108,8 @@
 						min="0"
 						step="0.01"
 						value={row.quantity ?? ''}
-						oninput={(e) => (row.quantity = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}
+						oninput={(e) =>
+							(row.quantity = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}
 						disabled={!editable}
 						aria-label="Quantité"
 						class="h-9"
@@ -124,7 +126,8 @@
 						min="0"
 						step="0.01"
 						value={row.unitPrice ?? ''}
-						oninput={(e) => (row.unitPrice = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}
+						oninput={(e) =>
+							(row.unitPrice = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}
 						disabled={!editable}
 						aria-label="Prix unitaire HT"
 						class="h-9"

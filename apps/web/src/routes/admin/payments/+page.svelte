@@ -25,7 +25,14 @@
 	import { PAYMENT_STATUS_LABELS } from '$lib/mission';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'PAST_DUE' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
-	const STATUSES: PaymentStatus[] = ['PENDING', 'PAID', 'PAST_DUE', 'FAILED', 'EXPIRED', 'CANCELLED'];
+	const STATUSES: PaymentStatus[] = [
+		'PENDING',
+		'PAID',
+		'PAST_DUE',
+		'FAILED',
+		'EXPIRED',
+		'CANCELLED',
+	];
 	const PAGE_SIZE = 20;
 	type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
 
@@ -212,17 +219,17 @@
 	}
 
 	function handleExportCSV() {
-		const csvData = payments.map(payment => ({
-			'ID': payment.id,
-			'Description': payment.description,
-			'Client': payment.client.companyName,
-			'Montant': formatCurrency(Number(payment.totalWithFees || payment.amount)),
+		const csvData = payments.map((payment) => ({
+			ID: payment.id,
+			Description: payment.description,
+			Client: payment.client.companyName,
+			Montant: formatCurrency(Number(payment.totalWithFees || payment.amount)),
 			'Frais Stripe': payment.stripeFee ? formatCurrency(Number(payment.stripeFee)) : '0,00 €',
-			'Statut': payment.status,
-			'Fréquence': getFrequencyLabel(payment.frequency),
+			Statut: payment.status,
+			Fréquence: getFrequencyLabel(payment.frequency),
 			'Date création': formatDate(payment.createdAt),
 			'Date échéance': formatDate(payment.dueDate),
-			'Date paiement': payment.paidAt ? formatDate(payment.paidAt) : '-'
+			'Date paiement': payment.paidAt ? formatDate(payment.paidAt) : '-',
 		}));
 		downloadCSV(csvData, 'paiements');
 	}
@@ -236,10 +243,15 @@
 	</div>
 {:else}
 	<Page width="xl">
-		<PageHeader title={$i18n.t('admin.payments.title')} description={$i18n.t('admin.payments.subtitle')}>
+		<PageHeader
+			title={$i18n.t('admin.payments.title')}
+			description={$i18n.t('admin.payments.subtitle')}
+		>
 			{#snippet actions()}
 				{#if payments.length > 0}
-					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}>Exporter CSV</Button>
+					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}
+						>Exporter CSV</Button
+					>
 				{/if}
 				<Button href={resolve('/admin/payments/create')} icon={icons.plus}>
 					{$i18n.t('admin.payments.createPayment')}
@@ -308,10 +320,13 @@
 										>
 											{payment.description}
 										</a>
-										<span class="font-mono text-fc-xs text-fc-fg-muted">#{payment.id.slice(0, 8)}</span>
+										<span class="font-mono text-fc-xs text-fc-fg-muted"
+											>#{payment.id.slice(0, 8)}</span
+										>
 										{#if payment.attachedFiles.length > 0}
 											<span class="text-fc-xs text-fc-fg-muted">
-												{payment.attachedFiles.length} {payment.attachedFiles.length > 1
+												{payment.attachedFiles.length}
+												{payment.attachedFiles.length > 1
 													? $i18n.t('admin.payments.files')
 													: $i18n.t('admin.payments.file')}
 											</span>
@@ -336,14 +351,17 @@
 											<span class="text-fc-xs text-fc-fg-muted">
 												{formatCurrency(Number(payment.amount))} +
 												<span class="font-medium text-fc-warning">
-													{formatCurrency(Number(payment.stripeFee))} {$i18n.t('admin.payments.table.fees')}
+													{formatCurrency(Number(payment.stripeFee))}
+													{$i18n.t('admin.payments.table.fees')}
 												</span>
 											</span>
 										{/if}
 									</div>
 								</td>
 								<td>
-									<Badge tone={getStatusColor(payment.status)}>{PAYMENT_STATUS_LABELS[payment.status]}</Badge>
+									<Badge tone={getStatusColor(payment.status)}
+										>{PAYMENT_STATUS_LABELS[payment.status]}</Badge
+									>
 								</td>
 								<td>
 									<div class="flex flex-col">
@@ -397,7 +415,9 @@
 								<span class="text-fc-sm font-semibold text-fc-fg">
 									{formatCurrency(Number(payment.totalWithFees || payment.amount))}
 								</span>
-								<Badge tone={getStatusColor(payment.status)}>{PAYMENT_STATUS_LABELS[payment.status]}</Badge>
+								<Badge tone={getStatusColor(payment.status)}
+									>{PAYMENT_STATUS_LABELS[payment.status]}</Badge
+								>
 							</div>
 							{#if payment.status === 'PENDING'}
 								<Button
@@ -441,7 +461,9 @@
 	bind:open={confirmCancel}
 	tone="danger"
 	title={$i18n.t('admin.payments.cancelPayment')}
-	description={$i18n.t('admin.payments.cancelConfirm', { description: cancelTarget?.description ?? '' })}
+	description={$i18n.t('admin.payments.cancelConfirm', {
+		description: cancelTarget?.description ?? '',
+	})}
 	confirmLabel={$i18n.t('admin.payments.cancelPayment')}
 	cancelLabel="Garder le paiement"
 	onConfirm={handleCancelPayment}

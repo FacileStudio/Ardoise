@@ -4,7 +4,17 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Button, Field, Input, Page, PageHeader, Section, Spinner, toast } from '@facile/muse';
+	import {
+		Alert,
+		Button,
+		Field,
+		Input,
+		Page,
+		PageHeader,
+		Section,
+		Spinner,
+		toast,
+	} from '@facile/muse';
 	import { ImageUpload } from '$lib/ui';
 	import { logger } from '@repo/logger';
 
@@ -37,7 +47,7 @@
 	async function getPresignedUrl(filename: string, folder: string) {
 		const result = await trpc.media.getUploadUrl.mutate({
 			fileName: filename,
-			fileType: 'image/*'
+			fileType: 'image/*',
 		});
 		return result.uploadUrl;
 	}
@@ -156,7 +166,7 @@
 			submitting = true;
 			await trpc.provider.update.mutate({
 				id: providerId,
-				data: normalizePayload()
+				data: normalizePayload(),
 			});
 			toast.success('Prestataire modifié avec succès!');
 			goto(resolve('/admin/prestataires'));
@@ -177,90 +187,99 @@
 		<Spinner size="lg" />
 	</div>
 {:else}
-<Page width="lg">
-	<PageHeader
-		title="Modifier le prestataire"
-		description="Modifiez les informations du prestataire"
-		back={{ href: resolve('/admin/prestataires'), label: 'Retour aux prestataires' }}
-	/>
-
-	{#if formMessage}
-		<Alert tone="danger">{formMessage}</Alert>
-	{/if}
-
-	<Section title="Informations générales" card>
-		<Field label="Nom du prestataire *" error={getFieldError('name')}>
-			<Input bind:value={formData.name} placeholder="Nom du prestataire" />
-		</Field>
-		<Field label="Raison sociale">
-			<Input bind:value={formData.legalName} placeholder="ex: Facile Studio SAS" />
-		</Field>
-		<div class="grid gap-4 sm:grid-cols-2">
-			<Field label="SIRET">
-				<Input bind:value={formData.siret} placeholder="12345678901234" />
-			</Field>
-			<Field label="Taux de TVA (%) *" error={getFieldError('tvaRate')}>
-				<Input type="number" step="0.1" min="0" max="100" bind:value={formData.tvaRate} placeholder="20" />
-			</Field>
-		</div>
-	</Section>
-
-	<Section title="Logo" card>
-		<ImageUpload
-			bind:value={formData.logoUrl}
-			label="Logo du prestataire"
-			{getPresignedUrl}
-			{trpc}
+	<Page width="lg">
+		<PageHeader
+			title="Modifier le prestataire"
+			description="Modifiez les informations du prestataire"
+			back={{ href: resolve('/admin/prestataires'), label: 'Retour aux prestataires' }}
 		/>
-		<p class="text-fc-xs text-fc-fg-muted">
-			Format recommandé: PNG ou SVG avec fond transparent, 512x512px minimum
-		</p>
-	</Section>
 
-	<Section title="Adresse" card>
-		<Field label="Adresse">
-			<Input bind:value={formData.address} placeholder="123 rue de la Paix" />
-		</Field>
-		<div class="grid gap-4 sm:grid-cols-2">
-			<Field label="Ville">
-				<Input bind:value={formData.city} placeholder="Paris" />
+		{#if formMessage}
+			<Alert tone="danger">{formMessage}</Alert>
+		{/if}
+
+		<Section title="Informations générales" card>
+			<Field label="Nom du prestataire *" error={getFieldError('name')}>
+				<Input bind:value={formData.name} placeholder="Nom du prestataire" />
 			</Field>
-			<Field label="Pays">
-				<Input bind:value={formData.country} placeholder="France" />
+			<Field label="Raison sociale">
+				<Input bind:value={formData.legalName} placeholder="ex: Facile Studio SAS" />
 			</Field>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="SIRET">
+					<Input bind:value={formData.siret} placeholder="12345678901234" />
+				</Field>
+				<Field label="Taux de TVA (%) *" error={getFieldError('tvaRate')}>
+					<Input
+						type="number"
+						step="0.1"
+						min="0"
+						max="100"
+						bind:value={formData.tvaRate}
+						placeholder="20"
+					/>
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Logo" card>
+			<ImageUpload
+				bind:value={formData.logoUrl}
+				label="Logo du prestataire"
+				{getPresignedUrl}
+				{trpc}
+			/>
+			<p class="text-fc-xs text-fc-fg-muted">
+				Format recommandé: PNG ou SVG avec fond transparent, 512x512px minimum
+			</p>
+		</Section>
+
+		<Section title="Adresse" card>
+			<Field label="Adresse">
+				<Input bind:value={formData.address} placeholder="123 rue de la Paix" />
+			</Field>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="Ville">
+					<Input bind:value={formData.city} placeholder="Paris" />
+				</Field>
+				<Field label="Pays">
+					<Input bind:value={formData.country} placeholder="France" />
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Contact" card>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="Email" error={getFieldError('email')}>
+					<Input bind:value={formData.email} type="email" placeholder="contact@example.com" />
+				</Field>
+				<Field label="Téléphone">
+					<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
+				</Field>
+			</div>
+		</Section>
+
+		<Section title="Informations bancaires" card>
+			<Field label="Nom de la banque">
+				<Input bind:value={formData.bankName} placeholder="BNP Paribas" />
+			</Field>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="IBAN">
+					<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
+				</Field>
+				<Field label="BIC">
+					<Input bind:value={formData.bic} placeholder="BNPAFRPPXXX" />
+				</Field>
+			</div>
+		</Section>
+
+		<div class="flex justify-end gap-3">
+			<Button href={resolve('/admin/prestataires')} variant="ghost" disabled={submitting}
+				>Annuler</Button
+			>
+			<Button onclick={handleUpdate} disabled={submitting}>
+				{submitting ? 'Modification en cours...' : 'Modifier le prestataire'}
+			</Button>
 		</div>
-	</Section>
-
-	<Section title="Contact" card>
-		<div class="grid gap-4 sm:grid-cols-2">
-			<Field label="Email" error={getFieldError('email')}>
-				<Input bind:value={formData.email} type="email" placeholder="contact@example.com" />
-			</Field>
-			<Field label="Téléphone">
-				<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
-			</Field>
-		</div>
-	</Section>
-
-	<Section title="Informations bancaires" card>
-		<Field label="Nom de la banque">
-			<Input bind:value={formData.bankName} placeholder="BNP Paribas" />
-		</Field>
-		<div class="grid gap-4 sm:grid-cols-2">
-			<Field label="IBAN">
-				<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
-			</Field>
-			<Field label="BIC">
-				<Input bind:value={formData.bic} placeholder="BNPAFRPPXXX" />
-			</Field>
-		</div>
-	</Section>
-
-	<div class="flex justify-end gap-3">
-		<Button href={resolve('/admin/prestataires')} variant="ghost" disabled={submitting}>Annuler</Button>
-		<Button onclick={handleUpdate} disabled={submitting}>
-			{submitting ? 'Modification en cours...' : 'Modifier le prestataire'}
-		</Button>
-	</div>
-</Page>
+	</Page>
 {/if}

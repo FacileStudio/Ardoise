@@ -22,7 +22,9 @@
 	const invoices = $derived(mission.documents.filter((d: any) => d.invoiceNumber));
 
 	// invoiced is the sum of the invoice totals, paid the sum of the payments already settled
-	const invoicedTotal = $derived(invoices.reduce((sum: number, d: any) => sum + Number(d.total), 0));
+	const invoicedTotal = $derived(
+		invoices.reduce((sum: number, d: any) => sum + Number(d.total), 0)
+	);
 	const paidTotal = $derived(
 		mission.payments
 			.filter((p: any) => p.status === 'PAID')
@@ -46,8 +48,7 @@
 
 		saving = false;
 
-		if (ok)
-			await onChange();
+		if (ok) await onChange();
 	}
 </script>
 
@@ -105,7 +106,8 @@
 					max="100"
 					step="0.5"
 					value={deposit ?? ''}
-					oninput={(e) => (deposit = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}
+					oninput={(e) =>
+						(deposit = e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}
 					disabled={!editable}
 					placeholder="Aucun"
 					class="h-8 w-24 px-2 text-fc-sm"

@@ -51,8 +51,7 @@
 
 		busy = false;
 
-		if (ok)
-			await load();
+		if (ok) await load();
 	}
 
 	async function deleteMission() {
@@ -66,8 +65,7 @@
 
 		busy = false;
 
-		if (ok)
-			goto(resolve('/admin/missions'));
+		if (ok) goto(resolve('/admin/missions'));
 	}
 </script>
 

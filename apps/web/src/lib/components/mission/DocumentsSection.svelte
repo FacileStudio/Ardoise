@@ -3,12 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { runAction } from '$lib/mission-actions';
 	import { downloadDocument } from '$lib/download-document';
-	import {
-		CONTRACT_TYPES,
-		DOCUMENT_TYPE_LABELS,
-		documentNumber,
-		formatDate,
-	} from '$lib/mission';
+	import { CONTRACT_TYPES, DOCUMENT_TYPE_LABELS, documentNumber, formatDate } from '$lib/mission';
 	import { SIGNABLE_TYPES, loadSignatureEnabled } from '$lib/signature';
 	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
 	import SendForSignature from '$lib/components/SendForSignature.svelte';
@@ -45,8 +40,7 @@
 	async function detach() {
 		const documentId = detachTarget;
 
-		if (!documentId)
-			return;
+		if (!documentId) return;
 
 		busy = true;
 
@@ -58,8 +52,7 @@
 
 		busy = false;
 
-		if (ok)
-			await onChange();
+		if (ok) await onChange();
 	}
 
 	const createHref = (type: string) =>
@@ -92,11 +85,7 @@
 					</div>
 					<div class="flex items-center gap-1">
 						{#if SIGNABLE_TYPES.includes(doc.type) && doc.signatureStatus === 'none'}
-							<SendForSignature
-								documentId={doc.id}
-								enabled={signatureEnabled}
-								onsent={onChange}
-							/>
+							<SendForSignature documentId={doc.id} enabled={signatureEnabled} onsent={onChange} />
 						{/if}
 						<Button
 							variant="ghost"
@@ -124,12 +113,7 @@
 	{#if open}
 		<div class="flex flex-wrap gap-2">
 			{#each CONTRACT_TYPES as type (type)}
-				<Button
-					href={resolve(createHref(type) as any)}
-					variant="ghost"
-					size="sm"
-					icon={icons.plus}
-				>
+				<Button href={resolve(createHref(type) as any)} variant="ghost" size="sm" icon={icons.plus}>
 					{DOCUMENT_TYPE_LABELS[type]}
 				</Button>
 			{/each}

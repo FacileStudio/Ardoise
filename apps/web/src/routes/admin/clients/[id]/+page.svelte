@@ -19,7 +19,6 @@
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
 	import { logger } from '@repo/logger';
-	import { i18n } from '@repo/i18n/svelte';
 	import TransferClientModal from '$lib/components/TransferClientModal.svelte';
 
 	let clientId = $derived($page.params.id as string);
@@ -69,7 +68,7 @@
 		if (formData.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
 			return "Format d'email invalide";
 		}
-		if (!formData.companyName.trim()) return 'Le nom de l\'entreprise est requis';
+		if (!formData.companyName.trim()) return "Le nom de l'entreprise est requis";
 		return null;
 	}
 
@@ -127,21 +126,31 @@
 
 	function getStatusColor(status: string) {
 		switch (status) {
-			case 'ACTIVE': return 'success';
-			case 'PENDING': return 'warning';
-			case 'SUSPENDED': return 'danger';
-			case 'BANNED': return 'danger';
-			default: return 'neutral';
+			case 'ACTIVE':
+				return 'success';
+			case 'PENDING':
+				return 'warning';
+			case 'SUSPENDED':
+				return 'danger';
+			case 'BANNED':
+				return 'danger';
+			default:
+				return 'neutral';
 		}
 	}
 
 	function getPaymentStatusColor(status: string) {
 		switch (status) {
-			case 'PAID': return 'success';
-			case 'PENDING': return 'warning';
-			case 'EXPIRED': return 'danger';
-			case 'CANCELLED': return 'neutral';
-			default: return 'neutral';
+			case 'PAID':
+				return 'success';
+			case 'PENDING':
+				return 'warning';
+			case 'EXPIRED':
+				return 'danger';
+			case 'CANCELLED':
+				return 'neutral';
+			default:
+				return 'neutral';
 		}
 	}
 </script>
@@ -222,7 +231,9 @@
 				{#if client.payments && client.payments.length > 0}
 					<Section
 						title="Paiements"
-						description="{client.payments.length} {client.payments.length > 1 ? 'paiements' : 'paiement'}"
+						description="{client.payments.length} {client.payments.length > 1
+							? 'paiements'
+							: 'paiement'}"
 						card
 					>
 						<div class="flex flex-col gap-2">
@@ -232,13 +243,23 @@
 									class="flex items-center gap-4 rounded-fc-md bg-fc-surface p-3 transition-colors hover:bg-fc-surface/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
 								>
 									<Icon
-										icon={payment.status === 'PAID' ? icons.check : payment.status === 'PENDING' ? icons.clock : icons.error}
+										icon={payment.status === 'PAID'
+											? icons.check
+											: payment.status === 'PENDING'
+												? icons.clock
+												: icons.error}
 										size={20}
-										class={payment.status === 'PAID' ? 'text-fc-success' : payment.status === 'PENDING' ? 'text-fc-warning' : 'text-fc-danger'}
+										class={payment.status === 'PAID'
+											? 'text-fc-success'
+											: payment.status === 'PENDING'
+												? 'text-fc-warning'
+												: 'text-fc-danger'}
 									/>
 									<div class="flex min-w-0 flex-1 flex-col gap-0.5">
 										<div class="flex items-center justify-between gap-2">
-											<span class="text-fc-sm font-medium text-fc-fg">{formatCurrency(payment.totalWithFees)}</span>
+											<span class="text-fc-sm font-medium text-fc-fg"
+												>{formatCurrency(payment.totalWithFees)}</span
+											>
 											<Badge tone={getPaymentStatusColor(payment.status)}>{payment.status}</Badge>
 										</div>
 										<span class="truncate text-fc-xs text-fc-fg-muted">{payment.description}</span>
@@ -256,7 +277,9 @@
 				{/if}
 
 				<div class="flex justify-end gap-3">
-					<Button href={resolve('/admin/clients')} variant="ghost" disabled={submitting}>Annuler</Button>
+					<Button href={resolve('/admin/clients')} variant="ghost" disabled={submitting}
+						>Annuler</Button
+					>
 					<Button onclick={handleUpdate} disabled={submitting}>
 						{submitting ? 'Modification en cours...' : 'Modifier le client'}
 					</Button>
@@ -293,7 +316,9 @@
 					{#if client.user?.lastLoginAt}
 						<div class="flex flex-col gap-1">
 							<span class="text-fc-xs text-fc-fg-muted">Dernière connexion</span>
-							<span class="text-fc-sm font-medium text-fc-fg">{formatDate(client.user.lastLoginAt)}</span>
+							<span class="text-fc-sm font-medium text-fc-fg"
+								>{formatDate(client.user.lastLoginAt)}</span
+							>
 						</div>
 					{/if}
 				</Section>
@@ -302,7 +327,9 @@
 					<Section title="Stripe" card>
 						<div class="flex flex-col gap-1">
 							<span class="text-fc-xs text-fc-fg-muted">Customer ID</span>
-							<span class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted">
+							<span
+								class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted"
+							>
 								{client.stripeCustomerId}
 							</span>
 						</div>

@@ -164,7 +164,9 @@
 <svelte:head><title>Prestataires - Ardoise</title></svelte:head>
 
 {#snippet logo(provider: Provider)}
-	<div class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-fc-sm bg-fc-surface">
+	<div
+		class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-fc-sm bg-fc-surface"
+	>
 		{#if logoUrls.get(provider.id) && !failedLogos.has(provider.id)}
 			<img
 				src={logoUrls.get(provider.id)}
@@ -184,10 +186,15 @@
 	</div>
 {:else}
 	<Page width="xl">
-		<PageHeader title="Prestataires" description="Gérez les informations de vos différents prestataires">
+		<PageHeader
+			title="Prestataires"
+			description="Gérez les informations de vos différents prestataires"
+		>
 			{#snippet actions()}
 				{#if providers.length > 0}
-					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}>Exporter CSV</Button>
+					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}
+						>Exporter CSV</Button
+					>
 				{/if}
 				<Button href={resolve('/admin/prestataires/create')} icon={icons.plus}>
 					Nouveau prestataire

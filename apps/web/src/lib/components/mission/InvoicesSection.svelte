@@ -31,8 +31,7 @@
 	const unlinkedPayments = $derived(mission.payments.filter((p: any) => !p.documentId));
 
 	const hint = $derived.by(() => {
-		if (billing.locked || !open)
-			return '';
+		if (billing.locked || !open) return '';
 
 		if (!billing.currentQuoteId)
 			return 'Générez puis faites accepter un devis pour pouvoir facturer.';
@@ -40,8 +39,7 @@
 		if (billing.quoteOutdated)
 			return 'Les prestations ont changé : générez un nouveau devis avant de facturer.';
 
-		if (billing.canAcceptQuote)
-			return 'Faites accepter le devis pour pouvoir facturer.';
+		if (billing.canAcceptQuote) return 'Faites accepter le devis pour pouvoir facturer.';
 
 		return '';
 	});
@@ -53,8 +51,7 @@
 
 		busy = false;
 
-		if (ok)
-			await onChange();
+		if (ok) await onChange();
 	}
 
 	function generateInvoice(kind: 'TOTAL' | 'DEPOSIT') {
@@ -100,7 +97,11 @@
 				Facture d'acompte ({Number(mission.depositPercent)} %)
 			</Button>
 		{/if}
-		<Button size="sm" disabled={busy || !billing.canInvoiceTotal} onclick={() => generateInvoice('TOTAL')}>
+		<Button
+			size="sm"
+			disabled={busy || !billing.canInvoiceTotal}
+			onclick={() => generateInvoice('TOTAL')}
+		>
 			{hasDeposit ? 'Facture de solde' : 'Facture totale'}
 		</Button>
 	{/snippet}

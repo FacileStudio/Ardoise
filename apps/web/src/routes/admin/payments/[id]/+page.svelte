@@ -230,16 +230,16 @@
 {/snippet}
 
 {#snippet step(icon: string, tone: string, title: string, date: Date | string)}
-              <div class="flex items-start gap-3">
-                <div class="flex size-8 shrink-0 items-center justify-center rounded-fc-pill {tone}">
-                  <Icon {icon} size={16} />
-                </div>
-                <div class="flex-1">
-                  <div class="text-fc-sm font-medium text-fc-fg">{title}</div>
-                  <div class="text-fc-xs text-fc-fg-muted">{formatDate(date)}</div>
-                </div>
-              </div>
-            {/snippet}
+  <div class="flex items-start gap-3">
+    <div class="flex size-8 shrink-0 items-center justify-center rounded-fc-pill {tone}">
+      <Icon {icon} size={16} />
+    </div>
+    <div class="flex-1">
+      <div class="text-fc-sm font-medium text-fc-fg">{title}</div>
+      <div class="text-fc-xs text-fc-fg-muted">{formatDate(date)}</div>
+    </div>
+  </div>
+{/snippet}
 
 {#if pageLoading}
   <div class="flex min-h-[40dvh] items-center justify-center">
@@ -330,10 +330,25 @@
 
         <Section title="Chronologie" card>
           {#if payment.paidAt}
-            {@render step(icons.check, 'bg-fc-success/10 text-fc-success', 'Paiement reçu', payment.paidAt)}
+            {@render step(
+              icons.check,
+              'bg-fc-success/10 text-fc-success',
+              'Paiement reçu',
+              payment.paidAt
+            )}
           {/if}
-          {@render step(icons.calendar, 'bg-fc-warning/10 text-fc-warning', 'Échéance', payment.dueDate)}
-          {@render step(icons.plus, 'bg-fc-surface text-fc-fg-muted', 'Paiement créé', payment.createdAt)}
+          {@render step(
+            icons.calendar,
+            'bg-fc-warning/10 text-fc-warning',
+            'Échéance',
+            payment.dueDate
+          )}
+          {@render step(
+            icons.plus,
+            'bg-fc-surface text-fc-fg-muted',
+            'Paiement créé',
+            payment.createdAt
+          )}
         </Section>
 
         {#if payment.frequency !== 'ONE_TIME' && payment.invoices && payment.invoices.length > 0}
@@ -370,7 +385,9 @@
               {payment.client.contactLastName}
             </span>
             <span class="text-fc-xs text-fc-fg-muted">
-              {payment.client.contactEmail || payment.client.user?.email || 'Aucun email de contact'}
+              {payment.client.contactEmail ||
+                payment.client.user?.email ||
+                'Aucun email de contact'}
             </span>
           </div>
 
@@ -453,7 +470,9 @@
             {#if payment.stripePaymentIntentId}
               <div class="flex flex-col gap-1">
                 <span class="text-fc-xs text-fc-fg-muted">Payment Intent</span>
-                <span class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted">
+                <span
+                  class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted"
+                >
                   {payment.stripePaymentIntentId}
                 </span>
               </div>
@@ -462,7 +481,9 @@
             {#if payment.stripeSubscriptionId}
               <div class="flex flex-col gap-1">
                 <span class="text-fc-xs text-fc-fg-muted">Subscription</span>
-                <span class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted">
+                <span
+                  class="break-all rounded-fc-sm bg-fc-surface p-2 font-mono text-fc-xs text-fc-fg-muted"
+                >
                   {payment.stripeSubscriptionId}
                 </span>
               </div>
