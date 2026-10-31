@@ -2,11 +2,10 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Input, toast } from '@facile/muse';
+	import { Alert, Button, Checkbox, Field, Input, Page, PageHeader, Section, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
-	import 'iconify-icon';
 
 	let submitting = $state(false);
 	let formMessage = $state('');
@@ -119,143 +118,91 @@
 	}
 </script>
 
-<div class="max-w-2xl mx-auto p-6 space-y-6">
-	<div>
-		<button
-			onclick={() => goto(resolve('/admin/clients'))}
-			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-		>
-			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			Retour aux clients
-		</button>
-		<h1 class="text-2xl font-bold tracking-tight text-foreground">
-			{$i18n.t('admin.clients.newClient')}
-		</h1>
-		<p class="text-sm text-muted-foreground mt-1">Créez une fiche client, avec ou sans accès à Ardoise</p>
-	</div>
+<svelte:head><title>Nouveau client - Ardoise</title></svelte:head>
 
-	<div class="space-y-6">
-		{#if formMessage}
-			<div class="rounded-lg border border-fc-danger/30 bg-fc-danger/10 px-4 py-3 text-sm font-medium text-fc-danger">
-				{formMessage}
+<Page width="md">
+	<PageHeader
+		title={$i18n.t('admin.clients.newClient')}
+		description="Créez une fiche client, avec ou sans accès à Ardoise"
+		back={{ href: resolve('/admin/clients'), label: 'Retour aux clients' }}
+	/>
+
+	{#if formMessage}
+		<Alert tone="danger">{formMessage}</Alert>
+	{/if}
+
+	<Section title="Contact client" card>
+		<div class="grid gap-4 sm:grid-cols-2">
+			<Field label="Prénom *" error={getFieldError('contactFirstName')}>
+				<Input bind:value={formData.contactFirstName} placeholder="Jean" />
+			</Field>
+			<Field label="Nom *" error={getFieldError('contactLastName')}>
+				<Input bind:value={formData.contactLastName} placeholder="Dupont" />
+			</Field>
+		</div>
+		<Field
+			label="Email de contact"
+			error={getFieldError('contactEmail')}
+			helper="Utilisé pour le suivi commercial et les paiements Stripe."
+		>
+			<Input bind:value={formData.contactEmail} type="email" placeholder="contact@entreprise.fr" />
+		</Field>
+	</Section>
+
+	<Section title="Informations entreprise" card>
+		<Field label="Nom de l'entreprise *" error={getFieldError('companyName')}>
+			<Input bind:value={formData.companyName} placeholder="Entreprise SAS" />
+		</Field>
+		<Field label="SIRET">
+			<Input bind:value={formData.siret} placeholder="12345678901234" />
+		</Field>
+	</Section>
+
+	<Section title="Adresse de facturation" card>
+		<Field label="Adresse">
+			<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
+		</Field>
+		<div class="grid gap-4 sm:grid-cols-2">
+			<Field label="Ville">
+				<Input bind:value={formData.billingCity} placeholder="Paris" />
+			</Field>
+			<Field label="Pays">
+				<Input bind:value={formData.billingCountry} placeholder="France" />
+			</Field>
+		</div>
+	</Section>
+
+	<Section title="Accès client à Ardoise" card>
+		<div class="flex flex-col gap-1 rounded-fc-md bg-fc-surface p-3">
+			<Checkbox
+				bind:checked={formData.createCredentials}
+				label="Créer des identifiants de connexion"
+			/>
+			<span class="pl-6 text-fc-xs text-fc-fg-muted">
+				Activez seulement si ce client doit se connecter à Ardoise.
+			</span>
+		</div>
+
+		{#if formData.createCredentials}
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="Email de connexion *" error={getFieldError('credentialEmail')}>
+					<Input bind:value={formData.credentialEmail} type="email" placeholder="login@entreprise.fr" />
+				</Field>
+				<Field
+					label="Mot de passe *"
+					error={getFieldError('credentialPassword')}
+					helper="Minimum 8 caractères."
+				>
+					<Input bind:value={formData.credentialPassword} type="password" placeholder="••••••••" />
+				</Field>
 			</div>
 		{/if}
+	</Section>
 
-		<div class="rounded-xl border border-border p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Contact client</h2>
-			<div class="grid grid-cols-2 gap-4">
-				<div>
-					<div class="text-sm font-medium mb-2">Prénom <span class="text-fc-danger">*</span></div>
-					<Input bind:value={formData.contactFirstName} placeholder="Jean" aria-invalid={!!getFieldError('contactFirstName')} class="aria-invalid:border-fc-danger" />
-					{#if getFieldError('contactFirstName')}
-						<p class="mt-1 text-xs text-fc-danger">{getFieldError('contactFirstName')}</p>
-					{/if}
-				</div>
-
-				<div>
-					<div class="text-sm font-medium mb-2">Nom <span class="text-fc-danger">*</span></div>
-					<Input bind:value={formData.contactLastName} placeholder="Dupont" aria-invalid={!!getFieldError('contactLastName')} class="aria-invalid:border-fc-danger" />
-					{#if getFieldError('contactLastName')}
-						<p class="mt-1 text-xs text-fc-danger">{getFieldError('contactLastName')}</p>
-					{/if}
-				</div>
-			</div>
-
-			<div>
-				<div class="text-sm font-medium mb-2">Email de contact</div>
-				<Input bind:value={formData.contactEmail} type="email" placeholder="contact@entreprise.fr" aria-invalid={!!getFieldError('contactEmail')} class="aria-invalid:border-fc-danger" />
-				{#if getFieldError('contactEmail')}
-					<p class="mt-1 text-xs text-fc-danger">{getFieldError('contactEmail')}</p>
-				{:else}
-					<p class="mt-1 text-xs text-muted-foreground">Utilisé pour le suivi commercial et les paiements Stripe.</p>
-				{/if}
-			</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Informations entreprise</h2>
-			<div>
-				<div class="text-sm font-medium mb-2">Nom de l'entreprise <span class="text-fc-danger">*</span></div>
-				<Input bind:value={formData.companyName} placeholder="Entreprise SAS" aria-invalid={!!getFieldError('companyName')} class="aria-invalid:border-fc-danger" />
-				{#if getFieldError('companyName')}
-					<p class="mt-1 text-xs text-fc-danger">{getFieldError('companyName')}</p>
-				{/if}
-			</div>
-
-			<div>
-				<div class="text-sm font-medium mb-2">SIRET</div>
-				<Input bind:value={formData.siret} placeholder="12345678901234" />
-			</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Adresse de facturation</h2>
-			<div>
-				<div class="text-sm font-medium mb-2">Adresse</div>
-				<Input bind:value={formData.billingAddress} placeholder="123 rue de la Paix" />
-			</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<div>
-					<div class="text-sm font-medium mb-2">Ville</div>
-					<Input bind:value={formData.billingCity} placeholder="Paris" />
-				</div>
-
-				<div>
-					<div class="text-sm font-medium mb-2">Pays</div>
-					<Input bind:value={formData.billingCountry} placeholder="France" />
-				</div>
-			</div>
-		</div>
-
-		<div class="rounded-xl border border-border p-6 space-y-4">
-			<h2 class="text-base font-semibold text-foreground">Accès client à Ardoise</h2>
-			<label class="flex items-start gap-3 cursor-pointer">
-				<input
-					type="checkbox"
-					bind:checked={formData.createCredentials}
-					class="mt-1 h-4 w-4 rounded border-border"
-				/>
-				<div>
-					<div class="text-sm font-semibold text-foreground">Créer des identifiants de connexion</div>
-					<p class="text-xs text-muted-foreground">Activez seulement si ce client doit se connecter à Ardoise.</p>
-				</div>
-			</label>
-
-			{#if formData.createCredentials}
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-medium mb-2">Email de connexion <span class="text-fc-danger">*</span></div>
-						<Input bind:value={formData.credentialEmail} type="email" placeholder="login@entreprise.fr" aria-invalid={!!getFieldError('credentialEmail')} class="aria-invalid:border-fc-danger" />
-						{#if getFieldError('credentialEmail')}
-							<p class="mt-1 text-xs text-fc-danger">{getFieldError('credentialEmail')}</p>
-						{/if}
-					</div>
-
-					<div>
-						<div class="text-sm font-medium mb-2">Mot de passe <span class="text-fc-danger">*</span></div>
-						<Input bind:value={formData.credentialPassword} type="password" placeholder="••••••••" aria-invalid={!!getFieldError('credentialPassword')} class="aria-invalid:border-fc-danger" />
-						{#if getFieldError('credentialPassword')}
-							<p class="mt-1 text-xs text-fc-danger">{getFieldError('credentialPassword')}</p>
-						{:else}
-							<p class="mt-1 text-xs text-muted-foreground">Minimum 8 caractères.</p>
-						{/if}
-					</div>
-				</div>
-			{/if}
-		</div>
-
-		<div class="flex gap-3 pt-2">
-			<Button onclick={() => goto(resolve('/admin/clients'))} variant="outline" class="flex-1" disabled={submitting}>
-				Annuler
-			</Button>
-			<button
-				onclick={handleCreate}
-				disabled={submitting}
-				class="flex-1 bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-			>
-				{submitting ? 'Création...' : 'Créer le client'}
-			</button>
-		</div>
+	<div class="flex justify-end gap-3">
+		<Button href={resolve('/admin/clients')} variant="ghost" disabled={submitting}>Annuler</Button>
+		<Button onclick={handleCreate} disabled={submitting}>
+			{submitting ? 'Création...' : 'Créer le client'}
+		</Button>
 	</div>
-</div>
+</Page>

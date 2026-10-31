@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { toast } from '@facile/muse';
+	import { Field, Select, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 
 	interface Provider {
@@ -46,22 +46,13 @@
 	}
 </script>
 
-<div>
-	<div class="block text-sm font-medium text-foreground mb-2">
-		Prestataire {required ? '*' : ''}
-	</div>
-	<select
-		value={value}
-		onchange={handleChange}
-		class="w-full h-9 px-3 text-sm bg-transparent border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:bg-muted disabled:text-muted-foreground"
-		disabled={loading}
-		required={required}
-	>
+<Field label="Prestataire {required ? '*' : ''}">
+	<Select {value} onchange={handleChange} disabled={loading} {required}>
 		<option value="">
 			{loading ? 'Chargement...' : 'Sélectionner un prestataire'}
 		</option>
 		{#each providers as provider (provider.id)}
 			<option value={provider.id}>{provider.name}</option>
 		{/each}
-	</select>
-</div>
+	</Select>
+</Field>
