@@ -15,6 +15,14 @@ const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 const optionalUrl = z.preprocess(emptyToUndefined, z.string().url().optional());
 const optionalString = z.preprocess(emptyToUndefined, z.string().min(1).optional());
 
+const booleanFlag = z.preprocess((v) => {
+  if (typeof v !== 'string') return v;
+  const value = v.trim().toLowerCase();
+  if (value === '' || value === 'false' || value === '0') return false;
+  if (value === 'true' || value === '1') return true;
+  return v;
+}, z.boolean().default(false));
+
 const nuageKeys = ['NUAGE_URL', 'NUAGE_API_TOKEN', 'NUAGE_SPACE_FACILE_ID'] as const;
 const plumeKeys = ['PLUME_URL', 'PLUME_API_TOKEN', 'PLUME_WEBHOOK_SECRET'] as const;
 
@@ -32,7 +40,9 @@ export const serverEnvSchema = baseSchema.extend({
   STORAGE_PATH: z.string().min(1).default('./data/uploads'),
 
   ADMIN_EMAIL: z.string().email(),
-  ADMIN_PASSWORD: z.string().min(8),
+  ADMIN_PASSWORD: z.preprocess(emptyToUndefined, z.string().min(8).optional()),
+  ADMIN_MIGRATE_FROM: z.preprocess(emptyToUndefined, z.string().email().optional()),
+  SSO_ONLY: booleanFlag,
 
   COOKIE_DOMAIN: optionalString,
 
@@ -57,6 +67,22 @@ export const serverEnvSchema = baseSchema.extend({
   PLUME_API_TOKEN: optionalString,
   PLUME_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
 }).superRefine((env, ctx) => {
+  if (!env.SSO_ONLY && !env.ADMIN_PASSWORD) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['ADMIN_PASSWORD'],
+      message: 'ADMIN_PASSWORD is required unless SSO_ONLY is true',
+    });
+  }
+
+  if (env.SSO_ONLY && !env.OIDC_ISSUER) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['OIDC_ISSUER'],
+      message: 'OIDC_ISSUER is required when SSO_ONLY is true',
+    });
+  }
+
   if (env.OIDC_ISSUER && (!env.OIDC_CLIENT_ID || !env.OIDC_CLIENT_SECRET)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
