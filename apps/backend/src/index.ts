@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { loggerMiddleware } from './middleware/logger.middleware';
-import { authRateLimit, paymentRateLimit, generalRateLimit } from './middleware/rate-limit.middleware';
+import { trpcRateLimit } from './middleware/rate-limit.middleware';
 import env from './lib/env';
 import { AuthManager } from '@repo/auth';
 import { StorageService } from '@repo/storage';
@@ -50,15 +50,7 @@ const cors = corsHandler([env.FRONTEND_URL, env.BACKEND_URL]);
 app.use('*', cors);
 app.use('*', loggerMiddleware);
 
-app.use('/trpc/auth.*', authRateLimit);
-app.use('/trpc/payment.*', paymentRateLimit);
-app.use('/trpc/*', async (c, next) => {
-  const path = c.req.path;
-  if (path.startsWith('/trpc/auth.') || path.startsWith('/trpc/payment.')) {
-    return next();
-  }
-  return generalRateLimit(c, next);
-});
+app.use('/trpc/*', trpcRateLimit);
 
 app.options('/trpc/*', (c) => c.body(null, 204));
 app.options('/storage/*', (c) => c.body(null, 204));

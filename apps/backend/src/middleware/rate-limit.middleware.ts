@@ -1,5 +1,5 @@
-import type { Context, Next } from "hono";
-import { getConnInfo } from "hono/bun";
+import type { Context, Next } from 'hono';
+import { getConnInfo } from 'hono/bun';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -11,17 +11,20 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
-class RateLimiter {
+export class RateLimiter {
   private store = new Map<string, RateLimitEntry>();
-  private cleanupInterval: ReturnType<typeof setInterval>;
   private maxEntries: number;
 
   constructor(maxEntries = 10_000) {
     this.maxEntries = maxEntries;
-    this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
+    setInterval(() => this.cleanup(), 60_000).unref();
   }
 
-  check(key: string, config: RateLimitConfig): { allowed: boolean; remaining: number; resetAt: number } {
+  check(
+    key: string,
+    config: RateLimitConfig,
+    cost = 1
+  ): { allowed: boolean; remaining: number; resetAt: number } {
     const now = Date.now();
     const entry = this.store.get(key);
 
@@ -33,11 +36,15 @@ class RateLimiter {
         }
       }
       const resetAt = now + config.windowMs;
-      this.store.set(key, { count: 1, resetAt });
-      return { allowed: true, remaining: config.maxRequests - 1, resetAt };
+      this.store.set(key, { count: cost, resetAt });
+      return {
+        allowed: cost <= config.maxRequests,
+        remaining: Math.max(0, config.maxRequests - cost),
+        resetAt,
+      };
     }
 
-    entry.count++;
+    entry.count += cost;
     const remaining = Math.max(0, config.maxRequests - entry.count);
     return { allowed: entry.count <= config.maxRequests, remaining, resetAt: entry.resetAt };
   }
@@ -52,60 +59,85 @@ class RateLimiter {
   }
 }
 
-const limiter = new RateLimiter();
-
 function getClientIp(c: Context): string {
   try {
     const connInfo = getConnInfo(c);
     if (connInfo?.remote?.address) {
       return connInfo.remote.address;
     }
-  } catch { /* getConnInfo unavailable — fall back to headers */ }
+  } catch {
+    /* getConnInfo is unavailable outside a Bun server */
+  }
   return (
-    c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-    c.req.header("x-real-ip") ||
-    "unknown"
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+    c.req.header('x-real-ip') ||
+    'unknown'
   );
 }
 
-function createRateLimitMiddleware(config: RateLimitConfig) {
+const BUCKETS = {
+  auth: { windowMs: 60_000, maxRequests: 5 },
+  payment: { windowMs: 60_000, maxRequests: 20 },
+  general: { windowMs: 60_000, maxRequests: 300 },
+} satisfies Record<string, RateLimitConfig>;
+
+type Bucket = keyof typeof BUCKETS;
+
+/**
+ * A tRPC batch call puts several procedures in one path (`/trpc/a.x,b.y`), so a
+ * limiter keyed on the path alone lets one request carry unlimited login
+ * attempts. Each procedure counts against its own bucket instead.
+ */
+export function bucketCosts(path: string): Map<Bucket, number> {
+  const costs = new Map<Bucket, number>();
+  const procedures = path.replace(/^\/trpc\/?/, '').split(',').filter(Boolean);
+
+  for (const procedure of procedures.length > 0 ? procedures : ['']) {
+    const bucket: Bucket = procedure.startsWith('auth.')
+      ? 'auth'
+      : procedure.startsWith('payment.')
+        ? 'payment'
+        : 'general';
+    costs.set(bucket, (costs.get(bucket) ?? 0) + 1);
+  }
+  return costs;
+}
+
+export function createTrpcRateLimit(limiter = new RateLimiter()) {
   return async (c: Context, next: Next) => {
-    if (c.req.method === "OPTIONS") {
+    if (c.req.method === 'OPTIONS') {
       await next();
       return;
     }
 
     const ip = getClientIp(c);
-    const path = new URL(c.req.url).pathname;
-    const key = `${ip}:${path}`;
+    let blocked: { config: RateLimitConfig; resetAt: number } | null = null;
+    let headerResult: { config: RateLimitConfig; remaining: number; resetAt: number } | null = null;
 
-    const result = limiter.check(key, config);
+    for (const [bucket, cost] of bucketCosts(new URL(c.req.url).pathname)) {
+      const config = BUCKETS[bucket];
+      const result = limiter.check(`${ip}:${bucket}`, config, cost);
+      if (!result.allowed) {
+        blocked ??= { config, resetAt: result.resetAt };
+      }
+      if (!headerResult || result.remaining < headerResult.remaining) {
+        headerResult = { config, remaining: result.remaining, resetAt: result.resetAt };
+      }
+    }
 
-    c.header("X-RateLimit-Limit", String(config.maxRequests));
-    c.header("X-RateLimit-Remaining", String(result.remaining));
-    c.header("X-RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
+    if (headerResult) {
+      c.header('X-RateLimit-Limit', String(headerResult.config.maxRequests));
+      c.header('X-RateLimit-Remaining', String(headerResult.remaining));
+      c.header('X-RateLimit-Reset', String(Math.ceil(headerResult.resetAt / 1000)));
+    }
 
-    if (!result.allowed) {
-      const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
-      c.header("Retry-After", String(retryAfter));
-      return c.json({ error: "Too many requests" }, 429);
+    if (blocked) {
+      c.header('Retry-After', String(Math.ceil((blocked.resetAt - Date.now()) / 1000)));
+      return c.json({ error: 'Too many requests' }, 429);
     }
 
     await next();
   };
 }
 
-export const authRateLimit = createRateLimitMiddleware({
-  windowMs: 60_000,
-  maxRequests: 5,
-});
-
-export const paymentRateLimit = createRateLimitMiddleware({
-  windowMs: 60_000,
-  maxRequests: 20,
-});
-
-export const generalRateLimit = createRateLimitMiddleware({
-  windowMs: 60_000,
-  maxRequests: 100,
-});
+export const trpcRateLimit = createTrpcRateLimit();
