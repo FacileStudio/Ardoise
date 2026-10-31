@@ -788,7 +788,7 @@ export const paymentService = {
       where: { id: paymentId },
       include: {
         client: {
-          include: { user: true },
+          include: { user: { select: { email: true } } },
         },
       },
     });

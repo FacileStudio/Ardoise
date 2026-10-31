@@ -197,9 +197,6 @@ export const clientService = {
       userId,
       await db.client.findUnique({
         where: { id },
-        include: {
-          user: true,
-        },
       }),
       'Client not found'
     );
