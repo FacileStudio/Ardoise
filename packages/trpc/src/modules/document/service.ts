@@ -333,59 +333,47 @@ const AppelDeFondsDataSchema = z.object({
   tva_rate: z.number().nonnegative().default(20),
 }).passthrough();
 
-const PrestationPhotoDataSchema = z.object({
-  type: z.literal('prestation_photo'),
-  invoice_number: z.string(),
-  invoice_date: z.string(),
-  due_date: z.string(),
-  clientId: z.string(),
-  providerId: z.string(),
-  client_name: z.string().optional(),
-  client_address: z.string().optional(),
-  client_city: z.string().optional(),
-  client_country: z.string().optional(),
-  client_siret: z.string().optional(),
-  provider_name: z.string().optional(),
-  provider_legal: z.string().optional(),
-  provider_address: z.string().optional(),
-  provider_city: z.string().optional(),
-  provider_siret: z.string().optional(),
-  provider_email: z.string().optional(),
-  provider_phone: z.string().optional(),
-  bank_name: z.string().optional(),
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour une facture"),
-  tva_rate: z.number().nonnegative().default(20),
-  railway_estimate: z.number().optional().default(0),
-}).passthrough();
+const SERVICE_DOC_TYPES = [
+  'prestation_barman',
+  'prestation_design',
+  'prestation_dev',
+  'prestation_photo',
+  'prestation_video',
+  'prestation_formation',
+  'prestation_btp',
+] as const;
 
-const PrestationVideoDataSchema = z.object({
-  type: z.literal('prestation_video'),
-  invoice_number: z.string(),
-  invoice_date: z.string(),
-  due_date: z.string(),
-  clientId: z.string(),
-  providerId: z.string(),
-  client_name: z.string().optional(),
-  client_address: z.string().optional(),
-  client_city: z.string().optional(),
-  client_country: z.string().optional(),
-  client_siret: z.string().optional(),
-  provider_name: z.string().optional(),
-  provider_legal: z.string().optional(),
-  provider_address: z.string().optional(),
-  provider_city: z.string().optional(),
-  provider_siret: z.string().optional(),
-  provider_email: z.string().optional(),
-  provider_phone: z.string().optional(),
-  bank_name: z.string().optional(),
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-  items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour une facture"),
-  tva_rate: z.number().nonnegative().default(20),
-  railway_estimate: z.number().optional().default(0),
-}).passthrough();
+const serviceDataSchema = <T extends (typeof SERVICE_DOC_TYPES)[number]>(type: T) =>
+  z.object({
+    type: z.literal(type),
+    invoice_number: z.string(),
+    invoice_date: z.string(),
+    due_date: z.string(),
+    clientId: z.string(),
+    providerId: z.string(),
+    client_name: z.string().optional(),
+    client_address: z.string().optional(),
+    client_city: z.string().optional(),
+    client_country: z.string().optional(),
+    client_siret: z.string().optional(),
+    provider_name: z.string().optional(),
+    provider_legal: z.string().optional(),
+    provider_address: z.string().optional(),
+    provider_city: z.string().optional(),
+    provider_siret: z.string().optional(),
+    provider_email: z.string().optional(),
+    provider_phone: z.string().optional(),
+    bank_name: z.string().optional(),
+    iban: z.string().optional(),
+    bic: z.string().optional(),
+    items: z.array(DocumentItemSchema).min(1, "Au moins un article est requis pour une facture"),
+    tva_rate: z.number().nonnegative().default(20),
+    railway_estimate: z.number().optional().default(0),
+  }).passthrough();
+
+const SERVICE_DATA_SCHEMAS = Object.fromEntries(
+  SERVICE_DOC_TYPES.map((type) => [type, serviceDataSchema(type)])
+) as Record<(typeof SERVICE_DOC_TYPES)[number], ReturnType<typeof serviceDataSchema>>;
 
 export const ContratPrestationInputSchema = z.object({
   contract_reference: z.string().optional(),
@@ -574,7 +562,6 @@ export async function generateDocument(
   data: DocumentData,
   logoPath?: string
 ): Promise<Buffer> {
-  // Use type-specific schema based on document type
   let validated: DocumentData;
   switch (data.type) {
     case 'contrat_maintenance':
@@ -598,14 +585,11 @@ export async function generateDocument(
     case 'appel_de_fonds':
       validated = AppelDeFondsDataSchema.parse(data);
       break;
-    case 'prestation_photo':
-      validated = PrestationPhotoDataSchema.parse(data);
-      break;
-    case 'prestation_video':
-      validated = PrestationVideoDataSchema.parse(data);
-      break;
-    default:
-      throw new Error(`Unknown document type: ${data.type}`);
+    default: {
+      const schema = SERVICE_DATA_SCHEMAS[data.type as keyof typeof SERVICE_DATA_SCHEMAS];
+      if (!schema) throw new Error(`Unknown document type: ${data.type}`);
+      validated = schema.parse(data) as DocumentData;
+    }
   }
 
   const template = TEMPLATES[validated.type];
