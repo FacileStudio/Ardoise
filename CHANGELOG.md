@@ -16,6 +16,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Changed
 
+- The clients, missions, documents, payments, prestataires and statistics pages are rebuilt on
+  `@facile/muse`: `Page` and `PageHeader`, `Section` cards, `StatCard`, `Table` with `Card` rows on
+  mobile, `Tabs` filters, `Field` forms, `EmptyState` and `ConfirmModal` for every destructive action.
+  No borders, dividers or rings remain on these pages.
+- The PDF preview is a muse `Modal`, the document preview a muse `Drawer`, and the Documents page
+  links to Signatures. `Pagination` and `SearchInput` are built on muse `Button` and `Input`.
 - `apps/web` now compiles with `strict: true`, so the tRPC types it reads from `@repo/trpc` match
   the backend. `typecheck` and `lint` cover `@repo/web` in CI and in the release workflow.
 
