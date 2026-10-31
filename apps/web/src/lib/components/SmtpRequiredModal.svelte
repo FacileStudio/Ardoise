@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Button, Modal } from '@facile/muse';
 	import { isAdmin } from '@repo/auth-shared';
@@ -8,9 +7,9 @@
 
 	const admin = $derived(isAdmin($authStore.user));
 
-	async function openSettings() {
+	function openSettings() {
 		smtpNotice.open = false;
-		await goto(`${resolve('/admin/settings')}#smtp`);
+		window.location.assign(`${resolve('/admin/settings')}#smtp`);
 	}
 </script>
 
