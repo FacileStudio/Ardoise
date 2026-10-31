@@ -96,14 +96,18 @@ export const authService = {
     const newAccessToken = await auth.createToken(sessionUser);
     const newRefresh = await auth.createRefreshToken(sessionUser.id);
 
-    await db.session.update({
-      where: { id: session.id },
+    const rotated = await db.session.updateMany({
+      where: { id: session.id, token: refreshToken },
       data: {
         token: newRefresh.token,
         expiresAt: newRefresh.expiresAt,
         updatedAt: new Date(),
       },
     });
+
+    if (rotated.count === 0) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Refresh token expired or revoked' });
+    }
 
     return {
       token: newAccessToken,
