@@ -1,4 +1,4 @@
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import { createTRPCProxyClient, httpBatchLink, TRPCClientError } from '@trpc/client';
 import type { AppRouter } from '@repo/trpc';
 import type { SessionUser } from '@repo/auth-shared';
 
@@ -36,7 +36,14 @@ export async function fetchSessionUser(
 
     const user = await client.auth.me.query({});
     return (user as SessionUser) ?? null;
-  } catch {
-    return null;
+  } catch (error) {
+    if (isUnauthorized(error)) return null;
+    throw error;
   }
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  if (!(error instanceof TRPCClientError)) return false;
+  const data = error.data as { httpStatus?: number; code?: string } | undefined;
+  return data?.httpStatus === 401 || data?.code === 'UNAUTHORIZED';
 }

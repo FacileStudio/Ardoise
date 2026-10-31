@@ -1,4 +1,4 @@
-import { UniversalAuthStore } from '@repo/auth-shared';
+import { UniversalAuthStore, type SessionUser } from '@repo/auth-shared';
 import { browser } from '$app/environment';
 import { logger } from '@repo/logger';
 import { trpc } from './trpc';
@@ -29,3 +29,22 @@ export const authStore = new UniversalAuthStore(
 );
 
 export default authStore;
+
+export async function verifySession(): Promise<boolean> {
+  if (!authStore.getState().user) return false;
+  try {
+    const user = await trpc.auth.me.query({});
+    if (user) {
+      authStore.updateUser(user as SessionUser);
+      return true;
+    }
+    await authStore.clear();
+    return false;
+  } catch (e) {
+    const data = (e as { data?: { httpStatus?: number; code?: string } }).data;
+    if (data?.httpStatus === 401 || data?.code === 'UNAUTHORIZED') {
+      await authStore.clear();
+    }
+    return false;
+  }
+}

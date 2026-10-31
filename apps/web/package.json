@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "icons": "bun run scripts/build-icons.ts",
     "dev": "LOG_PRETTY=1 vite dev",
     "build": "svelte-kit sync && vite build",
     "preview": "vite preview",

@@ -125,6 +125,12 @@ export const fr: EnTranslations = {
     statistics: 'Statistiques',
     users: 'Utilisateurs',
     spaces: 'Espaces',
+    missions: 'Missions',
+    signatures: 'Signatures',
+    providers: 'Prestataires',
+    myInvoices: 'Mes factures',
+    personalSpace: 'Personnel',
+    manageSpaces: 'Gérer les espaces',
   },
   spaces: {
     title: 'Espaces',
