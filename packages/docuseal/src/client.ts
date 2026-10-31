@@ -14,6 +14,8 @@ import {
   submitterSchema,
 } from './types';
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export class DocuSealClient {
   private config: DocuSealConfig;
 
@@ -29,6 +31,7 @@ export class DocuSealClient {
 
     const response = await fetch(url, {
       ...options,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       headers: {
         'X-Auth-Token': this.config.apiKey,
         'Content-Type': 'application/json',

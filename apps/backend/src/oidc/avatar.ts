@@ -11,9 +11,14 @@ const EXTENSIONS: Record<string, string> = {
   'image/jpeg': '.jpg',
 };
 
-const isPrivate = (ip: string) =>
-  /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.)/.test(ip) ||
-  /^(::1$|fc|fd|fe80)/i.test(ip);
+export const isPrivate = (ip: string) => {
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
+  const address = mapped ? mapped[1] : ip;
+  return (
+    /^(0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|198\.1[89]\.)/.test(address) ||
+    /^(::1?$|fc|fd|fe[89ab]|::ffff:)/i.test(address)
+  );
+};
 
 async function assertPublicHost(hostname: string) {
   const addresses = isIP(hostname) ? [{ address: hostname }] : await lookup(hostname, { all: true });

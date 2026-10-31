@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { prisma } from '@repo/database';
 import { StorageService } from '@repo/storage';
+import { logger } from '../lib/logger';
 
 export interface HealthCheckDependencies {
   storage: StorageService;
@@ -32,26 +33,22 @@ async function checkDatabase(): Promise<ServiceStatus> {
       latency: Date.now() - start,
     };
   } catch (error) {
-    return {
-      status: 'unhealthy',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    logger.error({ err: error }, 'Health check failed');
+    return { status: 'unhealthy', error: 'unavailable' };
   }
 }
 
 async function checkStorage(storage: StorageService): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    await storage.list();
+    await storage.ping();
     return {
       status: 'healthy',
       latency: Date.now() - start,
     };
   } catch (error) {
-    return {
-      status: 'unhealthy',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    logger.error({ err: error }, 'Health check failed');
+    return { status: 'unhealthy', error: 'unavailable' };
   }
 }
 

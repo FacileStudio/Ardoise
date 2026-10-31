@@ -80,6 +80,7 @@ export async function dispatchConfiguredWebhook({
       method: 'POST',
       headers,
       body,
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {

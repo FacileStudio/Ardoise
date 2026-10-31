@@ -1,23 +1,11 @@
-import { mkdir, readdir, stat, unlink, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, stat, unlink, readFile, writeFile } from 'node:fs/promises';
 import { join, dirname, resolve, sep } from 'node:path';
 import { existsSync } from 'node:fs';
-import { logger } from '@repo/logger';
 export { createStorageTicket, verifyStorageTicket } from './ticket';
 
 export interface StorageConfig {
   storagePath: string;
   publicUrl: string;
-}
-
-export interface StorageObject {
-  key: string;
-  size: number;
-  lastModified: Date;
-}
-
-export interface FileStat {
-  size: number;
-  lastModified: Date;
 }
 
 export class StorageService {
@@ -46,16 +34,6 @@ export class StorageService {
     return this.getFileUrl(path);
   }
 
-  async stat(path: string): Promise<FileStat | null> {
-    try {
-      const filePath = this.resolvePath(path);
-      const s = await stat(filePath);
-      return { size: s.size, lastModified: s.mtime };
-    } catch {
-      return null;
-    }
-  }
-
   async delete(path: string): Promise<boolean> {
     try {
       const filePath = this.resolvePath(path);
@@ -69,10 +47,6 @@ export class StorageService {
     }
   }
 
-  async exists(path: string): Promise<boolean> {
-    return existsSync(this.resolvePath(path));
-  }
-
   getFileUrl(path: string): string {
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     return `${this.publicUrl}/storage/${cleanPath}`;
@@ -84,30 +58,8 @@ export class StorageService {
     return new Uint8Array(buffer);
   }
 
-  async list(prefix?: string): Promise<StorageObject[]> {
-    const objects: StorageObject[] = [];
-    const dir = prefix ? this.resolvePath(prefix) : this.storagePath;
-
-    try {
-      await this.listRecursive(dir, prefix || '', objects);
-    } catch (e) {
-      logger.error({ err: e }, 'Storage list error');
-    }
-    return objects;
-  }
-
-  private async listRecursive(dir: string, prefix: string, objects: StorageObject[]): Promise<void> {
-    if (!existsSync(dir)) return;
-
-    const entries = await readdir(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const key = prefix ? `${prefix}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
-        await this.listRecursive(join(dir, entry.name), key, objects);
-      } else {
-        const s = await stat(join(dir, entry.name));
-        objects.push({ key, size: s.size, lastModified: s.mtime });
-      }
-    }
+  async ping(): Promise<void> {
+    await mkdir(this.storagePath, { recursive: true });
+    await stat(this.storagePath);
   }
 }

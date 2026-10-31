@@ -78,6 +78,7 @@ export async function finishLogin(
       'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${basic}`,
     },
+    signal: AbortSignal.timeout(10_000),
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code: input.code,

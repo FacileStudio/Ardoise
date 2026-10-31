@@ -16,7 +16,9 @@ export async function loadProvider(issuer: string): Promise<Provider> {
   const hit = cache.get(issuer);
   if (hit && hit.expiresAt > Date.now()) return hit.provider;
 
-  const res = await fetch(`${trimSlash(issuer)}/.well-known/openid-configuration`);
+  const res = await fetch(`${trimSlash(issuer)}/.well-known/openid-configuration`, {
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) throw new Error(`OIDC discovery failed: ${res.status}`);
 
   const doc = (await res.json()) as {

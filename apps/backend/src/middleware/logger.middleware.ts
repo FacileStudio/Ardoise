@@ -1,9 +1,24 @@
 import type { Context, Next } from "hono";
 import { logger } from "@/lib/logger";
 
+const SECRET_PARAMS = ['ticket', 'code', 'state', 'token'];
+
+export function redactUrl(raw: string): string {
+  try {
+    const url = new URL(raw);
+    for (const name of SECRET_PARAMS) {
+      if (url.searchParams.has(name)) url.searchParams.set(name, '[redacted]');
+    }
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
 export const loggerMiddleware = async (c: Context, next: Next) => {
   const start = Date.now();
-  const { method, url } = c.req;
+  const { method } = c.req;
+  const url = redactUrl(c.req.url);
 
   const requestId = c.get('requestId') || crypto.randomUUID();
   c.set('requestId', requestId);
