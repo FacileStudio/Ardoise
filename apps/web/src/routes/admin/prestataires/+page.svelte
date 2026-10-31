@@ -35,7 +35,7 @@
 	let totalPages = $state(1);
 	let currentPage = $state(1);
 	let searchQuery = $state('');
-	let logoUrls = new SvelteMap<string, string>();
+	const logoUrls = new SvelteMap<string, string>();
 
 	let showCreateDrawer = $state(false);
 	let showEditDrawer = $state(false);
@@ -109,7 +109,8 @@
 			}
 		}
 
-		logoUrls = newLogoUrls;
+		logoUrls.clear();
+		for (const [id, url] of newLogoUrls) logoUrls.set(id, url);
 	}
 
 	function handleSearch(e: Event) {

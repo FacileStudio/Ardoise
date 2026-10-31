@@ -29,7 +29,7 @@ jobs:
         run: bun run db:generate
 
       - name: Typecheck
-        run: bunx turbo run typecheck --filter='!@repo/web'
+        run: bunx turbo run typecheck
 
       - name: Lint
-        run: bunx turbo run lint --filter='!@repo/web'
+        run: bunx turbo run lint

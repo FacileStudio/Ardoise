@@ -7,7 +7,7 @@
   const menuItems = [
     { label: 'Mes factures', icon: 'solar:wallet-linear', href: '/app' },
     { label: 'Profil', icon: 'solar:user-linear', href: '/app/profile' },
-  ];
+  ] as const;
 
   $: userInitials = $authStore.user?.firstName?.[0] || 'U';
   $: userName = $authStore.user?.firstName || 'Utilisateur';

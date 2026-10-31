@@ -31,12 +31,12 @@
     id: string;
     name: string;
     type: string;
-    invoiceNumber?: string;
-    quoteNumber?: string;
-    contractRef?: string;
+    invoiceNumber?: string | null;
+    quoteNumber?: string | null;
+    contractRef?: string | null;
     clientName: string;
-    total: number;
-    createdAt: Date;
+    total: number | string;
+    createdAt: string;
   }
 
   let submitting = $state(false);
@@ -84,7 +84,7 @@
         search: documentSearchQuery || undefined,
         spaceId: spaceContext.spaceId,
       });
-      documents = result.items as Document[];
+      documents = result.items;
     } catch (err) {
       logger.error({ err }, 'Failed to fetch documents');
       toast.danger('Erreur lors du chargement des documents');

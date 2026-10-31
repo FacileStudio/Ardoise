@@ -14,6 +14,24 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- `apps/web` now compiles with `strict: true`, so the tRPC types it reads from `@repo/trpc` match
+  the backend. `typecheck` and `lint` cover `@repo/web` in CI and in the release workflow.
+
+### Fixed
+
+- Client and provider pickers called a missing `admin.providers` endpoint and an unsupported
+  `offset` input, and read the wrong response keys. They now use `provider.list` and `client.list`.
+- Creating a maintenance contract navigated to `/admin/documents/undefined`. It now uses the
+  returned document id.
+- The admin entity search box listened with `on:input`, which Svelte 5 components never fire. It
+  now passes `oninput`.
+- Invoice and quote previews no longer send `invoice_number` and `quote_number`, which the
+  procedures do not accept.
+- `**/*.svelte.ts` files parse with the TypeScript parser in the shared ESLint config, and empty
+  catch blocks and `logger.error` calls with the wrong signature are fixed.
+
 ## [0.2.2] - 2026-10-31
 
 ### Added

@@ -316,7 +316,6 @@
 			switch (formData.type) {
 				case 'facture_prestation':
 					result = await trpc.document.previewFacturePrestation.mutate({
-						invoice_number: formData.invoice_number,
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
 						spaceId: spaceContext.spaceId,
@@ -329,7 +328,6 @@
 
 				case 'maintenance':
 					result = await trpc.document.previewMaintenance.mutate({
-						quote_number: formData.quote_number,
 						quote_date: formData.quote_date,
 						validity_date: formData.validity_date,
 						maintenance_period: formData.maintenance_period,
@@ -371,7 +369,7 @@
 						valid_until: formData.valid_until,
 						spaceId: spaceContext.spaceId,
 						clientId: selectedClientId,
-						providerId: selectedProviderId || undefined,
+						providerId: selectedProviderId,
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
@@ -387,7 +385,7 @@
 						project_name: formData.project_name,
 						spaceId: spaceContext.spaceId,
 						clientId: selectedClientId,
-						providerId: selectedProviderId || undefined,
+						providerId: selectedProviderId,
 						payment_providers: formData.payment_providers,
 						});
 					break;
@@ -424,7 +422,6 @@
 			switch (formData.type) {
 				case 'facture_prestation':
 					result = await trpc.document.createFacturePrestation.mutate({
-						invoice_number: formData.invoice_number,
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
 						spaceId: spaceContext.spaceId,
@@ -438,7 +435,6 @@
 
 				case 'maintenance':
 					result = await trpc.document.createMaintenance.mutate({
-						quote_number: formData.quote_number,
 						quote_date: formData.quote_date,
 						validity_date: formData.validity_date,
 						maintenance_period: formData.maintenance_period,
@@ -484,7 +480,7 @@
 						spaceId: spaceContext.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
-						providerId: selectedProviderId || undefined,
+						providerId: selectedProviderId,
 						providers: formData.providers,
 						features: formData.features,
 						items: formData.items,
@@ -501,7 +497,7 @@
 						spaceId: spaceContext.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
-						providerId: selectedProviderId || undefined,
+						providerId: selectedProviderId,
 						payment_providers: formData.payment_providers,
 						});
 					break;

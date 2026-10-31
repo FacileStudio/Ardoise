@@ -178,7 +178,7 @@ Versions follow SemVer, with the root `package.json` `version` as the source of 
 Workflows in `.github/workflows/`:
 
 - `filet.yml`: runs the filet code-quality check on pushes to `main` and on pull requests.
-- `ci.yml`: install, Prisma generate, typecheck and lint on pushes to `main` and on pull requests. `@repo/web` is excluded because `main` already fails there: svelte-check reports 48 errors in 19 files and lint reports 3 errors.
+- `ci.yml`: install, Prisma generate, typecheck and lint on pushes to `main` and on pull requests.
 - `release.yml`: on a `v*` tag, checks that the tag equals the `package.json` version and that `CHANGELOG.md` has a matching section, runs the same typecheck and lint, pushes `ghcr.io/facilestudio/ardoise` (backend image, `VERSION` build arg set to the tag) and creates the GitHub release from the changelog section.
 
 A tag does not deploy: Dokploy auto-deploys the Compose stack on every push to `main`, and `apps/*/railway.toml` only describe Railway builds. `GET /version` returns the `VERSION` build arg, else `RAILWAY_GIT_COMMIT_SHA`, else `dev`.

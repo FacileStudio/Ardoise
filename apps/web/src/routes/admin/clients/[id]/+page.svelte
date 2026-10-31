@@ -10,7 +10,7 @@
 	import TransferClientModal from '$lib/components/TransferClientModal.svelte';
 	import 'iconify-icon';
 
-	let clientId = $derived($page.params.id);
+	let clientId = $derived($page.params.id as string);
 	let pageLoading = $state(true);
 	let submitting = $state(false);
 	let client: any = $state(null);

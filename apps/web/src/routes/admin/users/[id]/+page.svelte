@@ -9,7 +9,7 @@
 	import { i18n } from '@repo/i18n/svelte';
 	import 'iconify-icon';
 
-	let userId = $derived($page.params.id);
+	let userId = $derived($page.params.id as string);
 	let pageLoading = $state(true);
 	let submitting = $state(false);
 	let user: any = $state(null);
