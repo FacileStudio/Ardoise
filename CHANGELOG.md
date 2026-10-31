@@ -14,6 +14,18 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-31
+
+### Fixed
+
+- The rate limiter and the session metadata took the first `X-Forwarded-For` entry, which the
+  caller controls, so anyone could pick a fresh identity per request. Both now use the entry
+  Traefik appended, and fall back to the connection address when the header is absent.
+- Dependabot: `nodemailer` 6 to 10.3.1 (23 alerts) and the nested `zod` 4.3.6 copies pulled in by
+  `@scalar/types`, `sveltekit-superforms`, `trpc-redis-cache`, `trpc-to-openapi` and
+  `zod-prisma-types` to 4.6.7 through root `overrides` (6 alerts). The two remaining alerts are
+  low severity, development only, and need SvelteKit 3.
+
 ## [0.5.0] - 2026-10-31
 
 ### Added
