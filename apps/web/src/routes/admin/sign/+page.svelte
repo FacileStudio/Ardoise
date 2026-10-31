@@ -312,6 +312,7 @@
 	title="Supprimer cette demande ?"
 	description="Les signataires ne pourront plus signer le document. Cette action est définitive."
 	confirmLabel="Supprimer"
+	cancelLabel="Annuler"
 	tone="danger"
 	onConfirm={deleteSubmission}
 	onCancel={() => (deleting = null)}

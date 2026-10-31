@@ -199,6 +199,7 @@
     ? `${deleting.firstName} ${deleting.lastName} perdra l'accès à Ardoise immédiatement. Cette action est définitive.`
     : ''}
   confirmLabel="Supprimer"
+  cancelLabel="Annuler"
   tone="danger"
   onConfirm={confirmDelete}
   onCancel={() => (deleting = null)}

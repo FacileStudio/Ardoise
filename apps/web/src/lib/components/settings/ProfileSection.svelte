@@ -238,5 +238,6 @@
   title="Se déconnecter d'Ardoise ?"
   description="Vos données restent en place. Vous devrez vous reconnecter sur cet appareil."
   confirmLabel="Déconnexion"
+  cancelLabel="Annuler"
   onConfirm={() => authStore.logout()}
 />
