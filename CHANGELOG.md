@@ -14,6 +14,46 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-31
+
+### Changed
+
+- **The whole web app is rebuilt on `@facile/muse`, with no borders.** Cards, tables, stat tiles and
+  alerts are fills on the page background, as in the other Facile apps. Every page opens with
+  `Page` and `PageHeader`, lists use `Table` with `Card` rows on mobile, filters use `Tabs`, forms
+  use `Field`, empty states use `EmptyState`, and every destructive action goes through a
+  `ConfirmModal` that says what it breaks.
+- **The admin and client shells use muse `SideBar` and `MobileNav`.** The sidebar collapses, has the
+  space switcher and a user card that opens Settings. The client area now has a mobile nav too.
+  Admin nav order is Statistiques, Missions, Documents, Signatures, Paiements, Clients,
+  Prestataires, Espaces, and `/admin` opens Missions.
+- **Settings moved to `/admin/settings/[[section]]` and `/app/settings/[[section]]`.** Staff get
+  profile, appearance, company, billing, payments, email, integrations, users and advanced tabs;
+  clients get profile and appearance. Secrets use `SecretField`, connection state uses
+  `StatusDot`, and logout is a row in Profile. Staff are not offered a password change when the
+  backend runs in SSO-only mode. `/admin/users` opens the users tab. `/admin/profile` and
+  `/app/profile` are gone.
+- The PDF preview is a muse `Modal` and the document preview a muse `Drawer`. The Documents page
+  links to Signatures, and each contract shows its signature status.
+- Icons are bundled (`src/lib/icons/*.json`, regenerate with `bun run icons`) and the iconify CDN
+  script is gone, so the first paint has icons without network.
+- `apps/web` compiles with `strict: true`, so its tRPC types match the backend, and `typecheck`
+  and `lint` cover it in CI and in the release workflow.
+- Removed `UserCard`, `UserMenu`, `Toggle`, `LanguageSwitcher`, `AutoForm`, `AutoTable` and the
+  unreachable `/admin/[entity]` route.
+
+### Fixed
+
+- **A rate-limited or failing session check no longer bounces between `/login` and `/admin`.** The
+  guard now redirects to `/login` only on a definite 401 and shows a 503 page for other failures.
+- The client and provider pickers called a missing `admin.providers` endpoint and an unsupported
+  `offset` input, so they could not load. They use `provider.list` and `client.list`.
+- Creating a maintenance contract navigated to `/admin/documents/undefined`. It now opens the
+  documents list.
+- Invoice and quote previews no longer send `invoice_number` and `quote_number`, which the
+  procedures ignore.
+- The user edit page offered the role `USER`, which the backend rejects. It offers `CLIENT`.
+
 ## [0.2.3] - 2026-10-31
 
 ### Security
