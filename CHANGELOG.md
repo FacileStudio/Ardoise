@@ -14,6 +14,13 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-31
+
+### Added
+
+- `document.sendForSignature` sends the client with the request. Plume files the document under
+  its client with the same email and creates that client when missing. Needs Plume 0.5.0.
+
 ## [0.4.0] - 2026-10-31
 
 ### Removed
