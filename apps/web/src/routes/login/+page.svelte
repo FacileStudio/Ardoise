@@ -21,11 +21,13 @@
   let email = $state('');
   let password = $state('');
   let oidcEnabled = $state(false);
+  let ssoOnly = $state(false);
   let configLoaded = $state(false);
 
   const ssoErrors: Record<string, string> = {
     oidc_failed: "Échec de l'authentification SSO.",
-    not_invited: "Aucun compte n'existe pour cette adresse. Demandez une invitation.",
+    not_invited:
+      "Aucun compte Ardoise n'est associé à cette adresse. Demandez à un administrateur de l'ajouter.",
     email_unverified: "Votre adresse email n'est pas vérifiée auprès du fournisseur SSO.",
     identity_conflict: 'Ce compte est déjà lié à une autre identité SSO.',
     blocked: 'Ce compte est suspendu ou banni.',
@@ -64,6 +66,7 @@
       const res = await fetch(`${apiUrl}/auth/config`);
       const config = await res.json();
       oidcEnabled = config.oidc_enabled ?? false;
+      ssoOnly = config.sso_only ?? false;
     } catch { /* noop */ }
 
     configLoaded = true;
@@ -133,6 +136,12 @@
       {:else if !configLoaded}
         <div class="h-40"></div>
       {:else}
+        {#if error}
+          <p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        {/if}
+
         {#if oidcEnabled}
           <a
             href="{apiUrl}/auth/oidc?redirect={encodeURIComponent(window.location.origin + resolve('/login'))}"
@@ -152,6 +161,12 @@
             <span class="text-xs text-muted-foreground">ou</span>
             <span class="h-px flex-1 bg-border"></span>
           </div>
+        {/if}
+
+        {#if ssoOnly}
+          <p class="mb-4 text-sm text-muted-foreground">
+            Accès client : connectez-vous avec votre email et votre mot de passe.
+          </p>
         {/if}
 
         <form
@@ -185,12 +200,6 @@
               class={inputClass}
             />
           </div>
-
-          {#if error}
-            <p class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          {/if}
 
           <button
             type="submit"
