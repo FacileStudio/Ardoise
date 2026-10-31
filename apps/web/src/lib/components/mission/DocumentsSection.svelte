@@ -9,6 +9,10 @@
 		documentNumber,
 		formatDate,
 	} from '$lib/mission';
+	import { SIGNABLE_TYPES, loadSignatureEnabled } from '$lib/signature.svelte';
+	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
+	import SendForSignature from '$lib/components/SendForSignature.svelte';
+	import { onMount } from 'svelte';
 	import 'iconify-icon';
 
 	interface Props {
@@ -19,6 +23,11 @@
 	let { mission, onChange }: Props = $props();
 
 	let busy = $state(false);
+	let signatureEnabled = $state(false);
+
+	onMount(() => {
+		loadSignatureEnabled().then((enabled) => (signatureEnabled = enabled));
+	});
 
 	const open = $derived(mission.status !== 'CANCELLED');
 	const documents = $derived(
@@ -62,8 +71,25 @@
 							{/if}
 						</div>
 						<div class="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</div>
+						{#if SIGNABLE_TYPES.includes(doc.type)}
+							<div class="mt-1">
+								<SignatureStatus
+									status={doc.signatureStatus}
+									plumeUrl={doc.plumeUrl}
+									signedAt={doc.signedAt}
+									archived={!!doc.nuageArchivedAt}
+								/>
+							</div>
+						{/if}
 					</div>
 					<div class="flex items-center gap-1">
+						{#if SIGNABLE_TYPES.includes(doc.type) && doc.signatureStatus === 'none'}
+							<SendForSignature
+								documentId={doc.id}
+								enabled={signatureEnabled}
+								onsent={onChange}
+							/>
+						{/if}
 						<button
 							onclick={() => downloadDocument(doc.id)}
 							class="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"

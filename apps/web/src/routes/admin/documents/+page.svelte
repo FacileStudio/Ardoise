@@ -7,6 +7,9 @@
 	import { Pagination, SearchInput } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { DOCUMENT_TYPE_LABELS } from '$lib/mission';
+	import { SIGNABLE_TYPES, loadSignatureEnabled } from '$lib/signature.svelte';
+	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
+	import SendForSignature from '$lib/components/SendForSignature.svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
 	import 'iconify-icon';
 
@@ -20,6 +23,10 @@
 		contractRef?: string | null;
 		clientName: string;
 		total: number;
+		signatureStatus: 'none' | 'sent' | 'signed' | 'declined';
+		plumeUrl?: string | null;
+		signedAt?: Date | string | null;
+		nuageArchivedAt?: Date | string | null;
 		createdByUser: {
 			firstName: string;
 			lastName: string;
@@ -34,10 +41,12 @@
 	let searchQuery = $state('');
 	let selectedType = $state<string>('');
 
+	let signatureEnabled = $state(false);
 	let docTypes: Array<{ value: string; label: string }> = $state([]);
 	let searchTimer: ReturnType<typeof setTimeout>;
 
 	onMount(() => {
+		loadSignatureEnabled().then((enabled) => (signatureEnabled = enabled));
 		loadDocumentTypes().then(() => loadDocuments(true));
 		return () => clearTimeout(searchTimer);
 	});
@@ -213,6 +222,16 @@
 							<tr class="hover:bg-muted transition-colors">
 								<td class="px-4 py-3">
 									<span class="text-sm font-medium text-foreground">{getDocumentRef(doc)}</span>
+									{#if SIGNABLE_TYPES.includes(doc.type)}
+										<div class="mt-1">
+											<SignatureStatus
+												status={doc.signatureStatus}
+												plumeUrl={doc.plumeUrl}
+												signedAt={doc.signedAt}
+												archived={!!doc.nuageArchivedAt}
+											/>
+										</div>
+									{/if}
 								</td>
 								<td class="px-4 py-3">
 									<span class="text-sm text-muted-foreground">{docTypes.find((t) => t.value === doc.type)?.label || DOCUMENT_TYPE_LABELS[doc.type] || doc.type}</span>
@@ -230,7 +249,14 @@
 									<span class="text-sm text-muted-foreground">{doc.createdByUser.firstName} {doc.createdByUser.lastName}</span>
 								</td>
 								<td class="px-4 py-3">
-									<div class="flex justify-end gap-1">
+									<div class="flex items-center justify-end gap-1">
+										{#if SIGNABLE_TYPES.includes(doc.type) && doc.signatureStatus === 'none'}
+											<SendForSignature
+												documentId={doc.id}
+												enabled={signatureEnabled}
+												onsent={() => loadDocuments()}
+											/>
+										{/if}
 										<button
 											onclick={() => handleDownload(doc.id)}
 											class="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
