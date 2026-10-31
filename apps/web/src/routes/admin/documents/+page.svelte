@@ -1,9 +1,20 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Spinner, toast } from '@facile/muse';
+	import {
+		Button,
+		Card,
+		ConfirmModal,
+		EmptyState,
+		Page,
+		PageHeader,
+		Spinner,
+		Table,
+		Tabs,
+		toast,
+	} from '@facile/muse';
+	import { icons, ardoise } from '$lib/icons';
 	import { Pagination, SearchInput } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { DOCUMENT_TYPE_LABELS } from '$lib/mission';
@@ -11,7 +22,6 @@
 	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
 	import SendForSignature from '$lib/components/SendForSignature.svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
-	import 'iconify-icon';
 
 	type Document = {
 		id: string;
@@ -40,10 +50,19 @@
 	let currentPage = $state(1);
 	let searchQuery = $state('');
 	let selectedType = $state<string>('');
+	let typeTab = $state('ALL');
+	let deleteTarget: Document | null = $state(null);
+	let confirmDelete = $state(false);
+
 
 	let signatureEnabled = $state(false);
 	let docTypes: Array<{ value: string; label: string }> = $state([]);
 	let searchTimer: ReturnType<typeof setTimeout>;
+
+	const typeTabs = $derived([
+		{ id: 'ALL', label: 'Tous' },
+		...docTypes.map((type) => ({ id: type.value, label: type.label })),
+	]);
 
 	onMount(() => {
 		loadSignatureEnabled().then((enabled) => (signatureEnabled = enabled));
@@ -102,7 +121,7 @@
 	}
 
 	function handleTypeFilter(type: string) {
-		selectedType = type === selectedType ? '' : type;
+		selectedType = type === 'ALL' ? '' : type;
 		currentPage = 1;
 		loadDocuments();
 	}
@@ -123,8 +142,14 @@
 		}
 	}
 
-	async function handleDelete(documentId: string) {
-		if (!confirm('Voulez-vous vraiment supprimer ce document?')) return;
+	function askDelete(doc: Document) {
+		deleteTarget = doc;
+		confirmDelete = true;
+	}
+
+	async function handleDelete() {
+		if (!deleteTarget) return;
+		const documentId = deleteTarget.id;
 
 		try {
 			await trpc.document.delete.mutate({ id: documentId });
@@ -145,6 +170,10 @@
 		return new Blob([array], { type });
 	}
 
+	function typeLabel(type: string): string {
+		return docTypes.find((t) => t.value === type)?.label || DOCUMENT_TYPE_LABELS[type] || type;
+	}
+
 	function getDocumentRef(doc: Document): string {
 		return doc.invoiceNumber || doc.quoteNumber || doc.contractRef || '-';
 	}
@@ -161,67 +190,55 @@
 	}
 </script>
 
+<svelte:head><title>Documents - Ardoise</title></svelte:head>
+
 {#if pageLoading}
-	<div class="flex flex-col items-center justify-center h-screen space-y-4">
+	<div class="flex min-h-[40dvh] items-center justify-center">
 		<Spinner size="lg" />
-		<p class="text-xs text-muted-foreground">Chargement...</p>
 	</div>
 {:else}
-	<div class="p-6 max-w-5xl mx-auto space-y-6">
-		<header class="flex justify-between items-center">
-			<div>
-				<h1 class="text-2xl font-bold tracking-tight text-foreground">Documents</h1>
-				<p class="text-sm text-muted-foreground mt-1">Gérez vos factures, devis et contrats</p>
-			</div>
-			<button
-				onclick={() => goto(resolve('/admin/documents/create'))}
-				class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2"
-			>
-				<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
-				Créer un document
-			</button>
-		</header>
+	<Page width="xl">
+		<PageHeader title="Documents" description="Gérez vos factures, devis et contrats">
+			{#snippet actions()}
+				<Button variant="ghost" icon={ardoise.signature} href={resolve('/admin/sign')}>
+					Signatures
+				</Button>
+				<Button href={resolve('/admin/documents/create')} icon={icons.plus}>Créer un document</Button>
+			{/snippet}
+		</PageHeader>
 
-		<div class="space-y-3">
-			<SearchInput
-				bind:value={searchQuery}
-				oninput={handleSearch}
-				placeholder="Rechercher par référence, client..."
-			/>
+		<SearchInput
+			bind:value={searchQuery}
+			oninput={handleSearch}
+			placeholder="Rechercher par référence, client..."
+		/>
 
-			<div class="flex gap-2 flex-wrap">
-				{#each docTypes as type (type.value)}
-					<button
-						onclick={() => handleTypeFilter(type.value)}
-						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {selectedType === type.value
-							? 'bg-primary text-primary-foreground'
-							: 'bg-background text-foreground border border-border hover:bg-muted'}"
-					>
-						{type.label}
-					</button>
-				{/each}
-			</div>
-		</div>
+		<Tabs
+			label="Filtrer par type"
+			items={typeTabs}
+			bind:value={typeTab}
+			onChange={handleTypeFilter}
+		/>
 
 		{#if documents.length > 0}
-			<div class="rounded-xl border border-border overflow-hidden">
-				<table class="w-full">
-					<thead class="bg-muted border-b border-border">
+			<div class="hidden md:block">
+				<Table>
+					<thead>
 						<tr>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Référence</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Type</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Client</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Montant</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Date</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Créé par</th>
-							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</th>
+							<th scope="col">Référence</th>
+							<th scope="col">Type</th>
+							<th scope="col">Client</th>
+							<th scope="col">Montant</th>
+							<th scope="col">Date</th>
+							<th scope="col">Créé par</th>
+							<th scope="col" aria-label="Actions"></th>
 						</tr>
 					</thead>
-					<tbody class="divide-y divide-border">
+					<tbody>
 						{#each documents as doc (doc.id)}
-							<tr class="hover:bg-muted transition-colors">
-								<td class="px-4 py-3">
-									<span class="text-sm font-medium text-foreground">{getDocumentRef(doc)}</span>
+							<tr>
+								<td>
+									<span class="font-medium text-fc-fg">{getDocumentRef(doc)}</span>
 									{#if SIGNABLE_TYPES.includes(doc.type)}
 										<div class="mt-1">
 											<SignatureStatus
@@ -233,22 +250,14 @@
 										</div>
 									{/if}
 								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{docTypes.find((t) => t.value === doc.type)?.label || DOCUMENT_TYPE_LABELS[doc.type] || doc.type}</span>
+								<td class="text-fc-fg-muted">{typeLabel(doc.type)}</td>
+								<td class="font-medium text-fc-fg">{doc.clientName}</td>
+								<td class="font-medium text-fc-fg">{formatCurrency(doc.total)}</td>
+								<td class="text-fc-fg-muted">{formatDate(doc.createdAt)}</td>
+								<td class="text-fc-fg-muted">
+									{doc.createdByUser.firstName} {doc.createdByUser.lastName}
 								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm font-medium text-foreground">{doc.clientName}</span>
-								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm font-medium text-foreground">{formatCurrency(doc.total)}</span>
-								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{formatDate(doc.createdAt)}</span>
-								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{doc.createdByUser.firstName} {doc.createdByUser.lastName}</span>
-								</td>
-								<td class="px-4 py-3">
+								<td>
 									<div class="flex items-center justify-end gap-1">
 										{#if SIGNABLE_TYPES.includes(doc.type) && doc.signatureStatus === 'none'}
 											<SendForSignature
@@ -257,48 +266,106 @@
 												onsent={() => loadDocuments()}
 											/>
 										{/if}
-										<button
+										<Button
+											variant="ghost"
+											size="sm"
+											icon={icons.download}
+											aria-label="Télécharger"
 											onclick={() => handleDownload(doc.id)}
-											class="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-											title="Télécharger"
-										>
-											<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
-										</button>
-										<button
-											onclick={() => handleDelete(doc.id)}
-											class="p-1.5 text-fc-danger hover:bg-fc-danger/10 rounded transition-colors"
-											title="Supprimer"
-										>
-											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-										</button>
+										/>
+										<Button
+											variant="ghost-danger"
+											size="sm"
+											icon={icons.remove}
+											aria-label="Supprimer"
+											onclick={() => askDelete(doc)}
+										/>
 									</div>
 								</td>
 							</tr>
 						{/each}
 					</tbody>
-				</table>
+				</Table>
+			</div>
+
+			<div class="flex flex-col gap-2 md:hidden">
+				{#each documents as doc (doc.id)}
+					<Card class="flex flex-col gap-3">
+						<div class="flex items-start justify-between gap-2">
+							<div class="flex min-w-0 flex-col">
+								<span class="truncate text-fc-sm font-medium text-fc-fg">{getDocumentRef(doc)}</span>
+								<span class="truncate text-fc-xs text-fc-fg-muted">
+									{typeLabel(doc.type)} - {doc.clientName}
+								</span>
+							</div>
+							<span class="text-fc-sm font-medium text-fc-fg">{formatCurrency(doc.total)}</span>
+						</div>
+						{#if SIGNABLE_TYPES.includes(doc.type)}
+							<SignatureStatus
+								status={doc.signatureStatus}
+								plumeUrl={doc.plumeUrl}
+								signedAt={doc.signedAt}
+								archived={!!doc.nuageArchivedAt}
+							/>
+						{/if}
+						<div class="flex items-center justify-between gap-2">
+							<span class="text-fc-xs text-fc-fg-muted">{formatDate(doc.createdAt)}</span>
+							<div class="flex items-center gap-1">
+								{#if SIGNABLE_TYPES.includes(doc.type) && doc.signatureStatus === 'none'}
+									<SendForSignature
+										documentId={doc.id}
+										enabled={signatureEnabled}
+										onsent={() => loadDocuments()}
+									/>
+								{/if}
+								<Button
+									variant="ghost"
+									size="lg"
+									icon={icons.download}
+									aria-label="Télécharger"
+									onclick={() => handleDownload(doc.id)}
+								/>
+								<Button
+									variant="ghost-danger"
+									size="lg"
+									icon={icons.remove}
+									aria-label="Supprimer"
+									onclick={() => askDelete(doc)}
+								/>
+							</div>
+						</div>
+					</Card>
+				{/each}
 			</div>
 
 			{#if totalPages > 1}
 				<Pagination {currentPage} {totalPages} onPageChange={handlePageChange} />
 			{/if}
 		{:else}
-			<div class="text-center py-16">
-				<div class="flex flex-col items-center gap-3">
-					<iconify-icon icon="solar:document-text-bold" width="40" class="text-muted-foreground"></iconify-icon>
-					<h3 class="text-lg font-semibold text-foreground">Aucun document</h3>
-					<p class="text-sm text-muted-foreground max-w-md">{searchQuery || selectedType ? 'Aucun résultat trouvé pour votre recherche' : 'Créez votre premier document pour commencer'}</p>
-					{#if !searchQuery && !selectedType}
-						<button
-							onclick={() => goto(resolve('/admin/documents/create'))}
-							class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2 mt-2"
-						>
-							<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
-							Créer un document
-						</button>
-					{/if}
-				</div>
-			</div>
+			<EmptyState
+				icon={ardoise.document}
+				title="Aucun document"
+				description={searchQuery || selectedType
+					? 'Aucun résultat trouvé pour votre recherche'
+					: 'Créez votre premier document pour commencer'}
+			>
+				{#if !searchQuery && !selectedType}
+					<Button href={resolve('/admin/documents/create')} icon={icons.plus}>
+						Créer un document
+					</Button>
+				{/if}
+			</EmptyState>
 		{/if}
-	</div>
+	</Page>
 {/if}
+
+<ConfirmModal
+	bind:open={confirmDelete}
+	tone="danger"
+	title="Supprimer ce document ?"
+	description="Le PDF et sa référence sont supprimés définitivement. Une demande de signature déjà envoyée n'est pas retirée côté signataire."
+	confirmLabel="Supprimer le document"
+	cancelLabel="Garder le document"
+	onConfirm={handleDelete}
+	onCancel={() => (deleteTarget = null)}
+/>
