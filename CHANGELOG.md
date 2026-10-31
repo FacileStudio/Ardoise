@@ -16,6 +16,13 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [0.4.0] - 2026-10-31
 
+### Removed
+
+- DocuSeal support: the `@repo/docuseal` package, the `docuseal` tRPC router, the `/admin/sign`
+  pages and their nav entry, and the DocuSeal block in Settings. Plume is the only signature
+  provider. A migration drops `Settings.docusealApiUrl` and `Settings.docusealApiKey`, so a stored
+  DocuSeal key is deleted.
+
 ## [0.3.0] - 2026-10-31
 
 ### Changed
