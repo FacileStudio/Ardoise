@@ -7,7 +7,7 @@ import type { UpdateSettingsInput } from './types';
 import { TRPCError } from '@trpc/server';
 import { DocuSealService } from '../docuseal/service';
 import { CryptoService } from '@repo/crypto';
-import { join } from 'path';
+import { extname, join } from 'path';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { logger } from '@repo/logger';
@@ -60,21 +60,30 @@ export function redactSecrets<T extends Record<string, unknown>>(settings: T) {
   return result;
 }
 
-function publicSettings<T extends Record<string, unknown>>(settings: T) {
-  const safeSettings = { ...settings };
-  delete safeSettings.stripeSecretKey;
-  delete safeSettings.stripeWebhookSecret;
-  delete safeSettings.smtpHost;
-  delete safeSettings.smtpPort;
-  delete safeSettings.smtpUser;
-  delete safeSettings.smtpPass;
-  delete safeSettings.smtpFrom;
-  delete safeSettings.docusealApiUrl;
-  delete safeSettings.docusealApiKey;
-  delete safeSettings.webhookUrl;
-  delete safeSettings.webhookSecret;
-  delete safeSettings.webhookEvents;
-  return safeSettings;
+const PUBLIC_FIELDS = [
+  'companyName',
+  'companyLegal',
+  'companyAddress',
+  'companyCity',
+  'companyCountry',
+  'companySiret',
+  'companyEmail',
+  'companyPhone',
+  'companyTvaIntracom',
+  'companyLegalForm',
+  'companyShareCapital',
+  'companyRcsCity',
+  'companyApeCode',
+  'stripePublishableKey',
+  'bankName',
+  'iban',
+  'bic',
+  'logoUrl',
+  'tvaRate',
+] as const;
+
+export function publicSettings(settings: Record<string, unknown>) {
+  return Object.fromEntries(PUBLIC_FIELDS.map((field) => [field, settings[field]]));
 }
 
 export async function getSettingsRecord(db: PrismaClient) {
@@ -264,7 +273,7 @@ export async function downloadStoredFileToTempPath(
   try {
     const fileData = await storage.download(filePath);
     const tempDir = mkdtempSync(join(tmpdir(), `${prefix}-`));
-    const extension = fileUrl?.split('.').pop() || 'png';
+    const extension = /^\.(png|jpe?g|gif|webp|svg)$/i.exec(extname(filePath))?.[0].slice(1) ?? 'png';
     const localPath = join(tempDir, `${prefix}.${extension}`);
     writeFileSync(localPath, Buffer.from(fileData));
     return localPath;

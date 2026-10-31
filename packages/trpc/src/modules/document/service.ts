@@ -510,22 +510,12 @@ export function formatPaymentProviders(providers: Array<{ name: string; iban: st
 const TYPST_CODE_VARIABLES = new Set(['items', 'providers', 'features', 'payment_providers']);
 
 export function injectVariables(content: string, variables: Record<string, any>): string {
-  let result = content;
-  const tags = content.match(/\{\{([a-zA-Z0-9_]+)\}\}/g) || [];
-
-  tags.forEach((tag) => {
-    const key = tag.slice(2, -2);
-    if (variables[key] !== undefined) {
-      const value = TYPST_CODE_VARIABLES.has(key)
-        ? String(variables[key])
-        : escapeTypstString(variables[key]);
-      result = result.replaceAll(tag, value);
-    } else {
-      const isNumeric = key.match(/rate|price|amount|estimate|qty/);
-      result = result.replaceAll(tag, isNumeric ? '0.00' : '');
+  return content.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_tag, key: string) => {
+    if (variables[key] === undefined) {
+      return /rate|price|amount|estimate|qty/.test(key) ? '0.00' : '';
     }
+    return TYPST_CODE_VARIABLES.has(key) ? String(variables[key]) : escapeTypstString(variables[key]);
   });
-  return result;
 }
 
 function isBlank(value: string | null | undefined): boolean {
@@ -675,24 +665,7 @@ export async function generateDocument(
   const typstContent = injectVariables(template, templateData);
   const generator = new TypstGenerator(typstContent, logoPath);
 
-  return generator.generate({
-    receiptNumber: templateData.invoice_number || templateData.quote_number || 'DOC-001',
-    receiptDate: templateData.invoice_date || templateData.quote_date || templateData.contract_date || new Date().toISOString().split('T')[0],
-    paymentMethod: 'Virement',
-    clientName: templateData.client_name,
-    clientAddress: templateData.client_address,
-    clientCity: templateData.client_city,
-    clientCountry: templateData.client_country,
-    clientSiret: templateData.client_siret,
-    providerName: templateData.provider_name,
-    providerAddress: templateData.provider_address,
-    providerCity: templateData.provider_city,
-    providerSiret: templateData.provider_siret,
-    providerEmail: templateData.provider_email,
-    providerPhone: templateData.provider_phone,
-    items: (validated.items || []) as Array<{ description: string; quantity: number; unit: string; price: number }>,
-    tvaRate: templateData.tva_rate,
-  });
+  return generator.compile();
 }
 
 export async function loadDocumentContext(

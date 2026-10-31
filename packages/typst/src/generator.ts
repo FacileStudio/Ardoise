@@ -62,17 +62,10 @@ export class TypstGenerator {
   }
 
   private replaceTemplate(template: string, data: Record<string, any>): string {
-    let result = template;
-
-    for (const [key, value] of Object.entries(data)) {
-      const placeholder = `{{${key}}}`;
-      result = result.replaceAll(
-        placeholder,
-        key === 'items' ? String(value) : escapeTypstString(value)
-      );
-    }
-
-    return result;
+    return template.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (placeholder, key: string) => {
+      if (!(key in data)) return placeholder;
+      return key === 'items' ? String(data[key]) : escapeTypstString(data[key]);
+    });
   }
 
   private formatItems(items: ReceiptItem[]): string {
@@ -108,8 +101,10 @@ export class TypstGenerator {
       tva_rate: validated.tvaRate,
     };
 
-    const typstContent = this.replaceTemplate(this.templateContent, templateData);
+    return this.compile(this.replaceTemplate(this.templateContent, templateData));
+  }
 
+  compile(typstContent = this.templateContent): Buffer {
     const tempDir = mkdtempSync(join(tmpdir(), 'typst-'));
     const typstPath = join(tempDir, 'document.typ');
     const pdfPath = join(tempDir, 'document.pdf');
