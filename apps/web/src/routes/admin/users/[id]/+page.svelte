@@ -29,7 +29,7 @@
 		email: '',
 		firstName: '',
 		lastName: '',
-		role: 'USER' as 'USER' | 'ADMIN',
+		role: 'CLIENT' as 'CLIENT' | 'ADMIN',
 		password: '',
 		confirmPassword: '',
 	});
@@ -187,7 +187,7 @@
 		<Section title="Rôle" card>
 			<OptionCards
 				options={[
-					{ value: 'USER', label: 'Utilisateur', icon: icons.userCircle },
+					{ value: 'CLIENT', label: 'Utilisateur', icon: icons.userCircle },
 					{ value: 'ADMIN', label: 'Administrateur', icon: icons.shield },
 				]}
 				bind:value={formData.role}
