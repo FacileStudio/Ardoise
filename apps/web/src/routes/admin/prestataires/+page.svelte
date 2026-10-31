@@ -1,14 +1,25 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
 	import { onMount } from 'svelte';
-	import { SvelteMap } from 'svelte/reactivity';
-	import { goto } from '$app/navigation';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
-	import { Button, Drawer, Input, Spinner, toast } from '@facile/muse';
+	import {
+		Button,
+		Card,
+		ConfirmModal,
+		EmptyState,
+		Icon,
+		Page,
+		PageHeader,
+		Spinner,
+		Table,
+		toast,
+	} from '@facile/muse';
+	import { icons, ardoise } from '$lib/icons';
+	import { Pagination, SearchInput } from '$lib/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { spaceContext } from '$lib/space-context.svelte';
-	import 'iconify-icon';
 
 	type Provider = {
 		id: string;
@@ -35,27 +46,12 @@
 	let totalPages = $state(1);
 	let currentPage = $state(1);
 	let searchQuery = $state('');
+	let searchInput = $state('');
 	const logoUrls = new SvelteMap<string, string>();
 
-	let showCreateDrawer = $state(false);
-	let showEditDrawer = $state(false);
-	let editingProvider: Provider | null = $state(null);
-
-	let formData = $state({
-		name: '',
-		legalName: '',
-		siret: '',
-		address: '',
-		city: '',
-		country: 'France',
-		email: '',
-		phone: '',
-		bankName: '',
-		iban: '',
-		bic: '',
-		logoUrl: '',
-		tvaRate: 20,
-	});
+	let failedLogos = new SvelteSet<string>();
+	let pendingDelete: Provider | null = $state(null);
+	let confirmDelete = $state(false);
 
 	onMount(async () => {
 		await loadProviders(true);
@@ -113,87 +109,20 @@
 		for (const [id, url] of newLogoUrls) logoUrls.set(id, url);
 	}
 
-	function handleSearch(e: Event) {
-		const target = e.target as HTMLInputElement;
-		searchQuery = target.value;
+	function handleSearch() {
+		searchQuery = searchInput;
 		currentPage = 1;
 		loadProviders();
 	}
 
-	function resetForm() {
-		formData = {
-			name: '',
-			legalName: '',
-			siret: '',
-			address: '',
-			city: '',
-			country: 'France',
-			email: '',
-			phone: '',
-			bankName: '',
-			iban: '',
-			bic: '',
-			logoUrl: '',
-			tvaRate: 20,
-		};
+	function askDelete(provider: Provider) {
+		pendingDelete = provider;
+		confirmDelete = true;
 	}
 
-	function openCreateDrawer() {
-		goto(resolve('/admin/prestataires/create'));
-	}
-
-	function openEditDrawer(provider: Provider) {
-		goto(resolve(`/admin/prestataires/${provider.id}`));
-	}
-
-	async function handleCreate() {
-		if (!formData.name) {
-			toast.danger('Le nom est requis');
-			return;
-		}
-
-		try {
-			submitting = true;
-			await trpc.provider.create.mutate({ ...formData, spaceId: spaceContext.spaceId });
-			toast.success('Prestataire créé avec succès!');
-			showCreateDrawer = false;
-			resetForm();
-			await loadProviders();
-		} catch (err: any) {
-			logger.error({ err }, 'Failed to create provider');
-			toast.danger('Erreur lors de la création');
-		} finally {
-			submitting = false;
-		}
-	}
-
-	async function handleUpdate() {
-		if (!editingProvider || !formData.name) {
-			toast.danger('Le nom est requis');
-			return;
-		}
-
-		try {
-			submitting = true;
-			await trpc.provider.update.mutate({
-				id: editingProvider.id,
-				data: formData,
-			});
-			toast.success('Prestataire modifié avec succès!');
-			showEditDrawer = false;
-			editingProvider = null;
-			resetForm();
-			await loadProviders();
-		} catch (err: any) {
-			logger.error({ err }, 'Failed to update provider');
-			toast.danger('Erreur lors de la modification');
-		} finally {
-			submitting = false;
-		}
-	}
-
-	async function handleDelete(id: string) {
-		if (!confirm('Voulez-vous vraiment supprimer ce prestataire?')) return;
+	async function handleDelete() {
+		if (!pendingDelete) return;
+		const id = pendingDelete.id;
 
 		try {
 			await trpc.provider.delete.mutate({ id });
@@ -206,6 +135,8 @@
 			} else {
 				toast.danger('Erreur lors de la suppression');
 			}
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -230,316 +161,170 @@
 	}
 </script>
 
+<svelte:head><title>Prestataires - Ardoise</title></svelte:head>
+
+{#snippet logo(provider: Provider)}
+	<div class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-fc-sm bg-fc-surface">
+		{#if logoUrls.get(provider.id) && !failedLogos.has(provider.id)}
+			<img
+				src={logoUrls.get(provider.id)}
+				alt={provider.name}
+				class="size-full object-contain p-0.5"
+				onerror={() => failedLogos.add(provider.id)}
+			/>
+		{:else}
+			<Icon icon={ardoise.company} size={20} class="text-fc-fg-muted" />
+		{/if}
+	</div>
+{/snippet}
+
 {#if pageLoading}
-	<div class="flex flex-col items-center justify-center h-screen space-y-4">
+	<div class="flex min-h-[40dvh] items-center justify-center">
 		<Spinner size="lg" />
-		<p class="text-xs text-muted-foreground">Chargement...</p>
 	</div>
 {:else}
-	<div class="p-6 max-w-5xl mx-auto space-y-6">
-		<header class="flex justify-between items-center">
-			<div>
-				<h1 class="text-2xl font-bold tracking-tight text-foreground">Prestataires</h1>
-				<p class="text-sm text-muted-foreground mt-1">Gérez les informations de vos différents prestataires</p>
-			</div>
-			<div class="flex gap-2">
+	<Page width="xl">
+		<PageHeader title="Prestataires" description="Gérez les informations de vos différents prestataires">
+			{#snippet actions()}
 				{#if providers.length > 0}
-					<Button onclick={handleExportCSV}>
-						<iconify-icon icon="solar:file-download-bold" width="16"></iconify-icon>
-						Exporter CSV
-					</Button>
+					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}>Exporter CSV</Button>
 				{/if}
-				<button
-					onclick={openCreateDrawer}
-					class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2"
-				>
-					<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
+				<Button href={resolve('/admin/prestataires/create')} icon={icons.plus}>
 					Nouveau prestataire
-				</button>
-			</div>
-		</header>
+				</Button>
+			{/snippet}
+		</PageHeader>
 
-		<div class="relative">
-			<iconify-icon
-				icon="solar:magnifer-linear"
-				width="16"
-				class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-			></iconify-icon>
-			<input
-				type="text"
-				placeholder="Rechercher un prestataire..."
-				class="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-				oninput={handleSearch}
-			/>
-		</div>
+		<SearchInput
+			placeholder="Rechercher un prestataire..."
+			bind:value={searchInput}
+			oninput={handleSearch}
+		/>
 
 		{#if providers.length > 0}
-			<div class="rounded-xl border border-border overflow-hidden">
-				<table class="w-full">
-					<thead class="bg-muted border-b border-border">
+			<div class="hidden md:block">
+				<Table>
+					<thead>
 						<tr>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Logo</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nom</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">SIRET</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Téléphone</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Ville</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">TVA</th>
-							<th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</th>
+							<th scope="col" aria-label="Logo"></th>
+							<th scope="col">Nom</th>
+							<th scope="col">SIRET</th>
+							<th scope="col">Email</th>
+							<th scope="col">Téléphone</th>
+							<th scope="col">Ville</th>
+							<th scope="col">TVA</th>
+							<th scope="col" aria-label="Actions"></th>
 						</tr>
 					</thead>
-					<tbody class="divide-y divide-border">
+					<tbody>
 						{#each providers as provider (provider.id)}
-							<tr
-								class="hover:bg-muted transition-colors cursor-pointer"
-								onclick={(e) => {
-									if (!(e.target as HTMLElement).closest('button')) {
-										goto(resolve(`/admin/prestataires/${provider.id}`));
-									}
-								}}
-							>
-								<td class="px-4 py-3">
-									{#if logoUrls.get(provider.id)}
-										<div class="w-10 h-10 rounded-lg bg-background border border-border overflow-hidden flex items-center justify-center p-0.5">
-											<img
-												src={logoUrls.get(provider.id)}
-												alt={provider.name}
-												class="w-full h-full object-contain rounded"
-												onerror={(e) => {
-													const img = e.target as HTMLImageElement;
-													img.style.display = 'none';
-													const parent = img.parentElement;
-													if (parent) {
-														parent.innerHTML = '<iconify-icon icon="solar:buildings-2-bold" width="20" class="text-muted-foreground"></iconify-icon>';
-													}
-												}}
-											/>
-										</div>
-									{:else}
-										<div class="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-											<iconify-icon icon="solar:buildings-2-bold" width="20" class="text-muted-foreground"></iconify-icon>
-										</div>
-									{/if}
-								</td>
-								<td class="px-4 py-3">
-									<div>
-										<span class="text-sm font-medium text-foreground">{provider.name}</span>
+							<tr>
+								<td>{@render logo(provider)}</td>
+								<td>
+									<a
+										href={resolve(`/admin/prestataires/${provider.id}`)}
+										class="flex flex-col rounded-fc-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+									>
+										<span class="font-medium text-fc-fg">{provider.name}</span>
 										{#if provider.legalName}
-											<p class="text-xs text-muted-foreground">{provider.legalName}</p>
+											<span class="text-fc-xs text-fc-fg-muted">{provider.legalName}</span>
 										{/if}
-									</div>
+									</a>
 								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{provider.siret || '-'}</span>
-								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{provider.email || '-'}</span>
-								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{provider.phone || '-'}</span>
-								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm text-muted-foreground">{provider.city || '-'}</span>
-								</td>
-								<td class="px-4 py-3">
-									<span class="text-sm font-medium text-foreground">{provider.tvaRate}%</span>
-								</td>
-								<td class="px-4 py-3">
+								<td class="text-fc-fg-muted">{provider.siret || '-'}</td>
+								<td class="text-fc-fg-muted">{provider.email || '-'}</td>
+								<td class="text-fc-fg-muted">{provider.phone || '-'}</td>
+								<td class="text-fc-fg-muted">{provider.city || '-'}</td>
+								<td class="font-medium text-fc-fg">{provider.tvaRate}%</td>
+								<td>
 									<div class="flex justify-end gap-1">
-										<button
-											onclick={() => openEditDrawer(provider)}
-											class="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-											title="Modifier"
-										>
-											<iconify-icon icon="solar:pen-bold" width="16"></iconify-icon>
-										</button>
-										<button
-											onclick={() => handleDelete(provider.id)}
-											class="p-1.5 text-fc-danger hover:bg-fc-danger/10 rounded transition-colors"
-											title="Supprimer"
-										>
-											<iconify-icon icon="solar:trash-bin-trash-bold" width="16"></iconify-icon>
-										</button>
+										<Button
+											variant="ghost"
+											size="sm"
+											icon={icons.edit}
+											aria-label="Modifier"
+											href={resolve(`/admin/prestataires/${provider.id}`)}
+										/>
+										<Button
+											variant="ghost-danger"
+											size="sm"
+											icon={icons.remove}
+											aria-label="Supprimer"
+											onclick={() => askDelete(provider)}
+										/>
 									</div>
 								</td>
 							</tr>
 						{/each}
 					</tbody>
-				</table>
+				</Table>
+			</div>
+
+			<div class="flex flex-col gap-2 md:hidden">
+				{#each providers as provider (provider.id)}
+					<Card class="flex flex-col gap-3">
+						<a
+							href={resolve(`/admin/prestataires/${provider.id}`)}
+							class="flex min-w-0 items-center gap-3 rounded-fc-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+						>
+							{@render logo(provider)}
+							<span class="flex min-w-0 flex-col">
+								<span class="truncate text-fc-sm font-medium text-fc-fg">{provider.name}</span>
+								<span class="truncate text-fc-xs text-fc-fg-muted">
+									{provider.email || provider.city || provider.siret || '-'}
+								</span>
+							</span>
+						</a>
+						<div class="flex items-center justify-end">
+							<Button
+								variant="ghost-danger"
+								size="lg"
+								icon={icons.remove}
+								aria-label="Supprimer"
+								onclick={() => askDelete(provider)}
+							>
+								Supprimer
+							</Button>
+						</div>
+					</Card>
+				{/each}
 			</div>
 
 			{#if totalPages > 1}
-				<div class="flex justify-center gap-1">
-					{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pg (pg)}
-						<button
-							onclick={() => {
-								currentPage = pg;
-								loadProviders();
-							}}
-							class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {currentPage === pg
-								? 'bg-primary text-primary-foreground'
-								: 'bg-background text-foreground border border-border hover:bg-muted'}"
-						>
-							{pg}
-						</button>
-					{/each}
-				</div>
+				<Pagination
+					{currentPage}
+					{totalPages}
+					onPageChange={(page: number) => {
+						currentPage = page;
+						loadProviders();
+					}}
+				/>
 			{/if}
 		{:else}
-			<div class="text-center py-16">
-				<div class="flex flex-col items-center gap-3">
-					<iconify-icon icon="solar:buildings-2-bold" width="40" class="text-muted-foreground"></iconify-icon>
-					<h3 class="text-lg font-semibold text-foreground">Aucun prestataire</h3>
-					<p class="text-sm text-muted-foreground max-w-md">{searchQuery ? 'Aucun résultat trouvé pour votre recherche' : 'Créez votre premier prestataire pour commencer'}</p>
-					{#if !searchQuery}
-						<button
-							onclick={openCreateDrawer}
-							class="bg-primary text-primary-foreground rounded-md h-9 px-4 text-sm font-medium flex items-center gap-2 mt-2"
-						>
-							<iconify-icon icon="mdi:plus" width="16"></iconify-icon>
-							Nouveau prestataire
-						</button>
-					{/if}
-				</div>
-			</div>
+			<EmptyState
+				icon={ardoise.provider}
+				title="Aucun prestataire"
+				description={searchQuery
+					? 'Aucun résultat trouvé pour votre recherche'
+					: 'Créez votre premier prestataire pour commencer'}
+			>
+				{#if !searchQuery}
+					<Button href={resolve('/admin/prestataires/create')} icon={icons.plus}>
+						Nouveau prestataire
+					</Button>
+				{/if}
+			</EmptyState>
 		{/if}
-	</div>
+	</Page>
 {/if}
 
-<Drawer bind:open={showCreateDrawer} title="Nouveau prestataire" onClose={() => (showCreateDrawer = false)}>
-	<div class="space-y-4 pb-6">
-		<div class="grid grid-cols-2 gap-4">
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Nom du prestataire *</div>
-				<Input bind:value={formData.name} placeholder="Nom du prestataire" required />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Raison sociale</div>
-				<Input bind:value={formData.legalName} placeholder="SARL Nom du prestataire" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">SIRET</div>
-				<Input bind:value={formData.siret} placeholder="12345678900001" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Taux TVA (%)</div>
-				<Input type="number" bind:value={formData.tvaRate} placeholder="20" />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Adresse</div>
-				<Input bind:value={formData.address} placeholder="123 Rue du Développeur" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Ville</div>
-				<Input bind:value={formData.city} placeholder="75001 Paris" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Pays</div>
-				<Input bind:value={formData.country} placeholder="France" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Email</div>
-				<Input type="email" bind:value={formData.email} placeholder="contact@example.com" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Téléphone</div>
-				<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Banque</div>
-				<Input bind:value={formData.bankName} placeholder="Banque Postale" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">IBAN</div>
-				<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">BIC</div>
-				<Input bind:value={formData.bic} placeholder="PSSTFRPP" />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">URL du logo</div>
-				<Input bind:value={formData.logoUrl} placeholder="https://example.com/logo.png" />
-			</div>
-		</div>
-
-		<div class="flex gap-3 pt-4">
-			<Button onclick={() => { showCreateDrawer = false; }}>Annuler</Button>
-			<Button onclick={handleCreate} disabled={submitting}>
-				{#if submitting}
-					<Spinner size="sm" />
-				{/if}
-				Créer
-			</Button>
-		</div>
-	</div>
-</Drawer>
-
-<Drawer bind:open={showEditDrawer} title="Modifier le prestataire" onClose={() => (showEditDrawer = false)}>
-	<div class="space-y-4 pb-6">
-		<div class="grid grid-cols-2 gap-4">
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Nom du prestataire *</div>
-				<Input bind:value={formData.name} placeholder="Nom du prestataire" required />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Raison sociale</div>
-				<Input bind:value={formData.legalName} placeholder="SARL Nom du prestataire" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">SIRET</div>
-				<Input bind:value={formData.siret} placeholder="12345678900001" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Taux TVA (%)</div>
-				<Input type="number" bind:value={formData.tvaRate} placeholder="20" />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Adresse</div>
-				<Input bind:value={formData.address} placeholder="123 Rue du Développeur" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Ville</div>
-				<Input bind:value={formData.city} placeholder="75001 Paris" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Pays</div>
-				<Input bind:value={formData.country} placeholder="France" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Email</div>
-				<Input type="email" bind:value={formData.email} placeholder="contact@example.com" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">Téléphone</div>
-				<Input bind:value={formData.phone} placeholder="+33 1 23 45 67 89" />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">Banque</div>
-				<Input bind:value={formData.bankName} placeholder="Banque Postale" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">IBAN</div>
-				<Input bind:value={formData.iban} placeholder="FR76 1234 5678 9012 3456 7890 123" />
-			</div>
-			<div>
-				<div class="text-sm font-medium mb-2">BIC</div>
-				<Input bind:value={formData.bic} placeholder="PSSTFRPP" />
-			</div>
-			<div class="col-span-2">
-				<div class="text-sm font-medium mb-2">URL du logo</div>
-				<Input bind:value={formData.logoUrl} placeholder="https://example.com/logo.png" />
-			</div>
-		</div>
-
-		<div class="flex gap-3 pt-4">
-			<Button onclick={() => { showEditDrawer = false; }}>Annuler</Button>
-			<Button onclick={handleUpdate} disabled={submitting}>
-				{#if submitting}
-					<Spinner size="sm" />
-				{/if}
-				Enregistrer
-			</Button>
-		</div>
-	</div>
-</Drawer>
+<ConfirmModal
+	bind:open={confirmDelete}
+	tone="danger"
+	title="Supprimer {pendingDelete?.name ?? 'ce prestataire'} ?"
+	description="Le prestataire est supprimé définitivement. Si des documents lui sont rattachés, la suppression est refusée."
+	confirmLabel="Supprimer le prestataire"
+	cancelLabel="Garder le prestataire"
+	onConfirm={handleDelete}
+	onCancel={() => (pendingDelete = null)}
+/>
