@@ -11,11 +11,11 @@
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
-    "nodemailer": "^6.9.8"
+    "nodemailer": "^10.3.1"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
-    "@types/nodemailer": "^6.4.14",
+    "@types/nodemailer": "^8.0.2",
     "typescript": "^5.7.3"
   }
 }
