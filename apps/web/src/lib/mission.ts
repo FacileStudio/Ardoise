@@ -31,6 +31,13 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
 	contrat_maintenance: 'Contrat de maintenance',
 	back_contractuel: 'Back contractuel',
 	appel_de_fonds: 'Appel de fonds',
+	prestation_barman: 'Prestation de barman',
+	prestation_design: 'Design graphique',
+	prestation_dev: 'Développement logiciel',
+	prestation_photo: 'Photographie',
+	prestation_video: 'Vidéographie',
+	prestation_formation: 'Formation',
+	prestation_btp: 'BTP/Construction',
 };
 
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {
