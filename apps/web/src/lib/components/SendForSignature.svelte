@@ -2,6 +2,7 @@
 	import { Button, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { trpc } from '$lib/trpc';
+	import { ardoise } from '$lib/icons';
 
 	interface Props {
 		documentId: string;
@@ -36,9 +37,9 @@
 </script>
 
 <Button
-	variant="outline"
+	variant="ghost"
 	size="sm"
-	icon="solar:pen-bold"
+	icon={ardoise.signature}
 	disabled={!enabled || loading}
 	{title}
 	onclick={send}

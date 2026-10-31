@@ -7,14 +7,30 @@
     import { i18n } from '@repo/i18n/svelte';
     import { logger } from '@repo/logger';
     import { isSmtpNotConfigured } from '@repo/trpc-client';
-    import { ConfirmModal } from '@facile/muse';
+    import {
+        Alert,
+        Avatar,
+        Badge,
+        Button,
+        Card,
+        ConfirmModal,
+        EmptyState,
+        Field,
+        Input,
+        Page,
+        PageHeader,
+        Section,
+        Select,
+        Spinner,
+        Table,
+        toast,
+    } from '@facile/muse';
+    import { icons } from '$lib/icons';
     import authStore from '$lib/auth-store';
-    import 'iconify-icon';
 
     let members: any[] = $state([]);
     let space: any = $state(null);
     let loading = $state(true);
-    let error = $state('');
 
     let addUserId = $state('');
     let addRole = $state('MEMBER');
@@ -122,10 +138,10 @@
             await fetchData();
         } catch (err: any) {
             logger.error({ err }, 'Failed to remove member');
-            error = err?.message || $i18n.t('common.actions.error');
+            toast.danger(err?.message || $i18n.t('common.actions.error'));
             confirmRemove = null;
             showRemoveDialog = false;
-            setTimeout(() => { error = ''; }, 5000);
+
         } finally {
             removeLoading = false;
         }
@@ -141,8 +157,7 @@
             await fetchData();
         } catch (err: any) {
             logger.error({ err }, 'Failed to update member role');
-            error = err?.message || $i18n.t('common.actions.error');
-            setTimeout(() => { error = ''; }, 5000);
+            toast.danger(err?.message || $i18n.t('common.actions.error'));
         }
     }
 
@@ -153,169 +168,169 @@
             await goto(resolve('/admin/spaces'));
         } catch (err: any) {
             logger.error({ err }, 'Failed to leave space');
-            error = err?.message || $i18n.t('common.actions.error');
+            toast.danger(err?.message || $i18n.t('common.actions.error'));
             showLeaveDialog = false;
-            setTimeout(() => { error = ''; }, 5000);
         } finally {
             leaveLoading = false;
         }
     }
 
-    function roleBadgeClass(role: string): string {
-        switch (role) {
-            case 'OWNER': return 'bg-fc-warning/10 text-fc-warning';
-            case 'ADMIN': return 'bg-fc-info/10 text-fc-info';
-            default: return 'bg-muted text-muted-foreground';
-        }
+    function roleTone(role: string) {
+        return role === 'OWNER' ? 'owner' : role === 'ADMIN' ? 'admin' : 'neutral';
     }
 </script>
 
-<div class="flex h-full flex-col">
-    <div class="border-b border-border px-4 py-4 md:px-8 md:py-5">
-        <div class="flex items-center gap-3">
-            <a href={resolve(`/admin/spaces/${spaceId}`)} class="text-muted-foreground transition-colors hover:text-foreground" aria-label="Back to space">
-                <iconify-icon icon="solar:arrow-left-linear" width="20"></iconify-icon>
-            </a>
-            <div>
-                <h1 class="text-lg font-semibold">{$i18n.t('spaces.membersTitle')}</h1>
-                {#if space}
-                    <p class="mt-0.5 text-sm text-muted-foreground">{space.name}</p>
+<svelte:head>
+    <title>{$i18n.t('spaces.membersTitle')} - Ardoise</title>
+</svelte:head>
+
+{#snippet roleCell(m: any, isCurrentUser: boolean)}
+    {#if m.role === 'OWNER' || !canManage || isCurrentUser}
+        <Badge tone={roleTone(m.role)}>{$i18n.t(`spaces.roles.${m.role}`)}</Badge>
+    {:else}
+        <Select
+            value={m.role}
+            aria-label={$i18n.t('spaces.role')}
+            class="h-9 w-36"
+            onchange={(e) => updateRole(m.userId, (e.target as HTMLSelectElement).value)}
+        >
+            <option value="MEMBER">{$i18n.t('spaces.roles.MEMBER')}</option>
+            <option value="ADMIN">{$i18n.t('spaces.roles.ADMIN')}</option>
+        </Select>
+    {/if}
+{/snippet}
+
+<Page width="lg">
+    {#if loading}
+        <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
+    {:else if !space}
+        <EmptyState icon={icons.usersGroup} title="Espace introuvable">
+            <Button href={resolve('/admin/spaces')} variant="ghost">{$i18n.t('spaces.title')}</Button>
+        </EmptyState>
+    {:else}
+        <PageHeader
+            title={$i18n.t('spaces.membersTitle')}
+            description={space.name}
+            back={{ href: `/admin/spaces/${spaceId}`, label: space.name }}
+        />
+
+        {#if canManage}
+            <Section title={$i18n.t('spaces.addMember')} card>
+                <div class="grid gap-4 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
+                    <Field label={$i18n.t('spaces.emailPlaceholder')} error={addError}>
+                        <Input
+                            type="email"
+                            bind:value={addUserId}
+                            placeholder={$i18n.t('spaces.emailPlaceholder')}
+                            oninput={() => { addError = ''; }}
+                            onkeydown={(e) => { if (e.key === 'Enter' && !adding) addMember(); }}
+                        />
+                    </Field>
+                    <Field label={$i18n.t('spaces.role')}>
+                        <Select bind:value={addRole}>
+                            <option value="MEMBER">{$i18n.t('spaces.roles.MEMBER')}</option>
+                            <option value="ADMIN">{$i18n.t('spaces.roles.ADMIN')}</option>
+                        </Select>
+                    </Field>
+                    <Button size="lg" icon={icons.plus} onclick={addMember} disabled={adding}>
+                        {adding ? $i18n.t('spaces.adding') : $i18n.t('spaces.addMember')}
+                    </Button>
+                </div>
+                {#if inviteNotice}
+                    <Alert tone="info">{inviteNotice}</Alert>
                 {/if}
-            </div>
-        </div>
-    </div>
+            </Section>
+        {/if}
 
-    <div class="flex-1 overflow-auto px-4 py-6 md:px-8">
-        {#if loading}
-            <div class="flex items-center justify-center py-20">
-                <div class="h-6 w-6 animate-spin rounded-full border-2 border-foreground border-t-transparent"></div>
-            </div>
-        {:else if !space}
-            <div class="flex flex-col items-center justify-center py-20 text-center">
-                <p class="text-sm text-muted-foreground">Space not found</p>
-            </div>
-        {:else}
-            <div class="max-w-2xl space-y-8">
-                {#if canManage}
-                    <div class="space-y-3">
-                        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{$i18n.t('spaces.addMember')}</h2>
-                        <div class="flex items-end gap-2">
-                            <div class="flex-1">
-                                <label for="user-email" class="mb-1.5 block text-sm font-medium">{$i18n.t('spaces.emailPlaceholder')}</label>
-                                <input
-                                    id="user-email"
-                                    type="email"
-                                    bind:value={addUserId}
-                                    placeholder={$i18n.t('spaces.emailPlaceholder')}
-                                    oninput={() => { addError = ''; }}
-                                    onkeydown={(e) => { if (e.key === 'Enter' && !adding) addMember(); }}
-                                    aria-invalid={addError ? 'true' : undefined}
-                                    class="flex h-9 w-full rounded-md border bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 {addError ? 'border-fc-danger focus-visible:ring-fc-danger/30' : 'border-input focus-visible:ring-ring'}"
-                                />
-                            </div>
-                            <div class="w-32">
-                                <label for="add-role" class="mb-1.5 block text-sm font-medium">{$i18n.t('spaces.role')}</label>
-                                <select
-                                    id="add-role"
-                                    bind:value={addRole}
-                                    class="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                >
-                                    <option value="MEMBER">{$i18n.t('spaces.roles.MEMBER')}</option>
-                                    <option value="ADMIN">{$i18n.t('spaces.roles.ADMIN')}</option>
-                                </select>
-                            </div>
-                            <button
-                                class="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                onclick={addMember}
-                                disabled={adding}
-                            >
-                                {adding ? $i18n.t('spaces.adding') : $i18n.t('spaces.addMember')}
-                            </button>
-                        </div>
-                        {#if addError}
-                            <p class="text-sm text-fc-danger">{addError}</p>
-                        {/if}
-                        {#if inviteNotice}
-                            <p class="text-sm text-muted-foreground">{inviteNotice}</p>
-                        {/if}
-                    </div>
-                {/if}
-
-                {#if error}
-                    <p class="text-sm text-destructive">{error}</p>
-                {/if}
-
-                <div class="space-y-3">
-                    <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        {members.length} {members.length === 1 ? $i18n.t('spaces.member') : $i18n.t('spaces.members').toLowerCase()}
-                    </h2>
-
+        <Section
+            title={`${members.length} ${members.length === 1 ? $i18n.t('spaces.member') : $i18n.t('spaces.members').toLowerCase()}`}
+        >
+            <Table class="hidden md:block">
+                <thead>
+                    <tr>
+                        <th scope="col">Membre</th>
+                        <th scope="col">{$i18n.t('spaces.role')}</th>
+                        <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
                     {#each members as m (m.id)}
                         {@const isCurrentUser = m.userId === $authStore.user?.id}
-                        <div class="flex items-center justify-between rounded-lg border border-border p-3">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold"
-                                >
-                                    {(m.user?.firstName || m.user?.email || '?').slice(0, 2).toUpperCase()}
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <Avatar name={`${m.user.firstName} ${m.user.lastName}`} size="sm" />
+                                    <div class="flex min-w-0 flex-col">
+                                        <span class="font-medium text-fc-fg">
+                                            {m.user.firstName} {m.user.lastName}
+                                            {#if isCurrentUser}
+                                                <span class="ml-1 text-fc-xs text-fc-fg-muted">(vous)</span>
+                                            {/if}
+                                        </span>
+                                        <span class="text-fc-xs text-fc-fg-muted">{m.user.email}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-sm font-medium">
-                                        {m.user.firstName} {m.user.lastName}
-                                        {#if isCurrentUser}
-                                            <span class="text-xs text-muted-foreground ml-1">(you)</span>
-                                        {/if}
-                                    </p>
-                                    <p class="text-xs text-muted-foreground">{m.user.email}</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                {#if m.role === 'OWNER'}
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {roleBadgeClass('OWNER')}">
-                                        {$i18n.t('spaces.roles.OWNER')}
-                                    </span>
-                                {:else if canManage && !isCurrentUser}
-                                    <select
-                                        value={m.role}
-                                        onchange={(e) => updateRole(m.userId, (e.target as HTMLSelectElement).value)}
-                                        class="h-8 rounded-md border border-border bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                    >
-                                        <option value="MEMBER">{$i18n.t('spaces.roles.MEMBER')}</option>
-                                        <option value="ADMIN">{$i18n.t('spaces.roles.ADMIN')}</option>
-                                    </select>
-                                    <button
-                                        class="inline-flex h-8 items-center rounded-md px-2 text-xs text-destructive transition-colors hover:bg-destructive/10"
-                                        onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
+                            </td>
+                            <td>{@render roleCell(m, isCurrentUser)}</td>
+                            <td class="text-right">
+                                {#if canManage && !isCurrentUser && m.role !== 'OWNER'}
+                                    <Button
+                                        variant="ghost-danger"
+                                        size="sm"
+                                        icon={icons.remove}
                                         aria-label={$i18n.t('spaces.removeMember')}
-                                    >
-                                        <iconify-icon icon="solar:trash-bin-2-linear" width="14"></iconify-icon>
-                                    </button>
-                                {:else}
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {roleBadgeClass(m.role)}">
-                                        {$i18n.t(`spaces.roles.${m.role}`)}
-                                    </span>
+                                        onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
+                                    />
                                 {/if}
-                            </div>
-                        </div>
+                            </td>
+                        </tr>
                     {/each}
-                </div>
+                </tbody>
+            </Table>
 
-                {#if !isOwner}
-                    <div class="space-y-4 border-t border-border pt-8">
-                        <h2 class="text-sm font-semibold uppercase tracking-wider text-destructive">{$i18n.t('spaces.leaveSpace')}</h2>
-                        <button
-                            class="inline-flex h-9 items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20"
-                            onclick={() => { showLeaveDialog = true; }}
-                        >
-                            <iconify-icon icon="solar:logout-2-linear" width="16"></iconify-icon>
-                            {$i18n.t('spaces.leaveSpace')}
-                        </button>
-                    </div>
-                {/if}
+            <div class="flex flex-col gap-3 md:hidden">
+                {#each members as m (m.id)}
+                    {@const isCurrentUser = m.userId === $authStore.user?.id}
+                    <Card class="flex flex-col gap-3 p-4">
+                        <div class="flex items-center gap-3">
+                            <Avatar name={`${m.user.firstName} ${m.user.lastName}`} size="sm" />
+                            <div class="flex min-w-0 flex-1 flex-col">
+                                <span class="truncate text-fc-sm font-medium text-fc-fg">
+                                    {m.user.firstName} {m.user.lastName}
+                                </span>
+                                <span class="truncate text-fc-xs text-fc-fg-muted">{m.user.email}</span>
+                            </div>
+                            {#if canManage && !isCurrentUser && m.role !== 'OWNER'}
+                                <Button
+                                    variant="ghost-danger"
+                                    size="sm"
+                                    icon={icons.remove}
+                                    aria-label={$i18n.t('spaces.removeMember')}
+                                    onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
+                                />
+                            {/if}
+                        </div>
+                        {@render roleCell(m, isCurrentUser)}
+                    </Card>
+                {/each}
             </div>
+        </Section>
+
+        {#if !isOwner}
+            <Section title={$i18n.t('spaces.leaveSpace')} card>
+                <div>
+                    <Button
+                        variant="danger"
+                        icon={icons.logout}
+                        onclick={() => { showLeaveDialog = true; }}
+                    >
+                        {$i18n.t('spaces.leaveSpace')}
+                    </Button>
+                </div>
+            </Section>
         {/if}
-    </div>
-</div>
+    {/if}
+</Page>
 
 <ConfirmModal
     bind:open={inviteOffer}

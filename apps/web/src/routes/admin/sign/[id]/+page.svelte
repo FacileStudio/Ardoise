@@ -4,9 +4,19 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
-	import { Badge, Button, Spinner } from '@facile/muse';
+	import {
+		Badge,
+		Button,
+		Card,
+		Icon,
+		Page,
+		PageHeader,
+		Section,
+		Spinner,
+		toast,
+	} from '@facile/muse';
+	import { icons, ardoise } from '$lib/icons';
 	import { logger } from '@repo/logger';
-	import 'iconify-icon';
 
 	type SubmissionStatus = 'pending' | 'awaiting' | 'completed' | 'expired' | 'declined';
 
@@ -57,7 +67,7 @@
 			submission = result as Submission;
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch submission');
-			alert('Erreur lors du chargement de la demande de signature');
+			toast.danger('Erreur lors du chargement de la demande de signature');
 			goto(resolve('/admin/sign'));
 		} finally {
 			pageLoading = false;
@@ -80,6 +90,50 @@
 		}
 	}
 
+	type TimelineEvent = {
+		key: string;
+		icon: string;
+		tone: 'success' | 'info' | 'warning' | 'danger';
+		title: string;
+		at: string;
+	};
+
+	const toneClass = {
+		success: 'bg-fc-success/10 text-fc-success',
+		info: 'bg-fc-info/10 text-fc-info',
+		warning: 'bg-fc-warning/10 text-fc-warning',
+		danger: 'bg-fc-danger/10 text-fc-danger',
+	};
+
+	const timeline = $derived.by(() => {
+		if (!submission) return [] as TimelineEvent[];
+		const events: TimelineEvent[] = [
+			{
+				key: 'created',
+				icon: icons.plus,
+				tone: 'success',
+				title: 'Demande créée',
+				at: submission.created_at,
+			},
+		];
+		for (const s of submission.submitters) {
+			const who = s.name || s.email;
+			if (s.sent_at) {
+				events.push({ key: `${s.id}-sent`, icon: icons.mail, tone: 'info', title: `Envoyé à ${who}`, at: s.sent_at });
+			}
+			if (s.opened_at) {
+				events.push({ key: `${s.id}-opened`, icon: icons.eye, tone: 'warning', title: `Ouvert par ${who}`, at: s.opened_at });
+			}
+			if (s.completed_at) {
+				events.push({ key: `${s.id}-done`, icon: icons.check, tone: 'success', title: `Signé par ${who}`, at: s.completed_at });
+			}
+			if (s.declined_at) {
+				events.push({ key: `${s.id}-declined`, icon: icons.error, tone: 'danger', title: `Refusé par ${who}`, at: s.declined_at });
+			}
+		}
+		return events;
+	});
+
 	function formatDate(dateString: string | null) {
 		if (!dateString) return '-';
 		return new Date(dateString).toLocaleString('fr-FR', {
@@ -92,196 +146,113 @@
 	}
 </script>
 
-<div class="max-w-3xl mx-auto p-6 space-y-6">
-	<div>
-		<button
-			onclick={() => goto(resolve('/admin/sign'))}
-			class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-		>
-			<iconify-icon icon="solar:arrow-left-bold" width="16"></iconify-icon>
-			Retour aux signatures
-		</button>
-		<h1 class="text-2xl font-bold tracking-tight text-foreground">Détails de la signature</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			Consultez les informations et le statut de la demande
-		</p>
-	</div>
+<svelte:head>
+	<title>Détails de la signature - Ardoise</title>
+</svelte:head>
+
+<Page width="lg">
+	<PageHeader
+		title="Détails de la signature"
+		description="Consultez les informations et le statut de la demande"
+		back={{ href: '/admin/sign', label: 'Retour aux signatures' }}
+	/>
 
 	{#if pageLoading}
-		<div class="flex items-center justify-center py-20">
-			<Spinner size="lg" />
-		</div>
+		<div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
 	{:else if submission}
-		<div class="space-y-6">
-			<div class="rounded-xl border border-border p-6">
-				<div class="flex items-start justify-between mb-6">
-					<div>
-						<h2 class="text-lg font-semibold text-foreground mb-1">
-							{submission.template?.name || 'Sans template'}
-						</h2>
-						<p class="text-xs text-muted-foreground">Référence: #{submission.slug}</p>
-					</div>
-					<Badge tone={getStatusBadge(submission.status).variant}>
-						{getStatusBadge(submission.status).label}
-					</Badge>
+		<Section card>
+			<div class="flex items-start justify-between gap-4">
+				<div class="flex min-w-0 flex-col gap-1">
+					<h2 class="text-fc-lg font-semibold text-fc-fg">
+						{submission.template?.name || 'Sans template'}
+					</h2>
+					<p class="font-fc-mono text-fc-xs text-fc-fg-muted">Référence : #{submission.slug}</p>
 				</div>
+				<Badge tone={getStatusBadge(submission.status).variant}>
+					{getStatusBadge(submission.status).label}
+				</Badge>
+			</div>
 
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Date de création</p>
-						<p class="text-sm font-medium text-foreground">{formatDate(submission.created_at)}</p>
-					</div>
-					<div>
-						<p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Dernière mise à jour</p>
-						<p class="text-sm font-medium text-foreground">{formatDate(submission.updated_at)}</p>
-					</div>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div class="flex flex-col gap-1">
+					<p class="text-fc-xs text-fc-fg-muted">Date de création</p>
+					<p class="text-fc-sm font-medium text-fc-fg">{formatDate(submission.created_at)}</p>
 				</div>
+				<div class="flex flex-col gap-1">
+					<p class="text-fc-xs text-fc-fg-muted">Dernière mise à jour</p>
+					<p class="text-fc-sm font-medium text-fc-fg">{formatDate(submission.updated_at)}</p>
+				</div>
+			</div>
 
-				{#if submission.combined_document_url}
-					{@const documentUrl = submission.combined_document_url}
-					<div class="mt-6 pt-4 border-t border-border">
-						<Button
-							onclick={() => void window.open(documentUrl, '_blank')}
-						>
-							<iconify-icon icon="solar:download-bold" width="16"></iconify-icon>
+			{#if submission.combined_document_url || submission.audit_log_url}
+				{@const documentUrl = submission.combined_document_url}
+				{@const auditLogUrl = submission.audit_log_url}
+				<div class="flex flex-wrap gap-3">
+					{#if documentUrl}
+						<Button icon={icons.download} onclick={() => void window.open(documentUrl, '_blank')}>
 							Télécharger le document signé
 						</Button>
-					</div>
-				{/if}
-
-				{#if submission.audit_log_url}
-					{@const auditLogUrl = submission.audit_log_url}
-					<div class="mt-3">
+					{/if}
+					{#if auditLogUrl}
 						<Button
-							variant="outline"
+							variant="ghost"
+							icon={ardoise.document}
 							onclick={() => void window.open(auditLogUrl, '_blank')}
 						>
-							<iconify-icon icon="solar:document-text-bold" width="16"></iconify-icon>
 							Voir le journal d'audit
 						</Button>
-					</div>
-				{/if}
-			</div>
-
-			<div class="rounded-xl border border-border p-6">
-				<h3 class="text-base font-semibold text-foreground mb-4">Signataires ({submission.submitters.length})</h3>
-
-				<div class="space-y-3">
-					{#each submission.submitters as submitter (submitter.id)}
-						<div class="bg-muted rounded-lg p-4">
-							<div class="flex items-start justify-between mb-3">
-								<div class="flex items-center gap-3">
-									<div class="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-medium">
-										{submitter.name?.[0] || submitter.email?.[0] || '?'}
-									</div>
-									<div>
-										<p class="text-sm font-medium text-foreground">{submitter.name || 'Sans nom'}</p>
-										<p class="text-xs text-muted-foreground">{submitter.email}</p>
-										{#if submitter.phone}
-											<p class="text-xs text-muted-foreground">{submitter.phone}</p>
-										{/if}
-									</div>
-								</div>
-								<div class="text-right">
-									<Badge tone={getStatusBadge(submitter.status).variant}>
-										{submitter.role}
-									</Badge>
-									<p class="text-xs text-muted-foreground mt-1">
-										{getStatusBadge(submitter.status).label}
-									</p>
-								</div>
-							</div>
-
-							<div class="grid grid-cols-2 gap-3 text-sm">
-								<div>
-									<p class="text-xs font-medium text-muted-foreground mb-0.5">Envoyé</p>
-									<p class="text-xs text-foreground">{formatDate(submitter.sent_at)}</p>
-								</div>
-								<div>
-									<p class="text-xs font-medium text-muted-foreground mb-0.5">Ouvert</p>
-									<p class="text-xs text-foreground">{formatDate(submitter.opened_at)}</p>
-								</div>
-								<div>
-									<p class="text-xs font-medium text-muted-foreground mb-0.5">Complété</p>
-									<p class="text-xs text-foreground">{formatDate(submitter.completed_at)}</p>
-								</div>
-								<div>
-									<p class="text-xs font-medium text-muted-foreground mb-0.5">Refusé</p>
-									<p class="text-xs text-foreground">{formatDate(submitter.declined_at)}</p>
-								</div>
-							</div>
-						</div>
-					{/each}
+					{/if}
 				</div>
-			</div>
+			{/if}
+		</Section>
 
-			<div class="rounded-xl border border-border p-6">
-				<h3 class="text-base font-semibold text-foreground mb-4">Timeline</h3>
-
-				<div class="relative space-y-4">
-					<div class="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
-
-					<div class="relative flex gap-3">
-						<div class="w-8 h-8 rounded-full bg-fc-success flex items-center justify-center flex-shrink-0 z-10">
-							<iconify-icon icon="solar:add-circle-bold" width="16" class="text-white"></iconify-icon>
+		<Section title={`Signataires (${submission.submitters.length})`}>
+			<div class="flex flex-col gap-3">
+				{#each submission.submitters as submitter (submitter.id)}
+					<Card class="flex flex-col gap-4">
+						<div class="flex items-start justify-between gap-4">
+							<div class="flex min-w-0 flex-col">
+								<p class="text-fc-sm font-medium text-fc-fg">{submitter.name || 'Sans nom'}</p>
+								<p class="text-fc-xs text-fc-fg-muted">{submitter.email}</p>
+								{#if submitter.phone}
+									<p class="text-fc-xs text-fc-fg-muted">{submitter.phone}</p>
+								{/if}
+							</div>
+							<div class="flex flex-col items-end gap-1">
+								<Badge tone={getStatusBadge(submitter.status).variant}>{submitter.role}</Badge>
+								<p class="text-fc-xs text-fc-fg-muted">{getStatusBadge(submitter.status).label}</p>
+							</div>
 						</div>
-						<div class="pt-1">
-							<p class="text-sm font-medium text-foreground">Demande créée</p>
-							<p class="text-xs text-muted-foreground">{formatDate(submission.created_at)}</p>
+
+						<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+							{#each [['Envoyé', submitter.sent_at], ['Ouvert', submitter.opened_at], ['Complété', submitter.completed_at], ['Refusé', submitter.declined_at]] as [label, at] (label)}
+								<div class="flex flex-col gap-0.5">
+									<p class="text-fc-xs text-fc-fg-muted">{label}</p>
+									<p class="text-fc-xs text-fc-fg">{formatDate(at)}</p>
+								</div>
+							{/each}
 						</div>
-					</div>
-
-					{#each submission.submitters as submitter (submitter.id)}
-						{#if submitter.sent_at}
-							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-fc-info flex items-center justify-center flex-shrink-0 z-10">
-									<iconify-icon icon="solar:letter-bold" width="16" class="text-white"></iconify-icon>
-								</div>
-								<div class="pt-1">
-									<p class="text-sm font-medium text-foreground">Envoyé à {submitter.name || submitter.email}</p>
-									<p class="text-xs text-muted-foreground">{formatDate(submitter.sent_at)}</p>
-								</div>
-							</div>
-						{/if}
-
-						{#if submitter.opened_at}
-							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-fc-warning flex items-center justify-center flex-shrink-0 z-10">
-									<iconify-icon icon="solar:eye-bold" width="16" class="text-white"></iconify-icon>
-								</div>
-								<div class="pt-1">
-									<p class="text-sm font-medium text-foreground">Ouvert par {submitter.name || submitter.email}</p>
-									<p class="text-xs text-muted-foreground">{formatDate(submitter.opened_at)}</p>
-								</div>
-							</div>
-						{/if}
-
-						{#if submitter.completed_at}
-							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-fc-success flex items-center justify-center flex-shrink-0 z-10">
-									<iconify-icon icon="solar:check-circle-bold" width="16" class="text-white"></iconify-icon>
-								</div>
-								<div class="pt-1">
-									<p class="text-sm font-medium text-foreground">Signé par {submitter.name || submitter.email}</p>
-									<p class="text-xs text-muted-foreground">{formatDate(submitter.completed_at)}</p>
-								</div>
-							</div>
-						{/if}
-
-						{#if submitter.declined_at}
-							<div class="relative flex gap-3">
-								<div class="w-8 h-8 rounded-full bg-fc-danger flex items-center justify-center flex-shrink-0 z-10">
-									<iconify-icon icon="solar:close-circle-bold" width="16" class="text-white"></iconify-icon>
-								</div>
-								<div class="pt-1">
-									<p class="text-sm font-medium text-foreground">Refusé par {submitter.name || submitter.email}</p>
-									<p class="text-xs text-muted-foreground">{formatDate(submitter.declined_at)}</p>
-								</div>
-							</div>
-						{/if}
-					{/each}
-				</div>
+					</Card>
+				{/each}
 			</div>
-		</div>
+		</Section>
+
+		<Section title="Chronologie" card>
+			<ol class="flex flex-col gap-4">
+				{#each timeline as event (event.key)}
+					<li class="flex items-center gap-3">
+						<span
+							class="flex h-8 w-8 shrink-0 items-center justify-center rounded-fc-pill {toneClass[event.tone]}"
+						>
+							<Icon icon={event.icon} />
+						</span>
+						<div class="flex flex-col">
+							<p class="text-fc-sm font-medium text-fc-fg">{event.title}</p>
+							<p class="text-fc-xs text-fc-fg-muted">{formatDate(event.at)}</p>
+						</div>
+					</li>
+				{/each}
+			</ol>
+		</Section>
 	{/if}
-</div>
+</Page>

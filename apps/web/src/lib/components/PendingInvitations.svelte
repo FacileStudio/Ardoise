@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { toast } from '@facile/muse';
+	import { Badge, Button, Table, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { isSmtpNotConfigured } from '@repo/trpc-client';
 	import { trpc } from '$lib/trpc';
-	import 'iconify-icon';
 
 	type Invitation = Awaited<ReturnType<typeof trpc.invitation.list.query>>[number];
 
@@ -51,34 +50,50 @@
 </script>
 
 {#if invitations.length > 0}
-	<div class="space-y-3">
-		<h2 class="text-sm font-semibold text-muted-foreground">Invitations en attente</h2>
-		{#each invitations as invitation (invitation.id)}
-			<div class="flex items-center justify-between rounded-lg border border-border p-3">
-				<div>
-					<p class="text-sm font-medium">{invitation.email}</p>
-					<p class="text-xs text-muted-foreground">
-						{invitation.role === 'ADMIN' ? 'Administrateur' : 'Utilisateur'} · expire le
-						{new Date(invitation.expiresAt).toLocaleDateString()}
-					</p>
-				</div>
-				<div class="flex items-center gap-1">
-					<button
-						class="inline-flex h-8 items-center rounded-md px-2 text-xs transition-colors hover:bg-muted disabled:opacity-50"
-						disabled={busyId === invitation.id}
-						onclick={() => resend(invitation.id)}
-					>
-						Renvoyer
-					</button>
-					<button
-						class="inline-flex h-8 items-center rounded-md px-2 text-xs text-fc-danger transition-colors hover:bg-fc-danger/10 disabled:opacity-50"
-						disabled={busyId === invitation.id}
-						onclick={() => revoke(invitation.id)}
-					>
-						Révoquer
-					</button>
-				</div>
-			</div>
-		{/each}
+	<div class="flex flex-col gap-3">
+		<h3 class="text-fc-sm font-semibold text-fc-fg">Invitations en attente</h3>
+		<Table>
+			<thead>
+				<tr>
+					<th scope="col">Email</th>
+					<th scope="col">Rôle</th>
+					<th scope="col">Expire le</th>
+					<th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each invitations as invitation (invitation.id)}
+					<tr>
+						<td class="font-medium">{invitation.email}</td>
+						<td>
+							<Badge tone={invitation.role === 'ADMIN' ? 'admin' : 'neutral'}>
+								{invitation.role === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
+							</Badge>
+						</td>
+						<td class="text-fc-fg-muted">
+							{new Date(invitation.expiresAt).toLocaleDateString('fr-FR')}
+						</td>
+						<td class="text-right">
+							<Button
+								variant="ghost"
+								size="sm"
+								disabled={busyId === invitation.id}
+								onclick={() => resend(invitation.id)}
+							>
+								Renvoyer
+							</Button>
+							<Button
+								variant="ghost-danger"
+								size="sm"
+								disabled={busyId === invitation.id}
+								onclick={() => revoke(invitation.id)}
+							>
+								Révoquer
+							</Button>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</Table>
 	</div>
 {/if}
