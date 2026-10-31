@@ -22,7 +22,24 @@ describe('bucketCosts', () => {
   });
 });
 
+describe('session procedures', () => {
+  it('keep auth.me and auth.refresh out of the login bucket', () => {
+    const costs = bucketCosts('/trpc/auth.me,auth.refresh,auth.logout');
+
+    expect(costs.get('auth')).toBeUndefined();
+    expect(costs.get('general')).toBe(3);
+  });
+});
+
 describe('trpc rate limit', () => {
+  it('lets a visitor navigate far past five session checks a minute', async () => {
+    const server = app();
+    const statuses: number[] = [];
+    for (let i = 0; i < 20; i++) statuses.push((await call(server, '/trpc/auth.me')).status);
+
+    expect(statuses.every((status) => status === 200)).toBe(true);
+  });
+
   it('blocks the sixth login attempt', async () => {
     const server = app();
     const statuses: number[] = [];

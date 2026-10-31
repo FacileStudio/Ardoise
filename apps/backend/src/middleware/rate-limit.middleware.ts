@@ -69,9 +69,7 @@ function getClientIp(c: Context): string {
     /* getConnInfo is unavailable outside a Bun server */
   }
   return (
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
-    c.req.header('x-real-ip') ||
-    'unknown'
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
   );
 }
 
@@ -86,18 +84,24 @@ type Bucket = keyof typeof BUCKETS;
 /**
  * A tRPC batch call puts several procedures in one path (`/trpc/a.x,b.y`), so a
  * limiter keyed on the path alone lets one request carry unlimited login
- * attempts. Each procedure counts against its own bucket instead.
+ * attempts. Each procedure counts against its own bucket instead. Only the login
+ * attempt is brute-forceable and gets the strict bucket: `auth.me` and
+ * `auth.refresh` run on every page navigation and must not share its budget.
  */
 export function bucketCosts(path: string): Map<Bucket, number> {
   const costs = new Map<Bucket, number>();
-  const procedures = path.replace(/^\/trpc\/?/, '').split(',').filter(Boolean);
+  const procedures = path
+    .replace(/^\/trpc\/?/, '')
+    .split(',')
+    .filter(Boolean);
 
   for (const procedure of procedures.length > 0 ? procedures : ['']) {
-    const bucket: Bucket = procedure.startsWith('auth.')
-      ? 'auth'
-      : procedure.startsWith('payment.')
-        ? 'payment'
-        : 'general';
+    const bucket: Bucket =
+      procedure === 'auth.login'
+        ? 'auth'
+        : procedure.startsWith('payment.')
+          ? 'payment'
+          : 'general';
     costs.set(bucket, (costs.get(bucket) ?? 0) + 1);
   }
   return costs;
