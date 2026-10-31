@@ -18,7 +18,7 @@
     Textarea,
     toast,
   } from '@facile/muse';
-  import { icons, ardoise } from '$lib/icons';
+  import { icons } from '$lib/icons';
   import { loadAuthConfig, type AuthConfig } from '$lib/auth-config';
   import ProfileSection from '$lib/components/settings/ProfileSection.svelte';
   import AppearanceSection from '$lib/components/settings/AppearanceSection.svelte';
@@ -74,15 +74,15 @@
   };
 
   const SECTIONS = [
-    { id: 'profile', label: 'Profil', icon: icons.userCircle },
-    { id: 'appearance', label: 'Apparence', icon: icons.palette },
-    { id: 'company', label: 'Entreprise', icon: ardoise.company },
-    { id: 'billing', label: 'Facturation', icon: icons.card },
-    { id: 'payments', label: 'Paiements', icon: icons.shield },
-    { id: 'email', label: 'Email', icon: icons.mail },
-    { id: 'integrations', label: 'Intégrations', icon: icons.plug },
-    { id: 'users', label: 'Utilisateurs', icon: icons.usersGroup },
-    { id: 'advanced', label: 'Avancé', icon: icons.server },
+    { id: 'profile', label: 'Profil' },
+    { id: 'appearance', label: 'Apparence' },
+    { id: 'company', label: 'Entreprise' },
+    { id: 'billing', label: 'Facturation' },
+    { id: 'payments', label: 'Paiements' },
+    { id: 'email', label: 'Email' },
+    { id: 'integrations', label: 'Intégrations' },
+    { id: 'users', label: 'Utilisateurs' },
+    { id: 'advanced', label: 'Avancé' },
   ] as const;
 
   const section = $derived(
@@ -219,7 +219,7 @@
   </SettingsRow>
 {/snippet}
 
-<Page width="lg">
+<Page width="xl">
   <div class="flex flex-col gap-4">
     <PageHeader title="Réglages" />
     <Tabs items={tabs} value={section} label="Sections des réglages" />
