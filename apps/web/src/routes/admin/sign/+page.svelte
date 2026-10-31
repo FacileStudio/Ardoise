@@ -206,7 +206,7 @@
 		<Tabs items={statusTabs} value={status} onChange={selectStatus} label="Filtrer par statut" />
 		<Input
 			bind:value={searchQuery}
-			placeholder="Rechercher par template ou signataire"
+			placeholder="Rechercher"
 			class="sm:max-w-80"
 		/>
 	</div>
