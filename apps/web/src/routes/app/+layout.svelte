@@ -18,7 +18,7 @@
   const navPages = $derived([
     {
       href: '/app',
-      label: $i18n.t('nav.myInvoices'),
+      label: $i18n.t('portal.nav'),
       icon: ardoise.payment,
       active: pathname === '/app',
     },
