@@ -23,7 +23,6 @@ export const AddMemberSchema = z.object({
   role: SpaceRoleEnum.optional().default('MEMBER'),
 });
 
-export const InviteMemberSchema = AddMemberSchema;
 
 export const RemoveMemberSchema = z.object({
   spaceId: z.string(),
@@ -43,6 +42,5 @@ export const LeaveSpaceSchema = z.object({
 export type CreateSpaceInput = z.infer<typeof CreateSpaceSchema>;
 export type UpdateSpaceInput = z.infer<typeof UpdateSpaceSchema>;
 export type AddMemberInput = z.infer<typeof AddMemberSchema>;
-export type InviteMemberInput = z.infer<typeof InviteMemberSchema>;
 export type RemoveMemberInput = z.infer<typeof RemoveMemberSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof UpdateMemberRoleSchema>;

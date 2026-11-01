@@ -7,20 +7,17 @@
 		Button,
 		Field,
 		Input,
-		OptionCards,
 		Page,
 		PageHeader,
 		Section,
 		toast,
 	} from '@facile/muse';
-	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
 	import { isSmtpNotConfigured } from '@repo/trpc-client';
 
 	let submitting = $state(false);
 	let emailError = $state('');
 	let email = $state('');
-	let role = $state<'CLIENT' | 'ADMIN'>('ADMIN');
 
 	async function handleInvite() {
 		emailError = '';
@@ -32,7 +29,7 @@
 
 		try {
 			submitting = true;
-			await trpc.invitation.create.mutate({ email: email.trim(), role });
+			await trpc.invitation.create.mutate({ email: email.trim(), role: 'ADMIN' });
 			toast.success('Invitation envoyée');
 			goto(resolve('/admin/settings/users'));
 		} catch (err: any) {
@@ -57,7 +54,7 @@
 
 <Page width="md">
 	<PageHeader
-		title="Inviter un utilisateur"
+		title="Inviter un administrateur"
 		description="La personne reçoit un lien par email, valable 7 jours, pour rejoindre Ardoise"
 		back={{ href: '/admin/settings/users', label: 'Retour aux utilisateurs' }}
 	/>
@@ -68,23 +65,11 @@
 		</Field>
 	</Section>
 
-	<Section title="Rôle" card>
-		<OptionCards
-			options={[
-				{ value: 'CLIENT', label: 'Utilisateur', icon: icons.userCircle },
-				{ value: 'ADMIN', label: 'Administrateur', icon: icons.shield },
-			]}
-			bind:value={role}
-			label="Rôle"
-		/>
-	</Section>
-
-	{#if role === 'ADMIN'}
-		<Alert tone="info" title="Permissions administrateur">
-			Les administrateurs ont accès à toutes les fonctionnalités d'administration, incluant la
-			gestion des clients, paiements, documents et utilisateurs.
-		</Alert>
-	{/if}
+	<Alert tone="info" title="Permissions administrateur">
+		Les administrateurs ont accès à toutes les fonctionnalités d'administration, incluant la
+		gestion des clients, paiements, documents et utilisateurs. Les clients ne s'invitent pas :
+		créez la fiche client, il reçoit un lien de connexion.
+	</Alert>
 
 	<div class="flex justify-end gap-3">
 		<Button href={resolve('/admin/settings/users')} variant="ghost" disabled={submitting}>

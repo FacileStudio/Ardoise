@@ -1,12 +1,9 @@
 import { TRPCError } from '@trpc/server';
 import { type PrismaClient, type SpaceRole } from '@repo/database';
-import type { SMTPClient } from '@repo/smtp';
-import invitationService from '../invitation/service';
 import type {
   CreateSpaceInput,
   UpdateSpaceInput,
   AddMemberInput,
-  InviteMemberInput,
   RemoveMemberInput,
   UpdateMemberRoleInput,
 } from './types';
@@ -304,30 +301,6 @@ export const spaceService = {
           },
         },
       },
-    });
-  },
-
-  async inviteMember(
-    db: PrismaClient,
-    smtp: SMTPClient,
-    appOrigin: string,
-    inviterId: string,
-    data: InviteMemberInput
-  ) {
-    const member = await db.spaceMember.findUnique({
-      where: { spaceId_userId: { spaceId: data.spaceId, userId: inviterId } },
-    });
-    requireRole(member, 'ADMIN');
-
-    if (data.role === 'OWNER') {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot assign OWNER role directly' });
-    }
-
-    return invitationService.create(db, smtp, appOrigin, inviterId, {
-      email: data.email,
-      role: 'CLIENT',
-      spaceId: data.spaceId,
-      spaceRole: data.role,
     });
   },
 

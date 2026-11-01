@@ -6,9 +6,7 @@
     import { resolve } from '$app/paths';
     import { i18n } from '@repo/i18n/svelte';
     import { logger } from '@repo/logger';
-    import { isSmtpNotConfigured } from '@repo/trpc-client';
     import {
-        Alert,
         Avatar,
         Badge,
         Button,
@@ -36,9 +34,6 @@
     let addRole = $state('MEMBER');
     let addError = $state('');
     let adding = $state(false);
-    let inviteOffer = $state(false);
-    let inviting = $state(false);
-    let inviteNotice = $state('');
 
     let confirmRemove: any = $state(null);
     let showRemoveDialog = $state(false);
@@ -80,8 +75,6 @@
 
         adding = true;
         addError = '';
-        inviteOffer = false;
-        inviteNotice = '';
         try {
             await trpc.space.addMember.mutate({
                 spaceId,
@@ -95,33 +88,12 @@
         } catch (err: any) {
             logger.error({ err }, 'Failed to add member');
             if (err?.data?.code === 'NOT_FOUND') {
-                inviteOffer = true;
+                addError = $i18n.t('spaces.noUserFound');
             } else {
                 addError = err?.message || $i18n.t('common.actions.error');
             }
         } finally {
             adding = false;
-        }
-    }
-
-    async function inviteMember() {
-        inviting = true;
-        try {
-            await trpc.space.inviteMember.mutate({
-                spaceId,
-                email: addUserId.trim(),
-                role: addRole as any,
-            });
-            inviteNotice = $i18n.t('spaces.inviteSent', { email: addUserId.trim() });
-            addError = '';
-            addUserId = '';
-            addRole = 'MEMBER';
-        } catch (err: any) {
-            logger.error({ err }, 'Failed to invite member');
-            addError = isSmtpNotConfigured(err) ? '' : err?.message || $i18n.t('common.actions.error');
-        } finally {
-            inviting = false;
-            inviteOffer = false;
         }
     }
 
@@ -236,9 +208,6 @@
                         {adding ? $i18n.t('spaces.adding') : $i18n.t('spaces.addMember')}
                     </Button>
                 </div>
-                {#if inviteNotice}
-                    <Alert tone="info">{inviteNotice}</Alert>
-                {/if}
             </Section>
         {/if}
 
@@ -331,16 +300,6 @@
         {/if}
     {/if}
 </Page>
-
-<ConfirmModal
-    bind:open={inviteOffer}
-    title={$i18n.t('spaces.inviteTitle')}
-    description={$i18n.t('spaces.noUserFound')}
-    confirmLabel={inviting ? $i18n.t('spaces.inviting') : $i18n.t('spaces.sendInvitation')}
-    cancelLabel={$i18n.t('common.buttons.cancel')}
-    onConfirm={inviteMember}
-    onCancel={() => { inviteOffer = false; }}
-/>
 
 <ConfirmModal
     bind:open={showRemoveDialog}

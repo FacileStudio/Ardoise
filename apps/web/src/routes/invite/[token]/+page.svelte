@@ -87,6 +87,15 @@
       <div class="flex items-center justify-center py-8">
         <iconify-icon icon="svg-spinners:ring-resize" width="20"></iconify-icon>
       </div>
+    {:else if invitation?.role === 'CLIENT'}
+      <h1 class="text-2xl font-bold font-heading text-foreground">Invitation invalide</h1>
+      <p class="mt-1.5 text-sm text-muted-foreground">
+        Les clients ne sont plus invités par ce lien. Connectez-vous avec votre email : vous
+        recevrez un lien de connexion, sans mot de passe.
+      </p>
+      <a href={resolve('/login')} class="mt-6 inline-block text-sm font-medium underline">
+        Aller à la connexion
+      </a>
     {:else if invalid || !invitation}
       <h1 class="text-2xl font-bold font-heading text-foreground">Invitation invalide</h1>
       <p class="mt-1.5 text-sm text-muted-foreground">

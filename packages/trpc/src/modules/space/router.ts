@@ -5,7 +5,6 @@ import {
   UpdateSpaceSchema,
   GetSpaceSchema,
   AddMemberSchema,
-  InviteMemberSchema,
   RemoveMemberSchema,
   UpdateMemberRoleSchema,
   LeaveSpaceSchema,
@@ -38,11 +37,6 @@ export const spaceRouter = router({
 
   addMember: protectedProcedure.input(AddMemberSchema).mutation(async ({ ctx, input }) => {
     return spaceService.addMember(ctx.db, ctx.user.id, input);
-  }),
-
-  inviteMember: protectedProcedure.input(InviteMemberSchema).mutation(async ({ ctx, input }) => {
-    const smtp = await ctx.getSmtp();
-    return spaceService.inviteMember(ctx.db, smtp, ctx.appOrigin, ctx.user.id, input);
   }),
 
   removeMember: protectedProcedure.input(RemoveMemberSchema).mutation(async ({ ctx, input }) => {

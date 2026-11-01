@@ -31,6 +31,7 @@ export function createOIDCRoutes(
       oidc_enabled: config !== null,
       sso_only: env.SSO_ONLY,
       password_login: !env.SSO_ONLY,
+      client_magic_link: true,
     })
   );
 
