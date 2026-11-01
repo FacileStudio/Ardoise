@@ -26,14 +26,14 @@ async function tryRefresh(baseUrl: string, onRefreshed?: (user: any) => void): P
         'Content-Type': 'application/json',
         'x-trpc-source': 'universal-client',
       },
-      body: JSON.stringify({ json: {} }),
+      body: JSON.stringify({}),
     });
 
     if (!res.ok) return false;
 
     const data = await res.json();
-    if (data?.result?.data?.json?.user && onRefreshed) {
-      onRefreshed(data.result.data.json.user);
+    if (data?.result?.data?.user && onRefreshed) {
+      onRefreshed(data.result.data.user);
     }
     return true;
   } catch {

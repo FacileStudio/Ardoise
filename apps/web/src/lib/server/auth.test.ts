@@ -19,7 +19,7 @@ describe('refreshSessionUser', () => {
       const headers = new Headers();
       headers.append('set-cookie', 'auth_token=a; Path=/');
       headers.append('set-cookie', 'refresh_token=r; Path=/');
-      return new Response(JSON.stringify({ result: { data: { json: { user } } } }), { headers });
+      return new Response(JSON.stringify({ result: { data: { user } } }), { headers });
     }) as unknown as typeof fetch;
     const out = await refreshSessionUser('old', 'https://api.test/trpc', fetchFn);
     expect(out?.user.id).toBe('u1');

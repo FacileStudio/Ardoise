@@ -70,14 +70,14 @@ export async function refreshSessionUser(
       cookie: `${REFRESH_COOKIE}=${encodeURIComponent(refreshToken)}`,
       'x-trpc-source': 'web-server-guard',
     },
-    body: JSON.stringify({ json: {} }),
+    body: JSON.stringify({}),
   });
 
   if (res.status === 401) return null;
   if (!res.ok) throw new Error(`Session refresh failed with status ${res.status}`);
 
-  const data = (await res.json()) as { result?: { data?: { json?: { user?: SessionUser } } } };
-  const user = data.result?.data?.json?.user;
+  const body = (await res.json()) as { result?: { data?: { user?: SessionUser } } };
+  const user = body.result?.data?.user;
   if (!user) return null;
   return { user, setCookies: res.headers.getSetCookie() };
 }

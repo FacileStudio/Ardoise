@@ -14,6 +14,14 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-11-01
+
+### Fixed
+
+- Reloading an admin page still signed you out after 15 minutes. The refresh succeeded, but the web
+  server and the browser client looked for the user under `result.data.json`, a wrapper this API
+  does not send, so they saw no user and redirected to `/login`. Both now read `result.data.user`.
+
 ## [0.7.2] - 2026-11-01
 
 ### Fixed
