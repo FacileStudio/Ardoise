@@ -31,7 +31,6 @@
 		siret: '',
 		createCredentials: false,
 		credentialEmail: '',
-		credentialPassword: '',
 	});
 
 	let formErrors = $state<Record<string, string>>({});
@@ -75,12 +74,6 @@
 			} else if (!isValidEmail(formData.credentialEmail.trim())) {
 				nextErrors.credentialEmail = "Format d'email invalide";
 			}
-
-			if (!formData.credentialPassword) {
-				nextErrors.credentialPassword = 'Le mot de passe est requis';
-			} else if (formData.credentialPassword.length < 8) {
-				nextErrors.credentialPassword = 'Le mot de passe doit contenir au moins 8 caractères';
-			}
 		}
 
 		formErrors = nextErrors;
@@ -113,9 +106,6 @@
 				formMessage = formErrors.credentialEmail;
 			} else if (message.includes('Credential email')) {
 				formErrors.credentialEmail = message;
-				formMessage = message;
-			} else if (message.includes('Credential password')) {
-				formErrors.credentialPassword = message;
 				formMessage = message;
 			} else {
 				formMessage = message;
@@ -186,30 +176,26 @@
 		<div class="flex flex-col gap-1 rounded-fc-md bg-fc-surface p-3">
 			<Checkbox
 				bind:checked={formData.createCredentials}
-				label="Créer des identifiants de connexion"
+				label="Donner accès à Ardoise"
 			/>
 			<span class="pl-6 text-fc-xs text-fc-fg-muted">
-				Activez seulement si ce client doit se connecter à Ardoise.
+				Activez seulement si ce client doit se connecter à Ardoise. Il reçoit un lien de
+				connexion par email, sans mot de passe.
 			</span>
 		</div>
 
 		{#if formData.createCredentials}
-			<div class="grid gap-4 sm:grid-cols-2">
-				<Field label="Email de connexion *" error={getFieldError('credentialEmail')}>
-					<Input
-						bind:value={formData.credentialEmail}
-						type="email"
-						placeholder="login@entreprise.fr"
-					/>
-				</Field>
-				<Field
-					label="Mot de passe *"
-					error={getFieldError('credentialPassword')}
-					helper="Minimum 8 caractères."
-				>
-					<Input bind:value={formData.credentialPassword} type="password" placeholder="••••••••" />
-				</Field>
-			</div>
+			<Field
+				label="Email de connexion *"
+				error={getFieldError('credentialEmail')}
+				helper="Le lien de connexion est envoyé à cette adresse."
+			>
+				<Input
+					bind:value={formData.credentialEmail}
+					type="email"
+					placeholder="login@entreprise.fr"
+				/>
+			</Field>
 		{/if}
 	</Section>
 

@@ -6,6 +6,8 @@
   import authStore from '$lib/auth-store';
   import env from '$lib/env';
   import { isAdmin, type SessionUser } from '@repo/auth-shared';
+  import { Alert, Button, Field, Input } from '@facile/muse';
+  import { i18n } from '@repo/i18n/svelte';
   import 'iconify-icon';
 
   const apiUrl = env.API_URL?.replace(/\/trpc\/?$/, '').replace(/\/$/, '') ?? '';
@@ -21,8 +23,13 @@
   let email = $state('');
   let password = $state('');
   let oidcEnabled = $state(false);
-  let ssoOnly = $state(false);
   let configLoaded = $state(false);
+  let passwordLogin = $state(true);
+  let clientMagicLink = $state(true);
+  let audience = $state<'client' | 'staff'>('client');
+  let linkSending = $state(false);
+  let linkSent = $state(false);
+  let linkError = $state('');
 
   const ssoErrors: Record<string, string> = {
     oidc_failed: "Échec de l'authentification SSO.",
@@ -66,11 +73,34 @@
       const res = await fetch(`${apiUrl}/auth/config`);
       const config = await res.json();
       oidcEnabled = config.oidc_enabled ?? false;
-      ssoOnly = config.sso_only ?? false;
+      passwordLogin = config.password_login ?? true;
+      clientMagicLink = config.client_magic_link ?? true;
     } catch { /* noop */ }
 
+    if (!clientMagicLink || ssoError) audience = 'staff';
     configLoaded = true;
   });
+
+  async function requestLink() {
+    linkSending = true;
+    linkError = '';
+    try {
+      await trpc.magicLink.request.mutate({ email: email.trim() });
+      linkSent = true;
+    } catch (err) {
+      const limited = (err as { meta?: { response?: { status?: number } } })?.meta?.response?.status === 429;
+      linkError = $i18n.t(limited ? 'auth.magicLink.rateLimited' : 'auth.magicLink.requestFailed');
+    } finally {
+      linkSending = false;
+    }
+  }
+
+  function showAudience(next: 'client' | 'staff') {
+    audience = next;
+    error = '';
+    linkError = '';
+    linkSent = false;
+  }
 
   async function handleLogin() {
     loading = true;
@@ -142,73 +172,124 @@
           </p>
         {/if}
 
-        {#if oidcEnabled}
-          <a
-            href="{apiUrl}/auth/oidc?redirect={encodeURIComponent(window.location.origin + resolve('/login'))}"
-            rel="external"
-            data-sveltekit-reload
-            class={primaryButtonClass}
-          >
-            <iconify-icon
-              icon="solar:key-minimalistic-square-bold-duotone"
-              width="18"
-              class="mr-2"
-            ></iconify-icon>
-            Se connecter avec Facile
-          </a>
-          <div class="my-6 flex items-center gap-3">
-            <span class="h-px flex-1 bg-border"></span>
-            <span class="text-xs text-muted-foreground">ou</span>
-            <span class="h-px flex-1 bg-border"></span>
-          </div>
+        {#if audience === 'client'}
+          {#if linkSent}
+            <div class="space-y-4">
+              <h2 class="text-lg font-semibold font-heading text-foreground">
+                {$i18n.t('auth.magicLink.sentTitle')}
+              </h2>
+              <p class="text-sm text-muted-foreground">
+                {$i18n.t('auth.magicLink.sentBody', { email: email.trim() })}
+              </p>
+              <Button variant="ghost" size="lg" onclick={() => (linkSent = false)}>
+                {$i18n.t('auth.magicLink.sentRetry')}
+              </Button>
+            </div>
+          {:else}
+            <form
+              onsubmit={(e) => { e.preventDefault(); requestLink(); }}
+              class="space-y-4"
+            >
+              <p class="text-sm text-muted-foreground">{$i18n.t('auth.magicLink.clientHint')}</p>
+              {#if linkError}
+                <Alert tone="danger">{linkError}</Alert>
+              {/if}
+              <Field label={$i18n.t('auth.magicLink.emailLabel')}>
+                <Input
+                  type="email"
+                  bind:value={email}
+                  placeholder="vous@exemple.com"
+                  autocomplete="email"
+                  required
+                  disabled={linkSending}
+                />
+              </Field>
+              <Button type="submit" size="lg" class="w-full" disabled={linkSending || !email.trim()}>
+                {linkSending ? $i18n.t('auth.magicLink.sending') : $i18n.t('auth.magicLink.submit')}
+              </Button>
+            </form>
+          {/if}
+        {:else}
+          {#if oidcEnabled}
+            <a
+              href="{apiUrl}/auth/oidc?redirect={encodeURIComponent(window.location.origin + resolve('/login'))}"
+              rel="external"
+              data-sveltekit-reload
+              class={primaryButtonClass}
+            >
+              <iconify-icon
+                icon="solar:key-minimalistic-square-bold-duotone"
+                width="18"
+                class="mr-2"
+              ></iconify-icon>
+              Se connecter avec Facile
+            </a>
+            {#if passwordLogin}
+              <div class="my-6 flex items-center gap-3">
+                <span class="h-px flex-1 bg-border"></span>
+                <span class="text-xs text-muted-foreground">ou</span>
+                <span class="h-px flex-1 bg-border"></span>
+              </div>
+            {/if}
+          {/if}
+
+          {#if passwordLogin}
+            <form
+              onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
+              class="space-y-4"
+            >
+              <div class="space-y-1.5">
+                <label for="email" class={labelClass}>Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  bind:value={email}
+                  placeholder="vous@exemple.com"
+                  autocomplete="email"
+                  required
+                  disabled={loading}
+                  class={inputClass}
+                />
+              </div>
+
+              <div class="space-y-1.5">
+                <label for="password" class={labelClass}>Mot de passe</label>
+                <input
+                  id="password"
+                  type="password"
+                  bind:value={password}
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  required
+                  disabled={loading}
+                  class={inputClass}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !email || !password}
+                class={primaryButtonClass}
+              >
+                {loading ? 'Connexion…' : 'Se connecter'}
+              </button>
+            </form>
+          {/if}
         {/if}
 
-        {#if ssoOnly}
-          <p class="mb-4 text-sm text-muted-foreground">
-            Accès client : connectez-vous avec votre email et votre mot de passe.
+        {#if clientMagicLink && (oidcEnabled || passwordLogin)}
+          <p class="mt-8 text-center text-sm text-muted-foreground">
+            {#if audience === 'client'}
+              <button type="button" class="inline-flex min-h-11 items-center px-3 font-medium underline" onclick={() => showAudience('staff')}>
+                {$i18n.t('auth.magicLink.staffLink')}
+              </button>
+            {:else}
+              <button type="button" class="inline-flex min-h-11 items-center px-3 font-medium underline" onclick={() => showAudience('client')}>
+                {$i18n.t('auth.magicLink.clientLink')}
+              </button>
+            {/if}
           </p>
         {/if}
-
-        <form
-          onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
-          class="space-y-4"
-        >
-          <div class="space-y-1.5">
-            <label for="email" class={labelClass}>Email</label>
-            <input
-              id="email"
-              type="email"
-              bind:value={email}
-              placeholder="vous@exemple.com"
-              autocomplete="email"
-              required
-              disabled={loading}
-              class={inputClass}
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <label for="password" class={labelClass}>Mot de passe</label>
-            <input
-              id="password"
-              type="password"
-              bind:value={password}
-              placeholder="••••••••"
-              autocomplete="current-password"
-              required
-              disabled={loading}
-              class={inputClass}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !email || !password}
-            class={primaryButtonClass}
-          >
-            {loading ? 'Connexion…' : 'Se connecter'}
-          </button>
-        </form>
       {/if}
     </div>
   </div>

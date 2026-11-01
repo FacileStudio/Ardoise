@@ -168,21 +168,23 @@
 			<p class="text-fc-xs text-fc-fg-muted">Créé le {formatDate(user.createdAt)}</p>
 		</Section>
 
-		<Section title="Réinitialiser le mot de passe" card>
-			<Alert tone="warning">
-				Laissez ces champs vides si vous ne souhaitez pas modifier le mot de passe.
-			</Alert>
-			<Field label="Nouveau mot de passe" error={errors.password}>
-				<Input type="password" bind:value={formData.password} placeholder="Minimum 8 caractères" />
-			</Field>
-			<Field label="Confirmer le nouveau mot de passe" error={errors.confirmPassword}>
-				<Input
-					type="password"
-					bind:value={formData.confirmPassword}
-					placeholder="Confirmez le mot de passe"
-				/>
-			</Field>
-		</Section>
+		{#if user.role !== 'CLIENT'}
+			<Section title="Réinitialiser le mot de passe" card>
+				<Alert tone="warning">
+					Laissez ces champs vides si vous ne souhaitez pas modifier le mot de passe.
+				</Alert>
+				<Field label="Nouveau mot de passe" error={errors.password}>
+					<Input type="password" bind:value={formData.password} placeholder="Minimum 8 caractères" />
+				</Field>
+				<Field label="Confirmer le nouveau mot de passe" error={errors.confirmPassword}>
+					<Input
+						type="password"
+						bind:value={formData.confirmPassword}
+						placeholder="Confirmez le mot de passe"
+					/>
+				</Field>
+			</Section>
+		{/if}
 
 		<Section title="Rôle" card>
 			<OptionCards

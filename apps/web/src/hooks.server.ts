@@ -3,6 +3,7 @@ import { logger } from '@repo/logger';
 import { isAdmin, type SessionUser } from '@repo/auth-shared';
 import { fetchSessionUser } from '$lib/server/auth';
 import env from '$lib/env';
+import { redactUrl } from '$lib/server/redact';
 
 const AUTH_COOKIE = 'auth_token';
 
@@ -28,12 +29,16 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
-  return await resolve(event);
+  const response = await resolve(event);
+  if (event.url.pathname.startsWith('/login/verify')) {
+    response.headers.set('Referrer-Policy', 'no-referrer');
+  }
+  return response;
 };
 
 export const handleError: HandleServerError = ({ error, event }) => {
   logger.error(
-    { err: error, url: event.url.toString(), route: event.route?.id, method: event.request.method },
+    { err: error, url: redactUrl(event.url.toString()), route: event.route?.id, method: event.request.method },
     'Unhandled server error'
   );
 

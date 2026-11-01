@@ -46,7 +46,7 @@
   const user = $derived($authStore.user);
   const staff = $derived(area === 'admin');
   const nameLocked = $derived(staff && ssoOnly);
-  const canChangePassword = $derived(configLoaded && !(staff && ssoOnly));
+  const canChangePassword = $derived(configLoaded && staff && !ssoOnly);
   const dirty = $derived(
     firstName !== (user?.firstName ?? '') || lastName !== (user?.lastName ?? '')
   );
@@ -144,7 +144,7 @@
     </SettingsRow>
     <SettingsRow
       label="Adresse email"
-      description={staff ? 'Gérée par le SSO.' : 'Identifiant de connexion.'}
+      description={staff ? 'Gérée par le SSO.' : 'Les liens de connexion sont envoyés à cette adresse.'}
       stacked
     >
       <Field>
