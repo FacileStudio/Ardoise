@@ -82,4 +82,17 @@ describe('auth cookies', () => {
     expect(out.find((c) => c.startsWith('refresh_token=r'))).toContain('Path=/;');
     expect(out.some((c) => c.startsWith('refresh_token=;') && c.includes('Path=/trpc/auth.refresh'))).toBe(true);
   });
+
+  it('also expires host-only leftovers when a cookie domain is set, and never without one', async () => {
+    const { authCookies } = await import('./session');
+    const withDomain = authCookies('a', 'r', { secure: true, domain: '.facile.studio' });
+    expect(withDomain.some((c) => c.startsWith('auth_token=;') && !c.includes('Domain='))).toBe(true);
+    const plain = authCookies('a', 'r', { secure: false });
+    expect(plain.some((c) => c.startsWith('auth_token=;'))).toBe(false);
+  });
+
+  it('reads every cookie sharing a name', async () => {
+    const { extractCookies } = await import('../../context');
+    expect(extractCookies('refresh_token=old; a=1; refresh_token=new', 'refresh_token')).toEqual(['old', 'new']);
+  });
 });

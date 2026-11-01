@@ -10,10 +10,18 @@ import { getSmtpClient, getStripeService } from './modules/settings/service';
 export const AUTH_COOKIE_NAME = 'auth_token';
 export const REFRESH_COOKIE_NAME = 'refresh_token';
 
+export function extractCookies(cookieHeader: string | null, name: string): string[] {
+  if (!cookieHeader) return [];
+  const prefix = `${name}=`;
+  return cookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(prefix) && part.length > prefix.length)
+    .map((part) => decodeURIComponent(part.slice(prefix.length)));
+}
+
 export function extractCookie(cookieHeader: string | null, name: string): string | null {
-  if (!cookieHeader) return null;
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
+  return extractCookies(cookieHeader, name)[0] ?? null;
 }
 
 export interface CreateContextOptions extends FetchCreateContextFnOptions {
@@ -31,11 +39,15 @@ export const createContext = async ({
   env,
   logger,
 }: CreateContextOptions) => {
-  const cookieToken = extractCookie(req.headers.get('cookie'), AUTH_COOKIE_NAME);
   const authHeader = req.headers.get('authorization');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-  const token = cookieToken || bearerToken;
-  const user = token ? await authManager.verifyToken(token) : null;
+  const candidates = [...extractCookies(req.headers.get('cookie'), AUTH_COOKIE_NAME)];
+  if (bearerToken) candidates.push(bearerToken);
+  let user = null;
+  for (const candidate of candidates) {
+    user = await authManager.verifyToken(candidate);
+    if (user) break;
+  }
   const contextLogger = user ? logger.child({ userId: user.id, email: user.email }) : logger;
   const ipAddress = clientIp(req.headers.get('x-forwarded-for'));
   const userAgent = req.headers.get('user-agent') || undefined;

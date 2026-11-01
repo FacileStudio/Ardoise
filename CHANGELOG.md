@@ -14,6 +14,15 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-01
+
+### Fixed
+
+- Reloading could still sign you out when the browser held an old `refresh_token` or `auth_token`
+  cookie next to the new one (same name, different Domain or Path). The old one came first, failed,
+  and the client logged out. The API now tries every cookie of that name, and each login expires the
+  host-only and legacy-path leftovers.
+
 ## [0.7.1] - 2026-11-01
 
 ### Fixed
