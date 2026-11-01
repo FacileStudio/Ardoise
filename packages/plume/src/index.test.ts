@@ -2,10 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import {
   contractExternalRef,
   documentIdFromExternalRef,
+  getSigners,
   parseSignatureEvent,
   plumeConfigFromEnv,
   sendForSignature,
   signContractWebhook,
+  signingUrlFor,
   verifyWebhookSignature,
 } from './index';
 
@@ -100,5 +102,52 @@ describe('client link', () => {
       globalThis.fetch = original;
     }
     expect(sent.client).toEqual({ name: 'Ada Martin', email: 'ada@example.com', company: 'Acme' });
+  });
+});
+
+describe('signing links', () => {
+  const config = { url: 'https://plume.test', token: 't', webhookSecret: 'x'.repeat(16) };
+
+  test('sendForSignature returns each signer with its signing url', async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      Response.json({
+        document: { id: 7 },
+        signers: [
+          { id: 1, name: 'Ada', email: 'Ada@Example.com', signing_url: 'https://p.test/share/a' },
+          { id: 2, name: 'Bob', email: 'bob@example.com', signing_url: 'https://p.test/share/b' },
+        ],
+      })) as unknown as typeof fetch;
+    try {
+      const sent = await sendForSignature(config, {
+        name: 'C',
+        filename: 'c.pdf',
+        pdf: new Uint8Array([37]),
+        signers: [{ name: 'Ada', email: 'ada@example.com' }],
+        externalRef: 'ardoise:contract:1',
+      });
+      expect(signingUrlFor(sent.signers, 'ada@example.com')).toBe('https://p.test/share/a');
+      expect(signingUrlFor(sent.signers, 'nobody@example.com')).toBeNull();
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  test('getSigners looks the document up by external ref', async () => {
+    const original = globalThis.fetch;
+    let called = '';
+    globalThis.fetch = (async (url: string) => {
+      called = url;
+      return Response.json({ signers: [{ id: 3, email: 'a@b.c', status: 'pending', signing_url: 'u' }] });
+    }) as unknown as typeof fetch;
+    try {
+      const signers = await getSigners(config, 'ardoise:contract:57');
+      expect(called).toBe(
+        'https://plume.test/api/documents/lookup?external_ref=ardoise%3Acontract%3A57'
+      );
+      expect(signers[0]).toMatchObject({ email: 'a@b.c', signingUrl: 'u', status: 'pending' });
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 });

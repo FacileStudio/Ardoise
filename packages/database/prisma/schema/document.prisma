@@ -21,6 +21,11 @@ enum InvoiceKind {
   BALANCE
 }
 
+enum DocumentSource {
+  generated
+  imported
+}
+
 enum SignatureStatus {
   none
   sent
@@ -84,9 +89,13 @@ model Document {
   pdfHash          String?
   fileSize         Int?
 
+  source           DocumentSource  @default(generated)
+  issuedAt         DateTime?
+
   signatureStatus  SignatureStatus @default(none)
   plumeDocumentId  String?
   plumeUrl         String?
+  plumeClientSignUrl String?
   signedAt         DateTime?
   nuageArchivedAt  DateTime?
 
