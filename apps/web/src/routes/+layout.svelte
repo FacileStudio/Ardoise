@@ -37,8 +37,11 @@
 
     if ((path.startsWith('/app') || path.startsWith('/admin')) && !user) goto(resolve('/login'));
 
-    if (path === '/login' && user && verified)
-      goto(resolve(isAdmin(user) ? '/admin/missions' : '/app'));
+    if (path === '/login' && user && verified) {
+      const next = page.url.searchParams.get('next');
+      if (next?.startsWith('/') && !next.startsWith('//')) goto(next);
+      else goto(resolve(isAdmin(user) ? '/admin/missions' : '/app'));
+    }
 
     if (path.startsWith('/admin') && user && !isAdmin(user)) goto(resolve('/app'));
   });

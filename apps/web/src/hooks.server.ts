@@ -22,7 +22,8 @@ export const handle: Handle = async ({ event, resolve }) => {
     event.locals.user = user;
 
     if (!user) {
-      throw redirect(303, '/login');
+      const next = encodeURIComponent(event.url.pathname + event.url.search);
+      throw redirect(303, `/login?next=${next}`);
     }
     if (!isAdmin(user)) {
       throw redirect(303, '/app');

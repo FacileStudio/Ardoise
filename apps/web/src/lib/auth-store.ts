@@ -30,10 +30,25 @@ export const authStore = new UniversalAuthStore(
 
 export default authStore;
 
+const isUnauthorized = (e: unknown) => {
+  const data = (e as { data?: { httpStatus?: number; code?: string } }).data;
+  return data?.httpStatus === 401 || data?.code === 'UNAUTHORIZED';
+};
+
+async function queryMe() {
+  try {
+    return await trpc.auth.me.query({});
+  } catch (e) {
+    if (!isUnauthorized(e)) throw e;
+    await trpc.auth.refresh.mutate({});
+    return await trpc.auth.me.query({});
+  }
+}
+
 export async function verifySession(): Promise<boolean> {
   if (!authStore.getState().user) return false;
   try {
-    const user = await trpc.auth.me.query({});
+    const user = await queryMe();
     if (user) {
       authStore.updateUser(user as SessionUser);
       return true;
@@ -41,10 +56,7 @@ export async function verifySession(): Promise<boolean> {
     await authStore.clear();
     return false;
   } catch (e) {
-    const data = (e as { data?: { httpStatus?: number; code?: string } }).data;
-    if (data?.httpStatus === 401 || data?.code === 'UNAUTHORIZED') {
-      await authStore.clear();
-    }
+    if (isUnauthorized(e)) await authStore.clear();
     return false;
   }
 }
