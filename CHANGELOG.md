@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-11-01
+
+### Changed
+
+- `@facile/muse` bumped to v0.7.2: the Select chevron sits 12px inside the border.
+
 ## [0.7.5] - 2026-11-01
 
 ### Fixed
