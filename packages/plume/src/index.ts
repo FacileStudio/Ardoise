@@ -44,9 +44,19 @@ export interface SendForSignatureInput {
   nuageLinkedTo?: string;
 }
 
+export interface PlumeSignerInfo {
+  id: string | null;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  signingUrl: string | null;
+}
+
 export interface PlumeSent {
   documentId: string;
   url: string | null;
+  signers: PlumeSignerInfo[];
 }
 
 export interface SignatureEvent {
@@ -142,6 +152,35 @@ async function call(config: PlumeConfig, path: string, init: RequestInit): Promi
   return response.status === 204 ? null : response.json().catch(() => null);
 }
 
+function parseSigners(list: unknown): PlumeSignerInfo[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((signer: any) => ({
+    id: text(signer?.id),
+    name: text(signer?.name) ?? '',
+    email: text(signer?.email) ?? '',
+    role: text(signer?.role) ?? 'signer',
+    status: text(signer?.status) ?? 'pending',
+    signingUrl: text(signer?.signing_url),
+  }));
+}
+
+export function signingUrlFor(signers: PlumeSignerInfo[], email: string): string | null {
+  const wanted = email.trim().toLowerCase();
+  return signers.find((signer) => signer.email.toLowerCase() === wanted)?.signingUrl ?? null;
+}
+
+export async function getSigners(
+  config: PlumeConfig,
+  externalRef: string
+): Promise<PlumeSignerInfo[]> {
+  const found = await call(
+    config,
+    `/api/documents/lookup?external_ref=${encodeURIComponent(externalRef)}`,
+    { method: 'GET' }
+  );
+  return parseSigners(found?.signers);
+}
+
 export async function sendForSignature(
   config: PlumeConfig,
   input: SendForSignatureInput
@@ -174,5 +213,9 @@ export async function sendForSignature(
   });
   const id = text(created?.document?.id);
   if (!id) throw new PlumeError('Plume returned no document id');
-  return { documentId: id, url: text(created.document.url) ?? `${config.url}/documents/${id}` };
+  return {
+    documentId: id,
+    url: text(created.document.url) ?? `${config.url}/documents/${id}`,
+    signers: parseSigners(created.signers),
+  };
 }
