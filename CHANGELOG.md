@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-01
+
 ### Changed
 
 - **Breaking:** clients no longer have a password. They sign in on `/login` with an emailed
