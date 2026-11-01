@@ -16,7 +16,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@facile/magiclink": "file:/home/yann/Code/Facile/magiclink",
+    "@facile/magiclink": "github:FacileStudio/magiclink#v0.1.0",
     "@repo/admin": "workspace:*",
     "@repo/crypto": "workspace:*",
     "@repo/database": "workspace:*",
