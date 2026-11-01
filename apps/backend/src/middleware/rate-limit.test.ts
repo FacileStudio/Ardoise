@@ -22,6 +22,15 @@ describe('bucketCosts', () => {
   });
 });
 
+describe('magic link procedures', () => {
+  it('share the strict bucket with the login attempt', () => {
+    const costs = bucketCosts('/trpc/magicLink.request,magicLink.consume,auth.login');
+
+    expect(costs.get('auth')).toBe(3);
+    expect(costs.get('general')).toBeUndefined();
+  });
+});
+
 describe('session procedures', () => {
   it('keep auth.me and auth.refresh out of the login bucket', () => {
     const costs = bucketCosts('/trpc/auth.me,auth.refresh,auth.logout');

@@ -45,6 +45,13 @@ export interface InvitationData {
   asAdmin?: boolean;
 }
 
+export interface MagicLinkData {
+  to: string;
+  link: string;
+  ttlMinutes: number;
+  welcome?: boolean;
+}
+
 export class EmailTemplates {
   constructor(private smtpClient: SMTPClient) {}
 
@@ -357,6 +364,56 @@ export class EmailTemplates {
     await this.smtpClient.sendEmail({
       to,
       subject: `${inviterName} vous invite`,
+      html,
+    });
+  }
+
+  async sendMagicLink(data: MagicLinkData): Promise<void> {
+    const { to, link, ttlMinutes, welcome } = data;
+    const title = welcome ? 'Bienvenue sur Ardoise' : 'Votre lien de connexion';
+    const intro = welcome
+      ? 'Un espace client vient d\'être créé pour vous sur Ardoise. Utilisez le bouton ci-dessous pour vous connecter, sans mot de passe.'
+      : 'Vous avez demandé à vous connecter à Ardoise. Utilisez le bouton ci-dessous, sans mot de passe.';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .button { display: inline-block; background-color: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+    .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${title}</h1>
+    </div>
+    <div class="content">
+      <p>Bonjour,</p>
+      <p>${intro}</p>
+      <p style="text-align: center;">
+        <a href="${escapeHtml(link)}" class="button">Me connecter</a>
+      </p>
+      <p>Ce lien est valable ${ttlMinutes} minutes et ne peut servir qu'une fois. Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur :</p>
+      <p style="word-break: break-all;">${escapeHtml(link)}</p>
+      <div class="footer">
+        <p>Si vous n'avez pas demandé ce lien, ignorez simplement cet email.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    await this.smtpClient.sendEmail({
+      to,
+      subject: welcome ? 'Bienvenue sur Ardoise' : 'Votre lien de connexion Ardoise',
       html,
     });
   }

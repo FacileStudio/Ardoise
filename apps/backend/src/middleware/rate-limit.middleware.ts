@@ -78,11 +78,14 @@ const BUCKETS = {
 
 type Bucket = keyof typeof BUCKETS;
 
+const AUTH_PROCEDURES = new Set(['auth.login', 'magicLink.request', 'magicLink.consume']);
+
 /**
  * A tRPC batch call puts several procedures in one path (`/trpc/a.x,b.y`), so a
  * limiter keyed on the path alone lets one request carry unlimited login
  * attempts. Each procedure counts against its own bucket instead. Only the login
- * attempt is brute-forceable and gets the strict bucket: `auth.me` and
+ * attempt and the magic link calls (mail sending, token guessing) are abusable
+ * and get the strict bucket: `auth.me` and
  * `auth.refresh` run on every page navigation and must not share its budget.
  */
 export function bucketCosts(path: string): Map<Bucket, number> {
@@ -94,7 +97,7 @@ export function bucketCosts(path: string): Map<Bucket, number> {
 
   for (const procedure of procedures.length > 0 ? procedures : ['']) {
     const bucket: Bucket =
-      procedure === 'auth.login'
+      AUTH_PROCEDURES.has(procedure)
         ? 'auth'
         : procedure.startsWith('payment.')
           ? 'payment'

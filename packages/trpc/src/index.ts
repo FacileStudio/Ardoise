@@ -11,6 +11,7 @@ import { providerRouter } from './modules/provider/router';
 import { spaceRouter } from './modules/space/router';
 import { missionRouter } from './modules/mission/router';
 import { invitationRouter } from './modules/invitation/router';
+import { magicLinkRouter } from './modules/magic-link/router';
 import { createOpenApiDocument } from './openapi';
 
 export const appRouter = router({
@@ -26,6 +27,7 @@ export const appRouter = router({
   space: spaceRouter,
   mission: missionRouter,
   invitation: invitationRouter,
+  magicLink: magicLinkRouter,
 });
 export const openApiDocument = createOpenApiDocument(appRouter);
 

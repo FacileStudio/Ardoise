@@ -60,3 +60,20 @@ describe('SSO_ONLY env', () => {
     ]);
   });
 });
+
+describe('magic link env', () => {
+  test('defaults to 15 minutes, 5 per email and 20 per IP', () => {
+    const env = serverEnvSchema.parse({ ...base, ADMIN_PASSWORD: 'long-enough' });
+    expect([
+      env.MAGIC_LINK_TTL_MINUTES,
+      env.MAGIC_LINK_MAX_PER_EMAIL_HOUR,
+      env.MAGIC_LINK_MAX_PER_IP_HOUR,
+    ]).toEqual([15, 5, 20]);
+  });
+
+  test('rejects a zero lifetime', () => {
+    expect(failures({ ...base, ADMIN_PASSWORD: 'long-enough', MAGIC_LINK_TTL_MINUTES: '0' })).toContain(
+      'MAGIC_LINK_TTL_MINUTES'
+    );
+  });
+});
