@@ -18,7 +18,7 @@ One SvelteKit app serves both sides — a client portal under `/app` and an admi
 - Spaces: shared workspaces that scope clients, documents, payments and providers
 - Automatic payment emails, reminders, and receipt PDFs over configurable SMTP
 - Generic admin CRUD engine with per-entity permissions and an audit trail
-- Email/password auth plus optional OIDC SSO (Registre), invite-only: SSO signs in existing users and never creates one
+- Clients sign in with an emailed one-time link, no password. Staff use email/password plus optional OIDC SSO (Registre), invite-only: SSO signs in existing users and never creates one
 
 ## Stack
 

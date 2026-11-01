@@ -88,8 +88,8 @@ a different point of the flow:
 | Refonte intranet | `ACCEPTED`, in the "Atelier Nord" space |
 
 Everything but the last mission is in the personal scope, the one shown when no space is selected.
-Log in with `admin@seed.test` / `seed-password-1`, or as the portal client `client@seed.test` /
-the same password. Every administrator already in the database is also added to "Atelier Nord".
+Log in with `admin@seed.test` / `seed-password-1`. The portal client `client@seed.test` has no
+password: request a link on `/login` and read it from your SMTP catcher. Every administrator already in the database is also added to "Atelier Nord".
 Counters restart at 1, and running the seed twice gives the same result.
 
 `db:generate` deletes `packages/database/src/zod` and regenerates it, then runs
