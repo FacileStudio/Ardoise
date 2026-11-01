@@ -45,7 +45,7 @@
       "name": "@repo/web",
       "version": "0.0.0",
       "dependencies": {
-        "@facile/muse": "github:FacileStudio/muse#v0.7.1",
+        "@facile/muse": "github:FacileStudio/muse#v0.7.2",
         "@repo/admin": "workspace:*",
         "@repo/i18n": "workspace:*",
         "@repo/logger": "workspace:*",
@@ -421,7 +421,7 @@
 
     "@facile/magiclink": ["@facile/magiclink@github:FacileStudio/magiclink#76568b1", {}, "FacileStudio-magiclink-76568b1"],
 
-    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#e81ebf7", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-e81ebf7"],
+    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#97754f2", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-97754f2"],
 
     "@hapi/bourne": ["@hapi/bourne@3.0.0", "", {}, "sha512-Waj1cwPXJDucOib4a3bAISsKJVb15MKi9IvmTI/7ssVEm6sywXGjVJDhl6/umt1pK1ZS7PacXU3A1PmFKHEZ2w=="],
 
