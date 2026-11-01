@@ -14,6 +14,14 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-11-01
+
+### Fixed
+
+- The admin space switcher changed the selected space but not the data on screen: every page
+  fetched once on mount. The admin layout now remounts the page when the space changes, sends
+  detail pages back to their list, and drops a stored space you no longer belong to.
+
 ## [0.7.4] - 2026-11-01
 
 ### Fixed

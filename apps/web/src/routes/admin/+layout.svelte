@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { MobileNav, PageTransition, SideBar, SpaceSwitcher, Topbar } from '@facile/muse';
   import { i18n } from '@repo/i18n/svelte';
@@ -20,8 +22,11 @@
     try {
       spaceRows = (await trpc.space.list.query()) as SpaceRow[];
     } catch {
-      spaceRows = [];
+      return;
     }
+    const stored = spaceRows.find((space) => space.id === spaceContext.spaceId);
+    if (stored) spaceContext.switchToSpace(stored.id, stored.name, stored.role);
+    else spaceContext.switchToPersonal();
   });
 
   const pathname = $derived(page.url.pathname);
@@ -70,9 +75,13 @@
   const activeSpaceId = $derived(spaceContext.spaceId ?? null);
 
   function selectSpace(id: string | null) {
+    const before = spaceContext.spaceId;
     const row = spaceRows.find((space) => space.id === id);
     if (row) spaceContext.switchToSpace(row.id, row.name, row.role);
     else spaceContext.switchToPersonal();
+    if (spaceContext.spaceId === before) return;
+    const section = links.find((link) => isActive(link.href))?.href;
+    if (section && section !== pathname) goto(resolve(section as '/admin'));
   }
 
   $effect(() => {
@@ -119,7 +128,9 @@
     </Topbar>
 
     <PageTransition key={pathname}>
-      {@render children()}
+      {#key activeSpaceId}
+        {@render children()}
+      {/key}
     </PageTransition>
   </main>
 
