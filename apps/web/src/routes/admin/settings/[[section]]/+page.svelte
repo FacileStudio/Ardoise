@@ -3,6 +3,7 @@
   import { trpc } from '$lib/trpc';
   import { page } from '$app/state';
   import {
+    Alert,
     Button,
     Divider,
     Field,
@@ -26,6 +27,8 @@
   import { ImageUpload } from '$lib/ui';
 
   let loading = $state(true);
+  let loadFailed = $state(false);
+  let formError = $state('');
   let saving = $state(false);
   let webhookEventsText = $state('');
 
@@ -113,6 +116,8 @@
   });
 
   async function loadSettings() {
+    loading = true;
+    loadFailed = false;
     try {
       const settings = await trpc.settings.getAdmin.query() as unknown as Partial<AdminSettings>;
       formData = {
@@ -153,13 +158,35 @@
       };
       webhookEventsText = formData.webhookEvents.join('\n');
     } catch {
-      toast.danger('Impossible de charger les paramètres');
+      loadFailed = true;
     } finally {
       loading = false;
     }
   }
 
+  function validate() {
+    const { smtpPort, tvaRate, defaultPaymentTermsDays, defaultRecoveryFeeAmount } = formData;
+    if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+      return 'Le port SMTP doit être compris entre 1 et 65535.';
+    }
+    if (!Number.isFinite(tvaRate) || tvaRate < 0 || tvaRate > 100) {
+      return 'Le taux de TVA doit être compris entre 0 et 100.';
+    }
+    if (!Number.isInteger(defaultPaymentTermsDays) || defaultPaymentTermsDays < 0) {
+      return 'Le délai de paiement doit être un nombre de jours entier.';
+    }
+    if (!Number.isFinite(defaultRecoveryFeeAmount) || defaultRecoveryFeeAmount < 0) {
+      return "L'indemnité forfaitaire doit être un montant positif.";
+    }
+    if (formData.companyShareCapital != null && formData.companyShareCapital < 0) {
+      return 'Le capital social doit être positif.';
+    }
+    return '';
+  }
+
   async function saveSettings() {
+    formError = validate();
+    if (formError) return;
     saving = true;
 
     try {
@@ -202,6 +229,11 @@
 </svelte:head>
 
 {#snippet saveRow()}
+  {#if formError}
+    <SettingsRow>
+      <Alert tone="danger" role="alert">{formError}</Alert>
+    </SettingsRow>
+  {/if}
   <SettingsRow>
     <Button icon={icons.check} disabled={saving} onclick={saveSettings}>
       {saving ? 'Enregistrement...' : 'Enregistrer'}
@@ -242,7 +274,26 @@
     </SettingsSection>
   {:else if loading}
     <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
-  {:else if section === 'company'}
+  {:else if loadFailed}
+    <Alert tone="danger" title="Impossible de charger les paramètres" role="alert">
+      <p class="mb-3">Rien n'a été modifié. Réessayez avant de saisir quoi que ce soit.</p>
+      <Button variant="ghost" icon={icons.refresh} onclick={loadSettings}>Réessayer</Button>
+    </Alert>
+  {:else}
+    <svelte:boundary>
+      {@render configSection()}
+      {#snippet failed(error, reset)}
+        <Alert tone="danger" title="Cette section ne peut pas s'afficher" role="alert">
+          <p class="mb-3">{error instanceof Error ? error.message : 'Erreur inattendue.'}</p>
+          <Button variant="ghost" icon={icons.refresh} onclick={reset}>Réessayer</Button>
+        </Alert>
+      {/snippet}
+    </svelte:boundary>
+  {/if}
+</Page>
+
+{#snippet configSection()}
+  {#if section === 'company'}
     <SettingsSection title="Entreprise" description="Identité affichée sur vos documents.">
       <SettingsRow label="Nom commercial" stacked>
         <Field><Input bind:value={formData.companyName} /></Field>
@@ -282,8 +333,8 @@
           <Field label="Capital social (€)">
             <Input
               bind:value={
-                () => formData.companyShareCapital ?? undefined,
-                (v) => (formData.companyShareCapital = v ?? null)
+                () => formData.companyShareCapital ?? '',
+                (v) => (formData.companyShareCapital = v === '' || v == null ? null : Number(v))
               }
               type="number"
               step="0.01"
@@ -388,7 +439,7 @@
         <StatusDot tone={webhookStatus.tone} label={webhookStatus.label} />
       </SettingsRow>
       <SettingsRow label="URL" stacked>
-        <Field><Input bind:value={formData.webhookUrl} placeholder="https://example.com/webhooks/ardoise" class="font-fc-mono" /></Field>
+        <Field><Input bind:value={formData.webhookUrl} type="url" placeholder="https://example.com/webhooks/ardoise" class="font-fc-mono" /></Field>
       </SettingsRow>
       <SettingsRow label="Secret de signature" description="Optionnel. Laissez vide pour conserver le secret actuel." stacked>
         <SecretField bind:value={formData.webhookSecret} editable placeholder="Secret de signature" />
@@ -406,4 +457,4 @@
       {@render saveRow()}
     </SettingsSection>
   {/if}
-</Page>
+{/snippet}

@@ -103,14 +103,17 @@ export const cookieOptions = (env: { NODE_ENV?: string; COOKIE_DOMAIN?: string }
   domain: env.COOKIE_DOMAIN,
 });
 
-const REFRESH_COOKIE_PATH = '/trpc/auth.refresh';
+const REFRESH_COOKIE_PATH = '/';
+const LEGACY_REFRESH_COOKIE_PATH = '/trpc/auth.refresh';
 
 export const authCookies = (accessToken: string, refreshToken: string, opts: CookieOptions) => [
   cookie(AUTH_COOKIE_NAME, accessToken, '/', 15 * 60, opts),
   cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_PATH, 7 * 24 * 60 * 60, opts),
+  cookie(REFRESH_COOKIE_NAME, '', LEGACY_REFRESH_COOKIE_PATH, 0, opts),
 ];
 
 export const clearedAuthCookies = (opts: CookieOptions) => [
   cookie(AUTH_COOKIE_NAME, '', '/', 0, opts),
   cookie(REFRESH_COOKIE_NAME, '', REFRESH_COOKIE_PATH, 0, opts),
+  cookie(REFRESH_COOKIE_NAME, '', LEGACY_REFRESH_COOKIE_PATH, 0, opts),
 ];

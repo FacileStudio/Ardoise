@@ -103,6 +103,18 @@
 		signature.status === 'signed' && !signature.signedAt ? $i18n.t('import.errors.signedAt') : ''
 	);
 
+	function baseline(source: any) {
+		return {
+			name: source.name ?? '',
+			type: source.type ?? '',
+			number: source.invoiceNumber || source.quoteNumber || source.contractRef || '',
+			missionId: source.missionId ?? '',
+			providerId: source.providerId ?? '',
+			issuedAt: toDateInput(source.issuedAt ?? source.createdAt),
+			total: Number(source.total ?? 0),
+		};
+	}
+
 	function fill(source: any) {
 		doc = source;
 		form = {
@@ -170,16 +182,18 @@
 
 		saving = true;
 		try {
+			const original = baseline(doc);
+			const number = form.number.trim() || null;
 			const result = await trpc.document.update.mutate({
 				id: documentId,
-				name: form.name.trim(),
-				type: imported ? asImportType(form.type) : undefined,
-				number: form.number.trim() || null,
+				name: form.name.trim() !== original.name ? form.name.trim() : undefined,
+				type: imported && form.type !== original.type ? asImportType(form.type) : undefined,
+				number: number !== (original.number || null) ? number : undefined,
 				clientId: form.clientId || undefined,
-				missionId: form.missionId || null,
-				providerId: form.providerId || undefined,
-				issuedAt: new Date(form.issuedAt),
-				total: imported ? Number(form.total) : undefined,
+				missionId: form.missionId !== original.missionId ? form.missionId || null : undefined,
+				providerId: form.providerId !== original.providerId ? form.providerId || undefined : undefined,
+				issuedAt: form.issuedAt !== original.issuedAt ? new Date(form.issuedAt) : undefined,
+				total: imported && Number(form.total) !== Number(original.total) ? Number(form.total) : undefined,
 				pdfKey: pdfCleared ? null : (pdfKey ?? undefined),
 			});
 			pdfStale = result.pdfStale;

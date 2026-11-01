@@ -710,7 +710,7 @@ export async function loadDocumentContext(
   }
 
   const settings = await getSettingsRecord(db);
-  const tvaRate = Number(provider.tvaRate || 20);
+  const tvaRate = provider.tvaRate == null ? 20 : Number(provider.tvaRate);
 
   return { client, provider, settings, tvaRate, scope, missionId: missionId ?? null };
 }

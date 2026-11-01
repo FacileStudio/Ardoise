@@ -152,6 +152,19 @@ async function call(config: PlumeConfig, path: string, init: RequestInit): Promi
   return response.status === 204 ? null : response.json().catch(() => null);
 }
 
+export function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
+  if (url.protocol === 'https:' || (url.protocol === 'http:' && local)) return url.href;
+  return null;
+}
+
 function parseSigners(list: unknown): PlumeSignerInfo[] {
   if (!Array.isArray(list)) return [];
   return list.map((signer: any) => ({
@@ -160,13 +173,15 @@ function parseSigners(list: unknown): PlumeSignerInfo[] {
     email: text(signer?.email) ?? '',
     role: text(signer?.role) ?? 'signer',
     status: text(signer?.status) ?? 'pending',
-    signingUrl: text(signer?.signing_url),
+    signingUrl: safeHttpUrl(signer?.signing_url),
   }));
 }
 
 export function signingUrlFor(signers: PlumeSignerInfo[], email: string): string | null {
   const wanted = email.trim().toLowerCase();
-  return signers.find((signer) => signer.email.toLowerCase() === wanted)?.signingUrl ?? null;
+  return safeHttpUrl(
+    signers.find((signer) => signer.email.toLowerCase() === wanted)?.signingUrl
+  );
 }
 
 export async function getSigners(
@@ -215,7 +230,7 @@ export async function sendForSignature(
   if (!id) throw new PlumeError('Plume returned no document id');
   return {
     documentId: id,
-    url: text(created.document.url) ?? `${config.url}/documents/${id}`,
+    url: safeHttpUrl(created.document.url) ?? safeHttpUrl(`${config.url}/documents/${id}`),
     signers: parseSigners(created.signers),
   };
 }

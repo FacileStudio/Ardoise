@@ -13,6 +13,7 @@ import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/servi
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
 import { syncMissionPaid } from '../mission/sync';
+import { isOverdue, startOfDueDay } from './overdue';
 import type {
   CreatePaymentInput,
   CreateManualPaymentInput,
@@ -332,6 +333,7 @@ export const paymentService = {
         where: {
           id: data.documentId,
           spaceId: client.spaceId,
+          mission: { clientId: client.id },
           ...(data.missionId ? { missionId: data.missionId } : {}),
         },
         select: { id: true },
@@ -526,6 +528,24 @@ export const paymentService = {
 
     const manual = existing.collectionMethod === 'MANUAL';
 
+    if (
+      manual &&
+      existing.documentId &&
+      data.amount !== undefined &&
+      data.amount !== Number(existing.amount)
+    ) {
+      const linked = await db.document.findUnique({
+        where: { id: existing.documentId },
+        select: { source: true },
+      });
+      if (linked?.source === 'imported') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Edit the total on the imported document instead, the payment follows it',
+        });
+      }
+    }
+
     if (existing.status === 'PAID' && !manual) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -625,9 +645,18 @@ export const paymentService = {
     }
 
     const paid = data.status === 'PAID';
+
+    if (!paid && existing.status !== 'PAID') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Only a paid payment can be reopened',
+      });
+    }
+
+    const status = paid ? 'PAID' : isOverdue(existing.dueDate) ? 'PAST_DUE' : 'PENDING';
     const updated = await db.payment.update({
       where: { id: existing.id },
-      data: { status: data.status, paidAt: paid ? (data.paidAt ?? new Date()) : null },
+      data: { status, paidAt: paid ? (data.paidAt ?? new Date()) : null },
       include: {
         client: {
           include: { user: { omit: { password: true } } },
@@ -856,7 +885,7 @@ export const paymentService = {
       where: {
         ...scopeWhere(scope),
         status: 'PENDING',
-        dueDate: { lt: now },
+        dueDate: { lt: startOfDueDay(now) },
       },
       data: {
         status: 'EXPIRED',

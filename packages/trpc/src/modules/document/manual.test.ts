@@ -105,6 +105,24 @@ describe('document.import', () => {
     expect(created[0].payments).toBeUndefined();
   });
 
+  it('keeps the upload and drops the stored copy when the write fails', async () => {
+    const { caller, deleted } = setup({
+      db: {
+        document: {
+          findFirst: async () => null,
+          count: async () => 0,
+          create: async () => {
+            throw new Error('db down');
+          },
+        },
+      },
+    });
+
+    await expect(caller.import(base)).rejects.toThrow('db down');
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]).toMatch(/^documents\//);
+  });
+
   it('creates a paid manual payment for a paid invoice', async () => {
     const { caller, created } = setup();
 
@@ -145,10 +163,10 @@ describe('document.update', () => {
   it('marks the stored pdf of a generated document stale when its content changes', async () => {
     const { caller, updated, deleted } = setup();
 
-    const result = await caller.update({ id: 'doc-1', number: 'F-9' });
+    const result = await caller.update({ id: 'doc-1', tvaRate: 10 });
 
     expect(result.pdfStale).toBe(true);
-    expect(updated[0]).toMatchObject({ invoiceNumber: 'F-9', pdfUrl: null, pdfHash: null });
+    expect(updated[0]).toMatchObject({ tvaRate: 10, pdfUrl: null, pdfHash: null });
     expect(deleted).toEqual(['documents/doc-1.pdf']);
   });
 
@@ -165,7 +183,65 @@ describe('document.update', () => {
   it('refuses to change a generated document out for signature', async () => {
     const { caller } = setup({ document: { signatureStatus: 'sent' } });
 
-    await expect(caller.update({ id: 'doc-1', number: 'F-9' })).rejects.toThrow('out for signature');
+    await expect(caller.update({ id: 'doc-1', tvaRate: 10 })).rejects.toThrow('out for signature');
+  });
+
+  it('renames a generated document without touching its pdf, even when signed', async () => {
+    const { caller, updated, deleted } = setup({
+      document: { signatureStatus: 'signed', issuedAt: new Date('2024-03-01') },
+    });
+
+    const result = await caller.update({
+      id: 'doc-1',
+      name: 'renamed.pdf',
+      number: 'F-9',
+      issuedAt: '2024-03-01',
+    });
+
+    expect(result.pdfStale).toBe(false);
+    expect(updated[0].pdfUrl).toBeUndefined();
+    expect(deleted).toEqual([]);
+  });
+
+  it('keeps the detailed items when the total is unchanged and only the rate moves', async () => {
+    const items = [
+      { description: 'a', quantity: 2, unit: 'j', price: 100 },
+      { description: 'b', quantity: 1, unit: 'j', price: 50 },
+    ];
+    const { caller, updated } = setup({
+      document: { source: 'imported', items, total: 300, tvaRate: 20 },
+    });
+
+    await caller.update({ id: 'doc-1', total: 300, tvaRate: 10 });
+
+    expect(updated[0].items).toEqual(items);
+    expect(updated[0].total).toBe(275);
+  });
+
+  it('follows the linked manual payment when an imported total changes', async () => {
+    const { caller, updated } = setup({ document: { source: 'imported', total: 120 } });
+
+    await caller.update({ id: 'doc-1', total: 240 });
+
+    expect(updated[0].payments.updateMany.data).toEqual({ amount: 240, totalWithFees: 240 });
+  });
+
+  it('rejects a fractional VAT rate', async () => {
+    const { caller } = setup({ document: { source: 'imported' } });
+
+    await expect(caller.update({ id: 'doc-1', tvaRate: 5.5 })).rejects.toThrow('whole number');
+    await expect(caller.import({ ...base, tvaRate: 5.5 })).rejects.toThrow('whole number');
+  });
+
+  it('refuses a mission of another client', async () => {
+    const { caller } = setup({
+      db: {
+        mission: { findFirst: async (args: any) => (args.where.clientId === 'c-1' ? null : { id: 'm-9' }) },
+        client: { findFirst: async () => ({ id: 'c-1' }), findMany: async () => [{ id: 'c-1' }] },
+      },
+    });
+
+    await expect(caller.update({ id: 'doc-1', missionId: 'm-9' })).rejects.toThrow('Mission not found');
   });
 
   it('replaces then clears the pdf', async () => {
@@ -194,6 +270,14 @@ describe('document.setSignature', () => {
     expect(updated[0].signatureStatus).toBe('signed');
     expect(updated[0].signedAt).toEqual(new Date('2024-04-01'));
     expect(updated[0].pdfUrl).toMatch(/documents\//);
+  });
+
+  it('drops the stored client signing link', async () => {
+    const { caller, updated } = setup();
+
+    await caller.setSignature({ id: 'doc-1', status: 'declined' });
+
+    expect(updated[0].plumeClientSignUrl).toBeNull();
   });
 
   it('clears the date when the status is not signed', async () => {

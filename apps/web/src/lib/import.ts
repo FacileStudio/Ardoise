@@ -33,7 +33,10 @@ export function isSignableType(type: string): boolean {
 }
 
 export function todayInput(): string {
-	return new Date().toISOString().slice(0, 10);
+	const now = new Date();
+	const pad = (value: number) => String(value).padStart(2, '0');
+
+	return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 export function toDateInput(value: Date | string | null | undefined): string {

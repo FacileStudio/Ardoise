@@ -318,7 +318,7 @@ async function loadDocumentPdf(
     iban,
     bic,
     items: document.items as DocumentData['items'],
-    tva_rate: Number(document.tvaRate || 20),
+    tva_rate: document.tvaRate ?? 20,
     payment_terms_days: document.paymentTermsDays ?? 30,
     late_fee_rate: document.lateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
     recovery_fee_amount: document.recoveryFeeAmount != null ? Number(document.recoveryFeeAmount) : 40,
