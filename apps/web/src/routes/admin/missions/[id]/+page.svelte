@@ -4,8 +4,9 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Button, ConfirmModal, Page, PageHeader, Spinner, toast } from '@facile/muse';
+	import { Alert, Badge, Button, ConfirmModal, Page, PageHeader, Spinner, toast } from '@facile/muse';
 	import { icons } from '$lib/icons';
+	import { i18n } from '@repo/i18n/svelte';
 	import { logger } from '@repo/logger';
 	import { runAction } from '$lib/mission-actions';
 	import { STATUS_LABELS, STATUS_VARIANTS, type MissionStatus } from '$lib/mission';
@@ -22,6 +23,7 @@
 	let confirmCancel = $state(false);
 	let confirmDelete = $state(false);
 	let mission: any = $state(null);
+	let blockedMessage = $state('');
 
 	const closed = $derived(mission?.status === 'CANCELLED' || mission?.status === 'PAID');
 
@@ -56,16 +58,18 @@
 
 	async function deleteMission() {
 		busy = true;
+		blockedMessage = '';
 
-		const ok = await runAction(
-			() => trpc.mission.delete.mutate({ id: missionId }),
-			'Mission supprimée',
-			'Erreur lors de la suppression'
-		);
-
-		busy = false;
-
-		if (ok) goto(resolve('/admin/missions'));
+		try {
+			await trpc.mission.delete.mutate({ id: missionId });
+			toast.success('Mission supprimée');
+			goto(resolve('/admin/missions'));
+		} catch (err: any) {
+			logger.error({ err }, 'Failed to delete mission');
+			blockedMessage = err?.message || $i18n.t('import.blocked.mission');
+		} finally {
+			busy = false;
+		}
 	}
 </script>
 
@@ -100,6 +104,13 @@
 				/>
 			{/snippet}
 		</PageHeader>
+
+		{#if blockedMessage}
+			<Alert tone="danger" title={$i18n.t('import.blocked.title')}>
+				{$i18n.t('import.blocked.mission')}
+				{$i18n.t('import.blocked.reason', { message: blockedMessage })}
+			</Alert>
+		{/if}
 
 		<MissionSummary {mission} onChange={load} />
 		<PrestationsEditor {mission} onChange={load} />

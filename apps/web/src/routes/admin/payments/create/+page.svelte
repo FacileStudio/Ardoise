@@ -16,6 +16,7 @@
     PageHeader,
     Section,
     Select,
+    Switch,
     Textarea,
     toast,
   } from '@facile/muse';
@@ -68,6 +69,8 @@
     frequency: 'ONE_TIME' as PaymentFrequency,
     collectionMethod: 'STRIPE' as PaymentCollectionMethod,
     reference: '',
+    alreadyPaid: false,
+    paidAt: new Date().toISOString().split('T')[0],
     dueDate: new Date().toISOString().split('T')[0],
     attachedFiles: [] as string[],
     attachedDocumentIds: [] as string[],
@@ -153,6 +156,9 @@
     if (formData.collectionMethod === 'MANUAL' && !formData.reference.trim()) {
       return 'La référence manuelle est requise';
     }
+    if (formData.collectionMethod === 'MANUAL' && formData.alreadyPaid && !formData.paidAt) {
+      return $i18n.t('import.payment.errors.paidAt');
+    }
     return null;
   }
 
@@ -165,11 +171,23 @@
 
     try {
       submitting = true;
-      await trpc.payment.create.mutate({
-        ...formData,
-        reference: formData.reference.trim() || undefined,
-        dueDate: new Date(formData.dueDate),
-      });
+      if (formData.collectionMethod === 'MANUAL') {
+        await trpc.payment.createManual.mutate({
+          clientId: formData.clientId,
+          amount: formData.amount,
+          description: formData.description,
+          reference: formData.reference.trim() || undefined,
+          dueDate: new Date(formData.dueDate),
+          paid: formData.alreadyPaid,
+          paidAt: formData.alreadyPaid ? new Date(formData.paidAt) : undefined,
+        });
+      } else {
+        await trpc.payment.create.mutate({
+          ...formData,
+          reference: formData.reference.trim() || undefined,
+          dueDate: new Date(formData.dueDate),
+        });
+      }
 
       toast.success(
         formData.collectionMethod === 'STRIPE'
@@ -272,6 +290,16 @@
       >
         <Input bind:value={formData.reference} placeholder="Ex: VIR-2026-001" />
       </Field>
+      <Switch
+        bind:checked={formData.alreadyPaid}
+        label={$i18n.t('import.payment.alreadyPaid')}
+      />
+      <p class="text-fc-xs text-fc-fg-muted">{$i18n.t('import.payment.alreadyPaidHint')}</p>
+      {#if formData.alreadyPaid}
+        <Field label={$i18n.t('import.payment.paidAt')}>
+          <Input type="date" bind:value={formData.paidAt} />
+        </Field>
+      {/if}
     {:else}
       <p class="text-fc-xs text-fc-fg-muted">
         Un lien de paiement Stripe sera créé. Le client doit avoir un email de contact.

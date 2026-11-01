@@ -2,6 +2,7 @@
   import { trpc } from '$lib/trpc';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import {
     Alert,
@@ -9,11 +10,15 @@
     Button,
     ConfirmModal,
     EmptyState,
+    Field,
     Icon,
+    Input,
+    Modal,
     Page,
     PageHeader,
     Section,
     Spinner,
+    toast,
   } from '@facile/muse';
   import { icons, ardoise } from '$lib/icons';
   import { logger } from '@repo/logger';
@@ -83,6 +88,14 @@
   let reminderSent = $state(false);
   let reminderError = $state('');
   let cancelError = $state('');
+  let showEdit = $state(false);
+  let showPaid = $state(false);
+  let showUnpaid = $state(false);
+  let showDelete = $state(false);
+  let manualBusy = $state(false);
+  let editAttempted = $state(false);
+  let editForm = $state({ amount: '', description: '', reference: '', dueDate: '', paidAt: '' });
+  let paidDate = $state(new Date().toISOString().slice(0, 10));
 
   onMount(async () => {
     await fetchPayment();
@@ -96,6 +109,102 @@
       logger.error({ err }, 'Failed to fetch payment');
     } finally {
       pageLoading = false;
+    }
+  }
+
+  const isManual = $derived((payment as Payment | null)?.collectionMethod === 'MANUAL');
+
+  const editErrors = $derived.by(() => {
+    const e: Record<string, string> = {};
+    if (!(Number(editForm.amount) > 0)) e.amount = $i18n.t('import.payment.errors.amount');
+    if (!editForm.description.trim()) e.description = $i18n.t('import.payment.errors.description');
+    if (!editForm.dueDate) e.dueDate = $i18n.t('import.payment.errors.dueDate');
+    return e;
+  });
+
+  function openEdit() {
+    if (!payment) return;
+    editAttempted = false;
+    editForm = {
+      amount: String(Number(payment.amount)),
+      description: payment.description,
+      reference: payment.reference ?? '',
+      dueDate: new Date(payment.dueDate).toISOString().slice(0, 10),
+      paidAt: payment.paidAt ? new Date(payment.paidAt).toISOString().slice(0, 10) : '',
+    };
+    showEdit = true;
+  }
+
+  async function runManual(action: () => Promise<unknown>, success: string, close: () => void) {
+    manualBusy = true;
+    try {
+      await action();
+      toast.success(success);
+      close();
+      await fetchPayment();
+    } catch (err: any) {
+      logger.error({ err }, 'Manual payment action failed');
+      toast.danger(err?.message || $i18n.t('errors.serverError'));
+    } finally {
+      manualBusy = false;
+    }
+  }
+
+  async function saveEdit() {
+    if (!payment) return;
+    editAttempted = true;
+    if (Object.keys(editErrors).length > 0) return;
+    const id = payment.id;
+
+    await runManual(
+      () =>
+        trpc.payment.update.mutate({
+          id,
+          amount: Number(editForm.amount),
+          description: editForm.description.trim(),
+          reference: editForm.reference.trim() || undefined,
+          dueDate: new Date(editForm.dueDate),
+          paidAt:
+            payment?.status === 'PAID' && editForm.paidAt ? new Date(editForm.paidAt) : undefined,
+        }),
+      $i18n.t('import.payment.edited'),
+      () => (showEdit = false)
+    );
+  }
+
+  async function markPaid() {
+    if (!payment || !paidDate) return;
+    const id = payment.id;
+    await runManual(
+      () => trpc.payment.setStatus.mutate({ id, status: 'PAID', paidAt: new Date(paidDate) }),
+      $i18n.t('import.payment.markedPaid'),
+      () => (showPaid = false)
+    );
+  }
+
+  async function markUnpaid() {
+    if (!payment) return;
+    const id = payment.id;
+    await runManual(
+      () => trpc.payment.setStatus.mutate({ id, status: 'PENDING' }),
+      $i18n.t('import.payment.markedUnpaid'),
+      () => (showUnpaid = false)
+    );
+  }
+
+  async function removePayment() {
+    if (!payment) return;
+    const id = payment.id;
+    manualBusy = true;
+    try {
+      await trpc.payment.delete.mutate({ id });
+      toast.success($i18n.t('import.payment.deleted'));
+      await goto(resolve('/admin/payments'));
+    } catch (err: any) {
+      logger.error({ err }, 'Failed to delete payment');
+      toast.danger(err?.message || $i18n.t('errors.serverError'));
+    } finally {
+      manualBusy = false;
     }
   }
 
@@ -417,6 +526,33 @@
           </Button>
         </Section>
 
+        {#if isManual}
+          <Section title={$i18n.t('import.payment.manualTitle')} card>
+            <Button variant="ghost" class="w-full" icon={icons.edit} onclick={openEdit}>
+              {$i18n.t('import.payment.editTitle')}
+            </Button>
+            {#if payment.status === 'PAID'}
+              <Button variant="ghost" class="w-full" onclick={() => (showUnpaid = true)}>
+                {$i18n.t('import.payment.markUnpaid')}
+              </Button>
+            {:else if payment.status === 'PENDING' || payment.status === 'PAST_DUE'}
+              <Button variant="ghost" class="w-full" icon={icons.check} onclick={() => (showPaid = true)}>
+                {$i18n.t('import.payment.markPaid')}
+              </Button>
+            {/if}
+            <Button
+              variant="ghost-danger"
+              class="w-full"
+              icon={icons.remove}
+              onclick={() => (showDelete = true)}
+            >
+              {$i18n.t('import.payment.delete')}
+            </Button>
+          </Section>
+        {:else}
+          <Alert tone="neutral">{$i18n.t('import.payment.manualOnly')}</Alert>
+        {/if}
+
         {#if payment.status === 'PENDING'}
           <Section title="Actions" card>
             {#if reminderSent}
@@ -516,4 +652,67 @@
   tone="danger"
   onConfirm={handleCancelPayment}
   onCancel={() => (showCancelDialog = false)}
+/>
+
+<Modal bind:open={showEdit} title={$i18n.t('import.payment.editTitle')}>
+  <div class="flex flex-col gap-4">
+    <Field label={$i18n.t('import.payment.amount')} error={editAttempted ? editErrors.amount : ''}>
+      <Input type="number" step="0.01" min="0" bind:value={editForm.amount} />
+    </Field>
+    <Field
+      label={$i18n.t('import.payment.description')}
+      error={editAttempted ? editErrors.description : ''}
+    >
+      <Input bind:value={editForm.description} />
+    </Field>
+    <Field label={$i18n.t('import.payment.reference')}>
+      <Input bind:value={editForm.reference} />
+    </Field>
+    <Field label={$i18n.t('import.payment.dueDate')} error={editAttempted ? editErrors.dueDate : ''}>
+      <Input type="date" bind:value={editForm.dueDate} />
+    </Field>
+    {#if payment?.status === 'PAID'}
+      <Field label={$i18n.t('import.payment.paidAt')}>
+        <Input type="date" bind:value={editForm.paidAt} />
+      </Field>
+    {/if}
+    <div class="flex justify-end gap-2">
+      <Button variant="ghost" onclick={() => (showEdit = false)}>{$i18n.t('import.cancel')}</Button>
+      <Button onclick={saveEdit} disabled={manualBusy}>{$i18n.t('import.payment.editSave')}</Button>
+    </div>
+  </div>
+</Modal>
+
+<Modal bind:open={showPaid} title={$i18n.t('import.payment.markPaidTitle')}>
+  <div class="flex flex-col gap-4">
+    <p class="text-fc-sm text-fc-fg-muted">{$i18n.t('import.payment.markPaidDescription')}</p>
+    <Field label={$i18n.t('import.payment.paidAt')}>
+      <Input type="date" max={new Date().toISOString().slice(0, 10)} bind:value={paidDate} />
+    </Field>
+    <div class="flex justify-end gap-2">
+      <Button variant="ghost" onclick={() => (showPaid = false)}>{$i18n.t('import.cancel')}</Button>
+      <Button onclick={markPaid} disabled={manualBusy || !paidDate}>
+        {$i18n.t('import.payment.markPaid')}
+      </Button>
+    </div>
+  </div>
+</Modal>
+
+<ConfirmModal
+  bind:open={showUnpaid}
+  title={$i18n.t('import.payment.markUnpaidTitle')}
+  description={$i18n.t('import.payment.markUnpaidDescription')}
+  confirmLabel={$i18n.t('import.payment.markUnpaid')}
+  cancelLabel={$i18n.t('import.cancel')}
+  onConfirm={markUnpaid}
+/>
+
+<ConfirmModal
+  bind:open={showDelete}
+  tone="danger"
+  title={$i18n.t('import.payment.deleteTitle')}
+  description={$i18n.t('import.payment.deleteDescription')}
+  confirmLabel={$i18n.t('import.payment.deleteConfirm')}
+  cancelLabel={$i18n.t('import.payment.deleteCancel')}
+  onConfirm={removePayment}
 />

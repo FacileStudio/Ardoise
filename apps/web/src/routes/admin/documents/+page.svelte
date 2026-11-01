@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import {
 		Button,
+		Badge,
 		Card,
 		ConfirmModal,
 		EmptyState,
@@ -22,6 +23,7 @@
 	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
 	import SendForSignature from '$lib/components/SendForSignature.svelte';
 	import { spaceContext } from '$lib/space-context.svelte';
+	import { i18n } from '@repo/i18n/svelte';
 
 	type Document = {
 		id: string;
@@ -33,6 +35,8 @@
 		contractRef?: string | null;
 		clientName: string;
 		total: number;
+		source?: 'generated' | 'imported';
+		issuedAt?: Date | string | null;
 		signatureStatus: 'none' | 'sent' | 'signed' | 'declined';
 		plumeUrl?: string | null;
 		signedAt?: Date | string | null;
@@ -199,6 +203,9 @@
 	<Page width="xl">
 		<PageHeader title="Documents" description="Gérez vos factures, devis et contrats">
 			{#snippet actions()}
+				<Button variant="outline" href={resolve('/admin/documents/import')} icon={ardoise.pdf}>
+					{$i18n.t('import.action')}
+				</Button>
 				<Button href={resolve('/admin/documents/create')} icon={icons.plus}
 					>Créer un document</Button
 				>
@@ -236,7 +243,15 @@
 						{#each documents as doc (doc.id)}
 							<tr>
 								<td>
-									<span class="font-medium text-fc-fg">{getDocumentRef(doc)}</span>
+									<a
+										href={resolve(`/admin/documents/${doc.id}`)}
+										class="font-medium text-fc-fg hover:underline"
+									>
+										{getDocumentRef(doc)}
+									</a>
+									{#if doc.source === 'imported'}
+										<Badge tone="neutral">{$i18n.t('import.badge.imported')}</Badge>
+									{/if}
 									{#if SIGNABLE_TYPES.includes(doc.type)}
 										<div class="mt-1">
 											<SignatureStatus
@@ -251,7 +266,7 @@
 								<td class="text-fc-fg-muted">{typeLabel(doc.type)}</td>
 								<td class="font-medium text-fc-fg">{doc.clientName}</td>
 								<td class="font-medium text-fc-fg">{formatCurrency(doc.total)}</td>
-								<td class="text-fc-fg-muted">{formatDate(doc.createdAt)}</td>
+								<td class="text-fc-fg-muted">{formatDate(doc.issuedAt ?? doc.createdAt)}</td>
 								<td class="text-fc-fg-muted">
 									{doc.createdByUser.firstName}
 									{doc.createdByUser.lastName}
@@ -271,6 +286,13 @@
 											icon={icons.download}
 											aria-label="Télécharger"
 											onclick={() => handleDownload(doc.id)}
+										/>
+										<Button
+											variant="ghost"
+											size="sm"
+											icon={icons.edit}
+											aria-label={$i18n.t('import.detail.title')}
+											href={resolve(`/admin/documents/${doc.id}`)}
 										/>
 										<Button
 											variant="ghost-danger"
@@ -309,7 +331,7 @@
 							/>
 						{/if}
 						<div class="flex items-center justify-between gap-2">
-							<span class="text-fc-xs text-fc-fg-muted">{formatDate(doc.createdAt)}</span>
+							<span class="text-fc-xs text-fc-fg-muted">{formatDate(doc.issuedAt ?? doc.createdAt)}</span>
 							<div class="flex items-center gap-1">
 								{#if SIGNABLE_TYPES.includes(doc.type) && doc.signatureStatus === 'none'}
 									<SendForSignature
@@ -324,6 +346,13 @@
 									icon={icons.download}
 									aria-label="Télécharger"
 									onclick={() => handleDownload(doc.id)}
+								/>
+								<Button
+									variant="ghost"
+									size="lg"
+									icon={icons.edit}
+									aria-label={$i18n.t('import.detail.title')}
+									href={resolve(`/admin/documents/${doc.id}`)}
 								/>
 								<Button
 									variant="ghost-danger"
@@ -347,11 +376,14 @@
 				title="Aucun document"
 				description={searchQuery || selectedType
 					? 'Aucun résultat trouvé pour votre recherche'
-					: 'Créez votre premier document pour commencer'}
+					: `Créez votre premier document pour commencer. ${$i18n.t('import.emptyTitle')} : ${$i18n.t('import.emptyDescription')}`}
 			>
 				{#if !searchQuery && !selectedType}
 					<Button href={resolve('/admin/documents/create')} icon={icons.plus}>
 						Créer un document
+					</Button>
+					<Button variant="outline" href={resolve('/admin/documents/import')} icon={ardoise.pdf}>
+						{$i18n.t('import.action')}
 					</Button>
 				{/if}
 			</EmptyState>
