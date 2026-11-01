@@ -25,8 +25,27 @@ export const CreatePaymentSchema = z.object({
   documentId: z.string().optional(),
 });
 
+export const CreateManualPaymentSchema = z.object({
+  clientId: z.string().min(1, 'Client ID is required'),
+  amount: z.number().positive('Amount must be positive'),
+  description: z.string().trim().min(1, 'Description is required'),
+  reference: z.string().optional(),
+  dueDate: z.coerce.date(),
+  missionId: z.string().optional(),
+  documentId: z.string().optional(),
+  paid: z.boolean().default(false),
+  paidAt: z.coerce.date().optional(),
+});
+
+export const SetPaymentStatusSchema = z.object({
+  id: z.string().min(1, 'Payment ID is required'),
+  status: z.enum(['PAID', 'PENDING']),
+  paidAt: z.coerce.date().optional(),
+});
+
 export const UpdatePaymentSchema = z.object({
   id: z.string().min(1, 'Payment ID is required'),
+  paidAt: z.coerce.date().nullable().optional(),
   amount: z.number().positive('Amount must be positive').optional(),
   description: z.string().min(1).optional(),
   dueDate: z.coerce.date().optional(),
@@ -63,6 +82,8 @@ export const CancelPaymentSchema = z.object({
 export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
 export type PaymentFrequency = z.infer<typeof PaymentFrequencySchema>;
 export type PaymentCollectionMethod = z.infer<typeof PaymentCollectionMethodSchema>;
+export type CreateManualPaymentInput = z.infer<typeof CreateManualPaymentSchema>;
+export type SetPaymentStatusInput = z.infer<typeof SetPaymentStatusSchema>;
 export type CreatePaymentInput = z.infer<typeof CreatePaymentSchema>;
 export type UpdatePaymentInput = z.infer<typeof UpdatePaymentSchema>;
 export type ListPaymentsInput = z.infer<typeof ListPaymentsSchema>;

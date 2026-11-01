@@ -1,0 +1,266 @@
+import { describe, expect, it } from 'bun:test';
+import type { PrismaClient } from '@repo/database';
+import { documentRouter } from './router';
+
+const pdf = new TextEncoder().encode('%PDF-1.7 body');
+
+function setup(overrides: {
+    document?: Record<string, unknown>;
+    db?: Record<string, unknown>;
+    env?: Record<string, unknown>;
+  } = {}) {
+  const created: any[] = [];
+  const updated: any[] = [];
+  const deleted: string[] = [];
+  const uploads: string[] = [];
+  const document = {
+    id: 'doc-1',
+    type: 'facture_prestation',
+    name: 'f.pdf',
+    spaceId: null,
+    source: 'generated',
+    invoiceNumber: 'F-1',
+    quoteNumber: null,
+    contractRef: null,
+    tvaRate: 20,
+    items: [{ description: 'a', quantity: 1, unit: 'j', price: 100 }],
+    pdfUrl: 'http://api/storage/documents/doc-1.pdf',
+    signatureStatus: 'none',
+    ...overrides.document,
+  };
+  const db: any = {
+    document: {
+      findUnique: async () => document,
+      findFirst: async () => null,
+      count: async () => 0,
+      create: async (args: any) => {
+        created.push(args.data);
+        return { ...args.data, payments: [] };
+      },
+      update: async (args: any) => {
+        updated.push(args.data);
+        return { ...document, ...args.data };
+      },
+      delete: async () => ({}),
+    },
+    payment: { count: async () => 0 },
+    client: {
+      findFirst: async () => ({ id: 'c-1', companyName: 'Acme', siret: '123' }),
+    },
+    provider: {
+      findFirst: async () => ({ id: 'p-1', name: 'Studio', tvaRate: 20 }),
+    },
+    mission: { findFirst: async () => ({ id: 'm-1', status: 'ACCEPTED' }) },
+    settings: { findFirst: async () => ({ id: 'global' }), findUnique: async () => ({ id: 'global' }) },
+    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+    ...overrides.db,
+  };
+  const ctx = {
+    db: db as PrismaClient,
+    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
+    storage: {
+      download: async () => pdf,
+      upload: async (key: string) => {
+        uploads.push(key);
+        return key;
+      },
+      delete: async (key: string) => {
+        deleted.push(key);
+        return true;
+      },
+      getFileUrl: (key: string) => `http://api/storage/${key}`,
+    },
+    env: overrides.env ?? {},
+  } as any;
+  return { caller: documentRouter.createCaller(ctx), created, updated, deleted, uploads };
+}
+
+const base = {
+  pdfKey: 'uploads/user-1/1-old.pdf',
+  type: 'facture_prestation' as const,
+  number: 'F-2024-001',
+  clientId: 'c-1',
+  providerId: 'p-1',
+  issuedAt: '2024-03-01',
+  total: 120,
+};
+
+describe('document.import', () => {
+  it('stores the pdf as imported and splits a gross total into subtotal and vat', async () => {
+    const { caller, created, deleted, uploads } = setup();
+
+    await caller.import(base);
+
+    expect(uploads[0]).toMatch(/^documents\/.+\.pdf$/);
+    expect(deleted).toEqual(['uploads/user-1/1-old.pdf']);
+    expect(created[0]).toMatchObject({
+      source: 'imported',
+      invoiceNumber: 'F-2024-001',
+      subtotal: 100,
+      tva: 20,
+      total: 120,
+      signatureStatus: 'none',
+    });
+    expect(created[0].payments).toBeUndefined();
+  });
+
+  it('creates a paid manual payment for a paid invoice', async () => {
+    const { caller, created } = setup();
+
+    await caller.import({ ...base, markPaid: true, paidAt: '2024-03-10' });
+
+    expect(created[0].payments.create).toMatchObject({
+      status: 'PAID',
+      collectionMethod: 'MANUAL',
+      amount: 120,
+      clientId: 'c-1',
+    });
+  });
+
+  it('refuses a key that belongs to another user', async () => {
+    const { caller } = setup();
+
+    await expect(caller.import({ ...base, pdfKey: 'uploads/user-2/x.pdf' })).rejects.toThrow(
+      'Invalid file key'
+    );
+  });
+
+  it('refuses a number already used', async () => {
+    const { caller } = setup({ db: { document: { findFirst: async () => ({ id: 'x' }) } } });
+
+    await expect(caller.import(base)).rejects.toThrow('already exists');
+  });
+
+  it('refuses markPaid on a quote', async () => {
+    const { caller } = setup();
+
+    await expect(
+      caller.import({ ...base, type: 'devis', markPaid: true })
+    ).rejects.toThrow('Only an invoice');
+  });
+});
+
+describe('document.update', () => {
+  it('marks the stored pdf of a generated document stale when its content changes', async () => {
+    const { caller, updated, deleted } = setup();
+
+    const result = await caller.update({ id: 'doc-1', number: 'F-9' });
+
+    expect(result.pdfStale).toBe(true);
+    expect(updated[0]).toMatchObject({ invoiceNumber: 'F-9', pdfUrl: null, pdfHash: null });
+    expect(deleted).toEqual(['documents/doc-1.pdf']);
+  });
+
+  it('keeps the pdf of an imported document when its fields change', async () => {
+    const { caller, updated } = setup({ document: { source: 'imported' } });
+
+    const result = await caller.update({ id: 'doc-1', total: 240 });
+
+    expect(result.pdfStale).toBe(false);
+    expect(updated[0].total).toBe(240);
+    expect(updated[0].pdfUrl).toBeUndefined();
+  });
+
+  it('refuses to change a generated document out for signature', async () => {
+    const { caller } = setup({ document: { signatureStatus: 'sent' } });
+
+    await expect(caller.update({ id: 'doc-1', number: 'F-9' })).rejects.toThrow('out for signature');
+  });
+
+  it('replaces then clears the pdf', async () => {
+    const { caller, updated, deleted } = setup({ document: { source: 'imported' } });
+
+    await caller.update({ id: 'doc-1', pdfKey: 'uploads/user-1/new.pdf' });
+    await caller.update({ id: 'doc-1', pdfKey: null });
+
+    expect(updated[0].pdfUrl).toMatch(/documents\//);
+    expect(updated[1]).toMatchObject({ pdfUrl: null, fileSize: null });
+    expect(deleted).toContain('uploads/user-1/new.pdf');
+  });
+});
+
+describe('document.setSignature', () => {
+  it('sets the status, the date and the signed pdf', async () => {
+    const { caller, updated } = setup();
+
+    await caller.setSignature({
+      id: 'doc-1',
+      status: 'signed',
+      signedAt: '2024-04-01',
+      signedPdfKey: 'uploads/user-1/signed.pdf',
+    });
+
+    expect(updated[0].signatureStatus).toBe('signed');
+    expect(updated[0].signedAt).toEqual(new Date('2024-04-01'));
+    expect(updated[0].pdfUrl).toMatch(/documents\//);
+  });
+
+  it('clears the date when the status is not signed', async () => {
+    const { caller, updated } = setup();
+
+    await caller.setSignature({ id: 'doc-1', status: 'declined', signedAt: '2024-04-01' });
+
+    expect(updated[0].signedAt).toBeNull();
+  });
+
+  it('refuses a signed pdf with another status', async () => {
+    const { caller } = setup();
+
+    await expect(
+      caller.setSignature({ id: 'doc-1', status: 'none', signedPdfKey: 'uploads/user-1/s.pdf' })
+    ).rejects.toThrow('signed status');
+  });
+});
+
+describe('document.delete', () => {
+  it('explains which payments block it', async () => {
+    const { caller } = setup({ db: { payment: { count: async () => 2 } } });
+
+    await expect(caller.delete({ id: 'doc-1' })).rejects.toThrow('2 payment(s)');
+  });
+
+  it('removes the document and its stored pdf', async () => {
+    const { caller, deleted } = setup();
+
+    await caller.delete({ id: 'doc-1' });
+
+    expect(deleted).toEqual(['documents/doc-1.pdf']);
+  });
+});
+
+describe('document.refreshSignLink', () => {
+  it('fetches the client signing url from Plume and stores it', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      Response.json({
+        signers: [{ id: 1, email: 'ada@acme.fr', signing_url: 'https://p.test/share/a' }],
+      })) as unknown as typeof fetch;
+    try {
+      const { caller, updated } = setup({
+        document: { plumeDocumentId: '57', plumeClientSignUrl: null, missionId: 'm-1' },
+        db: {
+          mission: { findUnique: async () => ({ client: { contactEmail: 'ada@acme.fr' } }) },
+        },
+        env: {
+          PLUME_URL: 'https://p.test',
+          PLUME_API_TOKEN: 't',
+          PLUME_WEBHOOK_SECRET: 'x'.repeat(20),
+        },
+      });
+
+      const result = await caller.refreshSignLink({ id: 'doc-1' });
+
+      expect(result.url).toBe('https://p.test/share/a');
+      expect(updated[0]).toEqual({ plumeClientSignUrl: 'https://p.test/share/a' });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('answers null when Plume is not configured', async () => {
+    const { caller } = setup({ document: { plumeDocumentId: '57', plumeClientSignUrl: null } });
+
+    expect((await caller.refreshSignLink({ id: 'doc-1' })).url).toBeNull();
+  });
+});

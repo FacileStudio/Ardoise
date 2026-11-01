@@ -430,9 +430,13 @@ export const missionService = {
     ]);
 
     if (invoices > 0 || payments > 0) {
+      const blockers = [
+        invoices > 0 ? `${invoices} invoice(s)` : null,
+        payments > 0 ? `${payments} payment(s)` : null,
+      ].filter(Boolean);
       throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Cannot delete a mission with invoices or payments. Cancel it instead.',
+        code: 'PRECONDITION_FAILED',
+        message: `This mission still has ${blockers.join(' and ')}. Delete or unlink them first, or cancel the mission instead.`,
       });
     }
 

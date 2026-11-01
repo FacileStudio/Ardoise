@@ -137,14 +137,19 @@ export const providerRouter = router({
         'Provider not found'
       );
 
-      const documentsCount = await ctx.db.document.count({
-        where: { providerId: input.id },
-      });
+      const [documentsCount, missionsCount] = await Promise.all([
+        ctx.db.document.count({ where: { providerId: input.id } }),
+        ctx.db.missionProvider.count({ where: { providerId: input.id } }),
+      ]);
 
-      if (documentsCount > 0) {
+      if (documentsCount > 0 || missionsCount > 0) {
+        const blockers = [
+          documentsCount > 0 ? `${documentsCount} document(s)` : null,
+          missionsCount > 0 ? `${missionsCount} mission(s)` : null,
+        ].filter(Boolean);
         throw new TRPCError({
-          code: 'CONFLICT',
-          message: `Cannot delete provider with ${documentsCount} associated documents`,
+          code: 'PRECONDITION_FAILED',
+          message: `This provider is still used by ${blockers.join(' and ')}. Delete or reassign them first.`,
         });
       }
 
