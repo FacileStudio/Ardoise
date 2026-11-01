@@ -66,6 +66,17 @@ export const authService = {
     return issueSession(db, auth, toSessionUser(user), meta);
   },
 
+  me: async (db: PrismaClient, userId: string) => {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: sessionUserSelection,
+    });
+    if (!user) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+    }
+    return toSessionUser(user);
+  },
+
   refresh: async (db: PrismaClient, auth: AuthManager, refreshToken: string) => {
     const payload = await auth.verifyRefreshToken(refreshToken);
     if (!payload) {

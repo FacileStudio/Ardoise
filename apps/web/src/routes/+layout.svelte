@@ -7,7 +7,7 @@
   import { page } from '$app/state';
   import { Spinner, Toaster } from '@facile/muse';
   import { setLocale } from '@repo/i18n/svelte';
-  import { isAdmin } from '@repo/auth-shared';
+  import { isAdmin, type SessionUser } from '@repo/auth-shared';
   import SmtpRequiredModal from '$lib/components/SmtpRequiredModal.svelte';
   import mdi from '$lib/icons/mdi.json';
   import solar from '$lib/icons/solar.json';
@@ -25,7 +25,9 @@
   }
 
   onMount(async () => {
-    await authStore.init();
+    const serverUser = page.data.user as SessionUser | undefined;
+    if (serverUser) authStore.setAuth(serverUser);
+    else await authStore.init();
     setLocale('fr');
     if (page.url.pathname === '/login') verified = await verifySession();
   });

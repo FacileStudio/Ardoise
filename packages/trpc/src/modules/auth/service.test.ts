@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import type { PrismaClient } from '@repo/database';
 import type { AuthManager } from '@repo/auth';
+import { sessionUserSchema } from '@repo/auth-shared';
 import authService from './service';
 
 const user = {
@@ -94,5 +95,19 @@ describe('auth cookies', () => {
   it('reads every cookie sharing a name', async () => {
     const { extractCookies } = await import('../../context');
     expect(extractCookies('refresh_token=old; a=1; refresh_token=new', 'refresh_token')).toEqual(['old', 'new']);
+  });
+});
+
+describe('authService.me', () => {
+  it('returns a full session user the client store accepts after a reload', async () => {
+    const db = { user: { findUnique: async () => user } } as unknown as PrismaClient;
+    const me = await authService.me(db, 'u1');
+    expect(sessionUserSchema.safeParse(me).success).toBe(true);
+    expect(sessionUserSchema.safeParse({ id: 'u1', email: 'a@b.fr', role: 'ADMIN' }).success).toBe(false);
+  });
+
+  it('refuses a deleted user', async () => {
+    const db = { user: { findUnique: async () => null } } as unknown as PrismaClient;
+    await expect(authService.me(db, 'gone')).rejects.toThrow('User not found');
   });
 });

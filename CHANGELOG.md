@@ -14,6 +14,16 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-11-01
+
+### Fixed
+
+- Reloading any admin page after an SSO login signed you out. `auth.me` returned only the token
+  payload (`id`, `email`, `role`); the login page stored it, and on reload the client store rejected
+  it for lacking `firstName` and `lastName` and redirected to `/login`. `auth.me` now returns the full
+  user from the database, and the root layout seeds the store from the server-verified user instead
+  of trusting `localStorage`.
+
 ## [0.7.3] - 2026-11-01
 
 ### Fixed

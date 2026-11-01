@@ -57,7 +57,7 @@ export const authRouter = router({
   }),
 
   me: protectedProcedure.input(z.object({})).query(({ ctx }) => {
-    return ctx.user;
+    return authService.me(ctx.db, ctx.user.id);
   }),
 
   logout: protectedProcedure.input(z.object({})).mutation(async ({ ctx }) => {
