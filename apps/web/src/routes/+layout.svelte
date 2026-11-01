@@ -39,7 +39,7 @@
 
     if (path === '/login' && user && verified) {
       const next = page.url.searchParams.get('next');
-      if (next?.startsWith('/') && !next.startsWith('//')) goto(next);
+      if (next?.startsWith('/') && !next.startsWith('//')) goto(resolve(next as '/'));
       else goto(resolve(isAdmin(user) ? '/admin/missions' : '/app'));
     }
 

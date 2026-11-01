@@ -14,6 +14,14 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-01
+
+### Fixed
+
+- Reloading a page signed you out once the 15-minute access cookie had expired. The `/admin` guard
+  sent you to `/login`, where the session check never tried the refresh token. It now refreshes
+  once before giving up, and `/login?next=` returns you to the page you reloaded.
+
 ## [0.6.0] - 2026-11-01
 
 ### Changed
