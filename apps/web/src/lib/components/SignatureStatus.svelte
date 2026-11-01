@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Badge, Button } from '@facile/muse';
+	import { safeHttpUrl } from '$lib/safe-url';
 
 	type Status = 'none' | 'sent' | 'signed' | 'declined';
 	type Tone = 'neutral' | 'info' | 'success' | 'danger';
@@ -27,6 +28,7 @@
 		declined: 'danger',
 	};
 
+	const link = $derived(safeHttpUrl(plumeUrl));
 	const signedLabel = $derived(signedAt ? new Date(signedAt).toLocaleDateString('fr-FR') : null);
 </script>
 
@@ -34,11 +36,11 @@
 	<Badge tone={tones[status]}>
 		{labels[status]}{status === 'signed' && signedLabel ? ` le ${signedLabel}` : ''}
 	</Badge>
-	{#if plumeUrl && status !== 'none'}
+	{#if link && status !== 'none'}
 		<Button
 			variant="ghost"
 			size="sm"
-			href={plumeUrl}
+			href={link}
 			target="_blank"
 			rel="noopener noreferrer"
 		>

@@ -15,6 +15,7 @@ function setup(payment: Record<string, unknown> = {}) {
     amount: 100,
     status: 'PENDING',
     collectionMethod: 'MANUAL',
+    dueDate: new Date('2999-01-01'),
     ...payment,
   };
   const db: any = {
@@ -99,6 +100,20 @@ describe('payment.setStatus', () => {
 
     expect(updated[0]).toEqual({ status: 'PENDING', paidAt: null });
     expect(missionUpdates[0].data.status).toBe('INVOICED');
+  });
+
+  it('reopens a paid payment as past due when its due day is over', async () => {
+    const { caller, updated } = setup({ status: 'PAID', dueDate: new Date('2020-01-01') });
+
+    await caller.setStatus({ id: 'pay-1', status: 'PENDING' });
+
+    expect(updated[0].status).toBe('PAST_DUE');
+  });
+
+  it('refuses to reopen a payment that is not paid', async () => {
+    const { caller } = setup({ status: 'EXPIRED' });
+
+    await expect(caller.setStatus({ id: 'pay-1', status: 'PENDING' })).rejects.toThrow('reopened');
   });
 
   it('refuses a Stripe payment', async () => {

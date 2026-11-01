@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import {
+    Alert,
     Avatar,
     Badge,
     Button,
@@ -23,6 +23,7 @@
   import type { User } from '$lib/types';
 
   let loading = $state(true);
+  let loadFailed = $state(false);
   let users: User[] = $state([]);
   let search = $state('');
   let role = $state<'all' | 'admin' | 'user'>('all');
@@ -37,11 +38,13 @@
   onMount(fetchUsers);
 
   async function fetchUsers() {
+    loading = true;
+    loadFailed = false;
     try {
       users = await trpc.user.list.query({ role: 'all' });
     } catch (err) {
       logger.error({ err }, 'Failed to fetch users');
-      toast.danger('Impossible de charger les utilisateurs');
+      loadFailed = true;
     } finally {
       loading = false;
     }
@@ -105,11 +108,15 @@
       bind:value={role}
       label="Filtrer par rôle"
     />
-    <Input bind:value={search} placeholder="Rechercher un utilisateur" class="sm:max-w-64" />
+    <Input bind:value={search} aria-label="Rechercher un utilisateur" placeholder="Rechercher un utilisateur" class="sm:max-w-64" />
   </div>
 
   {#if loading}
     <div class="flex min-h-[20dvh] items-center justify-center"><Spinner size="lg" /></div>
+  {:else if loadFailed}
+    <Alert tone="danger" title="Impossible de charger les utilisateurs" role="alert">
+      <Button variant="ghost" icon={icons.refresh} onclick={fetchUsers}>Réessayer</Button>
+    </Alert>
   {:else if filtered.length === 0}
     <EmptyState
       bare

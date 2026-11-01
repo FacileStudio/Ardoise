@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
-import type { PlumeEnv } from '@repo/plume';
+import { safeHttpUrl, type PlumeEnv } from '@repo/plume';
+import { isOverdue } from '../payment/overdue';
 import { ensureClientSignUrl } from '../document/sign-link';
 import { toBillingLines, toCents, totalsOf } from '../mission/billing-math';
 import { parseStorageKey, mediaService } from '../media/service';
@@ -83,7 +84,7 @@ function missionPrice(mission: { prestations: any[]; providers: any[] }): number
   const lead =
     mission.providers.find((link) => link.role === 'LEAD')?.provider ??
     mission.providers[0]?.provider;
-  const rate = Number(lead?.tvaRate || DEFAULT_TVA_RATE);
+  const rate = lead?.tvaRate == null ? DEFAULT_TVA_RATE : Number(lead.tvaRate);
   return totalsOf(toBillingLines(mission.prestations), rate).total;
 }
 
@@ -126,7 +127,7 @@ export function summarizeTotals(payments: any[], now: Date) {
       continue;
     }
     due += amount;
-    if (payment.status === 'PAST_DUE' || payment.dueDate.getTime() < now.getTime()) {
+    if (payment.status === 'PAST_DUE' || isOverdue(payment.dueDate, now)) {
       overdue += amount;
     }
   }
@@ -183,7 +184,7 @@ async function overview(db: Db, userId: string, now = new Date()): Promise<Porta
       description: payment.description,
       amount: Number(payment.amount),
       dueDate: payment.dueDate.toISOString(),
-      overdue: payment.status === 'PAST_DUE' || payment.dueDate.getTime() < now.getTime(),
+      overdue: payment.status === 'PAST_DUE' || isOverdue(payment.dueDate, now),
     }));
 
   const toSign: ActionRequired[] = documents
@@ -271,7 +272,7 @@ async function signLink(
       message: 'This document is not waiting for a signature',
     });
   }
-  const url = await ensureClientSignUrl({ db: db as PrismaClient, env }, document);
+  const url = safeHttpUrl(await ensureClientSignUrl({ db: db as PrismaClient, env }, document));
   if (!url) throw notFound('Signature link');
   return { url };
 }

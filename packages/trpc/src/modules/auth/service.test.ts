@@ -74,3 +74,12 @@ describe('authService.refresh', () => {
     await expect(authService.refresh(refreshDb(0), manager, 'old')).rejects.toThrow('revoked');
   });
 });
+
+describe('auth cookies', () => {
+  it('sets the refresh cookie on / so the web server can read it, and clears the legacy path', async () => {
+    const { authCookies } = await import('./session');
+    const out = authCookies('a', 'r', { secure: true, domain: '.facile.studio' });
+    expect(out.find((c) => c.startsWith('refresh_token=r'))).toContain('Path=/;');
+    expect(out.some((c) => c.startsWith('refresh_token=;') && c.includes('Path=/trpc/auth.refresh'))).toBe(true);
+  });
+});

@@ -14,6 +14,30 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-01
+
+### Fixed
+
+- Reloading an admin page after 15 minutes signed you out. The refresh cookie was scoped to
+  `/trpc/auth.refresh`, so the web server never received it and the admin guard redirected to
+  `/login`. The cookie now covers the whole site and the guard refreshes the session server-side.
+  Sessions started before this release sign in once more.
+- The Settings > Entreprise section crashed on an unset share capital (`props_invalid_value`).
+  Settings sections now sit behind an error boundary, validate numbers before saving, and show a
+  retry instead of an empty form when loading fails, so a failed load can no longer be saved over
+  the real settings.
+- Renaming a generated document deleted its stored PDF, and saving an imported document flattened
+  its detailed lines into one. Only changed fields are sent and a rename keeps the PDF.
+- A provider with a 0% VAT rate was priced at 20% on the client dashboard and in imports.
+  Non-integer VAT rates are now refused instead of rounded.
+- A document or payment could be linked to another client's mission. It is now refused.
+- Plume sign links are only accepted as http(s) URLs.
+- Reopening a paid manual payment could resurrect a cancelled one, and a payment counted as
+  overdue before its due day ended.
+- Editing an imported invoice's total now updates its manual payment, and a failed import no longer
+  loses the uploaded file.
+- Manual signature status clears the stored client sign link.
+
 ## [0.7.0] - 2026-11-01
 
 ### Added

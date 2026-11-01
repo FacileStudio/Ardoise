@@ -18,6 +18,7 @@
   import { resolve } from '$app/paths';
   import { i18n, locale } from '@repo/i18n/svelte';
   import { ardoise, icons } from '$lib/icons';
+  import { safeHttpUrl } from '$lib/safe-url';
 
   type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
   type Signature = 'none' | 'sent' | 'signed' | 'declined';
@@ -163,7 +164,8 @@
     const tab = window.open('', '_blank');
     if (tab) tab.opener = null;
     try {
-      const { url } = await fetchUrl();
+      const url = safeHttpUrl((await fetchUrl()).url);
+      if (!url) throw new Error($i18n.t('portal.actions.openError'));
       if (tab) tab.location.href = url;
       else window.location.href = url;
     } catch (err) {

@@ -6,6 +6,7 @@ import spaceService, { scopeWhere, requireRowScope } from '../space/service';
 import { parseStorageKey } from '../media/service';
 import { syncMissionPaid } from '../mission/sync';
 import { DocumentItemSchema } from './types';
+import { resolveSignatureClient } from './sign-link';
 import { computeInvoiceTotals, loadDocumentContext, storeDocumentPdf } from './service';
 
 const MAX_PDF_BYTES = 50 * 1024 * 1024;
@@ -36,7 +37,7 @@ export const ImportDocumentSchema = z
     missionId: z.string().min(1).optional(),
     items: z.array(DocumentItemSchema).min(1).optional(),
     total: z.number().nonnegative().optional(),
-    tvaRate: z.number().min(0).max(100).optional(),
+    tvaRate: z.number().int('The VAT rate must be a whole number').min(0).max(100).optional(),
     issuedAt: z.coerce.date(),
     dueDate: z.coerce.date().optional(),
     signatureStatus: ManualSignatureSchema.default('none'),
@@ -63,7 +64,7 @@ export const UpdateDocumentSchema = z.object({
   missionId: z.string().min(1).nullable().optional(),
   items: z.array(DocumentItemSchema).min(1).optional(),
   total: z.number().nonnegative().optional(),
-  tvaRate: z.number().min(0).max(100).optional(),
+  tvaRate: z.number().int('The VAT rate must be a whole number').min(0).max(100).optional(),
   issuedAt: z.coerce.date().optional(),
   dueDate: z.coerce.date().nullable().optional(),
   pdfKey: z.string().min(1).nullable().optional(),
@@ -197,8 +198,34 @@ export async function storeUploadedPdf(storage: StorageService, userId: string, 
   }
 
   const stored = await storeDocumentPdf(storage, data);
-  await storage.delete(key).catch(() => false);
   return { ...stored, fileSize: data.length };
+}
+
+async function persistWithPdf<T>(
+  storage: StorageService,
+  uploadKey: string,
+  stored: { pdfUrl: string },
+  write: () => Promise<T>
+): Promise<T> {
+  let result: T;
+  try {
+    result = await write();
+  } catch (error) {
+    await removeStoredPdf(storage, stored.pdfUrl);
+    throw error;
+  }
+  await storage.delete(uploadKey).catch(() => false);
+  return result;
+}
+
+export function requireWholeRate(rate: number) {
+  if (!Number.isInteger(rate)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'The VAT rate must be a whole number',
+    });
+  }
+  return rate;
 }
 
 export async function removeStoredPdf(storage: StorageService, pdfUrl: string | null) {
@@ -239,7 +266,7 @@ export async function importDocument(ctx: Ctx, input: z.infer<typeof ImportDocum
   const spaceId = scopeWhere(scope).spaceId;
   if (input.number) await assertNumberFree(ctx.db, field, input.number, spaceId);
 
-  const tvaRate = Math.round(input.tvaRate ?? providerRate);
+  const tvaRate = requireWholeRate(input.tvaRate ?? providerRate);
   const name = input.name ?? `${input.type}${input.number ? `_${input.number}` : ''}.pdf`;
   const amounts = computeAmounts(input.items, input.total, tvaRate, name);
   const stored = await storeUploadedPdf(ctx.storage, ctx.user.id, input.pdfKey);
@@ -247,51 +274,53 @@ export async function importDocument(ctx: Ctx, input: z.infer<typeof ImportDocum
 
   const signed = input.signatureStatus === 'signed';
 
-  const document = await ctx.db.document.create({
-    data: {
-      id: stored.id,
-      type: input.type,
-      name,
-      [field]: input.number ?? null,
-      ...clientColumns(client),
-      ...providerColumns(provider),
-      spaceId,
-      missionId,
-      items: amounts.items,
-      subtotal: amounts.subtotal,
-      tva: amounts.tva,
-      total: amounts.total,
-      tvaRate,
-      pdfUrl: stored.pdfUrl,
-      pdfHash: stored.pdfHash,
-      fileSize: stored.fileSize,
-      source: 'imported',
-      issuedAt: input.issuedAt,
-      dueDate: input.dueDate ?? null,
-      signatureStatus: input.signatureStatus,
-      signedAt: signed ? (input.signedAt ?? input.issuedAt) : null,
-      createdBy: ctx.user.id,
-      payments: input.markPaid
-        ? {
-            create: {
-              clientId: client.id,
-              spaceId,
-              missionId,
-              amount: amounts.total,
-              totalWithFees: amounts.total,
-              description: `Facture ${reference}`,
-              reference: input.number ?? null,
-              status: 'PAID',
-              collectionMethod: 'MANUAL',
-              dueDate: input.dueDate ?? input.issuedAt,
-              paidAt: input.paidAt ?? input.issuedAt,
-              attachedDocuments: { create: { documentId: stored.id } },
-            },
-          }
-        : undefined,
-    } as Prisma.DocumentUncheckedCreateInput,
-    include: { payments: true },
-  });
+  const document = await persistWithPdf(ctx.storage, input.pdfKey, stored, () =>
+    ctx.db.document.create({
+      data: {
+        id: stored.id,
+        type: input.type,
+        name,
+        [field]: input.number ?? null,
+        ...clientColumns(client),
+        ...providerColumns(provider),
+        spaceId,
+        missionId,
+        items: amounts.items,
+        subtotal: amounts.subtotal,
+        tva: amounts.tva,
+        total: amounts.total,
+        tvaRate,
+        pdfUrl: stored.pdfUrl,
+        pdfHash: stored.pdfHash,
+        fileSize: stored.fileSize,
+        source: 'imported',
+        issuedAt: input.issuedAt,
+        dueDate: input.dueDate ?? null,
+        signatureStatus: input.signatureStatus,
+        signedAt: signed ? (input.signedAt ?? input.issuedAt) : null,
+        createdBy: ctx.user.id,
+        payments: input.markPaid
+          ? {
+              create: {
+                clientId: client.id,
+                spaceId,
+                missionId,
+                amount: amounts.total,
+                totalWithFees: amounts.total,
+                description: `Facture ${reference}`,
+                reference: input.number ?? null,
+                status: 'PAID',
+                collectionMethod: 'MANUAL',
+                dueDate: input.dueDate ?? input.issuedAt,
+                paidAt: input.paidAt ?? input.issuedAt,
+                attachedDocuments: { create: { documentId: stored.id } },
+              },
+            }
+          : undefined,
+      } as Prisma.DocumentUncheckedCreateInput,
+      include: { payments: true },
+    })
+  );
 
   if (input.markPaid) await syncMissionPaid(ctx.db, missionId);
 
@@ -300,13 +329,11 @@ export async function importDocument(ctx: Ctx, input: z.infer<typeof ImportDocum
 
 const CONTENT_KEYS = [
   'type',
-  'number',
   'clientId',
   'providerId',
   'items',
   'total',
   'tvaRate',
-  'issuedAt',
   'dueDate',
 ] as const;
 
@@ -329,7 +356,14 @@ export async function updateDocument(ctx: Ctx, input: z.infer<typeof UpdateDocum
 
   const data: Prisma.DocumentUncheckedUpdateInput = {};
   if (input.name !== undefined) data.name = input.name;
-  if (input.issuedAt !== undefined) data.issuedAt = input.issuedAt;
+  const issuedAtChanged =
+    input.issuedAt !== undefined &&
+    input.issuedAt.getTime() !== (existing.issuedAt ?? existing.createdAt).getTime();
+  if (issuedAtChanged) data.issuedAt = input.issuedAt;
+  const total =
+    input.total !== undefined && round2(input.total) === Number(existing.total)
+      ? undefined
+      : input.total;
   if (input.dueDate !== undefined) data.dueDate = input.dueDate;
 
   const finalType = input.type ?? existing.type;
@@ -366,12 +400,15 @@ export async function updateDocument(ctx: Ctx, input: z.infer<typeof UpdateDocum
     if (input.missionId === null) {
       data.missionId = null;
     } else {
+      const ownerId = input.clientId ?? (await resolveSignatureClient(ctx.db, existing))?.id;
+      if (!ownerId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Pick the client of this document before linking a mission',
+        });
+      }
       const mission = await ctx.db.mission.findFirst({
-        where: {
-          id: input.missionId,
-          ...scopeWhere(scope),
-          ...(input.clientId ? { clientId: input.clientId } : {}),
-        },
+        where: { id: input.missionId, ...scopeWhere(scope), clientId: ownerId },
         select: { id: true },
       });
       if (!mission) throw new TRPCError({ code: 'NOT_FOUND', message: 'Mission not found' });
@@ -379,20 +416,31 @@ export async function updateDocument(ctx: Ctx, input: z.infer<typeof UpdateDocum
     }
   }
 
-  if (input.items !== undefined || input.total !== undefined || input.tvaRate !== undefined) {
-    const tvaRate = Math.round(input.tvaRate ?? existing.tvaRate);
+  if (input.items !== undefined || total !== undefined || input.tvaRate !== undefined) {
+    const tvaRate = requireWholeRate(input.tvaRate ?? existing.tvaRate);
     const items =
       input.items ??
-      (input.total === undefined ? (existing.items as Array<{ quantity: number; price: number }>) : undefined);
-    const amounts = computeAmounts(items, input.total, tvaRate, input.name ?? existing.name);
+      (total === undefined ? (existing.items as Array<{ quantity: number; price: number }>) : undefined);
+    const amounts = computeAmounts(items, total, tvaRate, input.name ?? existing.name);
     data.items = amounts.items;
     data.subtotal = amounts.subtotal;
     data.tva = amounts.tva;
     data.total = amounts.total;
     data.tvaRate = tvaRate;
+    if (imported && amounts.total !== Number(existing.total)) {
+      data.payments = {
+        updateMany: {
+          where: { collectionMethod: 'MANUAL' },
+          data: { amount: amounts.total, totalWithFees: amounts.total },
+        },
+      };
+    }
   }
 
-  const contentChanged = CONTENT_KEYS.some((key) => input[key] !== undefined);
+  const contentChanged =
+    issuedAtChanged ||
+    total !== undefined ||
+    CONTENT_KEYS.some((key) => key !== 'total' && input[key] !== undefined);
   const replacing = input.pdfKey !== undefined;
   const locked = existing.signatureStatus === 'sent' || existing.signatureStatus === 'signed';
 
@@ -405,12 +453,13 @@ export async function updateDocument(ctx: Ctx, input: z.infer<typeof UpdateDocum
 
   let pdfStale = false;
   let staleUrl: string | null = null;
+  let uploaded: Awaited<ReturnType<typeof storeUploadedPdf>> | null = null;
 
   if (typeof input.pdfKey === 'string') {
-    const stored = await storeUploadedPdf(ctx.storage, ctx.user.id, input.pdfKey);
-    data.pdfUrl = stored.pdfUrl;
-    data.pdfHash = stored.pdfHash;
-    data.fileSize = stored.fileSize;
+    uploaded = await storeUploadedPdf(ctx.storage, ctx.user.id, input.pdfKey);
+    data.pdfUrl = uploaded.pdfUrl;
+    data.pdfHash = uploaded.pdfHash;
+    data.fileSize = uploaded.fileSize;
     staleUrl = existing.pdfUrl;
   } else if (input.pdfKey === null || (!imported && contentChanged && existing.pdfUrl)) {
     data.pdfUrl = null;
@@ -420,7 +469,11 @@ export async function updateDocument(ctx: Ctx, input: z.infer<typeof UpdateDocum
     pdfStale = !imported && input.pdfKey !== null;
   }
 
-  const document = await ctx.db.document.update({ where: { id: existing.id }, data });
+  const write = () => ctx.db.document.update({ where: { id: existing.id }, data });
+  const document =
+    uploaded && typeof input.pdfKey === 'string'
+      ? await persistWithPdf(ctx.storage, input.pdfKey, uploaded, write)
+      : await write();
   if (staleUrl) await removeStoredPdf(ctx.storage, staleUrl);
 
   return { document, pdfStale };
@@ -444,16 +497,18 @@ export async function setDocumentSignature(ctx: Ctx, input: z.infer<typeof SetSi
   const data: Prisma.DocumentUncheckedUpdateInput = {
     signatureStatus: input.status,
     signedAt: input.status === 'signed' ? (input.signedAt ?? new Date()) : null,
+    plumeClientSignUrl: null,
   };
 
+  let stored: Awaited<ReturnType<typeof storeUploadedPdf>> | null = null;
   if (input.signedPdfKey) {
-    const stored = await storeUploadedPdf(ctx.storage, ctx.user.id, input.signedPdfKey);
+    stored = await storeUploadedPdf(ctx.storage, ctx.user.id, input.signedPdfKey);
     data.pdfUrl = stored.pdfUrl;
     data.pdfHash = stored.pdfHash;
     data.fileSize = stored.fileSize;
   }
 
-  const document = await ctx.db.document.update({
+  const write = () => ctx.db.document.update({
     where: { id: existing.id },
     data,
     select: {
@@ -468,6 +523,10 @@ export async function setDocumentSignature(ctx: Ctx, input: z.infer<typeof SetSi
       pdfHash: true,
     },
   });
+  const document =
+    stored && input.signedPdfKey
+      ? await persistWithPdf(ctx.storage, input.signedPdfKey, stored, write)
+      : await write();
 
   if (input.signedPdfKey) await removeStoredPdf(ctx.storage, existing.pdfUrl);
 
