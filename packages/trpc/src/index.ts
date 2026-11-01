@@ -12,6 +12,7 @@ import { spaceRouter } from './modules/space/router';
 import { missionRouter } from './modules/mission/router';
 import { invitationRouter } from './modules/invitation/router';
 import { magicLinkRouter } from './modules/magic-link/router';
+import { portalRouter } from './modules/portal/router';
 import { createOpenApiDocument } from './openapi';
 
 export const appRouter = router({
@@ -28,6 +29,7 @@ export const appRouter = router({
   mission: missionRouter,
   invitation: invitationRouter,
   magicLink: magicLinkRouter,
+  portal: portalRouter,
 });
 export const openApiDocument = createOpenApiDocument(appRouter);
 
@@ -39,3 +41,4 @@ export { globalCacheFactory } from './cache';
 export { paymentService } from './modules/payment/service';
 export { spaceService } from './modules/space/service';
 export type { Scope } from './modules/space/service';
+export type * from './modules/portal/types';
