@@ -37,8 +37,9 @@ export interface LoginOptions {
 
 export const authService = {
   /**
-   * Password login. With `ssoOnly`, every non-CLIENT user is refused with the
-   * same error and the same hashing work as a wrong password.
+   * Password login. CLIENT users sign in with a magic link and are always
+   * refused. With `ssoOnly`, every other user is refused too. A refusal returns
+   * the same error and costs the same hashing work as a wrong password.
    */
   login: async (
     db: PrismaClient,
@@ -52,8 +53,9 @@ export const authService = {
       select: { ...sessionUserSelection, ...loginGateSelection, password: true },
     });
 
-    const refused = !user || (options.ssoOnly === true && user.role !== 'CLIENT');
-    const hash = !user || refused ? await decoyHash(auth) : user.password;
+    const refused =
+      !user || !user.password || user.role === 'CLIENT' || options.ssoOnly === true;
+    const hash = user?.password && !refused ? user.password : await decoyHash(auth);
     const valid = await auth.verifyPassword(input.password, hash);
 
     if (!user || refused || !valid) {

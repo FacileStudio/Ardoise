@@ -4,6 +4,12 @@ import { type AuthManager } from '@repo/auth';
 
 const NO_PASSWORD = { password: true } as const;
 
+const clientHasNoPassword = () =>
+  new TRPCError({
+    code: 'BAD_REQUEST',
+    message: 'Clients have no password: they sign in with an emailed link',
+  });
+
 export const userService = {
   createUser: async (
     db: PrismaClient,
@@ -16,6 +22,8 @@ export const userService = {
       role: 'CLIENT' | 'ADMIN';
     }
   ) => {
+    if (data.role === 'CLIENT') throw clientHasNoPassword();
+
     const existingUser = await db.user.findUnique({
       where: { email: data.email },
     });
@@ -192,6 +200,8 @@ export const userService = {
     if (data.role) updateData.role = data.role;
 
     if (data.password) {
+      const target = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (target?.role === 'CLIENT' || data.role === 'CLIENT') throw clientHasNoPassword();
       updateData.password = await auth.hashPassword(data.password);
     }
 
@@ -263,6 +273,8 @@ export const userService = {
         message: 'User not found',
       });
     }
+
+    if (user.role === 'CLIENT' || !user.password) throw clientHasNoPassword();
 
     const isValid = await auth.verifyPassword(currentPassword, user.password);
 

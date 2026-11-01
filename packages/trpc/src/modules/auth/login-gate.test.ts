@@ -18,7 +18,7 @@ const row = async (role: 'ADMIN' | 'CLIENT') => ({
   isBanned: false,
   isSuspended: false,
   suspendedUntil: null,
-  password: await auth.hashPassword('correct-password'),
+  password: (await auth.hashPassword('correct-password')) as string | null,
 });
 
 const dbFor = (user: Awaited<ReturnType<typeof row>> | null) =>
@@ -35,6 +35,40 @@ const attempt = (user: Awaited<ReturnType<typeof row>> | null, password: string,
       (error: TRPCError) => `${error.code}:${error.message}`
     );
 
+describe('authService.login', () => {
+  it('refuses a CLIENT even with a leftover password hash and the right password', async () => {
+    const client = await row('CLIENT');
+    const wrong = await attempt(client, 'nope-nope-nope', false);
+    expect(wrong).toBe('UNAUTHORIZED:Invalid credentials');
+    expect(await attempt(client, 'correct-password', false)).toBe(wrong);
+    expect(await attempt(client, 'correct-password', true)).toBe(wrong);
+  });
+
+  it('refuses a user without a password with the same error', async () => {
+    const user = { ...(await row('ADMIN')), password: null };
+    expect(await attempt(user, 'correct-password', false)).toBe('UNAUTHORIZED:Invalid credentials');
+  });
+
+  it('verifies against the decoy, never the stored hash, for a CLIENT', async () => {
+    const client = await row('CLIENT');
+    const verified: string[] = [];
+    const spy = {
+      hashPassword: (p: string) => auth.hashPassword(p),
+      verifyPassword: (p: string, hash: string) => {
+        verified.push(hash);
+        return auth.verifyPassword(p, hash);
+      },
+    } as unknown as AuthManager;
+
+    await authService
+      .login(dbFor(client), spy, { email: 'x@example.test', password: 'correct-password' })
+      .catch(() => undefined);
+
+    expect(verified).toHaveLength(1);
+    expect(verified[0]).not.toBe(client.password);
+  });
+});
+
 describe('authService.login with SSO_ONLY', () => {
   it('refuses staff with the wrong-password error, even with the right password', async () => {
     const admin = await row('ADMIN');
@@ -48,12 +82,7 @@ describe('authService.login with SSO_ONLY', () => {
     expect(await attempt(null, 'whatever-pass', true)).toBe('UNAUTHORIZED:Invalid credentials');
   });
 
-  it('still lets a CLIENT in', async () => {
-    expect(await attempt(await row('CLIENT'), 'correct-password', true)).toBe('ok');
-  });
-
-  it('lets everyone in when the mode is off', async () => {
+  it('lets staff in when the mode is off', async () => {
     expect(await attempt(await row('ADMIN'), 'correct-password', false)).toBe('ok');
-    expect(await attempt(await row('CLIENT'), 'correct-password', false)).toBe('ok');
   });
 });

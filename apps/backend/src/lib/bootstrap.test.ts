@@ -124,7 +124,7 @@ describe.skipIf(!url)('bootstrapAdmin', () => {
     );
     const admin = await prisma.user.findUniqueOrThrow({ where: { email: 'owner@example.test' } });
     expect(admin.role).toBe('ADMIN');
-    expect(await auth.verifyPassword('a-real-password', admin.password)).toBe(true);
+    expect(await auth.verifyPassword('a-real-password', admin.password ?? '')).toBe(true);
   });
 
   test('without SSO_ONLY ADMIN_MIGRATE_FROM is ignored', async () => {

@@ -3,7 +3,7 @@ import { appRouter } from '../index';
 
 const HASH = '$argon2id$PASSWORD-HASH-MARKER';
 const SECRETS = [HASH, 'REFRESH-TOKEN-MARKER', 'OIDC-ACCESS-MARKER', 'OIDC-ID-MARKER'];
-const FORBIDDEN_KEYS = ['"password"', '"accessToken"', '"refreshToken"', '"idToken"'];
+const FORBIDDEN_KEYS = ['"password"', '"tokenHash"', '"accessToken"', '"refreshToken"', '"idToken"'];
 const SESSION_KEY = '"token"';
 
 const user = () => ({
@@ -190,7 +190,7 @@ const surfaces: Record<string, (c: ReturnType<typeof caller>) => Promise<unknown
   'user.list': (c) => c.user.list({}),
   'user.getById': (c) => c.user.getById({ id: 'u1' }),
   'user.create': (c) =>
-    c.user.create({ email: 'n@b.fr', password: 'password1', firstName: 'N', lastName: 'B', role: 'CLIENT' }),
+    c.user.create({ email: 'n@b.fr', password: 'password1', firstName: 'N', lastName: 'B', role: 'ADMIN' }),
   'user.update': (c) => c.user.update({ id: 'u1', role: 'CLIENT' }),
   'user.adminUpdate': (c) => c.user.adminUpdate({ id: 'u1', firstName: 'Z' }),
   'user.updateProfile': (c) => c.user.updateProfile({ firstName: 'Z' }),
@@ -215,7 +215,7 @@ const surfaces: Record<string, (c: ReturnType<typeof caller>) => Promise<unknown
   'space.addMember': (c) => c.space.addMember({ spaceId: 's1', email: 'target@b.fr', role: 'MEMBER' }),
   'space.updateMemberRole': (c) => c.space.updateMemberRole({ spaceId: 's1', userId: 'u2', role: 'ADMIN' }),
   'invitation.list': (c) => c.invitation.list(),
-  'invitation.create': (c) => c.invitation.create({ email: 'n@b.fr', role: 'CLIENT' }),
+  'invitation.create': (c) => c.invitation.create({ email: 'n@b.fr', role: 'ADMIN' }),
   'invitation.preview': (c) => c.invitation.preview({ token: 'tok' }),
 };
 
@@ -228,13 +228,12 @@ describe('procedures never serialize secrets', () => {
 });
 
 describe('admin.create for users', () => {
-  it('refuses a caller supplied password instead of storing it', async () => {
-    const attempt = caller().admin.create({
-      entity: 'user',
-      data: { email: 'n@b.fr', firstName: 'N', lastName: 'B', password: HASH },
-    });
-
-    await expect(attempt).rejects.toThrow();
-    await attempt.catch((error) => expect(String(error.message)).not.toContain(HASH));
+  it('drops a caller supplied password and never echoes a hash', async () => {
+    assertClean(
+      await caller().admin.create({
+        entity: 'user',
+        data: { email: 'n@b.fr', firstName: 'N', lastName: 'B', password: HASH },
+      })
+    );
   });
 });
