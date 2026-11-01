@@ -7,6 +7,7 @@
 	import {
 		Alert,
 		Button,
+		ConfirmModal,
 		Field,
 		Input,
 		Page,
@@ -17,11 +18,15 @@
 	} from '@facile/muse';
 	import { ImageUpload } from '$lib/ui';
 	import { logger } from '@repo/logger';
+	import { i18n } from '@repo/i18n/svelte';
+	import { icons } from '$lib/icons';
 
 	let providerId = $derived($page.params.id as string);
 	let pageLoading = $state(true);
 	let submitting = $state(false);
 	let formMessage = $state('');
+	let confirmDelete = $state(false);
+	let blockedMessage = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
 
 	let formData = $state({
@@ -178,6 +183,17 @@
 			submitting = false;
 		}
 	}
+	async function handleDelete() {
+		blockedMessage = '';
+		try {
+			await trpc.provider.delete.mutate({ id: providerId });
+			toast.success($i18n.t('import.blocked.providerDeleted'));
+			await goto(resolve('/admin/prestataires'));
+		} catch (err: any) {
+			logger.error({ err }, 'Failed to delete provider');
+			blockedMessage = err?.message || $i18n.t('import.blocked.provider');
+		}
+	}
 </script>
 
 <svelte:head><title>Modifier le prestataire - Ardoise</title></svelte:head>
@@ -192,7 +208,20 @@
 			title="Modifier le prestataire"
 			description="Modifiez les informations du prestataire"
 			back={{ href: resolve('/admin/prestataires'), label: 'Retour aux prestataires' }}
-		/>
+		>
+			{#snippet actions()}
+				<Button variant="ghost-danger" icon={icons.remove} onclick={() => (confirmDelete = true)}>
+					{$i18n.t('import.blocked.deleteProvider')}
+				</Button>
+			{/snippet}
+		</PageHeader>
+
+		{#if blockedMessage}
+			<Alert tone="danger" title={$i18n.t('import.blocked.title')}>
+				{$i18n.t('import.blocked.provider')}
+				{$i18n.t('import.blocked.reason', { message: blockedMessage })}
+			</Alert>
+		{/if}
 
 		{#if formMessage}
 			<Alert tone="danger">{formMessage}</Alert>
@@ -283,3 +312,13 @@
 		</div>
 	</Page>
 {/if}
+
+<ConfirmModal
+	bind:open={confirmDelete}
+	tone="danger"
+	title={$i18n.t('import.blocked.deleteProviderTitle')}
+	description={$i18n.t('import.blocked.deleteProviderDescription')}
+	confirmLabel={$i18n.t('import.blocked.deleteProvider')}
+	cancelLabel={$i18n.t('import.blocked.keep')}
+	onConfirm={handleDelete}
+/>

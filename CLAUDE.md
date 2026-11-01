@@ -104,6 +104,12 @@ Custom JWT auth via `AuthManager` from `@repo/auth`. Password hashing uses Argon
 
 `@facile/magiclink` (git tag dependency in `packages/trpc`) plus `packages/trpc/src/modules/magic-link/`. `magicLink.request` always answers `{ ok: true }` and mails a link only to active, unblocked CLIENT users. The link opens `/login/verify?token=...`, whose button calls `magicLink.consume` (POST, one use, 15 minutes). Only the sha256 hash is stored in `MagicLink`. `consume` runs `loginBlockReason`, then `issueSession`. `client.create` with `createCredentials` mails a welcome link that skips the public rate limit. Limits: `MAGIC_LINK_TTL_MINUTES`, `MAGIC_LINK_MAX_PER_EMAIL_HOUR`, `MAGIC_LINK_MAX_PER_IP_HOUR`. `GET /auth/config` reports `client_magic_link`.
 
+### Client portal and manual data
+
+`/app` is the client dashboard, fed by `packages/trpc/src/modules/portal/` (`overview`, `documents`, `documentDownload`, `signLink`), all scoped to the caller's `Client` and space. Clients see only `devis`, `facture_prestation`, `appel_de_fonds`, `contrat_prestation`, `contrat_maintenance`, `back_contractuel` and `maintenance`. `portal.signLink` returns `Document.plumeClientSignUrl`, the client's own Plume `signing_url`; `plumeUrl` is Plume's owner page and a client cannot use it. Plume returns `signing_url` only on create and on `GET /api/documents/lookup?external_ref=`, so `getSigners` in `packages/plume` uses the lookup.
+
+Documents made outside Ardoise come in through `document.import` (`source = imported`, `issuedAt` is the real date, the PDF is stored as-is). A paid imported invoice also creates a `MANUAL` `PAID` payment. `document.update`, `document.setSignature` and the manual payment procedures (`createManual`, `setStatus`, `delete`) let an admin fix anything by hand. Deletes of referenced records answer `PRECONDITION_FAILED` with the blocking counts.
+
 ### OIDC
 
 Optional, invite-only SSO in `apps/backend/src/oidc/` (see `docs/architecture.md`). SSO never creates users: an admin creates the `User`, and the first SSO login links it by `(issuer, sub)` through a verified email. Roles are never taken from claims. Password login always stays on.

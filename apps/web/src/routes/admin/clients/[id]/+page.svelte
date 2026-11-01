@@ -5,8 +5,10 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
+		Alert,
 		Badge,
 		Button,
+		ConfirmModal,
 		EmptyState,
 		Field,
 		Icon,
@@ -19,6 +21,7 @@
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
 	import { logger } from '@repo/logger';
+	import { i18n } from '@repo/i18n/svelte';
 	import TransferClientModal from '$lib/components/TransferClientModal.svelte';
 
 	let clientId = $derived($page.params.id as string);
@@ -26,6 +29,8 @@
 	let submitting = $state(false);
 	let client: any = $state(null);
 	let showTransfer = $state(false);
+	let confirmDelete = $state(false);
+	let blockedMessage = $state('');
 
 	let formData = $state({
 		contactFirstName: '',
@@ -93,6 +98,18 @@
 			toast.danger(message);
 		} finally {
 			submitting = false;
+		}
+	}
+
+	async function handleDelete() {
+		blockedMessage = '';
+		try {
+			await trpc.client.delete.mutate({ id: clientId });
+			toast.success($i18n.t('import.blocked.clientDeleted'));
+			await goto(resolve('/admin/clients'));
+		} catch (err: any) {
+			logger.error({ err }, 'Failed to delete client');
+			blockedMessage = err?.message || $i18n.t('import.blocked.client');
 		}
 	}
 
@@ -172,8 +189,18 @@
 				<Button variant="ghost" icon={ardoise.transfer} onclick={() => (showTransfer = true)}>
 					Copier / déplacer
 				</Button>
+				<Button variant="ghost-danger" icon={icons.remove} onclick={() => (confirmDelete = true)}>
+					{$i18n.t('import.blocked.deleteClient')}
+				</Button>
 			{/snippet}
 		</PageHeader>
+
+		{#if blockedMessage}
+			<Alert tone="danger" title={$i18n.t('import.blocked.title')}>
+				{$i18n.t('import.blocked.client')}
+				{$i18n.t('import.blocked.reason', { message: blockedMessage })}
+			</Alert>
+		{/if}
 
 		<TransferClientModal
 			bind:open={showTransfer}
@@ -349,3 +376,13 @@
 		</EmptyState>
 	</Page>
 {/if}
+
+<ConfirmModal
+	bind:open={confirmDelete}
+	tone="danger"
+	title={$i18n.t('import.blocked.deleteClientTitle')}
+	description={$i18n.t('import.blocked.deleteClientDescription')}
+	confirmLabel={$i18n.t('import.blocked.deleteClient')}
+	cancelLabel={$i18n.t('import.blocked.keep')}
+	onConfirm={handleDelete}
+/>

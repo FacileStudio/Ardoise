@@ -14,6 +14,29 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-01
+
+### Added
+
+- Client dashboard at `/app`: an action strip (invoices to pay, documents to sign), billed, paid,
+  remaining and overdue totals, one card per project with its price and paid progress, a filterable
+  list of quotes, invoices and contracts with download, and the payment history.
+- A Sign button on contracts waiting for a signature. It opens the client's own Plume link, which
+  Ardoise now stores per document (`plumeClientSignUrl`) and fetches from Plume when missing.
+- Import of existing documents: upload a PDF made outside Ardoise, with client, project, type,
+  number, issue date, total and signature status. A paid invoice creates a manual paid payment.
+  Imported documents keep their real date (`issuedAt`) and show an Imported badge.
+- Admin edit pages for documents, with PDF replacement and manual signature status, and manual
+  payments that can be created, edited, marked paid or unpaid, and deleted.
+- Delete on client and provider detail pages. A delete blocked by linked records now says which
+  records block it.
+
+### Changed
+
+- Deleting a mission, client, provider or document that is still referenced answers
+  `PRECONDITION_FAILED` with counts, instead of `BAD_REQUEST` or `CONFLICT`.
+- Editing a generated document clears its stored PDF so the next download regenerates it.
+
 ## [0.6.1] - 2026-11-01
 
 ### Fixed
