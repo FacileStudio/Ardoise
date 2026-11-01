@@ -14,7 +14,6 @@ export const CreateClientSchema = z.object({
   tvaIntracom: z.string().optional(),
   createCredentials: z.boolean().default(false),
   credentialEmail: z.string().email().optional().or(z.literal('')),
-  credentialPassword: z.string().min(8).optional().or(z.literal('')),
 });
 
 export const UpdateClientSchema = z.object({

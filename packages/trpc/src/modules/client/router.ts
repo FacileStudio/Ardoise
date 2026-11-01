@@ -8,6 +8,7 @@ import {
   GetByIdSchema,
   TransferClientSchema,
 } from './types';
+import magicLinkService from '../magic-link/service';
 import { dispatchConfiguredWebhook } from '../webhook/service';
 
 export const clientRouter = router({
@@ -23,7 +24,13 @@ export const clientRouter = router({
 
   create: adminProcedure.input(CreateClientSchema).mutation(async ({ ctx, input }) => {
     const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
-    const client = await clientService.createClient(ctx.db, ctx.auth, input, scope);
+    const client = await clientService.createClient(ctx.db, input, scope);
+
+    if (client.user) {
+      await magicLinkService.sendWelcome(ctx, client.user.email).catch((err) => {
+        ctx.log.error({ err, clientId: client.id }, 'Failed to queue the client welcome link');
+      });
+    }
 
     await dispatchConfiguredWebhook({
       db: ctx.db,

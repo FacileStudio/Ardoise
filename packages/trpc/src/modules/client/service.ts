@@ -1,6 +1,5 @@
 import { TRPCError } from '@trpc/server';
 import { type Prisma, type PrismaClient } from '@repo/database';
-import { type AuthManager } from '@repo/auth';
 import { scopeWhere, scopeConnect, requireRowScope, type Scope } from '../space/service';
 import type {
   CreateClientInput,
@@ -103,27 +102,14 @@ export const clientService = {
     return { ...client, payments };
   },
 
-  createClient: async (
-    db: PrismaClient,
-    auth: AuthManager,
-    data: CreateClientInput,
-    scope: Scope
-  ) => {
+  createClient: async (db: PrismaClient, data: CreateClientInput, scope: Scope) => {
     const credentialEmail = data.credentialEmail?.trim();
-    const credentialPassword = data.credentialPassword?.trim();
 
     if (data.createCredentials) {
       if (!credentialEmail) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Credential email is required when creating client access',
-        });
-      }
-
-      if (!credentialPassword || credentialPassword.length < 8) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Credential password must contain at least 8 characters',
         });
       }
 
@@ -145,7 +131,6 @@ export const clientService = {
             email: credentialEmail!,
             firstName: data.contactFirstName,
             lastName: data.contactLastName,
-            password: await auth.hashPassword(credentialPassword!),
             role: 'CLIENT' as const,
             emailVerified: false,
           },

@@ -98,7 +98,12 @@ async function main() {
     user: { id: admin.id, role: 'ADMIN', email: admin.email },
     auth: authManager,
     storage,
-    env: {},
+    env: {
+      FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+      MAGIC_LINK_TTL_MINUTES: 15,
+      MAGIC_LINK_MAX_PER_EMAIL_HOUR: 5,
+      MAGIC_LINK_MAX_PER_IP_HOUR: 20,
+    },
     appOrigin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     apiOrigin: backendUrl,
     log,
@@ -120,7 +125,6 @@ async function main() {
         spaceId,
         createCredentials: !!credentialEmail && !spaceId,
         credentialEmail,
-        credentialPassword: credentialEmail ? PASSWORD : undefined,
       } as any);
 
       clients.set(id, client.id);
@@ -215,7 +219,7 @@ async function main() {
   for (const mission of missions) console.log(`  ${mission.status.padEnd(10)} ${mission.name}`);
 
   console.log(`\nAdmin    ${ADMIN.email} / ${PASSWORD}`);
-  console.log(`Client   ${CLIENTS.acme.credentialEmail} / ${PASSWORD}`);
+  console.log(`Client   ${CLIENTS.acme.credentialEmail} (signs in with an emailed link)`);
   console.log(`Rows with no space show in the personal scope, "Atelier Nord" holds one mission.`);
   console.log(`PDFs are stored in ${storagePath}`);
 }
