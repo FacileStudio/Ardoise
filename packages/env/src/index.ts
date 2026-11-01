@@ -46,6 +46,10 @@ export const serverEnvSchema = baseSchema.extend({
 
   COOKIE_DOMAIN: optionalString,
 
+  MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+  MAGIC_LINK_MAX_PER_EMAIL_HOUR: z.coerce.number().int().min(1).default(5),
+  MAGIC_LINK_MAX_PER_IP_HOUR: z.coerce.number().int().min(1).default(20),
+
   OIDC_ISSUER: optionalUrl,
   OIDC_CLIENT_ID: optionalString,
   OIDC_CLIENT_SECRET: optionalString,
