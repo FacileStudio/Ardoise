@@ -43,7 +43,7 @@ describe('userService password hash exposure', () => {
       password: 'password1',
       firstName: 'A',
       lastName: 'B',
-      role: 'CLIENT',
+      role: 'ADMIN',
     });
     await userService.updateProfile(db, 'u1', { firstName: 'X' });
     await userService.deleteUser(db, 'u1');
@@ -93,5 +93,49 @@ describe('userService session revocation', () => {
     await userService.adminUpdateUser(db, auth, 'u1', { firstName: 'Z' });
 
     expect(calls.some((c) => c.op === 'session.deleteMany')).toBe(false);
+  });
+});
+
+describe('userService clients have no password', () => {
+  const clientDb = () => {
+    const { db, calls } = recordingDb();
+    (db.user as any).findUnique = async (args: any) => {
+      calls.push({ op: 'user.findUnique', args });
+      return args.where.email ? null : { id: 'c1', role: 'CLIENT', password: 'stale-hash' };
+    };
+    return { db, calls };
+  };
+
+  it('refuses to create a CLIENT with a password', async () => {
+    const { db, calls } = recordingDb();
+
+    await expect(
+      userService.createUser(db, auth, {
+        email: 'a@b.fr',
+        password: 'password1',
+        firstName: 'A',
+        lastName: 'B',
+        role: 'CLIENT',
+      })
+    ).rejects.toThrow('no password');
+    expect(calls.some((c) => c.op === 'user.create')).toBe(false);
+  });
+
+  it('refuses an admin password reset on a CLIENT', async () => {
+    const { db, calls } = clientDb();
+
+    await expect(userService.adminUpdateUser(db, auth, 'c1', { password: 'new-password' })).rejects.toThrow(
+      'no password'
+    );
+    expect(calls.some((c) => c.op === 'user.update')).toBe(false);
+  });
+
+  it('refuses a CLIENT changing a password, even with the leftover hash', async () => {
+    const { db, calls } = clientDb();
+
+    await expect(
+      userService.changePassword(db, auth, 'c1', 'old-password', 'new-password')
+    ).rejects.toThrow('no password');
+    expect(calls.some((c) => c.op === 'user.update')).toBe(false);
   });
 });

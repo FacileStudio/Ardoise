@@ -30,11 +30,13 @@ describe('invitation.accept with SSO_ONLY', () => {
     expect(message).toContain('SSO-only');
   });
 
-  it('lets a client invitation through to the normal checks', async () => {
-    const message = await outcome(
-      invitationService.accept(db('CLIENT'), {} as AuthManager, input, undefined, true)
-    );
-    expect(message).toContain('account already exists');
+  it('refuses a client invitation in every mode', async () => {
+    for (const ssoOnly of [true, false]) {
+      const message = await outcome(
+        invitationService.accept(db('CLIENT'), {} as AuthManager, input, undefined, ssoOnly)
+      );
+      expect(message).toContain('Clients are not invited');
+    }
   });
 
   it('keeps staff invitations working when the mode is off', async () => {

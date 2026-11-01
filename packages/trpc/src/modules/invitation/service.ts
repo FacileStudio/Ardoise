@@ -14,8 +14,15 @@ import type { AcceptInvitationInput } from './types';
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const refuseStaffInvitation = (ssoOnly: boolean | undefined, role: string) => {
-  if (ssoOnly && role !== 'CLIENT') {
+const refuseInvitation = (ssoOnly: boolean | undefined, role: string) => {
+  if (role === 'CLIENT') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message:
+        'Clients are not invited: create the client first, it signs in with an emailed link, then add it to the space',
+    });
+  }
+  if (ssoOnly) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Staff accounts are created by an administrator when SSO-only mode is on',
@@ -105,7 +112,7 @@ export const invitationService = {
     target: InvitationTarget,
     ssoOnly?: boolean
   ) {
-    refuseStaffInvitation(ssoOnly, target.role);
+    refuseInvitation(ssoOnly, target.role);
     const inviter = await loadInviter(db, inviterId);
     const email = target.email.trim().toLowerCase();
 
@@ -224,7 +231,7 @@ export const invitationService = {
     ssoOnly?: boolean
   ) {
     const invitation = await findPending(db, input.token);
-    refuseStaffInvitation(ssoOnly, invitation.role);
+    refuseInvitation(ssoOnly, invitation.role);
 
     const existing = await db.user.findFirst({
       where: { email: { equals: invitation.email, mode: 'insensitive' } },
