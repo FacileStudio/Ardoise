@@ -90,7 +90,9 @@ Local auth is a custom HS256 JWT scheme. `AuthManager` (`@repo/auth`) signs with
 `maxi-boilerplate-client` — inherited from the boilerplate and never renamed. Passwords are hashed
 with argon2 through `@repo/crypto`.
 
-- `auth.login` returns an access token (15 minutes) and a refresh token (7 days), both set as
+- `auth.login` is for staff. It refuses every CLIENT, whatever the password, with the same
+  `Invalid credentials` error and the same hashing work as a wrong password. On success it returns
+  an access token (15 minutes) and a refresh token (7 days), both set as
   `HttpOnly` `SameSite=Lax` cookies. The refresh cookie is scoped to `Path=/trpc/auth.refresh`,
   so it is never sent with ordinary calls. `Secure` is added when `NODE_ENV=production`.
 - Role checks come from `@repo/auth-shared`, which defines the `SessionUser` shape and a
@@ -100,11 +102,48 @@ with argon2 through `@repo/crypto`.
 `@repo/auth` and `@repo/auth-shared` are workspace packages private to this monorepo. They were
 copy-pasted from `MonorepoBoilerplate` and have drifted since; nothing imports them across repos.
 
+### Client sign-in
+
+Clients have no password. `User.password` is nullable and the migration nulls it for every CLIENT.
+They sign in with a one-time link, built on `@facile/magiclink` (a TypeScript package with no
+dependency on Prisma, tRPC or SMTP) and wired in `packages/trpc/src/modules/magic-link/`.
+
+1. `magicLink.request({ email })` always returns `{ ok: true }`. A link is created and mailed only
+   for a CLIENT with `status = ACTIVE` that is not banned or suspended. Any other email (admin,
+   blocked, unknown) behaves the same way from the outside.
+2. The mail points at `FRONTEND_URL/login/verify?token=<token>`. The token is 32 random bytes in
+   hex. Only its sha256 hash is stored in `MagicLink.tokenHash`.
+3. The verify page never signs in on GET. It reads the token, removes it from the address bar,
+   and shows one button. The button calls `magicLink.consume({ token })`, a POST, so mail
+   scanners that prefetch the link do not burn it.
+4. `consume` marks the row used with one conditional `updateMany` (`consumedAt IS NULL AND
+   expiresAt > now`), so a token works once. The module then reloads the user, requires an active
+   CLIENT that passes `loginBlockReason`, and calls `issueSession` and `authCookies`. The session
+   is the same as any other login: 15 minute access token, 7 day refresh cookie.
+5. Unknown, expired, used and superseded tokens all return `This link is invalid or has expired`.
+   A new request invalidates the user's older unused links.
+
+There is no browser binding: a forwarded mail grants access for the link lifetime (15 minutes by
+default) and one use. Requests are capped per email and per IP per hour (see
+`docs/configuration.md`), on top of the strict rate-limit bucket that `magicLink.request` and
+`magicLink.consume` share with `auth.login`. The link an admin triggers by creating a client is
+not counted against that client. Request and consume outcomes are logged with the user id and IP,
+never the token.
+
+Invitations no longer create clients: `invitation.create` and `invitation.accept` refuse
+`role: 'CLIENT'`, and `space.inviteMember` is gone. An admin creates the client first, then adds
+the user to a space with `space.addMember`, which answers `NOT_FOUND` for an unknown email.
+
+The verify page loads no third-party resource (no icon font or CDN), sends
+`Referrer-Policy: no-referrer`, and the web server redacts the token from the URLs it logs. The
+reverse proxy's own access log still sees the query string of the `GET /login/verify` request:
+exclude that route from access logs if the proxy keeps them.
+
 ### OIDC
 
 Optional, invite-only login against any OpenID Connect provider (Registre in production). It
 activates when `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set. Password login
-always stays available.
+stays available for staff unless `SSO_ONLY` is on.
 
 Code lives in `apps/backend/src/oidc/`, one job per file:
 

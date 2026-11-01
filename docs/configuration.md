@@ -21,6 +21,9 @@ and exits 1** — the process does not start degraded.
 | `ADMIN_PASSWORD` | unless `SSO_ONLY` | — | Minimum 8 characters. Applied on every startup, ignored when `SSO_ONLY` is true |
 | `SSO_ONLY` | no | `false` | `true` or `1`. Staff sign in with SSO only; requires `OIDC_ISSUER`. See CLAUDE.md |
 | `ADMIN_MIGRATE_FROM` | no | — | Legacy admin email, used only with `SSO_ONLY`. Renamed to `ADMIN_EMAIL`, or disabled when `ADMIN_EMAIL` already exists |
+| `MAGIC_LINK_TTL_MINUTES` | no | `15` | Lifetime of a client sign-in link, 1 to 1440 |
+| `MAGIC_LINK_MAX_PER_EMAIL_HOUR` | no | `5` | Link requests per client email per hour. Extra requests are dropped silently |
+| `MAGIC_LINK_MAX_PER_IP_HOUR` | no | `20` | Link requests per source IP per hour |
 | `DATABASE_URL` | yes in practice | see below | Postgres connection string. Read directly by `packages/database/src/index.ts` and `prisma.config.ts` |
 
 `DATABASE_URL` is the one variable outside the zod schema, so it does not fail fast. Instead it

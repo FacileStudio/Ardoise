@@ -29,7 +29,7 @@ meta to the procedures you want exposed is what fills it in.
 
 | Procedure | Type | Level | Input |
 |---|---|---|---|
-| `login` | mutation | public | `{ email, password }`, password min 8 |
+| `login` | mutation | public | `{ email, password }`, password min 8. Staff only: a CLIENT is always refused with `Invalid credentials` |
 | `refresh` | mutation | public | `{}` — reads the `refresh_token` cookie |
 | `me` | query | protected | `{}` |
 | `logout` | mutation | protected | `{}` |
@@ -38,20 +38,31 @@ meta to the procedures you want exposed is what fills it in.
 days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` clears both.
 `me` returns the context user. This router sits behind the strictest rate-limit bucket.
 
+## `magicLink`
+
+| Procedure | Type | Level | Input |
+|---|---|---|---|
+| `request` | mutation | public | `{ email }`. Always returns `{ ok: true }`, whether or not a link was sent |
+| `consume` | mutation | public | `{ token }`. Sets the same cookies as `auth.login` and returns `{ user }`. Unknown, expired and used tokens all fail with `This link is invalid or has expired` |
+
+Only active CLIENT users receive a link. Both procedures share the strict rate-limit bucket with
+`auth.login`, and `request` is also capped per email and per IP per hour. See
+`docs/architecture.md` for the flow.
+
 ## `user`
 
 | Procedure | Type | Level | Input |
 |---|---|---|---|
 | `me` | query | protected | — |
 | `updateProfile` | mutation | protected | `{ firstName?, lastName? }` |
-| `changePassword` | mutation | protected | `{ currentPassword, newPassword }`, new min 8 |
+| `changePassword` | mutation | protected | `{ currentPassword, newPassword }`, new min 8. Refused for CLIENT users |
 | `deleteOwnAccount` | mutation | protected | — |
 | `list` | query | admin | `{ role?: 'all' \| 'admin' \| 'user' }?` |
 | `getById` | query | admin | `{ id }` |
 | `getStats` | query | admin | — |
-| `create` | mutation | admin | `{ email, password, firstName, lastName, role: 'CLIENT' \| 'ADMIN' }` |
+| `create` | mutation | admin | `{ email, password, firstName, lastName, role }`. Refuses `role: 'CLIENT'`: clients are created with `client.create` |
 | `update` | mutation | admin | `{ id, role? }` |
-| `adminUpdate` | mutation | admin | `{ id, email?, firstName?, lastName?, role?, password? }` |
+| `adminUpdate` | mutation | admin | `{ id, email?, firstName?, lastName?, role?, password? }`. A `password` is refused for CLIENT users |
 | `delete` | mutation | admin | `{ id }` |
 | `bulkDelete` | mutation | admin | `{ ids: string[] }` |
 
@@ -61,7 +72,7 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 |---|---|---|---|
 | `list` | query | admin | `{ page = 1, limit = 10 (max 100), search?, spaceId? }` |
 | `getById` | query | admin | `{ id }` |
-| `create` | mutation | admin | contact name, `companyName`, optional billing address, `siret`, `tvaIntracom`, plus `createCredentials` and optional `credentialEmail` / `credentialPassword` to provision a portal login |
+| `create` | mutation | admin | contact name, `companyName`, optional billing address, `siret`, `tvaIntracom`, plus `createCredentials` and `credentialEmail` to give the client portal access. The user has no password and gets a welcome mail with a sign-in link |
 | `update` | mutation | admin | `{ id }` plus the same fields, all optional |
 | `delete` | mutation | admin | `{ id }` — refused while the client has payments or missions |
 | `me` | query | protected | — the signed-in user's own client record |

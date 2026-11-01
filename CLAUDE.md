@@ -98,7 +98,11 @@ Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `s
 
 ### Authentication
 
-Custom JWT auth via `AuthManager` from `@repo/auth`. Password hashing uses Argon2/scrypt through `CryptoService`. Always use `AuthManager.hashPassword()` when creating users -- never bcrypt directly. The backend auto-creates an admin user on first startup from `ADMIN_EMAIL` and `ADMIN_PASSWORD` env vars.
+Custom JWT auth via `AuthManager` from `@repo/auth`. Password hashing uses Argon2/scrypt through `CryptoService`. Always use `AuthManager.hashPassword()` when creating staff users -- never bcrypt directly. CLIENT users have no password (`User.password` is nullable and nulled for clients): they sign in with a magic link, `auth.login` refuses them, and `user.create`, `changePassword` and invitations refuse CLIENT. The backend auto-creates an admin user on first startup from `ADMIN_EMAIL` and `ADMIN_PASSWORD` env vars.
+
+### Client sign-in (magic link)
+
+`@facile/magiclink` (git tag dependency in `packages/trpc`) plus `packages/trpc/src/modules/magic-link/`. `magicLink.request` always answers `{ ok: true }` and mails a link only to active, unblocked CLIENT users. The link opens `/login/verify?token=...`, whose button calls `magicLink.consume` (POST, one use, 15 minutes). Only the sha256 hash is stored in `MagicLink`. `consume` runs `loginBlockReason`, then `issueSession`. `client.create` with `createCredentials` mails a welcome link that skips the public rate limit. Limits: `MAGIC_LINK_TTL_MINUTES`, `MAGIC_LINK_MAX_PER_EMAIL_HOUR`, `MAGIC_LINK_MAX_PER_IP_HOUR`. `GET /auth/config` reports `client_magic_link`.
 
 ### OIDC
 
@@ -122,8 +126,8 @@ Pre-signed URL flow: client requests URL via tRPC -> server generates it -> clie
 
 `SSO_ONLY=true` (or `1`) makes SSO the only way for staff to sign in. It needs `OIDC_ISSUER` (the backend refuses to boot without it) and makes `ADMIN_PASSWORD` optional.
 
-- `auth.login` refuses every user whose role is not CLIENT with `Invalid credentials`, after the same hashing work as a wrong password. CLIENT logins are unchanged, so the login page keeps its password form, labelled as client access.
-- `invitation.create` and `invitation.accept` refuse ADMIN invitations. Staff are added by an admin through `user.create`, then link by verified email on their first SSO login.
+- `auth.login` refuses every user with `Invalid credentials`, after the same hashing work as a wrong password (it already refuses every CLIENT, see Authentication). Clients are unaffected because they sign in with a magic link, so the login page shows the client link form and hides the staff password form.
+- `invitation.create` and `invitation.accept` refuse ADMIN invitations (and CLIENT invitations, always). Staff are added by an admin through `user.create`, then link by verified email on their first SSO login.
 - `bootstrapAdmin` never sets a real password: the admin has the unusable password `!sso-only`, `ADMIN_EMAIL` is ensured as an active, verified ADMIN, and reruns write nothing.
 - `ADMIN_MIGRATE_FROM=old@example.com` migrates the legacy admin. If no user has `ADMIN_EMAIL`, the legacy user is renamed in one UPDATE (id, data, ownerships and linked accounts kept, sessions deleted). If `ADMIN_EMAIL` already exists, the legacy user is banned, its password cleared and its sessions deleted; the row stays for ownership. No other user is touched.
 - `GET /auth/config` returns `sso_only` and `password_login`.

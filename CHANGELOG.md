@@ -14,6 +14,34 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** clients no longer have a password. They sign in on `/login` with an emailed
+  one-time link (15 minutes, single use), built on `@facile/magiclink`. `User.password` is nullable
+  and the migration `20261101120000_add_magic_links` sets it to `NULL` for every CLIENT, without
+  notice. Admins keep password and SSO sign-in.
+- `auth.login` refuses every CLIENT with `Invalid credentials` and the same hashing work as a wrong
+  password. `user.create`, `user.adminUpdate` and `user.changePassword` refuse passwords for clients.
+- `invitation.create` and `invitation.accept` refuse CLIENT invitations, space invitations
+  included. Create the client first, then add it to the space.
+- `client.create` takes no `credentialPassword`. With `createCredentials`, the new client gets a
+  welcome mail with a sign-in link that skips the public rate limit.
+- `space.inviteMember` is removed. Adding an unknown email to a space now says to create the client
+  first. The admin invitation page only invites administrators.
+- The login page shows a client form (email, "send me a link") and a team sign-in view.
+
+### Added
+
+- `magicLink.request` and `magicLink.consume`, the `MagicLink` table, the `/login/verify` page
+  (confirm button, POST consume, `Referrer-Policy: no-referrer`, token removed from the address
+  bar) and the `sendMagicLink` mail template.
+- `MAGIC_LINK_TTL_MINUTES` (15), `MAGIC_LINK_MAX_PER_EMAIL_HOUR` (5) and
+  `MAGIC_LINK_MAX_PER_IP_HOUR` (20).
+- The web server redacts `token`, `ticket`, `code` and `state` in the URLs it logs, so a
+  `/login/verify` link never reaches the logs.
+- `client_magic_link` in `GET /auth/config`. Both magic link procedures share the strict
+  rate-limit bucket with `auth.login`.
+
 ## [0.5.2] - 2026-10-31
 
 ### Changed
