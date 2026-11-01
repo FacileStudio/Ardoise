@@ -15,7 +15,6 @@ import providerService from '../provider/service';
 import { loadDocumentContext, buildDocumentPersistenceBase } from '../document/service';
 import type { CreatePaymentInput } from '../payment/types';
 import type { CreateClientInput } from '../client/types';
-import type { AuthManager } from '@repo/auth';
 
 function dbWithMembership(member: { role: 'OWNER' | 'ADMIN' | 'MEMBER' } | null) {
   return {
@@ -558,7 +557,7 @@ describe('the create path carries the space', () => {
     input: CreateClientInput
   ) {
     const scope = await spaceService.resolveScope(db, userId, spaceId);
-    return clientService.createClient(db, {} as AuthManager, input, scope);
+    return clientService.createClient(db, input, scope);
   }
 
   it('refuses a client create in a space the caller is not a member of', async () => {
