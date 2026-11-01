@@ -52,3 +52,20 @@ describe('providerRouter.create', () => {
     expect(created[0].data.spaceId).toBe(null);
   });
 });
+
+describe('providerRouter.delete guards', () => {
+  it('names what still uses the provider', async () => {
+    const caller = providerRouter.createCaller({
+      db: {
+        provider: { findUnique: async () => ({ id: 'p-1', spaceId: null }) },
+        document: { count: async () => 3 },
+        missionProvider: { count: async () => 1 },
+        spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+      },
+      user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+      log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
+    } as any);
+
+    await expect(caller.delete({ id: 'p-1' })).rejects.toThrow('3 document(s) and 1 mission(s)');
+  });
+});

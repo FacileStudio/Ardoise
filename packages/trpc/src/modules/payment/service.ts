@@ -13,7 +13,13 @@ import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/servi
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
 import { syncMissionPaid } from '../mission/sync';
-import type { CreatePaymentInput, UpdatePaymentInput, ListPaymentsParams } from './types';
+import type {
+  CreatePaymentInput,
+  CreateManualPaymentInput,
+  SetPaymentStatusInput,
+  UpdatePaymentInput,
+  ListPaymentsParams,
+} from './types';
 
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
   const sub = invoice.parent?.subscription_details?.subscription;
@@ -518,14 +524,38 @@ export const paymentService = {
       'Payment not found'
     );
 
-    if (existing.status === 'PAID') {
+    const manual = existing.collectionMethod === 'MANUAL';
+
+    if (existing.status === 'PAID' && !manual) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Cannot update a payment that is already paid',
       });
     }
 
+    if (data.amount !== undefined && !manual && existing.status !== 'PENDING') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'The amount of a Stripe payment is fixed once it has left the pending state',
+      });
+    }
+
     const updateData: Prisma.PaymentUpdateInput = {};
+
+    if (data.paidAt !== undefined) {
+      if (!manual) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Only a manual payment can be dated by hand',
+        });
+      }
+      updateData.paidAt = data.paidAt;
+    }
+
+    if (data.amount !== undefined && manual) {
+      updateData.totalWithFees = data.amount;
+      updateData.stripeFee = 0;
+    }
 
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.description !== undefined) updateData.description = data.description;
@@ -550,6 +580,98 @@ export const paymentService = {
     }
 
     return updated;
+  },
+
+  createManualPayment: async (
+    db: PrismaClient,
+    userId: string,
+    data: CreateManualPaymentInput
+  ): Promise<Payment> => {
+    const { paid, paidAt, ...rest } = data;
+    const payment = await paymentService.createPayment(db, userId, null, null, {} as ServerEnv, '', {
+      ...rest,
+      frequency: 'ONE_TIME',
+      collectionMethod: 'MANUAL',
+      attachedFiles: [],
+      attachedDocumentIds: rest.documentId ? [rest.documentId] : [],
+    });
+
+    if (!paid) return payment;
+
+    return paymentService.setPaymentStatus(db, userId, {
+      id: payment.id,
+      status: 'PAID',
+      paidAt,
+    });
+  },
+
+  setPaymentStatus: async (
+    db: PrismaClient,
+    userId: string,
+    data: SetPaymentStatusInput
+  ): Promise<Payment> => {
+    const existing = await requireRowScope(
+      db,
+      userId,
+      await db.payment.findUnique({ where: { id: data.id } }),
+      'Payment not found'
+    );
+
+    if (existing.collectionMethod !== 'MANUAL') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Only a manual payment can be marked paid or unpaid by hand',
+      });
+    }
+
+    const paid = data.status === 'PAID';
+    const updated = await db.payment.update({
+      where: { id: existing.id },
+      data: { status: data.status, paidAt: paid ? (data.paidAt ?? new Date()) : null },
+      include: {
+        client: {
+          include: { user: { omit: { password: true } } },
+        },
+      },
+    });
+
+    if (paid) {
+      await syncMissionPaid(db, updated.missionId);
+    } else if (updated.missionId) {
+      await db.mission.updateMany({
+        where: { id: updated.missionId, status: 'PAID' },
+        data: { status: 'INVOICED' },
+      });
+    }
+
+    return updated;
+  },
+
+  deletePayment: async (db: PrismaClient, userId: string, id: string) => {
+    const existing = await requireRowScope(
+      db,
+      userId,
+      await db.payment.findUnique({ where: { id } }),
+      'Payment not found'
+    );
+
+    if (existing.collectionMethod !== 'MANUAL') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'A Stripe payment cannot be deleted. Cancel it instead.',
+      });
+    }
+
+    await db.payment.delete({ where: { id } });
+
+    if (existing.status === 'PAID' && existing.missionId) {
+      await db.mission.updateMany({
+        where: { id: existing.missionId, status: 'PAID' },
+        data: { status: 'INVOICED' },
+      });
+    }
+
+    return { success: true };
   },
 
   cancelPayment: async (

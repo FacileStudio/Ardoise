@@ -152,7 +152,7 @@ describe('missionRouter.delete', () => {
       payment: { count: async () => 0 },
     });
 
-    await expect(caller.delete({ id: 'p-1' })).rejects.toThrow('Cannot delete a mission');
+    await expect(caller.delete({ id: 'p-1' })).rejects.toThrow('still has 1 invoice(s)');
 
     expect(deleted.length).toBe(0);
   });

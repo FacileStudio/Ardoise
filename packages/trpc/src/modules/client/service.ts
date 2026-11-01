@@ -305,24 +305,23 @@ export const clientService = {
       await db.client.findUnique({
         where: { id },
         include: {
-          payments: true,
-          missions: { select: { id: true }, take: 1 },
+          payments: { select: { id: true } },
         },
       }),
       'Client not found'
     );
 
-    if (existingClient.payments.length > 0) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Cannot delete client with existing payments. Please delete payments first or archive the client instead.',
-      });
-    }
+    const missions = await db.mission.count({ where: { clientId: id } });
+    const payments = existingClient.payments.length;
 
-    if (existingClient.missions.length > 0) {
+    if (payments > 0 || missions > 0) {
+      const blockers = [
+        missions > 0 ? `${missions} mission(s)` : null,
+        payments > 0 ? `${payments} payment(s)` : null,
+      ].filter(Boolean);
       throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Cannot delete client with existing missions. Cancel or delete them first.',
+        code: 'PRECONDITION_FAILED',
+        message: `This client still has ${blockers.join(' and ')}. Delete them first.`,
       });
     }
 

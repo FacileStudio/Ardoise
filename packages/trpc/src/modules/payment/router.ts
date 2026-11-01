@@ -4,6 +4,8 @@ import spaceService from '../space/service';
 import {
   CreatePaymentSchema,
   UpdatePaymentSchema,
+  CreateManualPaymentSchema,
+  SetPaymentStatusSchema,
   ListPaymentsSchema,
   GetPaymentByIdSchema,
   CancelPaymentSchema,
@@ -41,6 +43,18 @@ export const paymentRouter = router({
       ctx.appOrigin,
       input
     );
+  }),
+
+  createManual: adminProcedure.input(CreateManualPaymentSchema).mutation(async ({ ctx, input }) => {
+    return paymentService.createManualPayment(ctx.db, ctx.user.id, input);
+  }),
+
+  setStatus: adminProcedure.input(SetPaymentStatusSchema).mutation(async ({ ctx, input }) => {
+    return paymentService.setPaymentStatus(ctx.db, ctx.user.id, input);
+  }),
+
+  delete: adminProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
+    return paymentService.deletePayment(ctx.db, ctx.user.id, input.id);
   }),
 
   update: adminProcedure.input(UpdatePaymentSchema).mutation(async ({ ctx, input }) => {

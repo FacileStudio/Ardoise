@@ -38,7 +38,18 @@ import {
   contractExternalRef,
   plumeConfigFromEnv,
   sendForSignature,
+  signingUrlFor,
 } from '@repo/plume';
+import { ensureClientSignUrl, resolveSignatureClient } from './sign-link';
+import {
+  ImportDocumentSchema,
+  UpdateDocumentSchema,
+  SetSignatureSchema,
+  importDocument,
+  updateDocument,
+  setDocumentSignature,
+  removeStoredPdf,
+} from './manual';
 import { logger } from '@repo/logger';
 import type { ServerEnv } from '@repo/env';
 
@@ -62,22 +73,6 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
 }
 
 const SIGNABLE_TYPES: string[] = ['contrat_prestation', 'contrat_maintenance', 'back_contractuel'];
-
-async function resolveSignatureClient(db: PrismaClient, document: StoredDocument) {
-  if (document.missionId) {
-    const mission = await db.mission.findUnique({
-      where: { id: document.missionId },
-      select: { client: true },
-    });
-    if (mission?.client) return mission.client;
-  }
-
-  const matches = await db.client.findMany({
-    where: { companyName: document.clientName, spaceId: document.spaceId },
-    take: 2,
-  });
-  return matches.length === 1 ? matches[0] : null;
-}
 
 function archiveContract(env: ServerEnv, document: { id: string; name: string }, pdf: Buffer) {
   void storeContractInNuage(nuageConfigFromEnv(env), {
@@ -264,6 +259,15 @@ async function loadDocumentPdf(
     return Buffer.from(await ctx.storage.download(storedKey));
   }
 
+  if (document.source === 'imported') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'This imported document has no PDF attached.',
+    });
+  }
+
+  const issued = (document.issuedAt ?? document.createdAt).toISOString().split('T')[0];
+
   let logoUrl: string | undefined;
   let bankName = '';
   let iban = '';
@@ -282,10 +286,10 @@ async function loadDocumentPdf(
   const documentData = {
     type: document.type as DocType,
     invoice_number: document.invoiceNumber || '',
-    invoice_date: document.createdAt.toISOString().split('T')[0],
+    invoice_date: issued,
     due_date: (document.dueDate ?? document.createdAt).toISOString().split('T')[0],
     quote_number: document.quoteNumber || '',
-    quote_date: document.createdAt.toISOString().split('T')[0],
+    quote_date: issued,
     validity_date: document.createdAt.toISOString().split('T')[0],
     contract_reference: document.contractRef || '',
     clientId: '',
@@ -412,7 +416,7 @@ export const documentRouter = router({
   delete: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      await requireRowScope(
+      const document = await requireRowScope(
         ctx.db,
         ctx.user.id,
         await ctx.db.document.findUnique({
@@ -421,11 +425,67 @@ export const documentRouter = router({
         'Document not found'
       );
 
+      const [payments, invoices] = await Promise.all([
+        ctx.db.payment.count({
+          where: { documentId: document.id, status: { in: ['PENDING', 'PAID', 'PAST_DUE'] } },
+        }),
+        ctx.db.document.count({ where: { sourceQuoteId: document.id } }),
+      ]);
+
+      if (payments > 0 || invoices > 0) {
+        const blockers = [
+          payments > 0 ? `${payments} payment(s)` : null,
+          invoices > 0 ? `${invoices} invoice(s) generated from it` : null,
+        ].filter(Boolean);
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: `This document is still referenced by ${blockers.join(' and ')}. Delete or cancel them first.`,
+        });
+      }
+
       await ctx.db.document.delete({
         where: { id: input.id },
       });
+      await removeStoredPdf(ctx.storage, document.pdfUrl);
 
       return { success: true };
+    }),
+
+  import: adminProcedure.input(ImportDocumentSchema).mutation(async ({ input, ctx }) => {
+    try {
+      return await importDocument(ctx, input);
+    } catch (error) {
+      rethrowUnexpected(error, 'Failed to import the document');
+    }
+  }),
+
+  update: adminProcedure.input(UpdateDocumentSchema).mutation(async ({ input, ctx }) => {
+    try {
+      return await updateDocument(ctx, input);
+    } catch (error) {
+      rethrowUnexpected(error, 'Failed to update the document');
+    }
+  }),
+
+  setSignature: adminProcedure.input(SetSignatureSchema).mutation(async ({ input, ctx }) => {
+    try {
+      return await setDocumentSignature(ctx, input);
+    } catch (error) {
+      rethrowUnexpected(error, 'Failed to set the signature');
+    }
+  }),
+
+  refreshSignLink: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const document = await requireRowScope(
+        ctx.db,
+        ctx.user.id,
+        await ctx.db.document.findUnique({ where: { id: input.id } }),
+        'Document not found'
+      );
+
+      return { url: await ensureClientSignUrl(ctx, document) };
     }),
 
   types: adminProcedure.query(() => {
@@ -525,12 +585,14 @@ export const documentRouter = router({
             signatureStatus: 'sent',
             plumeDocumentId: sent.documentId,
             plumeUrl: sent.url,
+            plumeClientSignUrl: signingUrlFor(sent.signers, client.contactEmail),
           },
           select: {
             id: true,
             signatureStatus: true,
             plumeDocumentId: true,
             plumeUrl: true,
+            plumeClientSignUrl: true,
             signedAt: true,
             nuageArchivedAt: true,
           },
