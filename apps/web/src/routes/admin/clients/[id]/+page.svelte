@@ -329,6 +329,23 @@
 							<Badge tone="success">Vérifié</Badge>
 						</div>
 					{/if}
+					{#if client.gloutonUrl}
+						<div class="flex flex-col gap-1">
+							<span class="text-fc-xs text-fc-fg-muted">Glouton</span>
+							<div class="flex flex-wrap items-center gap-2">
+								<Badge tone="info">Lié dans Glouton</Badge>
+								<Button
+									variant="ghost"
+									size="sm"
+									href={client.gloutonUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									Voir dans Glouton
+								</Button>
+							</div>
+						</div>
+					{/if}
 				</Section>
 
 				<Section title="Dates" card>
