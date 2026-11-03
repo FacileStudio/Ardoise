@@ -14,6 +14,18 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-03
+
+### Changed
+
+- Facile SSO owns staff: anyone who signs in through SSO is staff, a first sign-in creates the account, and every sign-in refreshes the name and picture from SSO.
+- Under SSO_ONLY, Ardoise no longer creates staff, changes roles or sets passwords, and the users settings hide invitations, promote and demote.
+- The SSO picture is the stable Registre URL instead of a one-time copy, so a new picture shows without signing in again.
+
+### Fixed
+
+- Staff showed as "Admin User": Registre sends `name` but no given or family name, and only those were read.
+
 ## [0.8.0] - 2026-11-03
 
 ### Added
