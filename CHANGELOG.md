@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-03
+
+### Changed
+
+- Spaces use the share-circle icon.
+
 ## [0.9.0] - 2026-11-03
 
 ### Changed
