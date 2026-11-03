@@ -14,6 +14,17 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-03
+
+### Added
+
+- Spaces mirror Registre's shared spaces: imported once, then synced at boot, every 5 minutes and on `POST /api/registre/sync`.
+- Registre members Ardoise does not know yet are provisioned as SSO-only admins; an existing user's role never changes.
+
+### Changed
+
+- Linked spaces are managed in Registre: create, rename, delete, membership and leave answer 409, and the web shows a Manage in Registre link.
+
 ## [0.7.6] - 2026-11-01
 
 ### Changed
