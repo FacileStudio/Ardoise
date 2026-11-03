@@ -19,7 +19,6 @@ import {
   createReadinessHandler,
 } from './handlers/health';
 import { createVersionHandler, resolveVersion } from './handlers/version';
-import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
 import { prisma } from '@repo/database';
 import { DirectoryClient, SyncPath } from './registre/directory';
@@ -42,8 +41,6 @@ app.onError((err, c) => {
 const authManager = new AuthManager({
   encryptionSecret: env.ENCRYPTION_SECRET,
 });
-
-await bootstrapAdmin(env, authManager);
 
 const storage = new StorageService({
   storagePath: env.STORAGE_PATH,

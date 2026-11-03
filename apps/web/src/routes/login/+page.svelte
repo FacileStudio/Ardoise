@@ -12,19 +12,13 @@
 
   const apiUrl = env.API_URL?.replace(/\/trpc\/?$/, '').replace(/\/$/, '') ?? '';
 
-  const inputClass =
-    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
-  const labelClass = 'text-sm font-medium leading-none';
   const primaryButtonClass =
     'inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50';
-  let loading = $state(false);
   let oidcLoading = $state(false);
   let error = $state('');
   let email = $state('');
-  let password = $state('');
   let oidcEnabled = $state(false);
   let configLoaded = $state(false);
-  let passwordLogin = $state(true);
   let clientMagicLink = $state(true);
   let audience = $state<'client' | 'staff'>('client');
   let linkSending = $state(false);
@@ -71,7 +65,6 @@
       const res = await fetch(`${apiUrl}/auth/config`);
       const config = await res.json();
       oidcEnabled = config.oidc_enabled ?? false;
-      passwordLogin = config.password_login ?? true;
       clientMagicLink = config.client_magic_link ?? true;
     } catch { /* noop */ }
 
@@ -100,19 +93,6 @@
     linkSent = false;
   }
 
-  async function handleLogin() {
-    loading = true;
-    error = '';
-    try {
-      const { user } = await trpc.auth.login.mutate({ email, password });
-      authStore.setAuth(user as SessionUser);
-      await goto(resolve(redirectForRole(user as SessionUser)));
-    } catch (err) {
-      error = err instanceof Error ? err.message : "Échec de l'authentification.";
-    } finally {
-      loading = false;
-    }
-  }
 </script>
 
 <svelte:head>
@@ -222,60 +202,12 @@
               ></iconify-icon>
               Se connecter avec Facile
             </a>
-            {#if passwordLogin}
-              <div class="my-6 flex items-center gap-3">
-                <span class="h-px flex-1 bg-border"></span>
-                <span class="text-xs text-muted-foreground">ou</span>
-                <span class="h-px flex-1 bg-border"></span>
-              </div>
-            {/if}
-          {/if}
-
-          {#if passwordLogin}
-            <form
-              onsubmit={(e) => { e.preventDefault(); handleLogin(); }}
-              class="space-y-4"
-            >
-              <div class="space-y-1.5">
-                <label for="email" class={labelClass}>Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  bind:value={email}
-                  placeholder="vous@exemple.com"
-                  autocomplete="email"
-                  required
-                  disabled={loading}
-                  class={inputClass}
-                />
-              </div>
-
-              <div class="space-y-1.5">
-                <label for="password" class={labelClass}>Mot de passe</label>
-                <input
-                  id="password"
-                  type="password"
-                  bind:value={password}
-                  placeholder="••••••••"
-                  autocomplete="current-password"
-                  required
-                  disabled={loading}
-                  class={inputClass}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || !email || !password}
-                class={primaryButtonClass}
-              >
-                {loading ? 'Connexion…' : 'Se connecter'}
-              </button>
-            </form>
+          {:else}
+            <Alert tone="warning">La connexion équipe passe par Facile SSO, qui n'est pas configuré.</Alert>
           {/if}
         {/if}
 
-        {#if clientMagicLink && (oidcEnabled || passwordLogin)}
+        {#if clientMagicLink && oidcEnabled}
           <p class="mt-8 text-center text-sm text-muted-foreground">
             {#if audience === 'client'}
               <button type="button" class="inline-flex min-h-11 items-center px-3 font-medium underline" onclick={() => showAudience('staff')}>

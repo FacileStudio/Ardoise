@@ -27,8 +27,6 @@ export function createOIDCRoutes(
   app.get('/auth/config', (c) =>
     c.json({
       oidc_enabled: config !== null,
-      sso_only: env.SSO_ONLY,
-      password_login: !env.SSO_ONLY,
       client_magic_link: true,
     })
   );

@@ -28,8 +28,7 @@ a restart.
 ## Components
 
 - `apps/backend` — Hono app. Wires CORS, request logging, three rate-limit tiers, then mounts the
-  handlers listed above. Its entry point calls `bootstrapAdmin()` before serving, so the admin
-  account from `ADMIN_EMAIL` / `ADMIN_PASSWORD` always exists.
+  handlers listed above.
 - `apps/web` — one SvelteKit app for both audiences. `/app/*` needs any authenticated user,
   `/admin/*` needs `ADMIN`, `/login` redirects by role, `/legal/*` is public.
 - `packages/trpc` — the API itself. Eleven module directories, each with `router.ts` and
@@ -87,12 +86,11 @@ Document numbering is driven from `Settings`: `nextInvoiceNumber`, `nextQuoteNum
 
 Local auth is a custom HS256 JWT scheme. `AuthManager` (`@repo/auth`) signs with `jose` using
 `ENCRYPTION_SECRET`, with an issuer and audience that still default to `maxi-boilerplate-api` and
-`maxi-boilerplate-client` — inherited from the boilerplate and never renamed. Passwords are hashed
-with argon2 through `@repo/crypto`.
+`maxi-boilerplate-client` — inherited from the boilerplate and never renamed.
 
-- `auth.login` is for staff. It refuses every CLIENT, whatever the password, with the same
-  `Invalid credentials` error and the same hashing work as a wrong password. On success it returns
-  an access token (15 minutes) and a refresh token (7 days), both set as
+- There is no password login. Staff sign in through OIDC, clients through a magic link. Both
+  end in `issueSession`, which returns an access token (15 minutes) and a refresh token (7 days),
+  both set as
   `HttpOnly` `SameSite=Lax` cookies. The refresh cookie is scoped to `Path=/trpc/auth.refresh`,
   so it is never sent with ordinary calls. `Secure` is added when `NODE_ENV=production`.
 - Role checks come from `@repo/auth-shared`, which defines the `SessionUser` shape and a
@@ -126,13 +124,12 @@ dependency on Prisma, tRPC or SMTP) and wired in `packages/trpc/src/modules/magi
 There is no browser binding: a forwarded mail grants access for the link lifetime (15 minutes by
 default) and one use. Requests are capped per email and per IP per hour (see
 `docs/configuration.md`), on top of the strict rate-limit bucket that `magicLink.request` and
-`magicLink.consume` share with `auth.login`. The link an admin triggers by creating a client is
+`magicLink.consume` share. The link an admin triggers by creating a client is
 not counted against that client. Request and consume outcomes are logged with the user id and IP,
 never the token.
 
-Invitations no longer create clients: `invitation.create` and `invitation.accept` refuse
-`role: 'CLIENT'`, and `space.inviteMember` is gone. An admin creates the client first, then adds
-the user to a space with `space.addMember`, which answers `NOT_FOUND` for an unknown email.
+There are no invitations. An admin creates the client first, then adds the user to a space with
+`space.addMember`, which answers `NOT_FOUND` for an unknown email.
 
 The verify page loads no third-party resource (no icon font or CDN), sends
 `Referrer-Policy: no-referrer`, and the web server redacts the token from the URLs it logs. The
@@ -141,9 +138,10 @@ exclude that route from access logs if the proxy keeps them.
 
 ### OIDC
 
-Optional, invite-only login against any OpenID Connect provider (Registre in production). It
-activates when `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set. Password login
-stays available for staff unless `SSO_ONLY` is on.
+The only staff login, against Registre (`https://sso.facile.studio` in production). It activates
+when `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set, and production refuses to
+boot without them. Anyone who signs in is staff; their name and picture come from the SSO profile
+on every sign-in. There is no staff password.
 
 Code lives in `apps/backend/src/oidc/`, one job per file:
 

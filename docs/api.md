@@ -29,12 +29,11 @@ meta to the procedures you want exposed is what fills it in.
 
 | Procedure | Type | Level | Input |
 |---|---|---|---|
-| `login` | mutation | public | `{ email, password }`, password min 8. Staff only: a CLIENT is always refused with `Invalid credentials` |
 | `refresh` | mutation | public | `{}` — reads the `refresh_token` cookie |
 | `me` | query | protected | `{}` |
 | `logout` | mutation | protected | `{}` |
 
-`login` and `refresh` set `auth_token` (15 min, `Path=/`) and `refresh_token` (7
+`refresh` sets `auth_token` (15 min, `Path=/`) and `refresh_token` (7
 days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` clears both.
 `me` returns the context user. This router sits behind the strictest rate-limit bucket.
 
@@ -43,10 +42,9 @@ days, `Path=/trpc/auth.refresh`) as `HttpOnly` `SameSite=Lax` cookies. `logout` 
 | Procedure | Type | Level | Input |
 |---|---|---|---|
 | `request` | mutation | public | `{ email }`. Always returns `{ ok: true }`, whether or not a link was sent |
-| `consume` | mutation | public | `{ token }`. Sets the same cookies as `auth.login` and returns `{ user }`. Unknown, expired and used tokens all fail with `This link is invalid or has expired` |
+| `consume` | mutation | public | `{ token }`. Sets the same cookies as `auth.refresh` and returns `{ user }`. Unknown, expired and used tokens all fail with `This link is invalid or has expired` |
 
-Only active CLIENT users receive a link. Both procedures share the strict rate-limit bucket with
-`auth.login`, and `request` is also capped per email and per IP per hour. See
+Only active CLIENT users receive a link. Both procedures share the strict rate-limit bucket, and `request` is also capped per email and per IP per hour. See
 `docs/architecture.md` for the flow.
 
 ## `user`
@@ -54,17 +52,8 @@ Only active CLIENT users receive a link. Both procedures share the strict rate-l
 | Procedure | Type | Level | Input |
 |---|---|---|---|
 | `me` | query | protected | — |
-| `updateProfile` | mutation | protected | `{ firstName?, lastName? }` |
-| `changePassword` | mutation | protected | `{ currentPassword, newPassword }`, new min 8. Refused for CLIENT users |
+| `updateProfile` | mutation | protected | `{ firstName?, lastName? }`. Clients only: staff names come from Facile SSO |
 | `deleteOwnAccount` | mutation | protected | — |
-| `list` | query | admin | `{ role?: 'all' \| 'admin' \| 'user' }?` |
-| `getById` | query | admin | `{ id }` |
-| `getStats` | query | admin | — |
-| `create` | mutation | admin | `{ email, password, firstName, lastName, role }`. Refuses `role: 'CLIENT'`: clients are created with `client.create` |
-| `update` | mutation | admin | `{ id, role? }` |
-| `adminUpdate` | mutation | admin | `{ id, email?, firstName?, lastName?, role?, password? }`. A `password` is refused for CLIENT users |
-| `delete` | mutation | admin | `{ id }` |
-| `bulkDelete` | mutation | admin | `{ ids: string[] }` |
 
 ## `client`
 

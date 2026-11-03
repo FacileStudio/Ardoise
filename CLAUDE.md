@@ -34,7 +34,6 @@ Use `mise run` (task runner, pins bun, node and Postgres) or `bun run`:
 | `mise run lint` | Lint all workspaces |
 | `mise run format` | Prettier format |
 | `mise run build` | Build all apps |
-| `mise run //apps/backend:create-admin` | Create admin user for local dev |
 
 Database scripts (from `packages/database`):
 
@@ -56,7 +55,7 @@ apps/
       /           Landing page
       /login      Unified login (redirects by role)
       /app/       Client routes (payments, profile, settings)
-      /admin/     Admin routes (clients, payments, documents, users, settings)
+      /admin/     Admin routes (clients, payments, documents, spaces, settings)
       /legal/     Legal pages (privacy, terms, cookies)
 
 packages/
@@ -99,7 +98,7 @@ Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `s
 
 ### Authentication
 
-Custom JWT auth via `AuthManager` from `@repo/auth`. Password hashing uses Argon2/scrypt through `CryptoService`. Always use `AuthManager.hashPassword()` when creating staff users -- never bcrypt directly. CLIENT users have no password (`User.password` is nullable and nulled for clients): they sign in with a magic link, `auth.login` refuses them, and `user.create`, `changePassword` and invitations refuse CLIENT. The backend auto-creates an admin user on first startup from `ADMIN_EMAIL` and `ADMIN_PASSWORD` env vars.
+Custom JWT sessions via `AuthManager` from `@repo/auth`. Nobody signs in with a password: staff use Facile SSO (see OIDC) and clients use a magic link. There is no `auth.login`, no bootstrap admin, no users admin and no invitations. `User.password` is a legacy nullable column nothing reads.
 
 ### Client sign-in (magic link)
 
@@ -113,7 +112,7 @@ Documents made outside Ardoise come in through `document.import` (`source = impo
 
 ### OIDC
 
-Optional, invite-only SSO in `apps/backend/src/oidc/` (see `docs/architecture.md`). SSO never creates users: an admin creates the `User`, and the first SSO login links it by `(issuer, sub)` through a verified email. Roles are never taken from claims. Password login always stays on.
+Facile SSO (Registre) is the only staff login, in `apps/backend/src/oidc/` (see `docs/architecture.md`). Production refuses to boot without `OIDC_ISSUER`. Anyone who signs in is staff: `resolveUser` (`apps/backend/src/oidc/identity.ts`) finds them by `(issuer, sub)`, then by verified email, else creates them, and every sign-in sets `role = ADMIN` plus `firstName`, `lastName` (split from the `name` claim, since Registre sends no given/family names) and `ssoPictureUrl`. Ardoise keeps no separate admin list, and `user.updateProfile` refuses staff. `GET /auth/config` returns `oidc_enabled` and `client_magic_link`.
 
 ### Prisma
 
@@ -129,22 +128,11 @@ Flow of a payment: admin creates payment -> backend sends email to client -> cli
 
 Pre-signed URL flow: client requests URL via tRPC -> server generates it -> client uploads directly to S3 -> client confirms via tRPC.
 
-### SSO-only mode
-
-`SSO_ONLY=true` (or `1`) makes SSO the only way for staff to sign in. It needs `OIDC_ISSUER` (the backend refuses to boot without it) and makes `ADMIN_PASSWORD` optional.
-
-- `auth.login` refuses every user with `Invalid credentials`, after the same hashing work as a wrong password (it already refuses every CLIENT, see Authentication). Clients are unaffected because they sign in with a magic link, so the login page shows the client link form and hides the staff password form.
-- Facile SSO owns staff. Anyone who signs in through SSO is staff: `resolveUser` (apps/backend/src/oidc/identity.ts) finds them by identity, then by verified email, else creates them, and every sign-in sets `role = ADMIN` plus `firstName`, `lastName` (split from the `name` claim, since Registre sends no given/family names) and `ssoPictureUrl`. Ardoise keeps no separate admin list.
-- `invitation.create` and `invitation.accept` refuse ADMIN invitations (and CLIENT invitations, always). `user.create`, and any `role` or `password` change through `user.update` and `user.adminUpdate`, answer FORBIDDEN; the web hides those controls.
-- `bootstrapAdmin` never sets a real password: the admin has the unusable password `!sso-only`, `ADMIN_EMAIL` is ensured as an active, verified ADMIN, and reruns write nothing.
-- `ADMIN_MIGRATE_FROM=old@example.com` migrates the legacy admin. If no user has `ADMIN_EMAIL`, the legacy user is renamed in one UPDATE (id, data, ownerships and linked accounts kept, sessions deleted). If `ADMIN_EMAIL` already exists, the legacy user is banned, its password cleared and its sessions deleted; the row stays for ownership. No other user is touched.
-- `GET /auth/config` returns `sso_only` and `password_login`.
-
 ## Environment Variables
 
 Schemas defined in `packages/env/src/index.ts`. Each app validates on startup via `check-env`.
 
-Backend requires: `DATABASE_URL`, `ENCRYPTION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (unless `SSO_ONLY`), `BACKEND_URL`, `FRONTEND_URL`. Stripe/SMTP/company settings are configured in the admin UI, not env vars.
+Backend requires: `DATABASE_URL`, `ENCRYPTION_SECRET`, `OIDC_ISSUER`/`OIDC_CLIENT_ID`/`OIDC_CLIENT_SECRET` (production), `BACKEND_URL`, `FRONTEND_URL`. Stripe/SMTP/company settings are configured in the admin UI, not env vars.
 
 Web app: `PORT`, `VITE_API_URL` (set from `BACKEND_URL` by Docker Compose).
 
@@ -168,7 +156,7 @@ See `apps/backend/.env.example` for reference.
 - Browser imports of `@repo/database` get a null stub for `prisma` -- add `@repo/database`, `@prisma/client`, `pg` to Vite `optimizeDeps.exclude`
 - `BACKEND_URL` is passed as `VITE_API_URL` at Docker build time to the web app
 - CORS origins are derived from `FRONTEND_URL` env var
-- Default dev admin: `admin@example.com` / `admin123456789`
+- Local staff sign-in needs a reachable Registre: set the `OIDC_*` variables
 
 ## Nuage, Plume and Glouton links
 

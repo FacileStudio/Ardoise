@@ -1,5 +1,4 @@
 import { router, publicProcedure, protectedProcedure } from '../../trpc';
-import { loginSchema } from '@repo/auth-shared';
 import { REFRESH_COOKIE_NAME, extractCookies } from '../../context';
 import { TRPCError } from '@trpc/server';
 import authService from './service';
@@ -11,21 +10,6 @@ function appendCookies(resHeaders: Headers, cookies: string[]) {
 }
 
 export const authRouter = router({
-  login: publicProcedure.input(loginSchema).mutation(async ({ ctx, input }) => {
-    const result = await authService.login(
-      ctx.db,
-      ctx.auth,
-      input,
-      { ipAddress: ctx.ipAddress, userAgent: ctx.userAgent },
-      { ssoOnly: ctx.env.SSO_ONLY }
-    );
-    appendCookies(
-      ctx.resHeaders,
-      authCookies(result.token, result.refreshToken, cookieOptions(ctx.env))
-    );
-    return { user: result.user };
-  }),
-
   refresh: publicProcedure.input(z.object({})).mutation(async ({ ctx }) => {
     const cookieHeader = ctx.req?.headers.get('cookie') ?? null;
     const candidates = extractCookies(cookieHeader, REFRESH_COOKIE_NAME);

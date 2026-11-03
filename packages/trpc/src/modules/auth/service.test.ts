@@ -20,32 +20,14 @@ const user = {
 };
 
 function auth(overrides: Partial<Record<string, unknown>> = {}) {
-  const verified: string[] = [];
   const manager = {
-    verifyPassword: async (_password: string, hash: string) => {
-      verified.push(hash);
-      return hash === 'hash';
-    },
-    hashPassword: async () => 'decoy',
     verifyRefreshToken: async () => ({ userId: 'u1' }),
     createToken: async () => 'access',
     createRefreshToken: async () => ({ token: 'new-refresh', expiresAt: new Date(Date.now() + 1e6) }),
     ...overrides,
   } as unknown as AuthManager;
-  return { manager, verified };
+  return { manager };
 }
-
-describe('authService.login', () => {
-  it('spends a password verification even when the email is unknown', async () => {
-    const { manager, verified } = auth();
-    const db = { user: { findUnique: async () => null } } as unknown as PrismaClient;
-
-    await expect(
-      authService.login(db, manager, { email: 'nobody@b.fr', password: 'whatever1' })
-    ).rejects.toThrow('Invalid credentials');
-    expect(verified).toHaveLength(1);
-  });
-});
 
 describe('authService.refresh', () => {
   const session = { id: 's1', userId: 'u1', token: 'old', expiresAt: new Date(Date.now() + 1e6) };

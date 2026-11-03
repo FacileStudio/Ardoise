@@ -54,7 +54,7 @@ docker compose down
 ## Environment for a real deployment
 
 At minimum: `NODE_ENV=production`, `ENCRYPTION_SECRET` (32+ random characters),
-`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
+`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
 `BACKEND_URL` and `FRONTEND_URL` set to the real public origins. See
 [configuration.md](configuration.md) for the full list and the fail-fast behavior.
 

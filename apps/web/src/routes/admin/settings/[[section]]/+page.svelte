@@ -23,7 +23,6 @@
   import { loadAuthConfig, type AuthConfig } from '$lib/auth-config';
   import ProfileSection from '$lib/components/settings/ProfileSection.svelte';
   import AppearanceSection from '$lib/components/settings/AppearanceSection.svelte';
-  import UsersSection from '$lib/components/settings/UsersSection.svelte';
   import { ImageUpload } from '$lib/ui';
 
   let loading = $state(true);
@@ -82,7 +81,6 @@
     { id: 'payments', label: 'Paiements' },
     { id: 'email', label: 'Email' },
     { id: 'integrations', label: 'Intégrations' },
-    { id: 'users', label: 'Utilisateurs' },
     { id: 'advanced', label: 'Avancé' },
   ] as const;
 
@@ -252,8 +250,6 @@
     <ProfileSection area="admin" />
   {:else if section === 'appearance'}
     <AppearanceSection />
-  {:else if section === 'users'}
-    <UsersSection />
   {:else if section === 'advanced'}
     <SettingsSection title="Instance" description="Faits utiles quand quelque chose casse.">
       <SettingsRow label="Application">
@@ -261,14 +257,14 @@
       </SettingsRow>
       <SettingsRow label="Connexion du personnel">
         <StatusDot
-          tone={authConfig?.ssoOnly ? 'success' : 'info'}
-          label={authConfig?.ssoOnly ? 'SSO uniquement' : 'SSO et mot de passe'}
+          tone={authConfig?.oidcEnabled ? 'success' : 'danger'}
+          label={authConfig?.oidcEnabled ? 'Facile SSO' : 'SSO non configuré'}
         />
       </SettingsRow>
       <SettingsRow label="Portail client">
         <StatusDot
-          tone={authConfig?.passwordLogin === false ? 'neutral' : 'success'}
-          label="Connexion par mot de passe"
+          tone={authConfig?.clientMagicLink ? 'success' : 'neutral'}
+          label="Lien de connexion par email"
         />
       </SettingsRow>
     </SettingsSection>
@@ -409,7 +405,7 @@
       {@render saveRow()}
     </SettingsSection>
   {:else if section === 'email'}
-    <SettingsSection title="SMTP" description="Serveur d'envoi des factures, invitations et relances.">
+    <SettingsSection title="SMTP" description="Serveur d'envoi des factures, liens de connexion et relances.">
       <SettingsRow label="État">
         <StatusDot tone={smtpStatus.tone} label={smtpStatus.label} />
       </SettingsRow>

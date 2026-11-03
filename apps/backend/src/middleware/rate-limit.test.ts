@@ -14,7 +14,7 @@ const call = (server: Hono, path: string, ip = '203.0.113.7') =>
 
 describe('bucketCosts', () => {
   it('counts every procedure of a batch against its own bucket', () => {
-    const costs = bucketCosts('/trpc/user.me,auth.login,auth.login,payment.list');
+    const costs = bucketCosts('/trpc/user.me,magicLink.request,magicLink.request,payment.list');
 
     expect(costs.get('auth')).toBe(2);
     expect(costs.get('payment')).toBe(1);
@@ -24,7 +24,7 @@ describe('bucketCosts', () => {
 
 describe('magic link procedures', () => {
   it('share the strict bucket with the login attempt', () => {
-    const costs = bucketCosts('/trpc/magicLink.request,magicLink.consume,auth.login');
+    const costs = bucketCosts('/trpc/magicLink.request,magicLink.consume,magicLink.request');
 
     expect(costs.get('auth')).toBe(3);
     expect(costs.get('general')).toBeUndefined();
@@ -52,37 +52,37 @@ describe('trpc rate limit', () => {
   it('blocks the sixth login attempt', async () => {
     const server = app();
     const statuses: number[] = [];
-    for (let i = 0; i < 6; i++) statuses.push((await call(server, '/trpc/auth.login')).status);
+    for (let i = 0; i < 6; i++) statuses.push((await call(server, '/trpc/magicLink.request')).status);
 
     expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
   });
 
   it('does not let a batch smuggle past the login limit', async () => {
     const server = app();
-    const batch = Array(50).fill('auth.login').join(',');
+    const batch = Array(50).fill('magicLink.request').join(',');
 
     expect((await call(server, `/trpc/${batch}?batch=1`)).status).toBe(429);
   });
 
   it('does not let a varied path or a leading procedure dodge the login bucket', async () => {
     const server = app();
-    for (let i = 0; i < 5; i++) await call(server, '/trpc/auth.login');
+    for (let i = 0; i < 5; i++) await call(server, '/trpc/magicLink.request');
 
-    expect((await call(server, '/trpc/user.me,auth.login?batch=1')).status).toBe(429);
-    expect((await call(server, '/trpc/auth.login,auth.me')).status).toBe(429);
+    expect((await call(server, '/trpc/user.me,magicLink.request?batch=1')).status).toBe(429);
+    expect((await call(server, '/trpc/magicLink.request,auth.me')).status).toBe(429);
   });
 
   it('keeps other clients independent', async () => {
     const server = app();
-    for (let i = 0; i < 6; i++) await call(server, '/trpc/auth.login');
+    for (let i = 0; i < 6; i++) await call(server, '/trpc/magicLink.request');
 
-    expect((await call(server, '/trpc/auth.login', '198.51.100.1')).status).toBe(200);
+    expect((await call(server, '/trpc/magicLink.request', '198.51.100.1')).status).toBe(200);
   });
 
   it('does not let a caller pick a fresh identity with a forged first address', async () => {
     const server = app();
-    for (let i = 0; i < 5; i++) await call(server, '/trpc/auth.login', `10.0.0.${i}, 203.0.113.7`);
+    for (let i = 0; i < 5; i++) await call(server, '/trpc/magicLink.request', `10.0.0.${i}, 203.0.113.7`);
 
-    expect((await call(server, '/trpc/auth.login', '10.9.9.9, 203.0.113.7')).status).toBe(429);
+    expect((await call(server, '/trpc/magicLink.request', '10.9.9.9, 203.0.113.7')).status).toBe(429);
   });
 });

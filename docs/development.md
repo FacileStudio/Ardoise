@@ -26,7 +26,7 @@ schema. `mise run db:down` stops it. To use another Postgres, skip `db:up` and s
 in both `.env` files.
 
 You still need a backend environment. The required variables are `NODE_ENV`, `DATABASE_URL`,
-`ENCRYPTION_SECRET` (32+ characters), `ADMIN_EMAIL` and `ADMIN_PASSWORD` — see
+`ENCRYPTION_SECRET` (32+ characters), plus the `OIDC_*` variables to sign in as staff — see
 [configuration.md](configuration.md). The backend refuses to start without them.
 
 ## Running
@@ -41,10 +41,8 @@ mise run //apps/web:dev       # web only, port 3000
 and `check-env`, so Turbo regenerates the Prisma client and validates the environment before
 either app comes up.
 
-The backend calls `bootstrapAdmin()` on startup, so the account from `ADMIN_EMAIL` /
-`ADMIN_PASSWORD` always exists — there is no separate seeding step for logging in. `mise run
-//apps/backend:create-admin` exists as a manual fallback and writes the development default
-`admin@example.com` / `admin123456789`.
+Staff sign in with Facile SSO only. Point `OIDC_ISSUER` at a Registre (local or
+`https://sso.facile.studio`) with an Ardoise client; the first sign-in creates the staff account.
 
 Once running: the web app is at <http://localhost:3000> (client portal `/app`, admin panel
 `/admin`), the API at <http://localhost:3001>, and interactive API reference at

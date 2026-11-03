@@ -17,10 +17,7 @@ and exits 1** — the process does not start degraded.
 | `FRONTEND_URL` | no | `http://localhost:3000` | Public web origin. Allowed CORS origin, and the default OIDC success redirect |
 | `ENCRYPTION_SECRET` | yes | — | Minimum 32 characters. Signs access and refresh JWTs, keys `@repo/crypto`, and signs storage tickets |
 | `STORAGE_PATH` | no | `./data/uploads` | Directory the filesystem object store writes to |
-| `ADMIN_EMAIL` | yes | — | Must be a valid email. The admin account bootstrapped on every startup |
-| `ADMIN_PASSWORD` | unless `SSO_ONLY` | — | Minimum 8 characters. Applied on every startup, ignored when `SSO_ONLY` is true |
-| `SSO_ONLY` | no | `false` | `true` or `1`. Staff sign in with SSO only; requires `OIDC_ISSUER`. See CLAUDE.md |
-| `ADMIN_MIGRATE_FROM` | no | — | Legacy admin email, used only with `SSO_ONLY`. Renamed to `ADMIN_EMAIL`, or disabled when `ADMIN_EMAIL` already exists |
+| `OIDC_ISSUER` | in production | — | Facile SSO issuer. Staff sign in only through it. Needs `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` |
 | `MAGIC_LINK_TTL_MINUTES` | no | `15` | Lifetime of a client sign-in link, 1 to 1440 |
 | `MAGIC_LINK_MAX_PER_EMAIL_HOUR` | no | `5` | Link requests per client email per hour. Extra requests are dropped silently |
 | `MAGIC_LINK_MAX_PER_IP_HOUR` | no | `20` | Link requests per source IP per hour |

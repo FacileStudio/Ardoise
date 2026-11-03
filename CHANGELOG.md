@@ -14,6 +14,19 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Removed
+
+- Staff password login: `auth.login`, `user.changePassword` and the password form are gone. Staff sign in with Facile SSO only.
+- The bootstrap admin: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_MIGRATE_FROM`, `SSO_ONLY` and the `create-admin` script.
+- The users admin: the Users settings tab, `/admin/users`, staff invitations (`invitation.*`, `/invite`) and `user.create`, `list`, `getById`, `update`, `adminUpdate`, `delete`.
+- The Spaces link in the admin sidebar; the space switcher's "manage spaces" still opens `/admin/spaces`.
+
+### Changed
+
+- `OIDC_ISSUER` is required in production.
+- Staff profiles (name, picture) come from the SSO profile only; `user.updateProfile` refuses staff.
+- `GET /auth/config` no longer returns `sso_only` or `password_login`.
+
 ## [0.10.0] - 2026-11-03
 
 ### Added

@@ -1,8 +1,7 @@
 import env from '$lib/env';
 
 export type AuthConfig = {
-  ssoOnly: boolean;
-  passwordLogin: boolean;
+  oidcEnabled: boolean;
   clientMagicLink: boolean;
 };
 
@@ -13,11 +12,10 @@ export async function loadAuthConfig(): Promise<AuthConfig> {
     const res = await fetch(`${apiUrl}/auth/config`);
     const config = await res.json();
     return {
-      ssoOnly: config.sso_only ?? false,
-      passwordLogin: config.password_login ?? true,
+      oidcEnabled: config.oidc_enabled ?? false,
       clientMagicLink: config.client_magic_link ?? true,
     };
   } catch {
-    return { ssoOnly: false, passwordLogin: true, clientMagicLink: true };
+    return { oidcEnabled: false, clientMagicLink: true };
   }
 }

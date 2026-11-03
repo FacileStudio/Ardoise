@@ -28,13 +28,6 @@ export interface AuthState {
   loading: boolean;
 }
 
-export const loginSchema = z.object({
-  email: z.string().min(1, "L'email est requis").email("Format d'email invalide"),
-  password: z.string().min(8, 'Le mot de passe doit faire au moins 8 caractères'),
-});
-
-export type LoginInput = z.infer<typeof loginSchema>;
-
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.CLIENT]: 1,
   [UserRole.ADMIN]: 2,

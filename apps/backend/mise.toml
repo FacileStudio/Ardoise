@@ -39,8 +39,3 @@ run = [
   'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run lint',
   'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run typecheck',
 ]
-
-[tasks.create-admin]
-description = "Create the development admin (admin@example.com / admin123456789)"
-depends = ["//:install", "//packages/database:generate"]
-run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" run ../../scripts/create-admin.ts'

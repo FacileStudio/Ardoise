@@ -48,8 +48,9 @@ mise run dev
 ```
 
 `mise run db:setup` installs dependencies, starts a repo-local Postgres on port 5433, creates the
-`ardoise` database, generates the Prisma client and pushes the schema. The backend bootstraps an admin account from `ADMIN_EMAIL` and
-`ADMIN_PASSWORD` on every startup.
+`ardoise` database, generates the Prisma client and pushes the schema. Staff sign in with Facile
+SSO: set `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET`, and the first sign-in creates
+the account.
 
 ## Configuration
 
@@ -58,8 +59,7 @@ mise run dev
 | `NODE_ENV` | `development`, `production` or `test`; required, no default |
 | `DATABASE_URL` | Postgres connection string |
 | `ENCRYPTION_SECRET` | JWT signing key and storage-ticket secret, minimum 32 characters |
-| `ADMIN_EMAIL` | Bootstrap admin account, created on startup |
-| `ADMIN_PASSWORD` | Bootstrap admin password, minimum 8 characters |
+| `OIDC_ISSUER` | Facile SSO issuer, required in production; staff sign in only through it |
 | `BACKEND_URL` | Public API origin, also the base for storage URLs |
 | `FRONTEND_URL` | Public web origin, drives the CORS allow-list |
 

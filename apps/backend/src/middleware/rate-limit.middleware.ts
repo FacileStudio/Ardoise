@@ -78,7 +78,7 @@ const BUCKETS = {
 
 type Bucket = keyof typeof BUCKETS;
 
-const AUTH_PROCEDURES = new Set(['auth.login', 'magicLink.request', 'magicLink.consume']);
+const AUTH_PROCEDURES = new Set(['magicLink.request', 'magicLink.consume']);
 
 /**
  * A tRPC batch call puts several procedures in one path (`/trpc/a.x,b.y`), so a

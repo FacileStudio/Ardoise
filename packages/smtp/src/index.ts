@@ -11,6 +11,5 @@ export type {
   PaymentNotificationData,
   PaymentConfirmationData,
   PaymentReminderData,
-  InvitationData,
   MagicLinkData,
 } from './templates';

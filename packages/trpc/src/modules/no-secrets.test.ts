@@ -67,24 +67,12 @@ const payment = () => ({
   attachedDocuments: [],
 });
 
-const invitation = () => ({
-  id: 'i1',
-  email: 'x@y.fr',
-  role: 'CLIENT',
-  spaceId: null,
-  expiresAt: new Date(Date.now() + 1e6),
-  createdAt: new Date(0),
-  invitedBy: user(),
-  space: null,
-});
-
 const member = () => ({ spaceId: 's1', userId: 'u1', role: 'OWNER', joinedAt: new Date(0), user: user() });
 
 const ROWS: Record<string, () => any> = {
   user,
   client,
   payment,
-  invitation,
   spaceMember: member,
   space: () => ({ id: 's1', name: 'Team', description: null, registreSpaceId: null, createdAt: new Date(0), updatedAt: new Date(0) }),
   settings: () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }),
@@ -188,15 +176,6 @@ function assertClean(result: unknown) {
 
 const surfaces: Record<string, (c: ReturnType<typeof caller>) => Promise<unknown>> = {
   'user.me': (c) => c.user.me(),
-  'user.list': (c) => c.user.list({}),
-  'user.getById': (c) => c.user.getById({ id: 'u1' }),
-  'user.create': (c) =>
-    c.user.create({ email: 'n@b.fr', password: 'password1', firstName: 'N', lastName: 'B', role: 'ADMIN' }),
-  'user.update': (c) => c.user.update({ id: 'u1', role: 'CLIENT' }),
-  'user.adminUpdate': (c) => c.user.adminUpdate({ id: 'u1', firstName: 'Z' }),
-  'user.updateProfile': (c) => c.user.updateProfile({ firstName: 'Z' }),
-  'user.changePassword': (c) => c.user.changePassword({ currentPassword: 'old', newPassword: 'newpassword' }),
-  'user.delete': (c) => c.user.delete({ id: 'u1' }),
   'user.deleteOwnAccount': (c) => c.user.deleteOwnAccount(),
   'client.list': (c) => c.client.list({} as any),
   'client.getById': (c) => c.client.getById({ id: 'c1' }),
@@ -215,9 +194,6 @@ const surfaces: Record<string, (c: ReturnType<typeof caller>) => Promise<unknown
   'space.getMembers': (c) => c.space.getMembers({ id: 's1' }),
   'space.addMember': (c) => c.space.addMember({ spaceId: 's1', email: 'target@b.fr', role: 'MEMBER' }),
   'space.updateMemberRole': (c) => c.space.updateMemberRole({ spaceId: 's1', userId: 'u2', role: 'ADMIN' }),
-  'invitation.list': (c) => c.invitation.list(),
-  'invitation.create': (c) => c.invitation.create({ email: 'n@b.fr', role: 'ADMIN' }),
-  'invitation.preview': (c) => c.invitation.preview({ token: 'tok' }),
 };
 
 describe('procedures never serialize secrets', () => {
