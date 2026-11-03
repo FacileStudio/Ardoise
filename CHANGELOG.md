@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-03
+
+### Fixed
+
+- Staff avatars: the Facile SSO picture now wins over a stale uploaded avatar, whose private storage URL answered 401 and left only initials.
+
 ## [0.11.0] - 2026-11-03
 
 ### Removed
