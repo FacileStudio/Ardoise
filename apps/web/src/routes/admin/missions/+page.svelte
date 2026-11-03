@@ -14,9 +14,9 @@
 		Tabs,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
-	import { Pagination, SearchInput } from '$lib/ui';
+	import { Pagination, SearchInput, SpaceFilter } from '$lib/ui';
 	import { logger } from '@repo/logger';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import { STATUS_LABELS, STATUS_VARIANTS, formatDate, type MissionStatus } from '$lib/mission';
 
 	const limit = 20;
@@ -51,7 +51,7 @@
 				limit,
 				search: searchQuery || undefined,
 				status: statusFilter || undefined,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 
 			missions = response.missions;
@@ -105,11 +105,15 @@
 			{/snippet}
 		</PageHeader>
 
-		<SearchInput
-			placeholder="Rechercher une mission ou un client"
-			bind:value={searchInput}
-			oninput={() => handleSearchInput(searchInput)}
-		/>
+		<div class="flex flex-col gap-2 sm:flex-row">
+			<SearchInput
+				class="flex-1"
+				placeholder="Rechercher une mission ou un client"
+				bind:value={searchInput}
+				oninput={() => handleSearchInput(searchInput)}
+			/>
+			<SpaceFilter />
+		</div>
 
 		<Tabs
 			label="Filtrer par statut"
@@ -125,6 +129,7 @@
 						<tr>
 							<th scope="col">Mission</th>
 							<th scope="col">Client</th>
+							<th scope="col">Espace</th>
 							<th scope="col">Prestataires</th>
 							<th scope="col">Statut</th>
 							<th scope="col">Contenu</th>
@@ -143,6 +148,7 @@
 									</a>
 								</td>
 								<td class="text-fc-fg">{mission.client.companyName}</td>
+								<td class="text-fc-fg-muted">{mission.space?.name ?? '-'}</td>
 								<td class="text-fc-fg-muted">{providerNames(mission)}</td>
 								<td>
 									<Badge tone={STATUS_VARIANTS[mission.status as MissionStatus]}>
@@ -172,7 +178,8 @@
 							</Badge>
 						</div>
 						<span class="text-fc-xs text-fc-fg-muted">
-							{mission.client.companyName} · {formatDate(mission.createdAt)}
+							{mission.client.companyName}{#if mission.space}
+								· {mission.space.name}{/if} · {formatDate(mission.createdAt)}
 						</span>
 					</Card>
 				{/each}

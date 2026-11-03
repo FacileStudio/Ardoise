@@ -17,7 +17,7 @@
 	} from '@facile/muse';
 	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import { ROLE_LABELS } from '$lib/mission';
 
 	type Role = 'LEAD' | 'SUBCONTRACTOR';
@@ -42,8 +42,8 @@
 	onMount(async () => {
 		try {
 			const [clientResult, providerResult] = await Promise.all([
-				trpc.client.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId }),
-				trpc.provider.list.query({ page: 1, limit: 100, spaceId: spaceContext.spaceId }),
+				trpc.client.list.query({ page: 1, limit: 100, spaceId: spaceFilter.spaceId }),
+				trpc.provider.list.query({ page: 1, limit: 100 }),
 			]);
 
 			clients = clientResult.clients as unknown as typeof clients;
@@ -93,7 +93,7 @@
 				clientId,
 				depositPercent: deposit ? Number(deposit) : undefined,
 				providers: linked,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 
 			toast.success('Mission créée');

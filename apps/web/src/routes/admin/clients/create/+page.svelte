@@ -11,16 +11,18 @@
 		Page,
 		PageHeader,
 		Section,
+		Select,
 		toast,
 	} from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 
 	let submitting = $state(false);
 	let formMessage = $state('');
 
 	let formData = $state({
+		spaceId: spaceFilter.spaceId ?? '',
 		contactFirstName: '',
 		contactLastName: '',
 		contactEmail: '',
@@ -34,6 +36,12 @@
 	});
 
 	let formErrors = $state<Record<string, string>>({});
+
+	$effect(() => {
+		if (!formData.spaceId && spaceFilter.spaces.length === 1) {
+			formData.spaceId = spaceFilter.spaces[0].id;
+		}
+	});
 
 	function resetErrors() {
 		formErrors = {};
@@ -51,6 +59,10 @@
 	function validateForm(): boolean {
 		resetErrors();
 		const nextErrors: Record<string, string> = {};
+
+		if (!formData.spaceId) {
+			nextErrors.spaceId = "Choisissez l'espace du client";
+		}
 
 		if (!formData.contactFirstName.trim()) {
 			nextErrors.contactFirstName = 'Le prénom du contact est requis';
@@ -91,7 +103,6 @@
 			submitting = true;
 			await trpc.client.create.mutate({
 				...formData,
-				spaceId: spaceContext.spaceId,
 				contactEmail: formData.contactEmail.trim(),
 				credentialEmail: formData.credentialEmail.trim(),
 			});
@@ -150,6 +161,14 @@
 	</Section>
 
 	<Section title="Informations entreprise" card>
+		<Field label="{$i18n.t('nav.space')} *" error={getFieldError('spaceId')}>
+			<Select bind:value={formData.spaceId}>
+				<option value="" disabled>Choisir un espace</option>
+				{#each spaceFilter.spaces as space (space.id)}
+					<option value={space.id}>{space.name}</option>
+				{/each}
+			</Select>
+		</Field>
 		<Field label="Nom de l'entreprise *" error={getFieldError('companyName')}>
 			<Input bind:value={formData.companyName} placeholder="Entreprise SAS" />
 		</Field>

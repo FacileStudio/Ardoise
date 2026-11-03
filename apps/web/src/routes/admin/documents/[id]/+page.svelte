@@ -28,7 +28,6 @@
 	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
 	import { loadSignatureEnabled } from '$lib/signature';
 	import { downloadDocument } from '$lib/download-document';
-	import { spaceContext } from '$lib/space-context.svelte';
 	import {
 		PDF_MAX_BYTES,
 		IMPORT_TYPES,
@@ -153,19 +152,22 @@
 
 	onMount(() => {
 		loadSignatureEnabled().then((enabled) => (signatureEnabled = enabled));
-		Promise.all([
-			load(),
-			trpc.document.types.query().then((list) => (docTypes = list)),
-			trpc.client.list
-				.query({ limit: 100, page: 1 })
-				.then((r: any) => (clients = r.clients.map((c: any) => ({ id: c.id, label: c.companyName })))),
-			trpc.mission.list
-				.query({ limit: 100, page: 1, spaceId: spaceContext.spaceId })
-				.then((r: any) => (missions = r.missions.map((m: any) => ({ id: m.id, label: m.name })))),
-			trpc.provider.list
-				.query({ limit: 100, page: 1, spaceId: spaceContext.spaceId })
-				.then((r: any) => (providers = r.providers.map((p: any) => ({ id: p.id, label: p.name })))),
-		])
+		load()
+			.then(() => {
+				const spaceId = doc?.spaceId;
+				return Promise.all([
+					trpc.document.types.query().then((list) => (docTypes = list)),
+					trpc.client.list
+						.query({ limit: 100, page: 1, spaceId })
+						.then((r: any) => (clients = r.clients.map((c: any) => ({ id: c.id, label: c.companyName })))),
+					trpc.mission.list
+						.query({ limit: 100, page: 1, spaceId })
+						.then((r: any) => (missions = r.missions.map((m: any) => ({ id: m.id, label: m.name })))),
+					trpc.provider.list
+						.query({ limit: 100, page: 1 })
+						.then((r: any) => (providers = r.providers.map((p: any) => ({ id: p.id, label: p.name })))),
+				]);
+			})
 			.catch((err) => logger.error({ err }, 'Failed to load document options'))
 			.finally(() => (loading = false));
 		loadPreview();

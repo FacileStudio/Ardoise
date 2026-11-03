@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { Button, Field, Input, Page, PageHeader, Section, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import ClientSelect from '$lib/components/ClientSelect.svelte';
 	import ProviderSelect from '$lib/components/ProviderSelect.svelte';
 	import PdfPreviewModal from '$lib/components/PdfPreviewModal.svelte';
@@ -30,7 +30,7 @@
 		generating = true;
 		try {
 			const result = await trpc.document.previewContratMaintenance.mutate({
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 				contract_reference: formData.contract_reference,
 				contract_date: formData.contract_date,
 				maintenance_period: formData.maintenance_period,
@@ -58,7 +58,7 @@
 		generating = true;
 		try {
 			const result = await trpc.document.createContratMaintenance.mutate({
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 				contract_reference: formData.contract_reference,
 				contract_date: formData.contract_date,
 				maintenance_period: formData.maintenance_period,

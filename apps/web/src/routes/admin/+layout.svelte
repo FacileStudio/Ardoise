@@ -1,32 +1,25 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { MobileNav, PageTransition, SideBar, SpaceSwitcher, Topbar } from '@facile/muse';
+  import { MobileNav, PageTransition, SideBar, Topbar } from '@facile/muse';
   import { i18n } from '@repo/i18n/svelte';
   import authStore from '$lib/auth-store';
   import { ardoise, icons } from '$lib/icons';
-  import { spaceContext } from '$lib/space-context.svelte';
+  import { spaceFilter } from '$lib/space-filter.svelte';
   import { trpc } from '$lib/trpc';
 
   let { children } = $props();
 
-  type SpaceRow = { id: string; name: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' };
-
   let collapsed = $state(false);
   let scroller: HTMLElement | null = $state(null);
-  let spaceRows: SpaceRow[] = $state([]);
 
   onMount(async () => {
     try {
-      spaceRows = (await trpc.space.list.query()) as SpaceRow[];
+      const rows = await trpc.space.list.query();
+      spaceFilter.setSpaces(rows.map(({ id, name }) => ({ id, name })));
     } catch {
       return;
     }
-    const stored = spaceRows.find((space) => space.id === spaceContext.spaceId);
-    if (stored) spaceContext.switchToSpace(stored.id, stored.name, stored.role);
-    else spaceContext.switchToPersonal();
   });
 
   const pathname = $derived(page.url.pathname);
@@ -70,18 +63,7 @@
       : undefined
   );
 
-  const switcherSpaces = $derived(spaceRows.map(({ id, name }) => ({ id, name })));
-  const activeSpaceId = $derived(spaceContext.spaceId ?? null);
-
-  function selectSpace(id: string | null) {
-    const before = spaceContext.spaceId;
-    const row = spaceRows.find((space) => space.id === id);
-    if (row) spaceContext.switchToSpace(row.id, row.name, row.role);
-    else spaceContext.switchToPersonal();
-    if (spaceContext.spaceId === before) return;
-    const section = links.find((link) => isActive(link.href))?.href;
-    if (section && section !== pathname) goto(resolve(section as '/admin'));
-  }
+  const filteredSpaceId = $derived(spaceFilter.spaceId ?? null);
 
   $effect(() => {
     void pathname;
@@ -96,12 +78,6 @@
       title="Ardoise"
       bind:collapsed
       pages={navPages}
-      spaces={switcherSpaces}
-      {activeSpaceId}
-      onSpaceSelect={selectSpace}
-      personalSpaceLabel={$i18n.t('nav.personalSpace')}
-      manageSpacesLabel={$i18n.t('nav.manageSpaces')}
-      manageSpacesHref="/admin/spaces"
       user={identity}
       userHref="/admin/settings"
       userActive={settingsActive}
@@ -112,22 +88,10 @@
   <main bind:this={scroller} class="min-w-0 flex-1 overflow-auto overscroll-contain pb-28 md:pb-0">
     <Topbar class="md:hidden">
       <span class="text-fc-md font-semibold text-fc-fg">Ardoise</span>
-      {#if switcherSpaces.length > 0}
-        <div class="max-w-56 min-w-0 flex-1">
-          <SpaceSwitcher
-            spaces={switcherSpaces}
-            activeId={activeSpaceId}
-            onSelect={selectSpace}
-            personalLabel={$i18n.t('nav.personalSpace')}
-            manageLabel={$i18n.t('nav.manageSpaces')}
-            manageHref="/admin/spaces"
-          />
-        </div>
-      {/if}
     </Topbar>
 
     <PageTransition key={pathname}>
-      {#key activeSpaceId}
+      {#key filteredSpaceId}
         {@render children()}
       {/key}
     </PageTransition>

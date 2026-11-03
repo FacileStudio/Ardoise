@@ -17,11 +17,11 @@
 		toast,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
-	import { Pagination, SearchInput } from '$lib/ui';
+	import { Pagination, SearchInput, SpaceFilter } from '$lib/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import { PAYMENT_STATUS_LABELS } from '$lib/mission';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'PAST_DUE' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
@@ -51,6 +51,7 @@
 
 	interface Payment {
 		id: string;
+		space?: { id: string; name: string } | null;
 		amount: number;
 		stripeFee?: number | null;
 		totalWithFees?: number | null;
@@ -110,7 +111,7 @@
 				limit: PAGE_SIZE,
 				status,
 				search: searchQuery.trim() || undefined,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 			payments = result.payments as unknown as Payment[];
 			total = result.total;
@@ -127,7 +128,7 @@
 
 	async function fetchStats() {
 		try {
-			stats = await trpc.payment.stats.query({ spaceId: spaceContext.spaceId });
+			stats = await trpc.payment.stats.query({ spaceId: spaceFilter.spaceId });
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch payment statistics');
 		}
@@ -282,11 +283,15 @@
 			/>
 		</div>
 
-		<SearchInput
-			bind:value={searchQuery}
-			oninput={handleSearch}
-			placeholder={$i18n.t('admin.payments.searchPlaceholder')}
-		/>
+		<div class="flex flex-col gap-2 sm:flex-row">
+			<SearchInput
+				class="flex-1"
+				bind:value={searchQuery}
+				oninput={handleSearch}
+				placeholder={$i18n.t('admin.payments.searchPlaceholder')}
+			/>
+			<SpaceFilter />
+		</div>
 
 		<Tabs
 			label="Filtrer par statut"
@@ -302,6 +307,7 @@
 						<tr>
 							<th scope="col">{$i18n.t('admin.payments.table.payment')}</th>
 							<th scope="col">{$i18n.t('admin.payments.table.client')}</th>
+							<th scope="col">{$i18n.t('nav.space')}</th>
 							<th scope="col">{$i18n.t('admin.payments.table.amount')}</th>
 							<th scope="col">{$i18n.t('admin.payments.table.status')}</th>
 							<th scope="col">{$i18n.t('admin.payments.table.frequency')}</th>
@@ -342,6 +348,7 @@
 										</span>
 									</div>
 								</td>
+								<td class="text-fc-fg-muted">{payment.space?.name ?? '-'}</td>
 								<td>
 									<div class="flex flex-col">
 										<span class="font-semibold text-fc-fg">
@@ -408,7 +415,10 @@
 							class="flex min-w-0 flex-col gap-1 rounded-fc-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
 						>
 							<span class="truncate text-fc-sm font-medium text-fc-fg">{payment.description}</span>
-							<span class="truncate text-fc-xs text-fc-fg-muted">{payment.client.companyName}</span>
+							<span class="truncate text-fc-xs text-fc-fg-muted"
+								>{payment.client.companyName}{#if payment.space}
+									· {payment.space.name}{/if}</span
+							>
 						</a>
 						<div class="flex items-center justify-between gap-2">
 							<div class="flex items-center gap-2">

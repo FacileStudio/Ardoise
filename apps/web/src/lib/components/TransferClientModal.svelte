@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Button, Field, Modal, OptionCards, Select, toast } from '@facile/muse';
 	import { logger } from '@repo/logger';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import { trpc } from '$lib/trpc';
 
 	let {
@@ -12,29 +12,15 @@
 	} = $props<{
 		open: boolean;
 		clientId: string;
-		currentSpaceId: string | null;
+		currentSpaceId: string;
 		onDone?: (relocated: boolean) => void;
 	}>();
 
-	let spaces = $state<{ id?: string; name?: string }[]>([]);
 	let target = $state('');
 	let mode = $state<'copy' | 'move'>('copy');
 	let submitting = $state(false);
 
-	const PERSONAL = 'personal';
-
-	const destinations = $derived([
-		...(currentSpaceId ? [{ id: PERSONAL, name: 'Espace personnel' }] : []),
-		...spaces.filter((s) => s.id !== currentSpaceId).map((s) => ({ id: s.id!, name: s.name! })),
-	]);
-
-	onMount(async () => {
-		try {
-			spaces = await trpc.space.list.query();
-		} catch (err) {
-			logger.error({ err }, 'Failed to fetch spaces');
-		}
-	});
+	const destinations = $derived(spaceFilter.spaces.filter((s) => s.id !== currentSpaceId));
 
 	async function submit() {
 		if (!target) return;
@@ -44,7 +30,7 @@
 			const { relocated } = await trpc.client.transfer.mutate({
 				id: clientId,
 				mode,
-				targetSpaceId: target === PERSONAL ? null : target,
+				targetSpaceId: target,
 			});
 
 			open = false;

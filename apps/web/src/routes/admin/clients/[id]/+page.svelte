@@ -205,7 +205,7 @@
 		<TransferClientModal
 			bind:open={showTransfer}
 			clientId={client.id}
-			currentSpaceId={client.spaceId ?? null}
+			currentSpaceId={client.spaceId}
 			onDone={(relocated) => relocated && goto(resolve('/admin/clients'))}
 		/>
 

@@ -24,7 +24,7 @@
   import { logger } from '@repo/logger';
   import { isSmtpNotConfigured } from '@repo/trpc-client';
   import { i18n } from '@repo/i18n/svelte';
-  import { spaceContext } from '$lib/space-context.svelte';
+  import { spaceFilter } from '$lib/space-filter.svelte';
 
   type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
   type PaymentCollectionMethod = 'STRIPE' | 'MANUAL';
@@ -85,7 +85,7 @@
       const result = await trpc.client.list.query({
         page: 1,
         limit: 100,
-        spaceId: spaceContext.spaceId,
+        spaceId: spaceFilter.spaceId,
       });
       clients = result.clients as Client[];
     } catch (err) {
@@ -100,7 +100,7 @@
         page: 1,
         pageSize: 100,
         search: documentSearchQuery || undefined,
-        spaceId: spaceContext.spaceId,
+        spaceId: spaceFilter.spaceId,
       });
       documents = result.items;
     } catch (err) {

@@ -16,17 +16,18 @@
 		toast,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
-	import { Pagination, SearchInput } from '$lib/ui';
+	import { Pagination, SearchInput, SpaceFilter } from '$lib/ui';
 	import { logger } from '@repo/logger';
 	import { DOCUMENT_TYPE_LABELS } from '$lib/mission';
 	import { SIGNABLE_TYPES, loadSignatureEnabled } from '$lib/signature';
 	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
 	import SendForSignature from '$lib/components/SendForSignature.svelte';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import { i18n } from '@repo/i18n/svelte';
 
 	type Document = {
 		id: string;
+		space?: { id: string; name: string } | null;
 		createdAt: Date;
 		type: string;
 		name: string;
@@ -94,7 +95,7 @@
 				pageSize: 20,
 				search: searchQuery || undefined,
 				type: selectedType || undefined,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 			documents = result.items as unknown as Document[];
 			totalPages = result.totalPages;
@@ -212,11 +213,15 @@
 			{/snippet}
 		</PageHeader>
 
-		<SearchInput
-			bind:value={searchQuery}
-			oninput={handleSearch}
-			placeholder="Rechercher par référence, client..."
-		/>
+		<div class="flex flex-col gap-2 sm:flex-row">
+			<SearchInput
+				class="flex-1"
+				bind:value={searchQuery}
+				oninput={handleSearch}
+				placeholder="Rechercher par référence, client..."
+			/>
+			<SpaceFilter />
+		</div>
 
 		<Tabs
 			label="Filtrer par type"
@@ -233,6 +238,7 @@
 							<th scope="col">Référence</th>
 							<th scope="col">Type</th>
 							<th scope="col">Client</th>
+							<th scope="col">{$i18n.t('nav.space')}</th>
 							<th scope="col">Montant</th>
 							<th scope="col">Date</th>
 							<th scope="col">Créé par</th>
@@ -265,6 +271,7 @@
 								</td>
 								<td class="text-fc-fg-muted">{typeLabel(doc.type)}</td>
 								<td class="font-medium text-fc-fg">{doc.clientName}</td>
+								<td class="text-fc-fg-muted">{doc.space?.name ?? '-'}</td>
 								<td class="font-medium text-fc-fg">{formatCurrency(doc.total)}</td>
 								<td class="text-fc-fg-muted">{formatDate(doc.issuedAt ?? doc.createdAt)}</td>
 								<td class="text-fc-fg-muted">
@@ -317,7 +324,8 @@
 								<span class="truncate text-fc-sm font-medium text-fc-fg">{getDocumentRef(doc)}</span
 								>
 								<span class="truncate text-fc-xs text-fc-fg-muted">
-									{typeLabel(doc.type)} - {doc.clientName}
+									{typeLabel(doc.type)} - {doc.clientName}{#if doc.space}
+										· {doc.space.name}{/if}
 								</span>
 							</div>
 							<span class="text-fc-sm font-medium text-fc-fg">{formatCurrency(doc.total)}</span>
