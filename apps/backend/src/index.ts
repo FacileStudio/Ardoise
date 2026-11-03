@@ -7,6 +7,7 @@ import { StorageService } from '@repo/storage';
 import corsHandler from './handlers/cors';
 import { createStripeWebhookHandler } from './handlers/stripe';
 import { createPlumeWebhookHandler } from './handlers/plume';
+import { GLOUTON_ROUTES_PREFIX, createGloutonRoutes } from './handlers/glouton';
 import trpcHandler from './handlers/trpc';
 import { openApiHandler } from './handlers/openapi';
 import { apiReference } from '@scalar/hono-api-reference';
@@ -73,6 +74,7 @@ app.options('*', (c) => c.body(null, 204));
 
 app.post('/webhook', createStripeWebhookHandler(storage, env));
 app.post('/webhooks/plume', createPlumeWebhookHandler(env));
+app.route(GLOUTON_ROUTES_PREFIX, createGloutonRoutes(env, prisma));
 
 if (directory) {
   app.post(SyncPath, (c) => {
