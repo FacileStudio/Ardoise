@@ -44,6 +44,9 @@ services:
       PLUME_URL: ${PLUME_URL:-}
       PLUME_API_TOKEN: ${PLUME_API_TOKEN:-}
       PLUME_WEBHOOK_SECRET: ${PLUME_WEBHOOK_SECRET:-}
+      GLOUTON_URL: ${GLOUTON_URL:-}
+      GLOUTON_API_TOKEN: ${GLOUTON_API_TOKEN:-}
+      GLOUTON_WEBHOOK_SECRET: ${GLOUTON_WEBHOOK_SECRET:-}
     volumes:
       - uploads_data:/data/uploads
     expose:
