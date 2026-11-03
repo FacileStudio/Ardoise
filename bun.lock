@@ -163,6 +163,14 @@
         "svelte-eslint-parser": "^1.4.1",
       },
     },
+    "packages/glouton": {
+      "name": "@repo/glouton",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@repo/tsconfig": "workspace:*",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/i18n": {
       "name": "@repo/i18n",
       "version": "0.0.0",
@@ -522,6 +530,8 @@
     "@repo/env": ["@repo/env@workspace:packages/env"],
 
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
+
+    "@repo/glouton": ["@repo/glouton@workspace:packages/glouton"],
 
     "@repo/i18n": ["@repo/i18n@workspace:packages/i18n"],
 
