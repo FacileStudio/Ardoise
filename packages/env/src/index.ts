@@ -25,6 +25,7 @@ const booleanFlag = z.preprocess((v) => {
 
 const nuageKeys = ['NUAGE_URL', 'NUAGE_API_TOKEN', 'NUAGE_SPACE_FACILE_ID'] as const;
 const plumeKeys = ['PLUME_URL', 'PLUME_API_TOKEN', 'PLUME_WEBHOOK_SECRET'] as const;
+const gloutonKeys = ['GLOUTON_URL', 'GLOUTON_API_TOKEN', 'GLOUTON_WEBHOOK_SECRET'] as const;
 
 export const publicEnvSchema = baseSchema.extend({
   API_URL: z.string().url().optional(),
@@ -70,6 +71,10 @@ export const serverEnvSchema = baseSchema.extend({
   PLUME_URL: optionalUrl,
   PLUME_API_TOKEN: optionalString,
   PLUME_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
+
+  GLOUTON_URL: optionalUrl,
+  GLOUTON_API_TOKEN: optionalString,
+  GLOUTON_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
 }).superRefine((env, ctx) => {
   if (!env.SSO_ONLY && !env.ADMIN_PASSWORD) {
     ctx.addIssue({
@@ -98,6 +103,7 @@ export const serverEnvSchema = baseSchema.extend({
   const groups = [
     { keys: nuageKeys, prefix: 'NUAGE_*' },
     { keys: plumeKeys, prefix: 'PLUME_*' },
+    { keys: gloutonKeys, prefix: 'GLOUTON_*' },
   ];
   for (const { keys, prefix } of groups) {
     const missing = keys.filter((key) => !env[key]);

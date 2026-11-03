@@ -72,8 +72,32 @@ describe('magic link env', () => {
   });
 
   test('rejects a zero lifetime', () => {
-    expect(failures({ ...base, ADMIN_PASSWORD: 'long-enough', MAGIC_LINK_TTL_MINUTES: '0' })).toContain(
-      'MAGIC_LINK_TTL_MINUTES'
-    );
+    expect(
+      failures({ ...base, ADMIN_PASSWORD: 'long-enough', MAGIC_LINK_TTL_MINUTES: '0' })
+    ).toContain('MAGIC_LINK_TTL_MINUTES');
+  });
+});
+
+describe('glouton env', () => {
+  const ok = { ...base, ADMIN_PASSWORD: 'long-enough' };
+  const glouton = {
+    GLOUTON_URL: 'https://glouton.example.test',
+    GLOUTON_API_TOKEN: 'token',
+    GLOUTON_WEBHOOK_SECRET: 's'.repeat(16),
+  };
+
+  test('is optional and all or nothing', () => {
+    expect(failures(ok)).toEqual([]);
+    expect(failures({ ...ok, ...glouton })).toEqual([]);
+    expect(failures({ ...ok, GLOUTON_URL: glouton.GLOUTON_URL })).toEqual([
+      'GLOUTON_API_TOKEN',
+      'GLOUTON_WEBHOOK_SECRET',
+    ]);
+  });
+
+  test('needs a webhook secret of at least 16 characters', () => {
+    expect(failures({ ...ok, ...glouton, GLOUTON_WEBHOOK_SECRET: 'short' })).toEqual([
+      'GLOUTON_WEBHOOK_SECRET',
+    ]);
   });
 });
