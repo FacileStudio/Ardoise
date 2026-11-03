@@ -16,6 +16,7 @@ import {
   GenerateInvoiceSchema,
 } from './types';
 import { dispatchConfiguredWebhook } from '../webhook/service';
+import { emitMissionToGlouton } from '../webhook/glouton';
 
 type EventContext = Pick<Parameters<typeof dispatchConfiguredWebhook>[0], 'db' | 'log'> & {
   user: { id: string; email: string; role: string };
@@ -76,6 +77,10 @@ export const missionRouter = router({
     const document = await generateQuote(ctx.db, ctx.storage, ctx.user.id, input);
 
     await emit(ctx, 'mission.quote_generated', { missionId: input.id, document });
+    emitMissionToGlouton(ctx, 'mission.quote_generated', input.id, {
+      amount: document.total,
+      documentNumber: document.quoteNumber,
+    });
 
     return document;
   }),
@@ -84,6 +89,10 @@ export const missionRouter = router({
     const document = await acceptQuote(ctx.db, ctx.user.id, input);
 
     await emit(ctx, 'mission.quote_accepted', { missionId: input.id, document });
+    emitMissionToGlouton(ctx, 'mission.quote_accepted', input.id, {
+      amount: document.total,
+      documentNumber: document.quoteNumber,
+    });
 
     return document;
   }),
@@ -92,6 +101,10 @@ export const missionRouter = router({
     const document = await generateInvoice(ctx.db, ctx.storage, ctx.user.id, input);
 
     await emit(ctx, 'mission.invoice_generated', { missionId: input.id, document });
+    emitMissionToGlouton(ctx, 'mission.invoice_generated', input.id, {
+      amount: document.total,
+      documentNumber: document.invoiceNumber,
+    });
 
     return document;
   }),
@@ -133,6 +146,10 @@ export const missionRouter = router({
       );
 
       await emit(ctx, 'mission.payment_created', { missionId: input.id, payment });
+      emitMissionToGlouton(ctx, 'mission.payment_created', input.id, {
+        amount: payment.amount,
+        documentNumber: payment.reference,
+      });
 
       return payment;
     }),

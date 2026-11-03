@@ -10,6 +10,11 @@ import {
 } from './types';
 import magicLinkService from '../magic-link/service';
 import { dispatchConfiguredWebhook } from '../webhook/service';
+import {
+  emitClientDeletedToGlouton,
+  emitClientToGlouton,
+  gloutonCompanyLink,
+} from '../webhook/glouton';
 
 export const clientRouter = router({
   list: adminProcedure.input(ListClientsSchema).query(async ({ ctx, input }) => {
@@ -19,7 +24,8 @@ export const clientRouter = router({
   }),
 
   getById: adminProcedure.input(GetByIdSchema).query(async ({ ctx, input }) => {
-    return clientService.getClientById(ctx.db, ctx.user.id, input.id);
+    const client = await clientService.getClientById(ctx.db, ctx.user.id, input.id);
+    return { ...client, gloutonUrl: gloutonCompanyLink(ctx.env, client.gloutonCompanyId) };
   }),
 
   create: adminProcedure.input(CreateClientSchema).mutation(async ({ ctx, input }) => {
@@ -39,6 +45,7 @@ export const clientRouter = router({
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { client },
     });
+    emitClientToGlouton(ctx, 'client.created', client.id);
 
     return client;
   }),
@@ -54,6 +61,7 @@ export const clientRouter = router({
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { clientId: id, client },
     });
+    emitClientToGlouton(ctx, 'client.updated', id);
 
     return client;
   }),
@@ -69,12 +77,21 @@ export const clientRouter = router({
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { clientId: result.client.id, client: result.client },
     });
+    emitClientToGlouton(
+      ctx,
+      result.relocated ? 'client.updated' : 'client.created',
+      result.client.id
+    );
 
     return result;
   }),
 
   delete: adminProcedure.input(GetByIdSchema).mutation(async ({ ctx, input }) => {
-    const result = await clientService.deleteClient(ctx.db, ctx.user.id, input.id);
+    const { gloutonCompanyId, ...result } = await clientService.deleteClient(
+      ctx.db,
+      ctx.user.id,
+      input.id
+    );
 
     await dispatchConfiguredWebhook({
       db: ctx.db,
@@ -83,6 +100,7 @@ export const clientRouter = router({
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { clientId: input.id },
     });
+    emitClientDeletedToGlouton(ctx, { id: input.id, gloutonCompanyId });
 
     return result;
   }),

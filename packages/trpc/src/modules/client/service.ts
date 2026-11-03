@@ -329,7 +329,7 @@ export const clientService = {
       where: { id },
     });
 
-    return { success: true };
+    return { success: true, gloutonCompanyId: existingClient.gloutonCompanyId };
   },
 
   getClientByUserId: async (db: PrismaClient, userId: string) => {

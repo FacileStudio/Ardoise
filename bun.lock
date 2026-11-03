@@ -262,6 +262,7 @@
         "@repo/admin": "workspace:*",
         "@repo/crypto": "workspace:*",
         "@repo/database": "workspace:*",
+        "@repo/glouton": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/nuage": "workspace:*",
         "@repo/plume": "workspace:*",
