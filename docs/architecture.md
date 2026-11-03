@@ -186,6 +186,18 @@ ones `modules/auth` issues (`issueSession` and `authCookies` in `packages/trpc`)
   mission status that follow those events, including the automatic move to `PAID`, send no
   event of their own.
 
+- **Glouton.** Optional two-way client sync with the suite contacts database (`GLOUTON_*`,
+  `packages/glouton`). Ardoise sends `client.created`, `client.updated`, `client.deleted` and the
+  four `mission.quote_generated`, `quote_accepted`, `invoice_generated`, `payment_created` events
+  to `{GLOUTON_URL}/api/integrations/ardoise/webhook`, signed with `X-Ardoise-Signature-256`
+  (`sha256=` HMAC of the raw body). Delivery runs after the response, with up to three retries on
+  network errors, 429 and 5xx. Mission events carry `clientId`, `missionTitle`, `amountCents`,
+  `currency` (`EUR`) and the quote or invoice number. Glouton writes back through
+  `/api/integrations/glouton/clients` (see `api.md`), matched on `Client.gloutonCompanyId`, with
+  last write wins on `updatedAt`; the space comes from `registreSpaceId`. Those writes are never
+  sent back to Glouton. A delete on either side only unlinks. A linked client shows a "Lié dans
+  Glouton" badge on its admin page.
+
 Ardoise does **not** use `pool` or `enveloppe`, and does not ship events to Nook or Journal.
 
 ## Storage

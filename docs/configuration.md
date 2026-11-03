@@ -50,9 +50,9 @@ startup fails if the issuer is set without the other two. Empty strings count as
 | `OIDC_REDIRECT_URL` | no | `BACKEND_URL/auth/oidc/callback` | Must match the redirect registered in Registre exactly |
 | `OIDC_SUCCESS_URL` | no | `FRONTEND_URL/login` | Where the browser lands after a successful callback |
 
-### Nuage and Plume
+### Nuage, Plume and Glouton
 
-Both optional, each all-or-nothing: setting some variables of a group without the others fails the
+All optional, each all-or-nothing: setting some variables of a group without the others fails the
 boot. Empty values count as unset.
 
 | Variable | Description |
@@ -60,6 +60,9 @@ boot. Empty values count as unset.
 | `NUAGE_URL`, `NUAGE_API_TOKEN`, `NUAGE_SPACE_FACILE_ID` | Archive generated contract PDFs in a Nuage space. Fire and forget: a Nuage failure is logged and never blocks document creation |
 | `NUAGE_SPACE_NAME` | Name used when Nuage creates the space. Defaults to `Ardoise` |
 | `PLUME_URL`, `PLUME_API_TOKEN`, `PLUME_WEBHOOK_SECRET` | Send contracts for signature. The secret (16+ characters) signs `POST /webhooks/plume` |
+| `GLOUTON_URL` | Glouton base URL. Ardoise posts events to `{GLOUTON_URL}/api/integrations/ardoise/webhook` and links client pages to `{GLOUTON_URL}/app/contacts/companies/{id}` |
+| `GLOUTON_API_TOKEN` | Bearer token Glouton sends on `/api/integrations/glouton/*`. Same value as Glouton's `ARDOISE_API_TOKEN` |
+| `GLOUTON_WEBHOOK_SECRET` | 16+ characters. Signs outbound events in `X-Ardoise-Signature-256`. Same value as Glouton's `ARDOISE_WEBHOOK_SECRET` |
 
 ## Web
 

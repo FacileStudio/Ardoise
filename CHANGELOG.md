@@ -14,6 +14,13 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Added
+
+- Optional two-way client sync with Glouton (`GLOUTON_URL`, `GLOUTON_API_TOKEN`,
+  `GLOUTON_WEBHOOK_SECRET`). Ardoise sends signed client and mission events to Glouton and
+  accepts client writes on `/api/integrations/glouton/clients`, last write wins on `updatedAt`.
+  Linked clients show a Glouton badge. Migration `20261103180000` adds `Client.gloutonCompanyId`.
+
 ## [0.9.1] - 2026-11-03
 
 ### Changed

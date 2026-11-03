@@ -76,6 +76,7 @@ packages/
   typst/          Typst document and receipt rendering, string escaping
   nuage/          Optional contract archive client for Nuage
   plume/          Optional signature client and webhook helpers for Plume
+  glouton/        Optional Glouton client sync: signed outbound events and helpers
   types/          Shared TypeScript types
   utils/          Shared utility functions
   logger/         Logging utilities
@@ -169,13 +170,14 @@ See `apps/backend/.env.example` for reference.
 - CORS origins are derived from `FRONTEND_URL` env var
 - Default dev admin: `admin@example.com` / `admin123456789`
 
-## Nuage and Plume links
+## Nuage, Plume and Glouton links
 
-Both optional and all-or-nothing (`NUAGE_*`, `PLUME_*`, see `docs/configuration.md`).
+All optional and all-or-nothing (`NUAGE_*`, `PLUME_*`, `GLOUTON_*`, see `docs/configuration.md`).
 
 - Creating a `contrat_prestation`, `contrat_maintenance` or `back_contractuel` uploads the stored PDF to Nuage, fire and forget, with `linked_to` `ardoise:contract:<id>`.
 - `document.sendForSignature({ id })` sends the stored PDF to Plume with the mission's client and the provider as signers, `external_ref` `ardoise:contract:<id>`, and sets `signatureStatus` to `sent`. `document.signatureEnabled` tells the UI whether Plume is configured.
 - `POST /webhooks/plume` verifies `x-plume-signature-256` and moves the document to `signed` or `declined`, and stamps `nuageArchivedAt` on `document.archived`. Replays change nothing.
+- Glouton: client and mission events go to Glouton after the response (`packages/trpc/src/modules/webhook/glouton.ts`); Glouton writes come in on `/api/integrations/glouton/clients` (`apps/backend/src/handlers/glouton.ts`), last write wins on `updatedAt`, and are never sent back to Glouton.
 
 ## Releasing
 
