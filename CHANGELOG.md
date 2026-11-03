@@ -14,6 +14,20 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-03
+
+### Changed
+
+- **Breaking:** the admin shows every space you belong to at once. Clients, missions, documents and payments list everything you can reach, with a Space column and a space filter that defaults to "Tous les espaces". The space switcher is gone. A space's page has a "Voir ses données" button that applies the filter.
+- **Breaking:** a list call without `spaceId` now covers every space of the caller instead of the personal scope. A caller in no space gets nothing.
+- **Breaking:** providers are shared by every space. `provider.*` takes no `spaceId`. Migration `20261103200000_global_view` merges providers that share an email: the row with the most references is kept, its empty fields are filled from the copies, and documents, mission links and prestations move to it.
+- Only a new client picks a space (`client.create` requires `spaceId`). Missions, documents and payments take the space of their client.
+- Glouton writes answer 422 `space_required` when `registreSpaceId` is null.
+
+### Removed
+
+- **Breaking:** the personal scope. `spaceId` is required on clients, missions, documents and payments, and the migration stops if any row has none. A space holding data cannot be deleted.
+
 ## [0.11.1] - 2026-11-03
 
 ### Fixed
