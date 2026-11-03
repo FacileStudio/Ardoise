@@ -15,7 +15,7 @@ function dbCapturingPartyLookups(seen: { client: any[]; provider: any[] }) {
       findUnique: async () => settings,
       update: async () => settings,
     },
-    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
     client: {
       findFirst: async ({ where }: any) => {
         seen.client.push(where);

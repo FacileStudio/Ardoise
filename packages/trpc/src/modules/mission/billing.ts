@@ -105,7 +105,7 @@ export async function generateQuote(
     userId,
     mission.clientId,
     providerId,
-    mission.spaceId ?? undefined,
+    mission.spaceId,
     mission.id
   );
 
@@ -236,7 +236,7 @@ export async function generateInvoice(
     userId,
     mission.clientId,
     providerId,
-    mission.spaceId ?? undefined,
+    mission.spaceId,
     mission.id
   );
 

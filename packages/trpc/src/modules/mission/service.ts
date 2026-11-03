@@ -44,8 +44,8 @@ async function requireMission(db: PrismaClient, userId: string, id: string) {
   );
 }
 
-async function requireClient(db: PrismaClient, clientId: string, spaceId: string | null) {
-  const client = await db.client.findFirst({ where: { id: clientId, spaceId } });
+async function requireClient(db: PrismaClient, clientId: string, scope: Scope) {
+  const client = await db.client.findFirst({ where: { id: clientId, ...scopeWhere(scope) } });
 
   if (!client) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
@@ -54,7 +54,7 @@ async function requireClient(db: PrismaClient, clientId: string, spaceId: string
   return client;
 }
 
-async function requireProviders(db: PrismaClient, links: ProviderLink[], spaceId: string | null) {
+async function requireProviders(db: PrismaClient, links: ProviderLink[]) {
   const ids = links.map((link) => link.providerId);
 
   if (new Set(ids).size !== ids.length) {
@@ -63,7 +63,7 @@ async function requireProviders(db: PrismaClient, links: ProviderLink[], spaceId
 
   if (ids.length === 0) return;
 
-  const found = await db.provider.count({ where: { id: { in: ids }, spaceId } });
+  const found = await db.provider.count({ where: { id: { in: ids } } });
 
   if (found !== ids.length) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more providers not found' });
@@ -112,7 +112,11 @@ export const missionService = {
         where,
         skip: (page - 1) * limit,
         take: limit,
-        include: { ...detail, _count: { select: { documents: true, payments: true } } },
+        include: {
+          ...detail,
+          space: { select: { id: true, name: true } },
+          _count: { select: { documents: true, payments: true } },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       db.mission.count({ where }),
@@ -175,17 +179,15 @@ export const missionService = {
   },
 
   createMission: async (db: PrismaClient, data: CreateMissionInput, scope: Scope) => {
-    const { spaceId } = scopeWhere(scope);
-
-    await requireClient(db, data.clientId, spaceId);
-    await requireProviders(db, data.providers, spaceId);
+    const client = await requireClient(db, data.clientId, scope);
+    await requireProviders(db, data.providers);
 
     return db.mission.create({
       data: {
         name: data.name,
         description: data.description?.trim() || null,
         clientId: data.clientId,
-        spaceId,
+        spaceId: client.spaceId,
         depositPercent: data.depositPercent,
         providers: { create: providerRows(data.providers) },
       },
@@ -202,7 +204,7 @@ export const missionService = {
     const existing = await requireMission(db, userId, id);
 
     if (data.providers) {
-      await requireProviders(db, data.providers, existing.spaceId);
+      await requireProviders(db, data.providers);
     }
 
     return db.mission.update({

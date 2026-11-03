@@ -11,7 +11,10 @@ const input = {
 
 function dbFor(member: { role: 'MEMBER' } | null, created: any[]) {
   return {
-    spaceMember: { findUnique: async () => member },
+    spaceMember: {
+      findUnique: async () => member,
+      findMany: async () => (member ? [{ spaceId: 'space-a' }] : []),
+    },
     settings: { findUnique: async () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }) },
     client: {
       create: async (args: any) => {
@@ -53,12 +56,11 @@ describe('clientRouter.create', () => {
     expect(created[0].data.space).toEqual({ connect: { id: 'space-a' } });
   });
 
-  it('leaves a spaceless client unattached to any space', async () => {
+  it('refuses a client with no space', async () => {
     const created: any[] = [];
 
-    await callerFor(null, created).create(input as any);
+    await expect(callerFor({ role: 'MEMBER' }, created).create(input as any)).rejects.toThrow();
 
-    expect(created.length).toBe(1);
-    expect(created[0].data.space).toBe(undefined);
+    expect(created.length).toBe(0);
   });
 });

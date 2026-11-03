@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { type Prisma, type PrismaClient } from '@repo/database';
-import { scopeWhere, scopeConnect, requireRowScope, type Scope } from '../space/service';
+import { scopeWhere, scopeConnect, scopeSpaceId, requireRowScope, type Scope } from '../space/service';
 import type {
   CreateClientInput,
   UpdateClientInput,
@@ -40,6 +40,7 @@ export const clientService = {
         skip,
         take: limit,
         include: {
+          space: { select: { id: true, name: true } },
           user: {
             select: {
               id: true,
@@ -265,7 +266,7 @@ export const clientService = {
       'Client not found'
     );
 
-    const targetSpaceId = target.type === 'space' ? target.spaceId : null;
+    const targetSpaceId = scopeSpaceId(target);
     if (source.spaceId === targetSpaceId) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Client is already in this space' });
     }

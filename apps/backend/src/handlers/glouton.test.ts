@@ -194,6 +194,11 @@ describe('glouton inbound writes', () => {
       payload({ gloutonCompanyId: 'g3', registreSpaceId: 'r-x' })
     );
     expect(unknown.status).toBe(422);
+
+    const spaceless = await call(app, 'POST', '/clients', payload({ gloutonCompanyId: 'g4' }));
+    expect(spaceless.status).toBe(422);
+    expect((await spaceless.json()).error.code).toBe('space_required');
+    expect(writes.map((write) => write.op)).toEqual(['update', 'create']);
   });
 
   test('unlink clears the link and GET returns the payload', async () => {

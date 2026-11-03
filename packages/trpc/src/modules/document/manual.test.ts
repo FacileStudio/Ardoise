@@ -17,7 +17,7 @@ function setup(overrides: {
     id: 'doc-1',
     type: 'facture_prestation',
     name: 'f.pdf',
-    spaceId: null,
+    spaceId: 'space-a',
     source: 'generated',
     invoiceNumber: 'F-1',
     quoteNumber: null,
@@ -45,14 +45,14 @@ function setup(overrides: {
     },
     payment: { count: async () => 0 },
     client: {
-      findFirst: async () => ({ id: 'c-1', companyName: 'Acme', siret: '123' }),
+      findFirst: async () => ({ id: 'c-1', companyName: 'Acme', siret: '123', spaceId: 'space-a' }),
     },
     provider: {
-      findFirst: async () => ({ id: 'p-1', name: 'Studio', tvaRate: 20 }),
+      findUnique: async () => ({ id: 'p-1', name: 'Studio', tvaRate: 20 }),
     },
     mission: { findFirst: async () => ({ id: 'm-1', status: 'ACCEPTED' }) },
     settings: { findFirst: async () => ({ id: 'global' }), findUnique: async () => ({ id: 'global' }) },
-    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
     ...overrides.db,
   };
   const ctx = {

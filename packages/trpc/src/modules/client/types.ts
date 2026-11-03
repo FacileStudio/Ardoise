@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const CreateClientSchema = z.object({
-  spaceId: z.string().optional(),
+  spaceId: z.string().min(1),
   contactEmail: z.string().email().optional().or(z.literal('')),
   contactFirstName: z.string().min(1),
   contactLastName: z.string().min(1),
@@ -33,7 +33,7 @@ export const UpdateClientSchema = z.object({
 export const TransferClientSchema = z.object({
   id: z.string(),
   mode: z.enum(['copy', 'move']),
-  targetSpaceId: z.string().nullable(),
+  targetSpaceId: z.string().min(1),
 });
 
 export const ListClientsSchema = z.object({

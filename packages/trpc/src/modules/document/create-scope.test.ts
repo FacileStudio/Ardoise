@@ -136,7 +136,10 @@ function dbFor(member: { role: 'MEMBER' } | null, seen: any[]) {
   const db: any = {
     $transaction: async (run: (tx: any) => Promise<unknown>) => run(db),
     settings: { findUnique: async () => settings, update: async () => settings },
-    spaceMember: { findUnique: async () => member },
+    spaceMember: {
+      findUnique: async () => member,
+      findMany: async () => (member ? [{ spaceId: 'space-a' }] : []),
+    },
     client: {
       findFirst: async ({ where }: any) => {
         seen.push(where);
@@ -197,13 +200,16 @@ describe.each(endpoints)('document router $name', ({ name, input }) => {
       expect(seen).toEqual([{ id: 'client-1', spaceId: 'space-a' }]);
     });
 
-    it(`${procedure} pins a spaceless call to personal rows`, async () => {
+    it(`${procedure} looks a spaceless call up in the caller spaces only`, async () => {
       const seen: any[] = [];
-      const caller = callerFor(null, seen) as any;
 
-      await trpcErrorOf(() => caller[procedure](input));
+      await trpcErrorOf(() => (callerFor({ role: 'MEMBER' }, seen) as any)[procedure](input));
+      await trpcErrorOf(() => (callerFor(null, seen) as any)[procedure](input));
 
-      expect(seen).toEqual([{ id: 'client-1', spaceId: null }]);
+      expect(seen).toEqual([
+        { id: 'client-1', spaceId: { in: ['space-a'] } },
+        { id: 'client-1', spaceId: { in: [] } },
+      ]);
     });
   }
 });

@@ -4,7 +4,7 @@ import type { PrismaClient } from '@repo/database';
 import { missionRouter } from './router';
 import { syncMissionPaid } from './sync';
 
-const missionRow = { id: 'p-1', clientId: 'client-1', spaceId: null, status: 'DRAFT' };
+const missionRow = { id: 'p-1', clientId: 'client-1', spaceId: 'space-a', status: 'DRAFT' };
 
 const invoice = {
   id: 'doc-1',
@@ -18,6 +18,10 @@ function callerFor(db: Record<string, unknown>) {
   return missionRouter.createCaller({
     db: {
       settings: { findUnique: async () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }) },
+      spaceMember: {
+        findUnique: async () => ({ role: 'MEMBER' }),
+        findMany: async () => [{ spaceId: 'space-a' }],
+      },
       ...db,
     } as unknown as PrismaClient,
     auth: {},
@@ -35,7 +39,7 @@ describe('missionRouter.create', () => {
   it('refuses a space the caller is not a member of', async () => {
     const created: any[] = [];
     const caller = callerFor({
-      spaceMember: { findUnique: async () => null },
+      spaceMember: { findUnique: async () => null, findMany: async () => [] },
       mission: { create: async (args: any) => created.push(args) },
     });
 
@@ -61,7 +65,7 @@ describe('missionRouter.create', () => {
   });
 
   it('refuses the same provider twice', async () => {
-    const caller = callerFor({ client: { findFirst: async () => ({ id: 'client-1' }) } });
+    const caller = callerFor({ client: { findFirst: async () => ({ id: 'client-1', spaceId: 'space-a' }) } });
 
     await expect(
       caller.create({
@@ -76,11 +80,10 @@ describe('missionRouter.create', () => {
     const created: any[] = [];
     const where: any[] = [];
     const caller = callerFor({
-      spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
       client: {
         findFirst: async (args: any) => {
           where.push(args.where);
-          return { id: 'client-1' };
+          return { id: 'client-1', spaceId: 'space-a' };
         },
       },
       provider: { count: async () => 1 },
@@ -200,7 +203,7 @@ describe('missionRouter.createPayment', () => {
     client: {
       findUnique: async () => ({
         id: 'client-1',
-        spaceId: null,
+        spaceId: 'space-a',
         contactFirstName: 'A',
         contactLastName: 'B',
       }),

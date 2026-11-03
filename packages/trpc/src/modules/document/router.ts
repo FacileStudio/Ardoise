@@ -82,29 +82,16 @@ function archiveContract(env: ServerEnv, document: { id: string; name: string },
   });
 }
 
-async function fetchProvidersByIds(
-  db: PrismaClient,
-  userId: string,
-  ids: string[],
-  spaceId?: string
-) {
-  const scope = await spaceService.resolveScope(db, userId, spaceId);
-  const providers = await db.provider.findMany({
-    where: { id: { in: ids }, ...scopeWhere(scope) },
-  });
+async function fetchProvidersByIds(db: PrismaClient, ids: string[]) {
+  const providers = await db.provider.findMany({ where: { id: { in: ids } } });
   if (providers.length !== ids.length) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more providers not found' });
   }
   return providers as Array<{ id: string; name: string; address: string | null; city: string | null; siret: string | null; email: string | null; iban: string | null; bic: string | null }>;
 }
 
-async function resolveSubProvidersForBack(
-  db: PrismaClient,
-  userId: string,
-  inputs: Array<{ id: string; role: string; amount: number }>,
-  spaceId?: string
-) {
-  const providers = await fetchProvidersByIds(db, userId, inputs.map(p => p.id), spaceId);
+async function resolveSubProvidersForBack(db: PrismaClient, inputs: Array<{ id: string; role: string; amount: number }>) {
+  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
   return inputs.map(inputProvider => {
     const dbProvider = providers.find(p => p.id === inputProvider.id)!;
     return {
@@ -229,13 +216,8 @@ async function createSpecializedPrestation(
   };
 }
 
-async function resolveSubProvidersForAppel(
-  db: PrismaClient,
-  userId: string,
-  inputs: Array<{ id: string; amount_to_pay: number }>,
-  spaceId?: string
-) {
-  const providers = await fetchProvidersByIds(db, userId, inputs.map(p => p.id), spaceId);
+async function resolveSubProvidersForAppel(db: PrismaClient, inputs: Array<{ id: string; amount_to_pay: number }>) {
+  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
   return inputs.map(inputProvider => {
     const dbProvider = providers.find(p => p.id === inputProvider.id)!;
     return {
@@ -273,8 +255,8 @@ async function loadDocumentPdf(
   let iban = '';
   let bic = '';
   if (document.providerId) {
-    const provider = await ctx.db.provider.findFirst({
-      where: { id: document.providerId, spaceId: document.spaceId },
+    const provider = await ctx.db.provider.findUnique({
+      where: { id: document.providerId },
       select: { logoUrl: true, bankName: true, iban: true, bic: true },
     });
     logoUrl = provider?.logoUrl || undefined;
@@ -370,6 +352,7 @@ export const documentRouter = router({
           take: pageSize,
           orderBy: { createdAt: 'desc' },
           include: {
+            space: { select: { id: true, name: true } },
             createdByUser: {
               select: {
                 firstName: true,
@@ -819,7 +802,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
-        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, ctx.user!.id, input.providers, input.spaceId);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -853,7 +836,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, ctx.user!.id, input.providers, input.spaceId);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -910,7 +893,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
-        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, ctx.user!.id, input.payment_providers, input.spaceId);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -945,7 +928,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, ctx.user!.id, input.payment_providers, input.spaceId);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,

@@ -4,8 +4,9 @@ import { loadDocumentContext, buildDocumentPersistenceBase } from './service';
 
 function dbWith(mission: unknown, seen: any[] = []) {
   return {
-    client: { findFirst: async () => ({ id: 'client-1' }) },
-    provider: { findFirst: async () => ({ id: 'provider-1', tvaRate: 20 }) },
+    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
+    client: { findFirst: async () => ({ id: 'client-1', spaceId: 'space-a' }) },
+    provider: { findUnique: async () => ({ id: 'provider-1', tvaRate: 20 }) },
     mission: {
       findFirst: async (args: any) => {
         seen.push(args.where);
@@ -25,7 +26,7 @@ describe('loadDocumentContext with a mission', () => {
 
     await load(dbWith({ id: 'p-1', status: 'DRAFT' }, seen), 'p-1');
 
-    expect(seen).toEqual([{ id: 'p-1', clientId: 'client-1', spaceId: null }]);
+    expect(seen).toEqual([{ id: 'p-1', clientId: 'client-1', spaceId: 'space-a' }]);
   });
 
   it('hands back the validated mission id', async () => {

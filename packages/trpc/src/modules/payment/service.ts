@@ -92,6 +92,7 @@ export const paymentService = {
         skip,
         take: limit,
         include: {
+          space: { select: { id: true, name: true } },
           client: {
             include: {
               user: {

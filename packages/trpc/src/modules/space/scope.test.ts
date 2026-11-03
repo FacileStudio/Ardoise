@@ -4,6 +4,7 @@ import type { PrismaClient } from '@repo/database';
 import spaceService, {
   scopeWhere,
   scopeConnect,
+  scopeSpaceId,
   requireRowScope,
   requireRowsScope,
   type Scope,
@@ -11,7 +12,6 @@ import spaceService, {
 import clientService from '../client/service';
 import mediaService from '../media/service';
 import { paymentService } from '../payment/service';
-import providerService from '../provider/service';
 import { loadDocumentContext, buildDocumentPersistenceBase } from '../document/service';
 import type { CreatePaymentInput } from '../payment/types';
 import type { CreateClientInput } from '../client/types';
@@ -20,6 +20,7 @@ function dbWithMembership(member: { role: 'OWNER' | 'ADMIN' | 'MEMBER' } | null)
   return {
     spaceMember: {
       findUnique: async () => member,
+      findMany: async () => (member ? [{ spaceId: 'space-1' }, { spaceId: 'space-2' }] : []),
     },
   } as unknown as PrismaClient;
 }
@@ -58,16 +59,24 @@ describe('spaceService.resolveScope', () => {
     });
   });
 
-  it('resolves an absent or empty space id to personal scope', async () => {
-    const db = dbWithMembership(null);
+  it('resolves an absent or empty space id to every space the caller belongs to', async () => {
+    const db = dbWithMembership({ role: 'MEMBER' });
 
     expect(await spaceService.resolveScope(db, 'user-1')).toMatchObject({
-      type: 'personal',
+      type: 'spaces',
+      spaceIds: ['space-1', 'space-2'],
       userId: 'user-1',
     });
     expect(await spaceService.resolveScope(db, 'user-1', '')).toMatchObject({
-      type: 'personal',
-      userId: 'user-1',
+      type: 'spaces',
+      spaceIds: ['space-1', 'space-2'],
+    });
+  });
+
+  it('resolves a caller in no space to no space, never to every row', async () => {
+    expect(await spaceService.resolveScope(dbWithMembership(null), 'user-1')).toMatchObject({
+      type: 'spaces',
+      spaceIds: [],
     });
   });
 });
@@ -76,8 +85,8 @@ function resolvedSpaceScope(spaceId: string, userId = 'user-1') {
   return spaceService.resolveScope(dbWithMembership({ role: 'MEMBER' }), userId, spaceId);
 }
 
-function resolvedPersonalScope(userId = 'user-1') {
-  return spaceService.resolveScope(dbWithMembership(null), userId);
+function resolvedEverySpaceScope(userId = 'user-1') {
+  return spaceService.resolveScope(dbWithMembership({ role: 'MEMBER' }), userId);
 }
 
 const forgedSpaceScope = {
@@ -86,12 +95,16 @@ const forgedSpaceScope = {
   userId: 'mallory',
 } as unknown as Scope;
 
-const forgedPersonalScope = { type: 'personal', userId: 'mallory' } as unknown as Scope;
+const forgedEverySpaceScope = {
+  type: 'spaces',
+  spaceIds: ['space-1'],
+  userId: 'mallory',
+} as unknown as Scope;
 
 describe('a Scope that resolveScope did not mint', () => {
   it('is refused by the read boundary', () => {
     expect(() => scopeWhere(forgedSpaceScope)).toThrow(TRPCError);
-    expect(() => scopeWhere(forgedPersonalScope)).toThrow(TRPCError);
+    expect(() => scopeWhere(forgedEverySpaceScope)).toThrow(TRPCError);
   });
 
   it('is refused by the create boundary', () => {
@@ -113,8 +126,10 @@ describe('a Scope that resolveScope did not mint', () => {
 });
 
 describe('scopeWhere', () => {
-  it('pins personal scope to unspaced rows instead of every row', async () => {
-    expect(scopeWhere(await resolvedPersonalScope())).toEqual({ spaceId: null });
+  it('pins an every-space scope to the caller spaces instead of every row', async () => {
+    expect(scopeWhere(await resolvedEverySpaceScope())).toEqual({
+      spaceId: { in: ['space-1', 'space-2'] },
+    });
   });
 
   it('pins space scope to the resolved space', async () => {
@@ -131,8 +146,11 @@ describe('scopeConnect', () => {
     });
   });
 
-  it('leaves a personal row unattached', async () => {
-    expect(scopeConnect(await resolvedPersonalScope())).toEqual({});
+  it('refuses to guess a space from an every-space scope', async () => {
+    const scope = await resolvedEverySpaceScope();
+
+    expect(() => scopeConnect(scope)).toThrow('Choose a space');
+    expect(() => scopeSpaceId(scope)).toThrow('Choose a space');
   });
 });
 
@@ -149,14 +167,6 @@ async function trpcErrorOf(run: () => Promise<unknown>) {
 }
 
 describe('requireRowScope', () => {
-  it('returns a personal row without consulting membership', async () => {
-    const row = { id: 'client-1', spaceId: null };
-
-    expect(await requireRowScope(dbWithMembership(null), 'user-1', row, 'Client not found')).toBe(
-      row
-    );
-  });
-
   it('returns a space row when the caller is a member', async () => {
     const row = { id: 'client-1', spaceId: 'space-1' };
 
@@ -213,7 +223,7 @@ describe('requireRowsScope', () => {
           db,
           'user-1',
           [
-            { id: 'doc-1', spaceId: null },
+            { id: 'doc-1', spaceId: 'space-2' },
             { id: 'doc-2', spaceId: 'space-1' },
           ],
           'One or more documents not found'
@@ -240,18 +250,14 @@ describe('clientService.getClientById', () => {
     } as unknown as PrismaClient;
   }
 
-  it('reads a personal client', async () => {
-    const client = { id: 'client-1', spaceId: null };
-
-    const read = await clientService.getClientById(dbWithClient(client, null), 'user-1', 'client-1');
-
-    expect(read as unknown).toEqual({ ...client, payments: [] });
-  });
-
   it('does not return a payment from another space', async () => {
-    const client = { id: 'client-1', spaceId: null };
+    const client = { id: 'client-1', spaceId: 'space-1' };
 
-    const read = await clientService.getClientById(dbWithClient(client, null), 'user-1', 'client-1');
+    const read = await clientService.getClientById(
+      dbWithClient(client, { role: 'MEMBER' }),
+      'user-1',
+      'client-1'
+    );
 
     expect(read.payments).toEqual([]);
   });
@@ -279,15 +285,17 @@ describe('clientService.getClientById', () => {
 describe('mediaService.resolveDownloadKey', () => {
   function dbWithReferences(options: {
     settingsLogoUrl?: string | null;
-    providers?: Array<{ spaceId: string | null; logoUrl: string | null }>;
-    documents?: Array<{ spaceId: string | null; pdfUrl: string | null }>;
+    providers?: Array<{ logoUrl: string | null }>;
+    documents?: Array<{ spaceId: string; pdfUrl: string | null }>;
     member?: { role: 'MEMBER' } | null;
+    role?: 'ADMIN' | 'CLIENT';
   }) {
     return {
       settings: { findFirst: async () => ({ logoUrl: options.settingsLogoUrl ?? null }) },
       provider: { findMany: async () => options.providers ?? [] },
       document: { findMany: async () => options.documents ?? [] },
       spaceMember: { findUnique: async () => options.member ?? null },
+      user: { findUnique: async () => ({ role: options.role ?? 'CLIENT' }) },
     } as unknown as PrismaClient;
   }
 
@@ -325,12 +333,10 @@ describe('mediaService.resolveDownloadKey', () => {
     ).toEqual({ code: 'NOT_FOUND', message: 'File not found' });
   });
 
-  it('refuses a provider logo from a space the caller is not in', async () => {
+  it('refuses a provider logo to a caller who is not staff', async () => {
     const db = dbWithReferences({
-      providers: [
-        { spaceId: 'space-1', logoUrl: 'https://api.test/storage/uploads/user-2/logo.png' },
-      ],
-      member: null,
+      providers: [{ logoUrl: 'https://api.test/storage/uploads/user-2/logo.png' }],
+      role: 'CLIENT',
     });
 
     expect(
@@ -344,12 +350,10 @@ describe('mediaService.resolveDownloadKey', () => {
     ).toEqual({ code: 'NOT_FOUND', message: 'File not found' });
   });
 
-  it('mints a provider logo for a member of the provider space', async () => {
+  it('mints a provider logo for staff', async () => {
     const db = dbWithReferences({
-      providers: [
-        { spaceId: 'space-1', logoUrl: 'https://api.test/storage/uploads/user-2/logo.png' },
-      ],
-      member: { role: 'MEMBER' },
+      providers: [{ logoUrl: 'https://api.test/storage/uploads/user-2/logo.png' }],
+      role: 'ADMIN',
     });
 
     expect(
@@ -400,7 +404,7 @@ describe('paymentService.getPaymentById', () => {
         findUnique: async () => ({
           id: 'pay-1',
           clientId: 'client-1',
-          spaceId: null,
+          spaceId: 'space-a',
           invoices: [],
           client: foreignClient,
           attachedDocuments: [foreignAttachment],
@@ -414,7 +418,7 @@ describe('paymentService.getPaymentById', () => {
         findMany: async ({ where }: any) =>
           where.document.spaceId === foreignAttachment.document.spaceId ? [foreignAttachment] : [],
       },
-      spaceMember: { findUnique: async () => null },
+      spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
     } as unknown as PrismaClient;
   }
 
@@ -478,7 +482,7 @@ describe('paymentService.createPayment', () => {
     expect(
       await trpcErrorOf(() =>
         paymentService.createPayment(
-          dbForCreate(null, 'space-b', created),
+          dbForCreate('space-a', 'space-b', created),
           'user-1',
           null,
           null,
@@ -516,7 +520,7 @@ describe('clientService.listClients', () => {
     await clientService.listClients(
       db,
       { page: 1, limit: 10 },
-      await resolvedPersonalScope('u')
+      await resolvedEverySpaceScope('u')
     );
     await clientService.listClients(
       db,
@@ -525,13 +529,14 @@ describe('clientService.listClients', () => {
     );
 
     expect(seen.length).toBe(4);
-    expect(seen.slice(0, 2).every((where) => where.spaceId === null)).toBe(true);
+    expect(seen.slice(0, 2).every((where) => where.spaceId.in.length === 2)).toBe(true);
     expect(seen.slice(2).every((where) => where.spaceId === 'space-1')).toBe(true);
   });
 });
 
 describe('the create path carries the space', () => {
   const clientInput: CreateClientInput = {
+    spaceId: 'space-a',
     contactFirstName: 'Ada',
     contactLastName: 'Lovelace',
     companyName: 'Analytical Engines',
@@ -540,7 +545,10 @@ describe('the create path carries the space', () => {
 
   function dbForClientCreate(member: { role: 'MEMBER' } | null, created: any[]) {
     return {
-      spaceMember: { findUnique: async () => member },
+      spaceMember: {
+        findUnique: async () => member,
+        findMany: async () => (member ? [{ spaceId: 'space-a' }] : []),
+      },
       client: {
         create: async (args: any) => {
           created.push(args);
@@ -580,30 +588,14 @@ describe('the create path carries the space', () => {
     expect(created[0].data.space).toEqual({ connect: { id: 'space-a' } });
   });
 
-  it('leaves a personal client unattached to any space', async () => {
+  it('refuses a client create that names no space', async () => {
     const created: any[] = [];
-    const db = dbForClientCreate(null, created);
+    const db = dbForClientCreate({ role: 'MEMBER' }, created);
 
-    await createClientThroughRouter(db, 'user-1', undefined, clientInput);
-
-    expect(created.length).toBe(1);
-    expect(created[0].data.space).toBe(undefined);
-  });
-
-  it('lands a provider in the resolved scope', async () => {
-    const created: any[] = [];
-    const db = {
-      provider: {
-        create: async (args: any) => {
-          created.push(args);
-          return { id: 'provider-1' };
-        },
-      },
-    } as unknown as PrismaClient;
-
-    await providerService.createProvider(db, { name: 'Acme' }, await resolvedSpaceScope('space-a'));
-
-    expect(created[0].data.spaceId).toBe('space-a');
+    expect(
+      await trpcErrorOf(() => createClientThroughRouter(db, 'user-1', undefined, clientInput))
+    ).toEqual({ code: 'BAD_REQUEST', message: 'Choose a space' });
+    expect(created.length).toBe(0);
   });
 
   it('stamps a document with the scope it was created in', async () => {
@@ -622,32 +614,33 @@ describe('the create path carries the space', () => {
 
 describe('loadDocumentContext', () => {
   function dbWithParties(options: {
-    client?: { id: string; spaceId: string | null };
-    provider?: { id: string; spaceId: string | null };
+    client?: { id: string; spaceId: string };
+    provider?: { id: string };
     member?: { role: 'MEMBER' } | null;
   }) {
-    const matches = (row: { spaceId: string | null } | undefined, where: any) =>
-      row !== undefined && where.spaceId === row.spaceId;
+    const matches = (row: { spaceId: string } | undefined, where: any) =>
+      row !== undefined &&
+      (where.spaceId?.in ? where.spaceId.in.includes(row.spaceId) : where.spaceId === row.spaceId);
 
     return {
-      spaceMember: { findUnique: async () => options.member ?? null },
+      spaceMember: {
+        findUnique: async () => options.member ?? null,
+        findMany: async () =>
+          options.member ? [{ spaceId: 'space-a' }, { spaceId: 'space-b' }] : [],
+      },
       settings: { findUnique: async () => ({ id: 'settings' }) },
       client: {
         findFirst: async ({ where }: any) => (matches(options.client, where) ? options.client : null),
         findUnique: async () => options.client ?? null,
       },
-      provider: {
-        findFirst: async ({ where }: any) =>
-          matches(options.provider, where) ? options.provider : null,
-        findUnique: async () => options.provider ?? null,
-      },
+      provider: { findUnique: async () => options.provider ?? null },
     } as unknown as PrismaClient;
   }
 
   it('refuses a client that does not live in the requested space', async () => {
     const db = dbWithParties({
-      client: { id: 'client-1', spaceId: null },
-      provider: { id: 'provider-1', spaceId: 'space-a' },
+      client: { id: 'client-1', spaceId: 'space-b' },
+      provider: { id: 'provider-1' },
       member: { role: 'MEMBER' },
     });
 
@@ -658,10 +651,9 @@ describe('loadDocumentContext', () => {
     ).toEqual({ code: 'NOT_FOUND', message: 'Client not found' });
   });
 
-  it('refuses a provider from a different space than the document', async () => {
+  it('refuses a provider that does not exist', async () => {
     const db = dbWithParties({
       client: { id: 'client-1', spaceId: 'space-a' },
-      provider: { id: 'provider-1', spaceId: 'space-b' },
       member: { role: 'MEMBER' },
     });
 
@@ -675,7 +667,7 @@ describe('loadDocumentContext', () => {
   it('returns the resolved scope so the created row can be stamped with it', async () => {
     const db = dbWithParties({
       client: { id: 'client-1', spaceId: 'space-a' },
-      provider: { id: 'provider-1', spaceId: 'space-a' },
+      provider: { id: 'provider-1' },
       member: { role: 'MEMBER' },
     });
 
@@ -683,6 +675,18 @@ describe('loadDocumentContext', () => {
 
     expect(context.scope).toMatchObject({ type: 'space', spaceId: 'space-a', userId: 'user-1' });
     expect(scopeWhere(context.scope)).toEqual({ spaceId: 'space-a' });
+  });
+
+  it('takes the space of the client when the call names no space', async () => {
+    const db = dbWithParties({
+      client: { id: 'client-1', spaceId: 'space-b' },
+      provider: { id: 'provider-1' },
+      member: { role: 'MEMBER' },
+    });
+
+    const context = await loadDocumentContext(db, 'user-1', 'client-1', 'provider-1');
+
+    expect(scopeSpaceId(context.scope)).toBe('space-b');
   });
 });
 
@@ -695,14 +699,14 @@ describe('paymentService.listClientPayments', () => {
   function dbForClientPortal() {
     return {
       client: {
-        findUnique: async () => ({ id: 'client-1', spaceId: null, userId: 'user-1' }),
+        findUnique: async () => ({ id: 'client-1', spaceId: 'space-a', userId: 'user-1' }),
         findFirst: async ({ where }: any) =>
-          where.spaceId === null ? { id: 'client-1', spaceId: null, user: null } : null,
+          where.spaceId === 'space-a' ? { id: 'client-1', spaceId: 'space-a', user: null } : null,
       },
       payment: {
         findMany: async ({ where }: any) =>
-          where.spaceId === null
-            ? [{ id: 'pay-1', clientId: 'client-1', spaceId: null }]
+          where.spaceId === 'space-a'
+            ? [{ id: 'pay-1', clientId: 'client-1', spaceId: 'space-a' }]
             : [],
       },
       paymentDocument: {
@@ -730,7 +734,7 @@ describe('spaceService.delete', () => {
     clients: number;
     documents: number;
     payments: number;
-    providers: number;
+    missions: number;
   }) {
     return dbWithSpaceContentsTracked(counts).db;
   }
@@ -739,7 +743,7 @@ describe('spaceService.delete', () => {
     clients: number;
     documents: number;
     payments: number;
-    providers: number;
+    missions: number;
   }) {
     let depth = 0;
     const outsideTransaction: string[] = [];
@@ -775,10 +779,10 @@ describe('spaceService.delete', () => {
           return counts.payments;
         },
       },
-      provider: {
+      mission: {
         count: async () => {
-          record('provider.count');
-          return counts.providers;
+          record('mission.count');
+          return counts.missions;
         },
       },
       space: {
@@ -797,7 +801,7 @@ describe('spaceService.delete', () => {
       clients: 0,
       documents: 0,
       payments: 0,
-      providers: 0,
+      missions: 0,
     });
 
     await spaceService.delete(db, 'user-1', 'space-a');
@@ -806,16 +810,16 @@ describe('spaceService.delete', () => {
   });
 
   it('refuses to delete a space that still holds rows', async () => {
-    const db = dbWithSpaceContents({ clients: 0, documents: 2, payments: 0, providers: 0 });
+    const db = dbWithSpaceContents({ clients: 0, documents: 2, payments: 0, missions: 0 });
 
     expect(await trpcErrorOf(() => spaceService.delete(db, 'user-1', 'space-a'))).toEqual({
       code: 'CONFLICT',
-      message: 'Cannot delete a space that still holds 2 clients, documents, payments or providers',
+      message: 'Cannot delete a space that still holds 2 clients, documents, payments or missions',
     });
   });
 
   it('deletes an empty space', async () => {
-    const db = dbWithSpaceContents({ clients: 0, documents: 0, payments: 0, providers: 0 });
+    const db = dbWithSpaceContents({ clients: 0, documents: 0, payments: 0, missions: 0 });
 
     expect(await spaceService.delete(db, 'user-1', 'space-a')).toEqual({ success: true });
   });
