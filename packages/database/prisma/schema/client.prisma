@@ -17,6 +17,8 @@ model Client {
 
   stripeCustomerId String? @unique
 
+  gloutonCompanyId String? @unique
+
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
