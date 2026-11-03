@@ -64,7 +64,7 @@
         }
     }
 
-    const canManage = $derived(space?.role === 'OWNER' || space?.role === 'ADMIN');
+    const canManage = $derived(!space?.manageUrl && (space?.role === 'OWNER' || space?.role === 'ADMIN'));
     const isOwner = $derived(space?.role === 'OWNER');
 
     async function addMember() {
@@ -186,6 +186,15 @@
             back={{ href: `/admin/spaces/${spaceId}`, label: space.name }}
         />
 
+        {#if space.manageUrl}
+            <Section card>
+                <p class="text-fc-sm text-fc-fg-muted">{$i18n.t('spaces.managedHint')}</p>
+                <div>
+                    <Button href={space.manageUrl} icon={icons.usersGroup}>{$i18n.t('spaces.manageInRegistre')}</Button>
+                </div>
+            </Section>
+        {/if}
+
         {#if canManage}
             <Section title={$i18n.t('spaces.addMember')} card>
                 <div class="grid gap-4 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
@@ -285,7 +294,7 @@
             </div>
         </Section>
 
-        {#if !isOwner}
+        {#if !isOwner && !space.manageUrl}
             <Section title={$i18n.t('spaces.leaveSpace')} card>
                 <div>
                     <Button

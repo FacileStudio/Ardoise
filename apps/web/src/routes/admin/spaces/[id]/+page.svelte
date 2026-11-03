@@ -69,6 +69,11 @@
         >
             {#snippet actions()}
                 <Button icon={icons.arrow} onclick={switchToSpace}>{$i18n.t('spaces.switchTo')}</Button>
+                {#if space.manageUrl}
+                    <Button href={space.manageUrl} variant="ghost" icon={icons.usersGroup}>
+                        {$i18n.t('spaces.manageInRegistre')}
+                    </Button>
+                {/if}
                 {#if isOwnerOrAdmin}
                     <Button href={resolve(`/admin/spaces/${spaceId}/settings`)} variant="ghost" icon={icons.settings}>
                         {$i18n.t('spaces.settings')}
@@ -79,7 +84,7 @@
 
         <Section title={$i18n.t('spaces.members')}>
             {#snippet actions()}
-                {#if isOwnerOrAdmin}
+                {#if isOwnerOrAdmin && !space.manageUrl}
                     <Button href={resolve(`/admin/spaces/${spaceId}/members`)} variant="ghost" size="sm" icon={icons.plus}>
                         {$i18n.t('spaces.membersTitle')}
                     </Button>

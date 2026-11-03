@@ -102,8 +102,8 @@
 
         {#if canManage}
             <Section title="Général" card>
-                <Field label={$i18n.t('spaces.name')}>
-                    <Input bind:value={name} />
+                <Field label={$i18n.t('spaces.name')} helper={space.manageUrl ? $i18n.t('spaces.managedHint') : undefined}>
+                    <Input bind:value={name} disabled={!!space.manageUrl} />
                 </Field>
                 <Field label={$i18n.t('spaces.description')}>
                     <Textarea bind:value={description} rows={3} placeholder={$i18n.t('spaces.descriptionPlaceholder')} />
@@ -116,7 +116,13 @@
             </Section>
         {/if}
 
-        {#if isOwner}
+        {#if space.manageUrl}
+            <div>
+                <Button href={space.manageUrl} variant="ghost" icon={icons.usersGroup}>
+                    {$i18n.t('spaces.manageInRegistre')}
+                </Button>
+            </div>
+        {:else if isOwner}
             <Section title={$i18n.t('spaces.deleteSpace')} card>
                 <p class="text-fc-sm text-fc-fg-muted">
                     {$i18n.t('spaces.deleteConfirm', { name: space.name })}

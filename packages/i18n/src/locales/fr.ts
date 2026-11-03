@@ -337,6 +337,8 @@ export const fr: EnTranslations = {
     },
   },
   spaces: {
+    manageInRegistre: 'Gérer dans Registre',
+    managedHint: 'Le nom, les membres et les rôles se gèrent dans Registre et sont partagés par toutes les apps Facile.',
     title: 'Espaces',
     subtitle: 'Gérez vos espaces de travail et la collaboration',
     personal: 'Personnel',

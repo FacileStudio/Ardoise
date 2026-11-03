@@ -9,10 +9,14 @@
 
     let spaces: any[] = $state([]);
     let loading = $state(true);
+    let registreUrl: string | null = $state(null);
 
     onMount(async () => {
         try {
-            spaces = await trpc.space.list.query();
+            [spaces, { spacesUrl: registreUrl }] = await Promise.all([
+                trpc.space.list.query(),
+                trpc.space.directory.query(),
+            ]);
         } catch (err) {
             logger.error({ err }, 'Failed to fetch spaces');
         } finally {
@@ -32,9 +36,13 @@
 <Page width="lg">
     <PageHeader title={$i18n.t('spaces.title')} description={$i18n.t('spaces.subtitle')}>
         {#snippet actions()}
-            <Button href={resolve('/admin/spaces/new')} icon={icons.plus}>
-                {$i18n.t('spaces.createSpace')}
-            </Button>
+            {#if registreUrl}
+                <Button href={registreUrl} icon={icons.arrow}>{$i18n.t('spaces.manageInRegistre')}</Button>
+            {:else}
+                <Button href={resolve('/admin/spaces/new')} icon={icons.plus}>
+                    {$i18n.t('spaces.createSpace')}
+                </Button>
+            {/if}
         {/snippet}
     </PageHeader>
 
@@ -46,9 +54,13 @@
             title={$i18n.t('spaces.noSpaces')}
             description={$i18n.t('spaces.noSpacesDescription')}
         >
-            <Button href={resolve('/admin/spaces/new')} icon={icons.plus}>
-                {$i18n.t('spaces.createSpace')}
-            </Button>
+            {#if registreUrl}
+                <Button href={registreUrl} icon={icons.arrow}>{$i18n.t('spaces.manageInRegistre')}</Button>
+            {:else}
+                <Button href={resolve('/admin/spaces/new')} icon={icons.plus}>
+                    {$i18n.t('spaces.createSpace')}
+                </Button>
+            {/if}
         </EmptyState>
     {:else}
         <div class="grid gap-3">

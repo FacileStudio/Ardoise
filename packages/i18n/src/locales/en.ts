@@ -335,6 +335,8 @@ export const en = {
     },
   },
   spaces: {
+    manageInRegistre: 'Manage in Registre',
+    managedHint: 'Name, members and roles are managed in Registre and shared by every Facile app.',
     title: 'Spaces',
     subtitle: 'Manage your workspaces and team collaboration',
     personal: 'Personal',
