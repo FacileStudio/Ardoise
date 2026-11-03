@@ -58,7 +58,7 @@
     {#if loading}
         <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
     {:else if !space}
-        <EmptyState icon={icons.usersGroup} title="Espace introuvable">
+        <EmptyState icon={icons.space} title="Espace introuvable">
             <Button href={resolve('/admin/spaces')} variant="ghost">{$i18n.t('spaces.title')}</Button>
         </EmptyState>
     {:else}
@@ -70,7 +70,7 @@
             {#snippet actions()}
                 <Button icon={icons.arrow} onclick={switchToSpace}>{$i18n.t('spaces.switchTo')}</Button>
                 {#if space.manageUrl}
-                    <Button href={space.manageUrl} variant="ghost" icon={icons.usersGroup}>
+                    <Button href={space.manageUrl} variant="ghost" icon={icons.space}>
                         {$i18n.t('spaces.manageInRegistre')}
                     </Button>
                 {/if}

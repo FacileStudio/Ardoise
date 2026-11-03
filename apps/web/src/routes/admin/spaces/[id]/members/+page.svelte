@@ -176,7 +176,7 @@
     {#if loading}
         <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
     {:else if !space}
-        <EmptyState icon={icons.usersGroup} title="Espace introuvable">
+        <EmptyState icon={icons.space} title="Espace introuvable">
             <Button href={resolve('/admin/spaces')} variant="ghost">{$i18n.t('spaces.title')}</Button>
         </EmptyState>
     {:else}
@@ -190,7 +190,7 @@
             <Section card>
                 <p class="text-fc-sm text-fc-fg-muted">{$i18n.t('spaces.managedHint')}</p>
                 <div>
-                    <Button href={space.manageUrl} icon={icons.usersGroup}>{$i18n.t('spaces.manageInRegistre')}</Button>
+                    <Button href={space.manageUrl} icon={icons.space}>{$i18n.t('spaces.manageInRegistre')}</Button>
                 </div>
             </Section>
         {/if}

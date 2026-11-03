@@ -50,7 +50,7 @@
         <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
     {:else if spaces.length === 0}
         <EmptyState
-            icon={icons.usersGroup}
+            icon={icons.space}
             title={$i18n.t('spaces.noSpaces')}
             description={$i18n.t('spaces.noSpacesDescription')}
         >
