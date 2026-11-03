@@ -5,7 +5,10 @@ import { providerRouter } from './router';
 
 function dbFor(member: { role: 'MEMBER' } | null, created: any[]) {
   return {
-    spaceMember: { findUnique: async () => member },
+    spaceMember: {
+      findUnique: async () => member,
+      findMany: async () => (member ? [{ spaceId: 'space-a' }] : []),
+    },
     provider: {
       create: async (args: any) => {
         created.push(args);
@@ -26,30 +29,14 @@ function callerFor(member: { role: 'MEMBER' } | null, created: any[]) {
 }
 
 describe('providerRouter.create', () => {
-  it('refuses a space the caller is not a member of', async () => {
+  it('creates a provider every space can use', async () => {
     const created: any[] = [];
 
-    await expect(
-      callerFor(null, created).create({ name: 'Acme', spaceId: 'space-a' } as any)
-    ).rejects.toThrow(new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this space' }));
+    await callerFor(null, created).create({ name: 'Acme', spaceId: 'space-a' } as any);
 
-    expect(created.length).toBe(0);
-  });
-
-  it('lands the provider in the requested space', async () => {
-    const created: any[] = [];
-
-    await callerFor({ role: 'MEMBER' }, created).create({ name: 'Acme', spaceId: 'space-a' } as any);
-
-    expect(created[0].data.spaceId).toBe('space-a');
-  });
-
-  it('pins a spaceless provider to personal rows', async () => {
-    const created: any[] = [];
-
-    await callerFor(null, created).create({ name: 'Acme' } as any);
-
-    expect(created[0].data.spaceId).toBe(null);
+    expect(created.length).toBe(1);
+    expect(created[0].data.name).toBe('Acme');
+    expect('spaceId' in created[0].data).toBe(false);
   });
 });
 
@@ -60,7 +47,7 @@ describe('providerRouter.delete guards', () => {
         provider: { findUnique: async () => ({ id: 'p-1', spaceId: null }) },
         document: { count: async () => 3 },
         missionProvider: { count: async () => 1 },
-        spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+        spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
       },
       user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
       log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },

@@ -5,7 +5,7 @@ import { PlumeError, contractExternalRef, getSigners, plumeConfigFromEnv, signin
 type SignableDocument = {
   id: string;
   missionId: string | null;
-  spaceId: string | null;
+  spaceId: string;
   clientName: string;
   plumeDocumentId: string | null;
   plumeClientSignUrl: string | null;

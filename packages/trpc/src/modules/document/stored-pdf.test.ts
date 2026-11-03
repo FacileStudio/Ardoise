@@ -84,7 +84,10 @@ describe('storeDocumentPdf', () => {
     const { storage } = storageSpy();
     const stored = await storeDocumentPdf(storage, pdf);
 
-    const scope = await spaceService.resolveScope({} as PrismaClient, 'user-1');
+    const db = {
+      spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+    } as unknown as PrismaClient;
+    const scope = await spaceService.resolveScope(db, 'user-1', 'space-a');
     const base = buildDocumentPersistenceBase(
       {} as any,
       'prov-1',
@@ -105,14 +108,17 @@ describe('document.download', () => {
   const row = {
     id: 'doc-1',
     name: 'facture.pdf',
-    spaceId: null,
+    spaceId: 'space-a',
     pdfUrl: 'http://api/storage/documents/doc-1.pdf',
     createdAt: new Date('2026-10-01'),
   };
 
   const callerWith = (storage: unknown) =>
     documentRouter.createCaller({
-      db: { document: { findUnique: async () => row } } as unknown as PrismaClient,
+      db: {
+        document: { findUnique: async () => row },
+        spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
+      } as unknown as PrismaClient,
       user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
       log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
       storage,

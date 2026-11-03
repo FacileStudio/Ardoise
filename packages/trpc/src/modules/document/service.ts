@@ -22,7 +22,7 @@ import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
 import { getSettingsRecord } from '../settings/service';
-import spaceService, { scopeWhere, type Scope } from '../space/service';
+import spaceService, { scopeSpaceId, scopeWhere, type Scope } from '../space/service';
 
 export const DocTypeSchema = z.enum([
   'facture_prestation',
@@ -676,18 +676,20 @@ export async function loadDocumentContext(
   spaceId?: string,
   missionId?: string
 ) {
-  const scope = await spaceService.resolveScope(db, userId, spaceId);
+  const reachable = await spaceService.resolveScope(db, userId, spaceId);
 
   const client = await db.client.findFirst({
-    where: { id: clientId, ...scopeWhere(scope) },
+    where: { id: clientId, ...scopeWhere(reachable) },
   });
 
   if (!client) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
   }
 
-  const provider = await db.provider.findFirst({
-    where: { id: providerId, ...scopeWhere(scope) },
+  const scope = await spaceService.resolveScope(db, userId, client.spaceId);
+
+  const provider = await db.provider.findUnique({
+    where: { id: providerId },
   });
 
   if (!provider) {
@@ -760,7 +762,7 @@ export function buildDocumentPersistenceBase(
   stored?: StoredPdf
 ) {
   return {
-    ...scopeWhere(scope),
+    spaceId: scopeSpaceId(scope),
     missionId,
     ...stored,
     clientName: documentData.client_name ?? '',

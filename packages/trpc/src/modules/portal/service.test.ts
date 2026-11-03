@@ -5,8 +5,8 @@ import { summarizeTotals } from './service';
 
 const date = (value: string) => new Date(value);
 
-const clientA = { id: 'client-a', userId: 'user-a', spaceId: null, companyName: 'A', contactFirstName: 'Ada', contactLastName: 'Lee', contactEmail: 'ada@a.test' };
-const clientB = { id: 'client-b', userId: 'user-b', spaceId: null, companyName: 'B', contactFirstName: 'Bob', contactLastName: 'Ray', contactEmail: 'bob@b.test' };
+const clientA = { id: 'client-a', userId: 'user-a', spaceId: 'space-a', companyName: 'A', contactFirstName: 'Ada', contactLastName: 'Lee', contactEmail: 'ada@a.test' };
+const clientB = { id: 'client-b', userId: 'user-b', spaceId: 'space-a', companyName: 'B', contactFirstName: 'Bob', contactLastName: 'Ray', contactEmail: 'bob@b.test' };
 
 const mentions = (where: unknown, clientId: string) => JSON.stringify(where).includes(`"clientId":"${clientId}"`);
 

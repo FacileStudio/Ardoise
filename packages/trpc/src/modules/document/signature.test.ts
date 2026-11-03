@@ -18,7 +18,7 @@ function stored(overrides: Record<string, unknown> = {}) {
     id: 'doc-1',
     type: 'contrat_prestation',
     name: 'contrat_prestation_C1.pdf',
-    spaceId: null,
+    spaceId: 'space-a',
     missionId: 'mission-1',
     clientName: 'Acme',
     providerName: 'Studio',
@@ -45,7 +45,7 @@ function setup(document: Record<string, unknown>, env: Record<string, unknown> =
         client: { contactFirstName: 'Ada', contactLastName: 'Martin', contactEmail: 'ada@acme.fr' },
       }),
     },
-    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
   };
   const ctx = {
     db: db as PrismaClient,

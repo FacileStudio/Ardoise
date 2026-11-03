@@ -74,7 +74,9 @@ async function readPayload(c: Context): Promise<ClientPayload> {
 }
 
 async function spaceIdFor(db: PrismaClient, registreSpaceId: string | null) {
-  if (!registreSpaceId) return null;
+  if (!registreSpaceId) {
+    throw new SyncError(422, 'space_required', 'An Ardoise client needs a registreSpaceId');
+  }
   const space = await db.space.findUnique({ where: { registreSpaceId }, select: { id: true } });
   if (!space)
     throw new SyncError(422, 'unknown_space', 'No Ardoise space has this registreSpaceId');

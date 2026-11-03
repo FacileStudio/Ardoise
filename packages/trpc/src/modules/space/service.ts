@@ -18,7 +18,7 @@ const RESOLVED: unique symbol = Symbol('space.scope.resolved');
 type ResolvedMark = { readonly [RESOLVED]: true };
 
 type ScopeShape =
-  | { type: 'personal'; userId: string }
+  | { type: 'spaces'; spaceIds: string[]; userId: string }
   | { type: 'space'; spaceId: string; userId: string };
 
 /**
@@ -56,17 +56,28 @@ function requireRole(member: { role: SpaceRole } | null, minimum: SpaceRole): vo
   }
 }
 
-export function scopeWhere(scope: Scope): { spaceId: string | null } {
+export function scopeWhere(scope: Scope): { spaceId: string | { in: string[] } } {
   requireMintedScope(scope);
-  return scope.type === 'space' ? { spaceId: scope.spaceId } : { spaceId: null };
+  return scope.type === 'space' ? { spaceId: scope.spaceId } : { spaceId: { in: scope.spaceIds } };
 }
 
-export function scopeConnect(scope: Scope): { space?: { connect: { id: string } } } {
+/**
+ * The one space a write lands in. A scope over every space of the caller has no
+ * single answer, so it is refused instead of guessed.
+ */
+export function scopeSpaceId(scope: Scope): string {
   requireMintedScope(scope);
-  return scope.type === 'space' ? { space: { connect: { id: scope.spaceId } } } : {};
+  if (scope.type !== 'space') {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose a space' });
+  }
+  return scope.spaceId;
 }
 
-export async function requireRowScope<T extends { spaceId: string | null }>(
+export function scopeConnect(scope: Scope): { space: { connect: { id: string } } } {
+  return { space: { connect: { id: scopeSpaceId(scope) } } };
+}
+
+export async function requireRowScope<T extends { spaceId: string }>(
   db: PrismaClient,
   userId: string,
   row: T | null | undefined,
@@ -86,7 +97,7 @@ export async function requireRowScope<T extends { spaceId: string | null }>(
   throw new TRPCError({ code: 'NOT_FOUND', message });
 }
 
-export async function requireRowsScope<T extends { spaceId: string | null }>(
+export async function requireRowsScope<T extends { spaceId: string }>(
   db: PrismaClient,
   userId: string,
   rows: T[],
@@ -101,7 +112,11 @@ export async function requireRowsScope<T extends { spaceId: string | null }>(
 export const spaceService = {
   async resolveScope(db: PrismaClient, userId: string, spaceId?: string | null): Promise<Scope> {
     if (!spaceId) {
-      return mintScope({ type: 'personal', userId });
+      const memberships = await db.spaceMember.findMany({
+        where: { userId },
+        select: { spaceId: true },
+      });
+      return mintScope({ type: 'spaces', spaceIds: memberships.map((m) => m.spaceId), userId });
     }
 
     const member = await db.spaceMember.findUnique({
@@ -216,14 +231,14 @@ export const spaceService = {
         tx.client.count({ where: { spaceId } }),
         tx.document.count({ where: { spaceId } }),
         tx.payment.count({ where: { spaceId } }),
-        tx.provider.count({ where: { spaceId } }),
+        tx.mission.count({ where: { spaceId } }),
       ]);
       const total = held.reduce((sum, count) => sum + count, 0);
 
       if (total > 0) {
         throw new TRPCError({
           code: 'CONFLICT',
-          message: `Cannot delete a space that still holds ${total} clients, documents, payments or providers`,
+          message: `Cannot delete a space that still holds ${total} clients, documents, payments or missions`,
         });
       }
 

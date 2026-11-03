@@ -45,16 +45,15 @@ export function parseStorageKey(value: string | null): string | null {
 async function findKeyReference(
   db: PrismaClient,
   key: string
-): Promise<{ spaceId: string | null } | 'public' | null> {
+): Promise<{ spaceId: string } | 'public' | 'staff' | null> {
   const settings = await db.settings.findFirst({ select: { logoUrl: true } });
   if (settings && parseStorageKey(settings.logoUrl) === key) return 'public';
 
   const providers = await db.provider.findMany({
     where: { logoUrl: { endsWith: key } },
-    select: { spaceId: true, logoUrl: true },
+    select: { logoUrl: true },
   });
-  const provider = providers.find((row) => parseStorageKey(row.logoUrl) === key);
-  if (provider) return { spaceId: provider.spaceId };
+  if (providers.some((row) => parseStorageKey(row.logoUrl) === key)) return 'staff';
 
   const documents = await db.document.findMany({
     where: { pdfUrl: { endsWith: key } },
@@ -102,7 +101,10 @@ export const mediaService = {
       throw new TRPCError({ code: 'NOT_FOUND', message: NOT_ENTITLED });
     }
 
-    if (reference !== 'public') {
+    if (reference === 'staff') {
+      const user = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (user?.role !== 'ADMIN') throw new TRPCError({ code: 'NOT_FOUND', message: NOT_ENTITLED });
+    } else if (reference !== 'public') {
       await requireRowScope(db, userId, reference, NOT_ENTITLED);
     }
 

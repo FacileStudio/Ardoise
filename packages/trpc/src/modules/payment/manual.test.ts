@@ -10,7 +10,7 @@ function setup(payment: Record<string, unknown> = {}) {
   const row = {
     id: 'pay-1',
     clientId: 'c-1',
-    spaceId: null,
+    spaceId: 'space-a',
     missionId: 'm-1',
     amount: 100,
     status: 'PENDING',
@@ -35,7 +35,7 @@ function setup(payment: Record<string, unknown> = {}) {
       },
     },
     client: {
-      findUnique: async () => ({ id: 'c-1', spaceId: null, contactEmail: null, user: null }),
+      findUnique: async () => ({ id: 'c-1', spaceId: 'space-a', contactEmail: null, user: null }),
     },
     mission: {
       findFirst: async () => ({ id: 'm-1' }),
@@ -45,7 +45,7 @@ function setup(payment: Record<string, unknown> = {}) {
       },
     },
     document: { findFirst: async () => null, findMany: async () => [] },
-    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }) },
+    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
   };
   const ctx = {
     db: db as PrismaClient,

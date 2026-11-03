@@ -42,7 +42,7 @@ const user = () => ({
 
 const client = () => ({
   id: 'c1',
-  spaceId: null,
+  spaceId: 'space-a',
   userId: 'u1',
   companyName: 'Acme',
   contactFirstName: 'A',
@@ -55,7 +55,7 @@ const client = () => ({
 
 const payment = () => ({
   id: 'p1',
-  spaceId: null,
+  spaceId: 'space-a',
   clientId: 'c1',
   status: 'PENDING',
   amount: 10,
@@ -79,7 +79,7 @@ const ROWS: Record<string, () => any> = {
   session: () => ({ id: 's1', userId: 'u1', token: 'old', expiresAt: new Date(Date.now() + 1e6) }),
   auditLog: () => ({ id: 'l1' }),
   media: () => ({ id: 'm1', url: 'u', key: 'k' }),
-  paymentDocument: () => ({ id: 'pd1', paymentId: 'p1', document: { id: 'd1', spaceId: null } }),
+  paymentDocument: () => ({ id: 'pd1', paymentId: 'p1', document: { id: 'd1', spaceId: 'space-a' } }),
   adminPermission: () => ({ id: 'ap1' }),
 };
 
@@ -181,7 +181,7 @@ const surfaces: Record<string, (c: ReturnType<typeof caller>) => Promise<unknown
   'client.getById': (c) => c.client.getById({ id: 'c1' }),
   'client.update': (c) => c.client.update({ id: 'c1', companyName: 'New' }),
   'client.create': (c) =>
-    c.client.create({ contactFirstName: 'A', contactLastName: 'B', companyName: 'Acme' } as any),
+    c.client.create({ contactFirstName: 'A', contactLastName: 'B', companyName: 'Acme', spaceId: 'space-a' } as any),
   'payment.list': (c) => c.payment.list({} as any),
   'payment.getById': (c) => c.payment.getById({ id: 'p1' }),
   'payment.update': (c) => c.payment.update({ id: 'p1', description: 'd' }),

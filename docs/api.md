@@ -61,7 +61,7 @@ Only active CLIENT users receive a link. Both procedures share the strict rate-l
 |---|---|---|---|
 | `list` | query | admin | `{ page = 1, limit = 10 (max 100), search?, spaceId? }` |
 | `getById` | query | admin | `{ id }` |
-| `create` | mutation | admin | contact name, `companyName`, optional billing address, `siret`, `tvaIntracom`, plus `createCredentials` and `credentialEmail` to give the client portal access. The user has no password and gets a welcome mail with a sign-in link |
+| `create` | mutation | admin | `spaceId` (required), contact name, `companyName`, optional billing address, `siret`, `tvaIntracom`, plus `createCredentials` and `credentialEmail` to give the client portal access. The user has no password and gets a welcome mail with a sign-in link |
 | `update` | mutation | admin | `{ id }` plus the same fields, all optional |
 | `delete` | mutation | admin | `{ id }` — refused while the client has payments or missions |
 | `me` | query | protected | — the signed-in user's own client record |
@@ -99,7 +99,7 @@ is admin-only and scoped by space like `client` and `payment`.
 |---|---|---|---|
 | `list` | query | admin | `{ page = 1, limit = 20 (max 100), status?, clientId?, search?, spaceId? }` |
 | `getById` | query | admin | `{ id }`: client, providers, prestations, documents, payments and a `billing` object |
-| `create` | mutation | admin | `{ name, clientId, description?, depositPercent?, providers = [{ providerId, role = 'LEAD' }], spaceId? }` |
+| `create` | mutation | admin | `{ name, clientId, description?, depositPercent?, providers = [{ providerId, role = 'LEAD' }], spaceId? }`. The mission takes the space of its client |
 | `update` | mutation | admin | `{ id, name?, description?, depositPercent?, providers? }`: `providers` replaces the whole list, `depositPercent: null` removes the deposit |
 | `setPrestations` | mutation | admin | `{ id, prestations: [{ description, quantity, unit = 'jour', unitPrice, providerId? }] }`: replaces every line |
 | `generateQuote` | mutation | admin | `{ id, validityDays = 30 }` |
@@ -204,7 +204,7 @@ reachable through their own procedures but are not listed in that picker.
 
 | Procedure | Type | Level | Input |
 |---|---|---|---|
-| `list` | query | admin | `{ page = 1, limit = 20 (max 100), search?, spaceId? }` |
+| `list` | query | admin | `{ page = 1, limit = 20 (max 100), search? }`. Providers are shared by every space |
 | `get` | query | admin | `{ id }` |
 | `create` | mutation | admin | `{ name }` plus optional legal identity (`legalName`, `siret`, `tvaIntracom`, `legalForm`, `shareCapital`, `rcsCity`, `apeCode`), address, contact, `bankName` / `iban` / `bic`, `logoUrl`, `country = 'France'`, `tvaRate = 20` |
 | `update` | mutation | admin | `{ id }` plus a partial of the above |
@@ -284,7 +284,7 @@ Not tRPC — these exist because of raw bodies, redirects, or callers that canno
 | `POST` | `/api/integrations/glouton/clients` | Bearer `GLOUTON_API_TOKEN` | Creates a client from a Glouton `ClientPayload`, or updates the one already linked to its `gloutonCompanyId`. Answers `{data:{id, updatedAt}}` |
 | `PUT` | `/api/integrations/glouton/clients/{id}` | Bearer `GLOUTON_API_TOKEN` | Updates and links that client. A payload whose `updatedAt` is not newer than the stored one changes nothing and answers `skipped: true` |
 | `POST` | `/api/integrations/glouton/clients/{id}/unlink` | Bearer `GLOUTON_API_TOKEN` | Clears `gloutonCompanyId` |
-| `GET` | `/api/integrations/glouton/clients/{id}` | Bearer `GLOUTON_API_TOKEN` | `{data: ClientPayload}`. All four answer 404 when Glouton is not configured, 401 on a wrong token, 400 on an invalid payload, 422 when `registreSpaceId` matches no space |
+| `GET` | `/api/integrations/glouton/clients/{id}` | Bearer `GLOUTON_API_TOKEN` | `{data: ClientPayload}`. All four answer 404 when Glouton is not configured, 401 on a wrong token, 400 on an invalid payload, 422 when `registreSpaceId` is null or matches no space |
 | `GET` | `/auth/config` | none | Whether OIDC is enabled |
 | `GET` | `/auth/oidc` | none | Starts the OIDC authorization flow |
 | `GET` | `/auth/oidc/callback` | none | Exchanges the code, signs in an existing user, sets auth cookies, redirects to `OIDC_SUCCESS_URL` with `?oidc=success` or `?error=<code>` |

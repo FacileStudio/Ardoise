@@ -1,8 +1,7 @@
 import { router, adminProcedure } from '../../trpc';
-import spaceService, { scopeWhere, requireRowScope } from '../space/service';
-import providerService from './service';
+import spaceService, { scopeWhere } from '../space/service';
 import { z } from 'zod';
-import type { Prisma } from '@repo/database';
+import type { Prisma, PrismaClient } from '@repo/database';
 import { TRPCError } from '@trpc/server';
 
 const emptyStringToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
@@ -33,6 +32,12 @@ const ProviderInput = z.object({
   tvaRate: z.number().min(0, 'Le taux de TVA doit être entre 0 et 100').max(100, 'Le taux de TVA doit être entre 0 et 100').default(20),
 });
 
+async function requireProvider(db: PrismaClient, id: string) {
+  const provider = await db.provider.findUnique({ where: { id } });
+  if (!provider) throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
+  return provider;
+}
+
 export const providerRouter = router({
   list: adminProcedure
     .input(
@@ -40,15 +45,13 @@ export const providerRouter = router({
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(100).default(20),
         search: z.string().optional(),
-        spaceId: z.string().optional(),
       })
     )
     .query(async ({ input, ctx }) => {
-      const { page, limit, search, spaceId } = input;
+      const { page, limit, search } = input;
       const skip = (page - 1) * limit;
 
-      const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
-      const where: Prisma.ProviderWhereInput = { ...scopeWhere(scope) };
+      const where: Prisma.ProviderWhereInput = {};
 
       if (search) {
         where.OR = [
@@ -79,15 +82,11 @@ export const providerRouter = router({
   get: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const provider = await requireRowScope(
-        ctx.db,
-        ctx.user.id,
-        await ctx.db.provider.findUnique({ where: { id: input.id } }),
-        'Provider not found'
-      );
+      const provider = await requireProvider(ctx.db, input.id);
+      const scope = await spaceService.resolveScope(ctx.db, ctx.user.id);
 
       const documents = await ctx.db.document.findMany({
-        where: { providerId: provider.id, spaceId: provider.spaceId },
+        where: { providerId: provider.id, ...scopeWhere(scope) },
         orderBy: { createdAt: 'desc' },
         take: 20,
       });
@@ -96,13 +95,8 @@ export const providerRouter = router({
     }),
 
   create: adminProcedure
-    .input(ProviderInput.extend({ spaceId: z.string().optional() }))
-    .mutation(async ({ input, ctx }) => {
-      const { spaceId, ...data } = input;
-      const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
-
-      return providerService.createProvider(ctx.db, data, scope);
-    }),
+    .input(ProviderInput)
+    .mutation(({ input, ctx }) => ctx.db.provider.create({ data: input })),
 
   update: adminProcedure
     .input(
@@ -112,12 +106,7 @@ export const providerRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      await requireRowScope(
-        ctx.db,
-        ctx.user.id,
-        await ctx.db.provider.findUnique({ where: { id: input.id } }),
-        'Provider not found'
-      );
+      await requireProvider(ctx.db, input.id);
 
       const provider = await ctx.db.provider.update({
         where: { id: input.id },
@@ -130,12 +119,7 @@ export const providerRouter = router({
   delete: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      await requireRowScope(
-        ctx.db,
-        ctx.user.id,
-        await ctx.db.provider.findUnique({ where: { id: input.id } }),
-        'Provider not found'
-      );
+      await requireProvider(ctx.db, input.id);
 
       const [documentsCount, missionsCount] = await Promise.all([
         ctx.db.document.count({ where: { providerId: input.id } }),

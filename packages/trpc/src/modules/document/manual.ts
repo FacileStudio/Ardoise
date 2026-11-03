@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { Prisma, PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
-import spaceService, { scopeWhere, requireRowScope } from '../space/service';
+import spaceService, { scopeSpaceId, scopeWhere, requireRowScope } from '../space/service';
 import { parseStorageKey } from '../media/service';
 import { syncMissionPaid } from '../mission/sync';
 import { DocumentItemSchema } from './types';
@@ -237,7 +237,7 @@ async function assertNumberFree(
   db: PrismaClient,
   field: NumberField,
   number: string,
-  spaceId: string | null,
+  spaceId: string,
   exceptId?: string
 ) {
   if (field === 'contractRef') return;
@@ -263,7 +263,7 @@ export async function importDocument(ctx: Ctx, input: z.infer<typeof ImportDocum
     input.missionId
   );
   const field = numberFieldFor(input.type);
-  const spaceId = scopeWhere(scope).spaceId;
+  const spaceId = scopeSpaceId(scope);
   if (input.number) await assertNumberFree(ctx.db, field, input.number, spaceId);
 
   const tvaRate = requireWholeRate(input.tvaRate ?? providerRate);
@@ -389,9 +389,7 @@ export async function updateDocument(ctx: Ctx, input: z.infer<typeof UpdateDocum
   }
 
   if (input.providerId !== undefined) {
-    const provider = await ctx.db.provider.findFirst({
-      where: { id: input.providerId, ...scopeWhere(scope) },
-    });
+    const provider = await ctx.db.provider.findUnique({ where: { id: input.providerId } });
     if (!provider) throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
     Object.assign(data, providerColumns(provider));
   }

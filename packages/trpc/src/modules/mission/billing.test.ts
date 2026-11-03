@@ -46,7 +46,7 @@ function setup(options: Setup = {}) {
   const mission = {
     id: 'm-1',
     clientId: 'client-1',
-    spaceId: null,
+    spaceId: 'space-a',
     status: 'DRAFT',
     name: 'Site vitrine',
     depositPercent: null,
@@ -68,6 +68,7 @@ function setup(options: Setup = {}) {
   };
 
   const db: any = {
+    spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
     $transaction: async (run: unknown) =>
       typeof run === 'function'
         ? (run as (tx: unknown) => unknown)(db)
@@ -86,9 +87,9 @@ function setup(options: Setup = {}) {
       findFirst: async () => ({ id: 'm-1', status: mission.status }),
       updateMany: async (args: any) => writes.missionUpdates.push(args),
     },
-    client: { findFirst: async () => ({ id: 'client-1', companyName: 'Acme' }) },
+    client: { findFirst: async () => ({ id: 'client-1', companyName: 'Acme', spaceId: 'space-a' }) },
     provider: {
-      findFirst: async () => ({ id: 'prov-1', name: 'Facile', tvaRate: 20, logoUrl: null }),
+      findUnique: async () => ({ id: 'prov-1', name: 'Facile', tvaRate: 20, logoUrl: null }),
       count: async () => 1,
     },
     prestation: {
