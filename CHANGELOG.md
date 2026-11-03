@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-03
+
 ### Removed
 
 - Staff password login: `auth.login`, `user.changePassword` and the password form are gone. Staff sign in with Facile SSO only.
