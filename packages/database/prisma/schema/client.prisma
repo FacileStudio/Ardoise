@@ -19,8 +19,8 @@ model Client {
 
   gloutonCompanyId String? @unique
 
-  spaceId String?
-  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  spaceId String
+  space   Space  @relation(fields: [spaceId], references: [id], onDelete: Restrict)
 
   payments    Payment[]
   missions Mission[]

@@ -67,10 +67,8 @@ async function seedAdmin() {
   });
 }
 
-async function seedSpace(seedAdminId: string) {
-  const space = await prisma.space.create({
-    data: { name: 'Atelier Nord', description: 'Espace de test pour le changement d\'espace' },
-  });
+async function seedSpace(seedAdminId: string, name: string, description: string) {
+  const space = await prisma.space.create({ data: { name, description } });
   const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
 
   await prisma.spaceMember.createMany({
@@ -91,7 +89,8 @@ async function main() {
   await seedSettings();
 
   const admin = await seedAdmin();
-  const space = await seedSpace(admin.id);
+  const studio = await seedSpace(admin.id, 'Studio', 'Espace principal de test');
+  const space = await seedSpace(admin.id, 'Atelier Nord', 'Second espace de test');
 
   const ctx: any = {
     db: prisma,
@@ -115,15 +114,15 @@ async function main() {
   const clients = new Map<string, string>();
   const providers = new Map<string, string>();
 
-  async function clientId(key: keyof typeof CLIENTS, spaceId?: string) {
-    const id = `${key}:${spaceId ?? ''}`;
+  async function clientId(key: keyof typeof CLIENTS, spaceId: string) {
+    const id = `${key}:${spaceId}`;
 
     if (!clients.has(id)) {
       const { credentialEmail, ...data } = CLIENTS[key] as typeof CLIENTS.acme;
       const client = await api.client.create({
         ...data,
         spaceId,
-        createCredentials: !!credentialEmail && !spaceId,
+        createCredentials: !!credentialEmail && spaceId === studio.id,
         credentialEmail,
       } as any);
 
@@ -133,30 +132,28 @@ async function main() {
     return clients.get(id) as string;
   }
 
-  async function providerId(key: keyof typeof PROVIDERS, spaceId?: string) {
-    const id = `${key}:${spaceId ?? ''}`;
+  async function providerId(key: keyof typeof PROVIDERS) {
+    if (!providers.has(key)) {
+      const provider = await api.provider.create(PROVIDERS[key] as any);
 
-    if (!providers.has(id)) {
-      const provider = await api.provider.create({ ...PROVIDERS[key], spaceId } as any);
-
-      providers.set(id, provider.id);
+      providers.set(key, provider.id);
     }
 
-    return providers.get(id) as string;
+    return providers.get(key) as string;
   }
 
-  const prestationsOf = async (lines: Line[], spaceId?: string) =>
+  const prestationsOf = async (lines: Line[]) =>
     Promise.all(
       lines.map(async (line) => ({
         description: line.description,
         quantity: line.quantity,
         unit: line.unit,
         unitPrice: line.unitPrice,
-        providerId: line.provider ? await providerId(line.provider, spaceId) : null,
+        providerId: line.provider ? await providerId(line.provider) : null,
       }))
     );
 
-  async function play(missionId: string, seed: MissionSeed, spaceId?: string) {
+  async function play(missionId: string, seed: MissionSeed) {
     let invoiceId = '';
 
     for (const step of seed.steps) {
@@ -184,7 +181,7 @@ async function main() {
       if (step === 'edit') {
         await api.mission.setPrestations({
           id: missionId,
-          prestations: await prestationsOf(seed.editedLines ?? seed.lines, spaceId),
+          prestations: await prestationsOf(seed.editedLines ?? seed.lines),
         } as any);
       }
       if (step === 'cancel') await api.mission.setStatus({ id: missionId, status: 'CANCELLED' });
@@ -192,9 +189,9 @@ async function main() {
   }
 
   for (const seed of MISSIONS) {
-    const spaceId = seed.space ? space.id : undefined;
+    const spaceId = seed.space ? space.id : studio.id;
     const links = await Promise.all(
-      seed.providers.map(async ([key, role]) => ({ providerId: await providerId(key, spaceId), role }))
+      seed.providers.map(async ([key, role]) => ({ providerId: await providerId(key), role }))
     );
     const mission = await api.mission.create({
       name: seed.name,
@@ -202,14 +199,13 @@ async function main() {
       clientId: await clientId(seed.client, spaceId),
       depositPercent: seed.depositPercent,
       providers: links,
-      spaceId,
     } as any);
 
     await api.mission.setPrestations({
       id: mission.id,
-      prestations: await prestationsOf(seed.lines, spaceId),
+      prestations: await prestationsOf(seed.lines),
     } as any);
-    await play(mission.id, seed, spaceId);
+    await play(mission.id, seed);
     console.log(`  mission ${seed.name}`);
   }
 
@@ -220,7 +216,7 @@ async function main() {
 
   console.log(`\nAdmin    ${ADMIN.email} / ${PASSWORD}`);
   console.log(`Client   ${CLIENTS.acme.credentialEmail} (signs in with an emailed link)`);
-  console.log(`Rows with no space show in the personal scope, "Atelier Nord" holds one mission.`);
+  console.log(`"Studio" holds every mission but one, which sits in "Atelier Nord".`);
   console.log(`PDFs are stored in ${storagePath}`);
 }
 
