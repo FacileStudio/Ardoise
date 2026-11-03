@@ -174,8 +174,9 @@ export const en = {
     signatures: 'Signatures',
     providers: 'Providers',
     myInvoices: 'My invoices',
-    personalSpace: 'Personal',
-    manageSpaces: 'Manage spaces',
+    allSpaces: 'All spaces',
+    space: 'Space',
+    filterBySpace: 'Filter by space',
   },
   import: {
     action: 'Import existing document',
@@ -377,7 +378,7 @@ export const en = {
     save: 'Save',
     dashboard: 'Dashboard',
     dashboardSubtitle: 'Overview of your space',
-    switchTo: 'Switch to',
+    switchTo: 'Show its records',
     roles: {
       OWNER: 'Owner',
       ADMIN: 'Admin',

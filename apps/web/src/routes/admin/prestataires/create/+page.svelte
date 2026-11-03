@@ -5,7 +5,6 @@
 	import { Alert, Button, Field, Input, Page, PageHeader, Section, toast } from '@facile/muse';
 	import { ImageUpload } from '$lib/ui';
 	import { logger } from '@repo/logger';
-	import { spaceContext } from '$lib/space-context.svelte';
 
 	let submitting = $state(false);
 	let formMessage = $state('');
@@ -122,7 +121,7 @@
 
 		try {
 			submitting = true;
-			await trpc.provider.create.mutate({ ...normalizePayload(), spaceId: spaceContext.spaceId });
+			await trpc.provider.create.mutate(normalizePayload());
 			toast.success('Prestataire créé avec succès!');
 			goto(resolve('/admin/prestataires'));
 		} catch (err: any) {

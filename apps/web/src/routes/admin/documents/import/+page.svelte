@@ -7,7 +7,7 @@
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import PdfPane from '$lib/components/PdfPane.svelte';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import {
 		IMPORT_TYPES,
 		SIGNATURE_STATUSES,
@@ -90,7 +90,7 @@
 			const [typeList, clientList, providerList] = await Promise.all([
 				trpc.document.types.query(),
 				trpc.client.list.query({ limit: 100, page: 1 }),
-				trpc.provider.list.query({ limit: 100, page: 1, spaceId: spaceContext.spaceId }),
+				trpc.provider.list.query({ limit: 100, page: 1 }),
 			]);
 			docTypes = typeList.filter((item) => (IMPORT_TYPES as readonly string[]).includes(item.value));
 			clients = clientList.clients.map((c: any) => ({ id: c.id, label: c.companyName }));
@@ -112,7 +112,7 @@
 				clientId,
 				limit: 100,
 				page: 1,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 			projects = result.missions.map((m: any) => ({ id: m.id, label: m.name }));
 		} catch (err) {
@@ -139,7 +139,7 @@
 			signedAt: signedNeedsDate ? new Date(form.signedAt) : undefined,
 			markPaid: invoice && form.paid ? true : undefined,
 			paidAt: invoice && form.paid ? new Date(paidAtValue) : undefined,
-			spaceId: spaceContext.spaceId,
+			spaceId: spaceFilter.spaceId,
 		};
 	}
 

@@ -16,7 +16,8 @@
 	import { onMount } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { logger } from '@repo/logger';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
+	import { SpaceFilter } from '$lib/ui';
 
 	type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
 
@@ -42,7 +43,7 @@
 			const result = await trpc.payment.list.query({
 				page: 1,
 				limit: 100,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 			payments = result.payments as unknown as Payment[];
 		} catch (err) {
@@ -176,6 +177,7 @@
 			description="Analyse détaillée des paiements et revenus"
 		>
 			{#snippet actions()}
+				<SpaceFilter />
 				{#if payments.length > 0}
 					<Button variant="ghost" icon={icons.download} onclick={handleExportCSV}
 						>Exporter CSV</Button

@@ -3,7 +3,8 @@
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import { resolve } from '$app/paths';
-    import { spaceContext } from '$lib/space-context.svelte';
+    import { goto } from '$app/navigation';
+    import { spaceFilter } from '$lib/space-filter.svelte';
     import { Avatar, Badge, Button, Card, EmptyState, Page, PageHeader, Section, Spinner } from '@facile/muse';
     import { icons } from '$lib/icons';
     import { i18n } from '@repo/i18n/svelte';
@@ -37,10 +38,10 @@
         }
     }
 
-    function switchToSpace() {
-        if (space) {
-            spaceContext.switchToSpace(space.id, space.name, space.role);
-        }
+    function showRecords() {
+        if (!space) return;
+        spaceFilter.select(space.id);
+        goto(resolve('/admin/clients'));
     }
 
     function roleTone(role: string) {
@@ -68,7 +69,7 @@
             back={{ href: '/admin/spaces', label: $i18n.t('spaces.title') }}
         >
             {#snippet actions()}
-                <Button icon={icons.arrow} onclick={switchToSpace}>{$i18n.t('spaces.switchTo')}</Button>
+                <Button icon={icons.arrow} onclick={showRecords}>{$i18n.t('spaces.switchTo')}</Button>
                 {#if space.manageUrl}
                     <Button href={space.manageUrl} variant="ghost" icon={icons.space}>
                         {$i18n.t('spaces.manageInRegistre')}

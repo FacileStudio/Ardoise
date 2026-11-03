@@ -16,11 +16,11 @@
 		Table,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
-	import { Pagination, SearchInput } from '$lib/ui';
+	import { Pagination, SearchInput, SpaceFilter } from '$lib/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import TransferClientModal from '$lib/components/TransferClientModal.svelte';
 
 	let pageLoading = $state(true);
@@ -57,7 +57,7 @@
 				page: currentPage,
 				limit,
 				search: searchQuery || undefined,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 			clients = response.clients;
 			total = response.total;
@@ -169,6 +169,7 @@
 			'Email contact': client.contactEmail || '',
 			'Email connexion': client.user?.email || '',
 			Entreprise: client.companyName || '',
+			Espace: client.space?.name || '',
 			SIRET: client.siret || '',
 			Adresse: client.billingAddress || '',
 			Ville: client.billingCity || '',
@@ -217,11 +218,15 @@
 			<StatCard label={$i18n.t('admin.clients.thisPage')} value={clients.length} />
 		</div>
 
-		<SearchInput
-			placeholder={$i18n.t('admin.clients.searchPlaceholder')}
-			bind:value={searchInput}
-			oninput={() => handleSearchInput(searchInput)}
-		/>
+		<div class="flex flex-col gap-2 sm:flex-row">
+			<SearchInput
+				class="flex-1"
+				placeholder={$i18n.t('admin.clients.searchPlaceholder')}
+				bind:value={searchInput}
+				oninput={() => handleSearchInput(searchInput)}
+			/>
+			<SpaceFilter />
+		</div>
 
 		{#if clients.length > 0}
 			<div class="hidden md:block">
@@ -229,6 +234,7 @@
 					<thead>
 						<tr>
 							<th scope="col">{$i18n.t('admin.clients.table.company')}</th>
+							<th scope="col">{$i18n.t('nav.space')}</th>
 							<th scope="col">{$i18n.t('admin.clients.table.contact')}</th>
 							<th scope="col">{$i18n.t('admin.clients.table.location')}</th>
 							<th scope="col">{$i18n.t('admin.clients.table.siret')}</th>
@@ -258,6 +264,7 @@
 										</span>
 									</a>
 								</td>
+								<td class="text-fc-fg-muted">{client.space?.name ?? '-'}</td>
 								<td>
 									<div class="flex flex-col">
 										<span class="font-medium text-fc-fg">
@@ -330,6 +337,9 @@
 							class="flex min-w-0 flex-col rounded-fc-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
 						>
 							<span class="truncate text-fc-sm font-medium text-fc-fg">{client.companyName}</span>
+							{#if client.space}
+								<span class="truncate text-fc-xs text-fc-fg-muted">{client.space.name}</span>
+							{/if}
 							<span class="truncate text-fc-xs text-fc-fg-muted">
 								{client.contactFirstName}
 								{client.contactLastName}
@@ -413,7 +423,7 @@
 		<TransferClientModal
 			bind:open={showTransfer}
 			clientId={transferClient.id}
-			currentSpaceId={transferClient.spaceId ?? null}
+			currentSpaceId={transferClient.spaceId}
 			onDone={() => fetchClients()}
 		/>
 	{/key}

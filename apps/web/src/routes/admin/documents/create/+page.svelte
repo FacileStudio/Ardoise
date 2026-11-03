@@ -21,7 +21,7 @@
 	} from '@facile/muse';
 	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
-	import { spaceContext } from '$lib/space-context.svelte';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 
 	type DocType =
 		| 'facture_prestation'
@@ -194,7 +194,7 @@
 			const result = await trpc.client.list.query({
 				page: 1,
 				limit: 100,
-				spaceId: spaceContext.spaceId,
+				spaceId: spaceFilter.spaceId,
 			});
 			clients = result.clients as unknown as Client[];
 		} catch (err) {
@@ -204,11 +204,7 @@
 
 	async function loadProviders() {
 		try {
-			const result = await trpc.provider.list.query({
-				page: 1,
-				limit: 100,
-				spaceId: spaceContext.spaceId,
-			});
+			const result = await trpc.provider.list.query({ page: 1, limit: 100 });
 			providers = result.providers as unknown as Provider[];
 		} catch (err) {
 			logger.error({ err }, 'Failed to fetch providers');
@@ -347,7 +343,7 @@
 					result = await trpc.document.previewFacturePrestation.mutate({
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
@@ -360,7 +356,7 @@
 						quote_date: formData.quote_date,
 						validity_date: formData.validity_date,
 						maintenance_period: formData.maintenance_period,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						items: formData.items,
@@ -373,7 +369,7 @@
 						contract_reference: formData.contract_reference,
 						contract_date: formData.contract_date,
 						quote_number: formData.quote_number,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 					});
@@ -384,7 +380,7 @@
 						contract_reference: formData.contract_reference,
 						contract_date: formData.contract_date,
 						maintenance_period: formData.maintenance_period,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 					});
@@ -396,7 +392,7 @@
 						contract_date: formData.contract_date,
 						project_name: formData.project_name,
 						valid_until: formData.valid_until,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						providers: formData.providers,
@@ -412,7 +408,7 @@
 						due_date: formData.due_date,
 						project_step: formData.project_step,
 						project_name: formData.project_name,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
 						payment_providers: formData.payment_providers,
@@ -453,7 +449,7 @@
 					result = await trpc.document.createFacturePrestation.mutate({
 						invoice_date: formData.invoice_date,
 						due_date: formData.due_date,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
@@ -467,7 +463,7 @@
 						quote_date: formData.quote_date,
 						validity_date: formData.validity_date,
 						maintenance_period: formData.maintenance_period,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
@@ -481,7 +477,7 @@
 						contract_reference: formData.contract_reference,
 						contract_date: formData.contract_date,
 						quote_number: formData.quote_number,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
@@ -493,7 +489,7 @@
 						contract_reference: formData.contract_reference,
 						contract_date: formData.contract_date,
 						maintenance_period: formData.maintenance_period,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
@@ -506,7 +502,7 @@
 						contract_date: formData.contract_date,
 						project_name: formData.project_name,
 						valid_until: formData.valid_until,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,
@@ -523,7 +519,7 @@
 						due_date: formData.due_date,
 						project_step: formData.project_step,
 						project_name: formData.project_name,
-						spaceId: spaceContext.spaceId,
+						spaceId: spaceFilter.spaceId,
 						missionId: mission?.id,
 						clientId: selectedClientId,
 						providerId: selectedProviderId,

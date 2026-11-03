@@ -19,7 +19,6 @@
 	import { Pagination, SearchInput } from '$lib/ui';
 	import { downloadCSV } from '@repo/utils';
 	import { logger } from '@repo/logger';
-	import { spaceContext } from '$lib/space-context.svelte';
 
 	type Provider = {
 		id: string;
@@ -68,7 +67,6 @@
 				page: currentPage,
 				limit: 20,
 				search: searchQuery || undefined,
-				spaceId: spaceContext.spaceId,
 			});
 			providers = result.providers as unknown as Provider[];
 			totalPages = result.totalPages;

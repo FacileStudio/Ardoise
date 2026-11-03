@@ -176,8 +176,9 @@ export const fr: EnTranslations = {
     signatures: 'Signatures',
     providers: 'Prestataires',
     myInvoices: 'Mes factures',
-    personalSpace: 'Personnel',
-    manageSpaces: 'Gérer les espaces',
+    allSpaces: 'Tous les espaces',
+    space: 'Espace',
+    filterBySpace: 'Filtrer par espace',
   },
   import: {
     action: 'Importer un document existant',
@@ -379,7 +380,7 @@ export const fr: EnTranslations = {
     save: 'Enregistrer',
     dashboard: 'Tableau de bord',
     dashboardSubtitle: 'Vue d\'ensemble de votre espace',
-    switchTo: 'Basculer vers',
+    switchTo: 'Voir ses données',
     roles: {
       OWNER: 'Propriétaire',
       ADMIN: 'Admin',
