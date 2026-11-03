@@ -24,9 +24,6 @@ model Provider {
 
   tvaRate Decimal @default(20) @db.Decimal(5, 2)
 
-  spaceId String?
-  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
-
   documents   Document[]
   missions    MissionProvider[]
   prestations Prestation[]
@@ -35,5 +32,4 @@ model Provider {
   updatedAt DateTime @updatedAt
 
   @@index([name])
-  @@index([spaceId])
 }

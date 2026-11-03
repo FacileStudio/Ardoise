@@ -102,8 +102,8 @@ model Document {
   createdBy        String
   createdByUser    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-  spaceId          String?
-  space            Space?   @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  spaceId          String
+  space            Space   @relation(fields: [spaceId], references: [id], onDelete: Restrict)
 
   missionId     String?
   mission          Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)

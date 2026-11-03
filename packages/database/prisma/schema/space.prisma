@@ -16,7 +16,6 @@ model Space {
   clients     Client[]
   documents   Document[]
   payments    Payment[]
-  providers   Provider[]
   missions Mission[]
 }
 
