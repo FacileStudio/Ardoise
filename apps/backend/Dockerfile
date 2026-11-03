@@ -13,6 +13,7 @@ COPY packages/auth-shared/package.json ./packages/auth-shared/package.json
 COPY packages/crypto/package.json ./packages/crypto/package.json
 COPY packages/database/package.json ./packages/database/package.json
 COPY packages/env/package.json ./packages/env/package.json
+COPY packages/glouton/package.json ./packages/glouton/package.json
 COPY packages/logger/package.json ./packages/logger/package.json
 COPY packages/nuage/package.json ./packages/nuage/package.json
 COPY packages/plume/package.json ./packages/plume/package.json
@@ -37,6 +38,7 @@ RUN cat <<'EOF' > package.json
     "packages/crypto",
     "packages/database",
     "packages/env",
+    "packages/glouton",
     "packages/logger",
     "packages/nuage",
     "packages/plume",
@@ -52,7 +54,7 @@ RUN cat <<'EOF' > package.json
 }
 EOF
 
-RUN bun -e "const rewrites = new Map([['apps/backend/package.json', pkg => { delete pkg.devDependencies; }], ['packages/admin/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth-shared/package.json', pkg => { delete pkg.devDependencies; }], ['packages/crypto/package.json', pkg => { delete pkg.devDependencies; }], ['packages/database/package.json', pkg => { pkg.devDependencies = { prisma: pkg.devDependencies.prisma, 'zod-prisma-types': pkg.devDependencies['zod-prisma-types'] }; }], ['packages/env/package.json', pkg => { delete pkg.devDependencies; }], ['packages/logger/package.json', pkg => { delete pkg.devDependencies; }], ['packages/nuage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/plume/package.json', pkg => { delete pkg.devDependencies; }], ['packages/smtp/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/stripe/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc/package.json', pkg => { delete pkg.devDependencies; }], ['packages/types/package.json', pkg => { delete pkg.devDependencies; }], ['packages/typst/package.json', pkg => { delete pkg.devDependencies; }], ['packages/utils/package.json', pkg => { delete pkg.devDependencies; }]]); for (const [file, rewrite] of rewrites) { const pkg = JSON.parse(await Bun.file(file).text()); rewrite(pkg); await Bun.write(file, JSON.stringify(pkg, null, 2) + '\n'); }"
+RUN bun -e "const rewrites = new Map([['apps/backend/package.json', pkg => { delete pkg.devDependencies; }], ['packages/admin/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth/package.json', pkg => { delete pkg.devDependencies; }], ['packages/auth-shared/package.json', pkg => { delete pkg.devDependencies; }], ['packages/crypto/package.json', pkg => { delete pkg.devDependencies; }], ['packages/database/package.json', pkg => { pkg.devDependencies = { prisma: pkg.devDependencies.prisma, 'zod-prisma-types': pkg.devDependencies['zod-prisma-types'] }; }], ['packages/env/package.json', pkg => { delete pkg.devDependencies; }], ['packages/glouton/package.json', pkg => { delete pkg.devDependencies; }], ['packages/logger/package.json', pkg => { delete pkg.devDependencies; }], ['packages/nuage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/plume/package.json', pkg => { delete pkg.devDependencies; }], ['packages/smtp/package.json', pkg => { delete pkg.devDependencies; }], ['packages/storage/package.json', pkg => { delete pkg.devDependencies; }], ['packages/stripe/package.json', pkg => { delete pkg.devDependencies; }], ['packages/trpc/package.json', pkg => { delete pkg.devDependencies; }], ['packages/types/package.json', pkg => { delete pkg.devDependencies; }], ['packages/typst/package.json', pkg => { delete pkg.devDependencies; }], ['packages/utils/package.json', pkg => { delete pkg.devDependencies; }]]); for (const [file, rewrite] of rewrites) { const pkg = JSON.parse(await Bun.file(file).text()); rewrite(pkg); await Bun.write(file, JSON.stringify(pkg, null, 2) + '\n'); }"
 
 RUN bun install --no-frozen-lockfile --network-concurrency 8
 
@@ -66,6 +68,7 @@ COPY packages/auth-shared ./packages/auth-shared
 COPY packages/crypto ./packages/crypto
 COPY packages/database ./packages/database
 COPY packages/env ./packages/env
+COPY packages/glouton ./packages/glouton
 COPY packages/logger ./packages/logger
 COPY packages/nuage ./packages/nuage
 COPY packages/plume ./packages/plume
