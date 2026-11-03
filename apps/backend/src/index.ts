@@ -20,6 +20,10 @@ import {
 import { createVersionHandler, resolveVersion } from './handlers/version';
 import { bootstrapAdmin } from './lib/bootstrap';
 import { logger } from './lib/logger';
+import { prisma } from '@repo/database';
+import { DirectoryClient, SyncPath } from './registre/directory';
+import { applySnapshot, buildImport } from './registre/spaces';
+import { startDirectorySync } from './registre/boot';
 
 const app = new Hono();
 
@@ -45,6 +49,16 @@ const storage = new StorageService({
   publicUrl: env.BACKEND_URL,
 });
 
+const issuer = env.OIDC_ISSUER && env.OIDC_CLIENT_ID && env.OIDC_CLIENT_SECRET ? env.OIDC_ISSUER : null;
+const directory = issuer
+  ? startDirectorySync({
+      remote: new DirectoryClient(issuer, env.OIDC_CLIENT_ID!, env.OIDC_CLIENT_SECRET!),
+      collect: () => buildImport(prisma, issuer),
+      apply: (snapshot) => applySnapshot({ db: prisma, issuer, logger }, snapshot),
+      logger,
+    }).syncer
+  : null;
+
 const cors = corsHandler([env.FRONTEND_URL, env.BACKEND_URL]);
 
 app.use('*', cors);
@@ -59,6 +73,13 @@ app.options('*', (c) => c.body(null, 204));
 
 app.post('/webhook', createStripeWebhookHandler(storage, env));
 app.post('/webhooks/plume', createPlumeWebhookHandler(env));
+
+if (directory) {
+  app.post(SyncPath, (c) => {
+    directory.nudge();
+    return c.body(null, 202);
+  });
+}
 
 app.get('/docs/openapi.json', openApiHandler);
 app.get('/docs', apiReference({ url: '/docs/openapi.json', pageTitle: 'Ardoise API' }));

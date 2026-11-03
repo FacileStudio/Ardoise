@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 
@@ -53,12 +52,12 @@ export type InputJsonValueType = z.infer<typeof InputJsonValueSchema>;
 // DECIMAL
 //------------------------------------------------------
 
-export const DecimalJsLikeSchema = z.object({
+export const DecimalJsLikeSchema: z.ZodType<Prisma.DecimalJsLike> = z.object({
   d: z.array(z.number()),
   e: z.number(),
   s: z.number(),
   toFixed: z.any(),
-}) as unknown as z.ZodType<Prisma.DecimalJsLike>;
+})
 
 export const DECIMAL_STRING_REGEX = /^(?:-?Infinity|NaN|-?(?:0[bB][01]+(?:\.[01]+)?(?:[pP][-+]?\d+)?|0[oO][0-7]+(?:\.[0-7]+)?(?:[pP][-+]?\d+)?|0[xX][\da-fA-F]+(?:\.[\da-fA-F]+)?(?:[pP][-+]?\d+)?|(?:\d+|\d*\.\d+)(?:[eE][-+]?\d+)?))$/;
 
@@ -112,7 +111,7 @@ export const SessionScalarFieldEnumSchema = z.enum(['id','userId','token','expir
 
 export const SettingsScalarFieldEnumSchema = z.enum(['id','companyName','companyLegal','companyAddress','companyCity','companyCountry','companySiret','companyEmail','companyPhone','companyTvaIntracom','companyLegalForm','companyShareCapital','companyRcsCity','companyApeCode','stripeSecretKey','stripeWebhookSecret','stripePublishableKey','smtpHost','smtpPort','smtpUser','smtpPass','smtpFrom','webhookUrl','webhookSecret','webhookEvents','bankName','iban','bic','logoUrl','tvaRate','defaultPaymentTermsDays','defaultLateFeeRate','defaultRecoveryFeeAmount','defaultVatExemptionMention','nextInvoiceNumber','nextQuoteNumber','nextContractNumber','invoiceNumberFormat','quoteNumberFormat','contractNumberFormat','createdAt','updatedAt']);
 
-export const SpaceScalarFieldEnumSchema = z.enum(['id','name','description','createdAt','updatedAt']);
+export const SpaceScalarFieldEnumSchema = z.enum(['id','name','registreSpaceId','description','createdAt','updatedAt']);
 
 export const SpaceMemberScalarFieldEnumSchema = z.enum(['id','spaceId','userId','role','joinedAt']);
 
@@ -124,15 +123,15 @@ export const WebhookEventScalarFieldEnumSchema = z.enum(['id','type','processedA
 
 export const SortOrderSchema = z.enum(['asc','desc']);
 
-export const NullableJsonNullValueInputSchema = z.enum(['DbNull','JsonNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value) as unknown as z.ZodType<Prisma.NullableJsonNullValueInput>;
+export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNullValueInput> = z.enum(['DbNull','JsonNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value);
 
-export const JsonNullValueInputSchema = z.enum(['JsonNull',]).transform((value) => (value === 'JsonNull' ? Prisma.JsonNull : value)) as unknown as z.ZodType<Prisma.JsonNullValueInput>;
+export const JsonNullValueInputSchema: z.ZodType<Prisma.JsonNullValueInput> = z.enum(['JsonNull',]).transform((value) => (value === 'JsonNull' ? Prisma.JsonNull : value));
 
 export const QueryModeSchema = z.enum(['default','insensitive']);
 
 export const NullsOrderSchema = z.enum(['first','last']);
 
-export const JsonNullValueFilterSchema = z.enum(['DbNull','JsonNull','AnyNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value === 'AnyNull' ? Prisma.AnyNull : value) as unknown as z.ZodType<Prisma.JsonNullValueFilter>;
+export const JsonNullValueFilterSchema: z.ZodType<Prisma.JsonNullValueFilter> = z.enum(['DbNull','JsonNull','AnyNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value === 'AnyNull' ? Prisma.AnyNull : value);
 
 export const AuditActionSchema = z.enum(['CREATE','UPDATE','DELETE']);
 
@@ -890,6 +889,7 @@ export type Settings = z.infer<typeof SettingsSchema>
 export const SpaceSchema = z.object({
   id: z.string(),
   name: z.string(),
+  registreSpaceId: z.string().nullable(),
   description: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -1725,6 +1725,7 @@ export const SpaceCountOutputTypeSelectSchema: z.ZodType<Prisma.SpaceCountOutput
 export const SpaceSelectSchema: z.ZodType<Prisma.SpaceSelect> = z.object({
   id: z.boolean().optional(),
   name: z.boolean().optional(),
+  registreSpaceId: z.boolean().optional(),
   description: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
@@ -4061,6 +4062,7 @@ export const SpaceWhereInputSchema: z.ZodType<Prisma.SpaceWhereInput> = z.strict
   NOT: z.union([ z.lazy(() => SpaceWhereInputSchema), z.lazy(() => SpaceWhereInputSchema).array() ]).optional(),
   id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  registreSpaceId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   description: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -4076,6 +4078,7 @@ export const SpaceWhereInputSchema: z.ZodType<Prisma.SpaceWhereInput> = z.strict
 export const SpaceOrderByWithRelationInputSchema: z.ZodType<Prisma.SpaceOrderByWithRelationInput> = z.strictObject({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  registreSpaceId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   description: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -4088,11 +4091,21 @@ export const SpaceOrderByWithRelationInputSchema: z.ZodType<Prisma.SpaceOrderByW
   missions: z.lazy(() => MissionOrderByRelationAggregateInputSchema).optional(),
 });
 
-export const SpaceWhereUniqueInputSchema: z.ZodType<Prisma.SpaceWhereUniqueInput> = z.object({
-  id: z.string(),
-})
+export const SpaceWhereUniqueInputSchema: z.ZodType<Prisma.SpaceWhereUniqueInput> = z.union([
+  z.object({
+    id: z.string(),
+    registreSpaceId: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+  }),
+  z.object({
+    registreSpaceId: z.string(),
+  }),
+])
 .and(z.strictObject({
   id: z.string().optional(),
+  registreSpaceId: z.string().optional(),
   AND: z.union([ z.lazy(() => SpaceWhereInputSchema), z.lazy(() => SpaceWhereInputSchema).array() ]).optional(),
   OR: z.lazy(() => SpaceWhereInputSchema).array().optional(),
   NOT: z.union([ z.lazy(() => SpaceWhereInputSchema), z.lazy(() => SpaceWhereInputSchema).array() ]).optional(),
@@ -4112,6 +4125,7 @@ export const SpaceWhereUniqueInputSchema: z.ZodType<Prisma.SpaceWhereUniqueInput
 export const SpaceOrderByWithAggregationInputSchema: z.ZodType<Prisma.SpaceOrderByWithAggregationInput> = z.strictObject({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  registreSpaceId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   description: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -4126,6 +4140,7 @@ export const SpaceScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.SpaceSc
   NOT: z.union([ z.lazy(() => SpaceScalarWhereWithAggregatesInputSchema), z.lazy(() => SpaceScalarWhereWithAggregatesInputSchema).array() ]).optional(),
   id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  registreSpaceId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   description: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
@@ -6751,6 +6766,7 @@ export const SettingsUncheckedUpdateManyInputSchema: z.ZodType<Prisma.SettingsUn
 export const SpaceCreateInputSchema: z.ZodType<Prisma.SpaceCreateInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -6766,6 +6782,7 @@ export const SpaceCreateInputSchema: z.ZodType<Prisma.SpaceCreateInput> = z.stri
 export const SpaceUncheckedCreateInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -6781,6 +6798,7 @@ export const SpaceUncheckedCreateInputSchema: z.ZodType<Prisma.SpaceUncheckedCre
 export const SpaceUpdateInputSchema: z.ZodType<Prisma.SpaceUpdateInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -6796,6 +6814,7 @@ export const SpaceUpdateInputSchema: z.ZodType<Prisma.SpaceUpdateInput> = z.stri
 export const SpaceUncheckedUpdateInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -6811,6 +6830,7 @@ export const SpaceUncheckedUpdateInputSchema: z.ZodType<Prisma.SpaceUncheckedUpd
 export const SpaceCreateManyInputSchema: z.ZodType<Prisma.SpaceCreateManyInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -6819,6 +6839,7 @@ export const SpaceCreateManyInputSchema: z.ZodType<Prisma.SpaceCreateManyInput> 
 export const SpaceUpdateManyMutationInputSchema: z.ZodType<Prisma.SpaceUpdateManyMutationInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -6827,6 +6848,7 @@ export const SpaceUpdateManyMutationInputSchema: z.ZodType<Prisma.SpaceUpdateMan
 export const SpaceUncheckedUpdateManyInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateManyInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -8991,6 +9013,7 @@ export const ProviderOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Provi
 export const SpaceCountOrderByAggregateInputSchema: z.ZodType<Prisma.SpaceCountOrderByAggregateInput> = z.strictObject({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  registreSpaceId: z.lazy(() => SortOrderSchema).optional(),
   description: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -8999,6 +9022,7 @@ export const SpaceCountOrderByAggregateInputSchema: z.ZodType<Prisma.SpaceCountO
 export const SpaceMaxOrderByAggregateInputSchema: z.ZodType<Prisma.SpaceMaxOrderByAggregateInput> = z.strictObject({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  registreSpaceId: z.lazy(() => SortOrderSchema).optional(),
   description: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -9007,6 +9031,7 @@ export const SpaceMaxOrderByAggregateInputSchema: z.ZodType<Prisma.SpaceMaxOrder
 export const SpaceMinOrderByAggregateInputSchema: z.ZodType<Prisma.SpaceMinOrderByAggregateInput> = z.strictObject({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  registreSpaceId: z.lazy(() => SortOrderSchema).optional(),
   description: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -12243,6 +12268,7 @@ export const UserCreateOrConnectWithoutClientInputSchema: z.ZodType<Prisma.UserC
 export const SpaceCreateWithoutClientsInputSchema: z.ZodType<Prisma.SpaceCreateWithoutClientsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -12257,6 +12283,7 @@ export const SpaceCreateWithoutClientsInputSchema: z.ZodType<Prisma.SpaceCreateW
 export const SpaceUncheckedCreateWithoutClientsInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateWithoutClientsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -12474,6 +12501,7 @@ export const SpaceUpdateToOneWithWhereWithoutClientsInputSchema: z.ZodType<Prism
 export const SpaceUpdateWithoutClientsInputSchema: z.ZodType<Prisma.SpaceUpdateWithoutClientsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -12488,6 +12516,7 @@ export const SpaceUpdateWithoutClientsInputSchema: z.ZodType<Prisma.SpaceUpdateW
 export const SpaceUncheckedUpdateWithoutClientsInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateWithoutClientsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -12713,6 +12742,7 @@ export const UserCreateOrConnectWithoutDocumentsInputSchema: z.ZodType<Prisma.Us
 export const SpaceCreateWithoutDocumentsInputSchema: z.ZodType<Prisma.SpaceCreateWithoutDocumentsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -12727,6 +12757,7 @@ export const SpaceCreateWithoutDocumentsInputSchema: z.ZodType<Prisma.SpaceCreat
 export const SpaceUncheckedCreateWithoutDocumentsInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateWithoutDocumentsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -13303,6 +13334,7 @@ export const SpaceUpdateToOneWithWhereWithoutDocumentsInputSchema: z.ZodType<Pri
 export const SpaceUpdateWithoutDocumentsInputSchema: z.ZodType<Prisma.SpaceUpdateWithoutDocumentsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -13317,6 +13349,7 @@ export const SpaceUpdateWithoutDocumentsInputSchema: z.ZodType<Prisma.SpaceUpdat
 export const SpaceUncheckedUpdateWithoutDocumentsInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateWithoutDocumentsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -13637,6 +13670,7 @@ export const PaymentDocumentScalarWhereInputSchema: z.ZodType<Prisma.PaymentDocu
 export const SpaceCreateWithoutInvitationsInputSchema: z.ZodType<Prisma.SpaceCreateWithoutInvitationsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -13651,6 +13685,7 @@ export const SpaceCreateWithoutInvitationsInputSchema: z.ZodType<Prisma.SpaceCre
 export const SpaceUncheckedCreateWithoutInvitationsInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateWithoutInvitationsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -13752,6 +13787,7 @@ export const SpaceUpdateToOneWithWhereWithoutInvitationsInputSchema: z.ZodType<P
 export const SpaceUpdateWithoutInvitationsInputSchema: z.ZodType<Prisma.SpaceUpdateWithoutInvitationsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -13766,6 +13802,7 @@ export const SpaceUpdateWithoutInvitationsInputSchema: z.ZodType<Prisma.SpaceUpd
 export const SpaceUncheckedUpdateWithoutInvitationsInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateWithoutInvitationsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -14346,6 +14383,7 @@ export const ClientCreateOrConnectWithoutMissionsInputSchema: z.ZodType<Prisma.C
 export const SpaceCreateWithoutMissionsInputSchema: z.ZodType<Prisma.SpaceCreateWithoutMissionsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -14360,6 +14398,7 @@ export const SpaceCreateWithoutMissionsInputSchema: z.ZodType<Prisma.SpaceCreate
 export const SpaceUncheckedCreateWithoutMissionsInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateWithoutMissionsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -14709,6 +14748,7 @@ export const SpaceUpdateToOneWithWhereWithoutMissionsInputSchema: z.ZodType<Pris
 export const SpaceUpdateWithoutMissionsInputSchema: z.ZodType<Prisma.SpaceUpdateWithoutMissionsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -14723,6 +14763,7 @@ export const SpaceUpdateWithoutMissionsInputSchema: z.ZodType<Prisma.SpaceUpdate
 export const SpaceUncheckedUpdateWithoutMissionsInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateWithoutMissionsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -15281,6 +15322,7 @@ export const ClientCreateOrConnectWithoutPaymentsInputSchema: z.ZodType<Prisma.C
 export const SpaceCreateWithoutPaymentsInputSchema: z.ZodType<Prisma.SpaceCreateWithoutPaymentsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -15295,6 +15337,7 @@ export const SpaceCreateWithoutPaymentsInputSchema: z.ZodType<Prisma.SpaceCreate
 export const SpaceUncheckedCreateWithoutPaymentsInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateWithoutPaymentsInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -15602,6 +15645,7 @@ export const SpaceUpdateToOneWithWhereWithoutPaymentsInputSchema: z.ZodType<Pris
 export const SpaceUpdateWithoutPaymentsInputSchema: z.ZodType<Prisma.SpaceUpdateWithoutPaymentsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -15616,6 +15660,7 @@ export const SpaceUpdateWithoutPaymentsInputSchema: z.ZodType<Prisma.SpaceUpdate
 export const SpaceUncheckedUpdateWithoutPaymentsInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateWithoutPaymentsInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -16408,6 +16453,7 @@ export const DocumentUncheckedUpdateWithoutPaymentAttachmentsInputSchema: z.ZodT
 export const SpaceCreateWithoutProvidersInputSchema: z.ZodType<Prisma.SpaceCreateWithoutProvidersInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -16422,6 +16468,7 @@ export const SpaceCreateWithoutProvidersInputSchema: z.ZodType<Prisma.SpaceCreat
 export const SpaceUncheckedCreateWithoutProvidersInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateWithoutProvidersInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -16650,6 +16697,7 @@ export const SpaceUpdateToOneWithWhereWithoutProvidersInputSchema: z.ZodType<Pri
 export const SpaceUpdateWithoutProvidersInputSchema: z.ZodType<Prisma.SpaceUpdateWithoutProvidersInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -16664,6 +16712,7 @@ export const SpaceUpdateWithoutProvidersInputSchema: z.ZodType<Prisma.SpaceUpdat
 export const SpaceUncheckedUpdateWithoutProvidersInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateWithoutProvidersInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -17485,6 +17534,7 @@ export const MissionUpdateManyWithWhereWithoutSpaceInputSchema: z.ZodType<Prisma
 export const SpaceCreateWithoutMembersInputSchema: z.ZodType<Prisma.SpaceCreateWithoutMembersInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -17499,6 +17549,7 @@ export const SpaceCreateWithoutMembersInputSchema: z.ZodType<Prisma.SpaceCreateW
 export const SpaceUncheckedCreateWithoutMembersInputSchema: z.ZodType<Prisma.SpaceUncheckedCreateWithoutMembersInput> = z.strictObject({
   id: z.string().optional(),
   name: z.string(),
+  registreSpaceId: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -17600,6 +17651,7 @@ export const SpaceUpdateToOneWithWhereWithoutMembersInputSchema: z.ZodType<Prism
 export const SpaceUpdateWithoutMembersInputSchema: z.ZodType<Prisma.SpaceUpdateWithoutMembersInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -17614,6 +17666,7 @@ export const SpaceUpdateWithoutMembersInputSchema: z.ZodType<Prisma.SpaceUpdateW
 export const SpaceUncheckedUpdateWithoutMembersInputSchema: z.ZodType<Prisma.SpaceUncheckedUpdateWithoutMembersInput> = z.strictObject({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  registreSpaceId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),

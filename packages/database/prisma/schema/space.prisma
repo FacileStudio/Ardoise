@@ -6,7 +6,8 @@ enum SpaceRole {
 
 model Space {
   id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Text
-  name        String        @db.Text
+  name            String        @db.Text
+  registreSpaceId String?       @unique @db.Text
   description String?       @db.Text
   createdAt   DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime      @default(now()) @updatedAt @db.Timestamptz(3)
