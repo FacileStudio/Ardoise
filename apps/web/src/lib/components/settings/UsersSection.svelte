@@ -20,6 +20,7 @@
   import { trpc } from '$lib/trpc';
   import { icons } from '$lib/icons';
   import PendingInvitations from '$lib/components/PendingInvitations.svelte';
+  import { loadAuthConfig } from '$lib/auth-config';
   import type { User } from '$lib/types';
 
   let loading = $state(true);
@@ -28,14 +29,18 @@
   let search = $state('');
   let role = $state<'all' | 'admin' | 'user'>('all');
   let deleting = $state<User | null>(null);
+  let ssoOnly = $state(true);
 
   const roleTabs = [
     { id: 'all', label: 'Tous' },
-    { id: 'admin', label: 'Administrateurs' },
-    { id: 'user', label: 'Utilisateurs' },
+    { id: 'admin', label: 'Équipe' },
+    { id: 'user', label: 'Clients' },
   ];
 
-  onMount(fetchUsers);
+  onMount(() => {
+    void fetchUsers();
+    void loadAuthConfig().then((config) => (ssoOnly = config.ssoOnly));
+  });
 
   async function fetchUsers() {
     loading = true;
@@ -94,13 +99,19 @@
 <SettingsSection
   bare
   title="Utilisateurs"
-  description="Les personnes qui ont accès à cette instance d'Ardoise."
+  description={ssoOnly
+    ? "L'équipe se connecte avec le SSO Facile : un premier accès crée le compte, et le nom et la photo viennent du SSO. Les clients se connectent par lien email."
+    : "Les personnes qui ont accès à cette instance d'Ardoise."}
 >
   {#snippet actions()}
-    <Button icon={icons.plus} href={resolve('/admin/users/create')}>Nouvel utilisateur</Button>
+    {#if !ssoOnly}
+      <Button icon={icons.plus} href={resolve('/admin/users/create')}>Nouvel utilisateur</Button>
+    {/if}
   {/snippet}
 
-  <PendingInvitations />
+  {#if !ssoOnly}
+    <PendingInvitations />
+  {/if}
 
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <Tabs
@@ -145,7 +156,7 @@
               >
                 <Avatar
                   name={`${user.firstName} ${user.lastName}`}
-                  src={user.avatar?.url}
+                  src={user.avatar?.url ?? user.ssoPictureUrl ?? undefined}
                   size="sm"
                 />
                 <span class="flex min-w-0 flex-col">
@@ -161,14 +172,16 @@
             </td>
             <td>
               <Badge tone={user.role === 'ADMIN' ? 'admin' : 'neutral'}>
-                {user.role === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
+                {user.role === 'ADMIN' ? 'Équipe' : 'Client'}
               </Badge>
             </td>
             <td class="text-fc-fg-muted">{formatDate(user.createdAt)}</td>
             <td class="text-right">
-              <Button variant="ghost" size="sm" onclick={() => toggleRole(user)}>
-                {user.role === 'ADMIN' ? 'Rétrograder' : 'Promouvoir'}
-              </Button>
+              {#if !ssoOnly}
+                <Button variant="ghost" size="sm" onclick={() => toggleRole(user)}>
+                  {user.role === 'ADMIN' ? 'Rétrograder' : 'Promouvoir'}
+                </Button>
+              {/if}
               <Button
                 variant="ghost-danger"
                 size="sm"
@@ -185,13 +198,13 @@
     <div class="flex flex-col gap-3 md:hidden">
       {#each filtered as user (user.id)}
         <Card href={resolve(`/admin/users/${user.id}`)} class="flex items-center gap-3">
-          <Avatar name={`${user.firstName} ${user.lastName}`} src={user.avatar?.url} size="sm" />
+          <Avatar name={`${user.firstName} ${user.lastName}`} src={user.avatar?.url ?? user.ssoPictureUrl ?? undefined} size="sm" />
           <span class="flex min-w-0 flex-1 flex-col">
             <span class="truncate font-medium text-fc-fg">{user.firstName} {user.lastName}</span>
             <span class="truncate text-fc-xs text-fc-fg-muted">{user.email}</span>
           </span>
           <Badge tone={user.role === 'ADMIN' ? 'admin' : 'neutral'}>
-            {user.role === 'ADMIN' ? 'Admin' : 'Utilisateur'}
+            {user.role === 'ADMIN' ? 'Équipe' : 'Client'}
           </Badge>
         </Card>
       {/each}

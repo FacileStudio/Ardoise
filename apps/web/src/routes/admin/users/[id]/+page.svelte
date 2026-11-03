@@ -18,12 +18,15 @@
 	} from '@facile/muse';
 	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
+	import { loadAuthConfig } from '$lib/auth-config';
 
 	let userId = $derived($page.params.id as string);
 	let pageLoading = $state(true);
 	let submitting = $state(false);
 	let user: any = $state(null);
 	let errors = $state<Record<string, string>>({});
+	let ssoOnly = $state(true);
+	const ssoStaff = $derived(ssoOnly && user?.role === 'ADMIN');
 
 	let formData = $state({
 		email: '',
@@ -35,6 +38,7 @@
 	});
 
 	onMount(async () => {
+		void loadAuthConfig().then((config) => (ssoOnly = config.ssoOnly));
 		await fetchUser();
 	});
 
@@ -96,10 +100,10 @@
 				email: formData.email.trim(),
 				firstName: formData.firstName.trim(),
 				lastName: formData.lastName.trim(),
-				role: formData.role,
 			};
 
-			if (formData.password) {
+			if (!ssoOnly) updateData.role = formData.role;
+			if (formData.password && !ssoOnly) {
 				updateData.password = formData.password;
 			}
 
@@ -159,16 +163,22 @@
 			</Field>
 			<div class="grid gap-4 sm:grid-cols-2">
 				<Field label="Prénom" error={errors.firstName}>
-					<Input bind:value={formData.firstName} placeholder="John" />
+					<Input bind:value={formData.firstName} placeholder="John" disabled={ssoStaff} />
 				</Field>
 				<Field label="Nom" error={errors.lastName}>
-					<Input bind:value={formData.lastName} placeholder="Doe" />
+					<Input bind:value={formData.lastName} placeholder="Doe" disabled={ssoStaff} />
 				</Field>
 			</div>
 			<p class="text-fc-xs text-fc-fg-muted">Créé le {formatDate(user.createdAt)}</p>
 		</Section>
 
-		{#if user.role !== 'CLIENT'}
+		{#if ssoStaff}
+			<Alert tone="info">
+				Membre de l'équipe : le nom, la photo et l'accès viennent du SSO Facile et se mettent à jour à chaque connexion.
+			</Alert>
+		{/if}
+
+		{#if user.role !== 'CLIENT' && !ssoOnly}
 			<Section title="Réinitialiser le mot de passe" card>
 				<Alert tone="warning">
 					Laissez ces champs vides si vous ne souhaitez pas modifier le mot de passe.
@@ -186,6 +196,7 @@
 			</Section>
 		{/if}
 
+		{#if !ssoOnly}
 		<Section title="Rôle" card>
 			<OptionCards
 				options={[
@@ -196,6 +207,7 @@
 				label="Rôle"
 			/>
 		</Section>
+		{/if}
 
 		<div class="flex justify-end gap-3">
 			<Button href={resolve('/admin/settings/users')} variant="ghost" disabled={submitting}>

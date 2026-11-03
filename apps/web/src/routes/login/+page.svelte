@@ -33,8 +33,6 @@
 
   const ssoErrors: Record<string, string> = {
     oidc_failed: "Échec de l'authentification SSO.",
-    not_invited:
-      "Aucun compte Ardoise n'est associé à cette adresse. Demandez à un administrateur de l'ajouter.",
     email_unverified: "Votre adresse email n'est pas vérifiée auprès du fournisseur SSO.",
     identity_conflict: 'Ce compte est déjà lié à une autre identité SSO.',
     blocked: 'Ce compte est suspendu ou banni.',

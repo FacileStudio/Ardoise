@@ -2,6 +2,21 @@ import { z } from 'zod';
 import { router, protectedProcedure, adminProcedure } from '../../trpc';
 import userService from './service';
 import { REFRESH_COOKIE_NAME, extractCookie } from '../../context';
+import { TRPCError } from '@trpc/server';
+
+/**
+ * Under SSO_ONLY, staff accounts, their role and their sign-in belong to
+ * Facile SSO: a first sign-in creates the account and every sign-in makes it
+ * staff, so Ardoise refuses to create staff, change roles or set passwords.
+ */
+function refuseStaffEdit(ssoOnly: boolean | undefined, changes: { role?: unknown; password?: unknown }) {
+  if (ssoOnly && (changes.role !== undefined || changes.password !== undefined)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Staff accounts and roles come from Facile SSO (sso.facile.studio)',
+    });
+  }
+}
 
 export const userRouter = router({
   me: protectedProcedure.query(async ({ ctx }) => {
@@ -19,6 +34,7 @@ export const userRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      refuseStaffEdit(ctx.env.SSO_ONLY, input);
       return userService.createUser(ctx.db, ctx.auth, input);
     }),
 
@@ -51,6 +67,7 @@ export const userRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+      refuseStaffEdit(ctx.env.SSO_ONLY, data);
       return userService.updateUser(ctx.db, id, data);
     }),
 
@@ -67,6 +84,7 @@ export const userRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+      refuseStaffEdit(ctx.env.SSO_ONLY, data);
       return userService.adminUpdateUser(ctx.db, ctx.auth, id, data);
     }),
 

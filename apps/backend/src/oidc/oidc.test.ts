@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { PrismaClient } from '@repo/types';
 import { claimsFromPayload, OidcFlowError } from './flow';
-import { IdentityError, resolveUser } from './identity';
+import { IdentityError, resolveUser, ssoProfile } from './identity';
 import { openState, pkceChallenge, safeRedirect, sealState } from './state';
 
 const SECRET = 'x'.repeat(32);
@@ -57,6 +57,22 @@ describe('claimsFromPayload', () => {
   });
 });
 
+describe('ssoProfile', () => {
+  test('prefers given and family names, else splits name, else the email', () => {
+    const base = { sub: 's', email: 'jo@x.test', emailVerified: true };
+    expect(ssoProfile({ ...base, givenName: 'Jo', familyName: 'Doe', name: 'Ignored' })).toMatchObject({
+      firstName: 'Jo',
+      lastName: 'Doe',
+    });
+    expect(ssoProfile({ ...base, name: ' Jo  Ann Doe ' })).toMatchObject({ firstName: 'Jo', lastName: 'Ann Doe' });
+    expect(ssoProfile(base)).toMatchObject({ firstName: 'jo', lastName: '' });
+    expect(ssoProfile({ ...base, picture: 'http://x.test/p' }).ssoPictureUrl).toBeNull();
+    expect(ssoProfile({ ...base, picture: 'https://sso.test/avatars/s' }).ssoPictureUrl).toBe(
+      'https://sso.test/avatars/s'
+    );
+  });
+});
+
 describe('resolveUser', () => {
   const ISSUER = 'https://sso.example.com';
   const user = {
@@ -85,7 +101,14 @@ describe('resolveUser', () => {
       },
       user: {
         findFirst: async () => (opts.byEmail ? row : null),
-        update: async () => row,
+        update: async (args: { data: Record<string, unknown> }) => {
+          calls.push(`update:${args.data.role}:${args.data.firstName}:${args.data.lastName}`);
+          return { ...row, ...args.data };
+        },
+        create: async (args: { data: Record<string, unknown> }) => {
+          calls.push(`create:${args.data.role}:${args.data.firstName}`);
+          return { ...row, id: 'new-user', ...args.data };
+        },
       },
       $transaction: async (ops: unknown[]) => ops,
     };
@@ -95,8 +118,18 @@ describe('resolveUser', () => {
   const claims = { sub: 'sub-1', email: 'a@b.c', emailVerified: true };
   const code = (p: Promise<unknown>) => p.then(() => 'ok', (e) => (e as IdentityError).code);
 
-  test('uninvited email is refused', async () => {
-    expect(await code(resolveUser(fakeDb({}).db, ISSUER, claims))).toBe('not_invited');
+  test('a first SSO sign-in creates a staff account', async () => {
+    const { db, calls } = fakeDb({});
+    const created = await resolveUser(db, ISSUER, { ...claims, name: 'Yann Thevenin' });
+    expect(created.id).toBe('new-user');
+    expect(calls).toEqual(['create:ADMIN:Yann']);
+  });
+
+  test('every SSO sign-in makes the user staff and refreshes their name', async () => {
+    const { db, calls } = fakeDb({ linked: true });
+    const user = await resolveUser(db, ISSUER, { ...claims, name: 'Yann Van Thevenin' });
+    expect(user.role).toBe('ADMIN' as typeof user.role);
+    expect(calls).toEqual(['update:ADMIN:Yann:Van Thevenin']);
   });
 
   test('unverified email never links by email', async () => {

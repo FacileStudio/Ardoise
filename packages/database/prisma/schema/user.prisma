@@ -18,6 +18,7 @@ model User {
   lastLoginAt    DateTime?
   lastLoginIp    String?
 
+  ssoPictureUrl  String?
   avatar         Media?           @relation("UserAvatar")
   coverImage     Media?           @relation("UserCover")
 

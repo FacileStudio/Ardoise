@@ -3,11 +3,9 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { prisma } from '@repo/database';
 import type { AuthManager } from '@repo/auth';
 import type { ServerEnv } from '@repo/env';
-import type { StorageService } from '@repo/storage';
 import { authCookies, issueSession } from '@repo/trpc/auth/session';
 import { clientIp } from '@repo/trpc/client-ip';
 import { logger } from '../lib/logger';
-import { adoptPicture } from './avatar';
 import { oidcConfig } from './config';
 import { finishLogin, startLogin } from './flow';
 import { IdentityError, resolveUser } from './identity';
@@ -21,9 +19,9 @@ const withParam = (url: string, key: string, value: string) => {
 
 export function createOIDCRoutes(
   app: Hono,
-  deps: { authManager: AuthManager; env: ServerEnv; storage: StorageService }
+  deps: { authManager: AuthManager; env: ServerEnv }
 ) {
-  const { authManager, env, storage } = deps;
+  const { authManager, env } = deps;
   const config = oidcConfig(env);
 
   app.get('/auth/config', (c) =>
@@ -68,7 +66,6 @@ export function createOIDCRoutes(
 
       try {
         const user = await resolveUser(prisma, config.issuer, claims);
-        if (claims.picture) user.avatarUrl ??= await adoptPicture(user.id, claims.picture, storage);
 
         const session = await issueSession(prisma, authManager, user, {
           ipAddress: clientIp(c.req.header('x-forwarded-for')),

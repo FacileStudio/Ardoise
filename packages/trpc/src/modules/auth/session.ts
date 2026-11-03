@@ -21,6 +21,7 @@ export const sessionUserSelection = {
   firstName: true,
   lastName: true,
   role: true,
+  ssoPictureUrl: true,
   avatar: { select: { url: true } },
   coverImage: { select: { url: true } },
 } as const;
@@ -31,6 +32,7 @@ export const toSessionUser = (user: {
   firstName: string;
   lastName: string;
   role: string;
+  ssoPictureUrl?: string | null;
   avatar?: { url: string } | null;
   coverImage?: { url: string } | null;
 }): SessionUser => ({
@@ -39,7 +41,7 @@ export const toSessionUser = (user: {
   firstName: user.firstName,
   lastName: user.lastName,
   role: user.role as SessionUser['role'],
-  avatarUrl: user.avatar?.url ?? null,
+  avatarUrl: user.avatar?.url ?? user.ssoPictureUrl ?? null,
   coverImageUrl: user.coverImage?.url ?? null,
 });
 
