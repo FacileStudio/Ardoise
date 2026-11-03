@@ -3,6 +3,7 @@ import type { PrismaClient } from '@repo/database';
 import type { AuthManager } from '@repo/auth';
 import { sessionUserSchema } from '@repo/auth-shared';
 import authService from './service';
+import { toSessionUser } from './session';
 
 const user = {
   id: 'u1',
@@ -91,5 +92,13 @@ describe('authService.me', () => {
   it('refuses a deleted user', async () => {
     const db = { user: { findUnique: async () => null } } as unknown as PrismaClient;
     await expect(authService.me(db, 'gone')).rejects.toThrow('User not found');
+  });
+});
+
+describe('toSessionUser', () => {
+  it('prefers the SSO picture over a stored upload', () => {
+    const picture = 'https://sso.test/avatars/u1';
+    const session = toSessionUser({ ...user, ssoPictureUrl: picture, avatar: { url: 'https://api.test/storage/old.png' } });
+    expect(session.avatarUrl).toBe(picture);
   });
 });

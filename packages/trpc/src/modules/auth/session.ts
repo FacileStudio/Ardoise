@@ -41,7 +41,7 @@ export const toSessionUser = (user: {
   firstName: user.firstName,
   lastName: user.lastName,
   role: user.role as SessionUser['role'],
-  avatarUrl: user.avatar?.url ?? user.ssoPictureUrl ?? null,
+  avatarUrl: user.ssoPictureUrl ?? user.avatar?.url ?? null,
   coverImageUrl: user.coverImage?.url ?? null,
 });
 

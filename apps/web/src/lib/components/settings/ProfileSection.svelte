@@ -45,7 +45,7 @@
       area === 'client' ? trpc.client.me.query().catch(() => null) : Promise.resolve(null),
     ]);
     loaded = true;
-    avatarUrl = profile?.avatar?.url ?? $authStore.user?.avatarUrl ?? undefined;
+    avatarUrl = $authStore.user?.avatarUrl ?? profile?.avatar?.url ?? undefined;
     company = clientCompany;
   });
 
