@@ -42,7 +42,6 @@
     { href: '/admin/documents', label: $i18n.t('nav.documents'), icon: ardoise.document },
     { href: '/admin/payments', label: $i18n.t('nav.payments'), icon: icons.card },
     { href: '/admin/statistics', label: $i18n.t('nav.statistics'), icon: icons.dashboard },
-    { href: '/admin/spaces', label: $i18n.t('nav.spaces'), icon: icons.space },
   ]);
 
   const MOBILE_HREFS = [
