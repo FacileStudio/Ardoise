@@ -99,6 +99,8 @@ model SpaceSubscription {
   currentPeriodEnd     DateTime?    @db.Timestamptz(3)
   pastDueSince         DateTime?    @db.Timestamptz(3)
   cancelAtPeriodEnd    Boolean      @default(false)
+  checkoutSessionId    String?
+  checkoutExpiresAt    DateTime?    @db.Timestamptz(3)
   createdAt            DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime     @updatedAt @db.Timestamptz(3)
 
@@ -109,6 +111,7 @@ model EntitlementOverride {
   id              String           @id @default(cuid())
   scope           EntitlementScope
   registreSpaceId String?
+  personSub       String?
   personEmail     String?
   featureId       String
   feature         Feature          @relation(fields: [featureId], references: [id], onDelete: Cascade)
@@ -119,16 +122,27 @@ model EntitlementOverride {
   createdAt       DateTime         @default(now()) @db.Timestamptz(3)
 
   @@index([registreSpaceId])
-  @@index([personEmail])
+  @@index([personSub])
 }
 
 model CompedPerson {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  reason    String
+  id          String   @id @default(cuid())
+  email       String   @unique
+  registreSub String?  @unique
+  reason      String
   planKey   String
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model CompedSpace {
+  id              String   @id @default(cuid())
+  registreSpaceId String   @unique
+  reason          String
+  planKey         String
+  createdBy       String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model BillingEvent {
@@ -137,6 +151,8 @@ model BillingEvent {
   type          String
   receivedAt    DateTime  @default(now()) @db.Timestamptz(3)
   processedAt   DateTime? @db.Timestamptz(3)
+  failedAt      DateTime? @db.Timestamptz(3)
+  lastError     String?
 }
 
 model EntitlementPushState {
