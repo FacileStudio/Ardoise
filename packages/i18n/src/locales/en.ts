@@ -170,6 +170,7 @@ export const en = {
     statistics: 'Statistics',
     users: 'Users',
     spaces: 'Spaces',
+    offers: 'Plans',
     missions: 'Missions',
     signatures: 'Signatures',
     providers: 'Providers',

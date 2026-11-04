@@ -12,8 +12,13 @@
 
   let collapsed = $state(false);
   let scroller: HTMLElement | null = $state(null);
+  let billingStaff = $state(false);
 
   onMount(async () => {
+    trpc.billing.access
+      .query()
+      .then((access) => (billingStaff = access.staff))
+      .catch(() => (billingStaff = false));
     try {
       const rows = await trpc.space.list.query();
       spaceFilter.setSpaces(rows.map(({ id, name }) => ({ id, name })));
@@ -35,6 +40,9 @@
     { href: '/admin/documents', label: $i18n.t('nav.documents'), icon: ardoise.document },
     { href: '/admin/payments', label: $i18n.t('nav.payments'), icon: icons.card },
     { href: '/admin/statistics', label: $i18n.t('nav.statistics'), icon: icons.dashboard },
+    ...(billingStaff
+      ? [{ href: '/admin/offres', label: $i18n.t('nav.offers'), icon: ardoise.offer }]
+      : []),
   ]);
 
   const MOBILE_HREFS = [
