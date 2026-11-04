@@ -84,6 +84,8 @@ CREATE TABLE "SpaceSubscription" (
     "currentPeriodEnd" TIMESTAMPTZ(3),
     "pastDueSince" TIMESTAMPTZ(3),
     "cancelAtPeriodEnd" BOOLEAN NOT NULL DEFAULT false,
+    "checkoutSessionId" TEXT,
+    "checkoutExpiresAt" TIMESTAMPTZ(3),
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
@@ -95,6 +97,7 @@ CREATE TABLE "EntitlementOverride" (
     "id" TEXT NOT NULL,
     "scope" "EntitlementScope" NOT NULL,
     "registreSpaceId" TEXT,
+    "personSub" TEXT,
     "personEmail" TEXT,
     "featureId" TEXT NOT NULL,
     "value" JSONB NOT NULL,
@@ -110,6 +113,7 @@ CREATE TABLE "EntitlementOverride" (
 CREATE TABLE "CompedPerson" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "registreSub" TEXT,
     "reason" TEXT NOT NULL,
     "planKey" TEXT NOT NULL,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -119,12 +123,27 @@ CREATE TABLE "CompedPerson" (
 );
 
 -- CreateTable
+CREATE TABLE "CompedSpace" (
+    "id" TEXT NOT NULL,
+    "registreSpaceId" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "planKey" TEXT NOT NULL,
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+
+    CONSTRAINT "CompedSpace_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "BillingEvent" (
     "id" TEXT NOT NULL,
     "stripeEventId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "receivedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "processedAt" TIMESTAMPTZ(3),
+    "failedAt" TIMESTAMPTZ(3),
+    "lastError" TEXT,
 
     CONSTRAINT "BillingEvent_pkey" PRIMARY KEY ("id")
 );
@@ -180,10 +199,16 @@ CREATE INDEX "SpaceSubscription_planVersionId_idx" ON "SpaceSubscription"("planV
 CREATE INDEX "EntitlementOverride_registreSpaceId_idx" ON "EntitlementOverride"("registreSpaceId");
 
 -- CreateIndex
-CREATE INDEX "EntitlementOverride_personEmail_idx" ON "EntitlementOverride"("personEmail");
+CREATE INDEX "EntitlementOverride_personSub_idx" ON "EntitlementOverride"("personSub");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CompedPerson_email_key" ON "CompedPerson"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CompedPerson_registreSub_key" ON "CompedPerson"("registreSub");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CompedSpace_registreSpaceId_key" ON "CompedSpace"("registreSpaceId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "BillingEvent_stripeEventId_key" ON "BillingEvent"("stripeEventId");
