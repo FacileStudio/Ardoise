@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-11-04
+
+### Fixed
+
+- Settings, Avancé tab links to the spaces pages again; v0.12.0 had removed their only entry point with the switcher.
+
 ## [0.12.0] - 2026-11-03
 
 ### Changed
