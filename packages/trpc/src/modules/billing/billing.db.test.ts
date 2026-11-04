@@ -315,6 +315,36 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     expect((await prisma.entitlementPushState.findUniqueOrThrow({ where: { id: 'singleton' } })).revision).toBe(43);
   });
 
+  it('serialises concurrent pushes from two instances with distinct, increasing revisions', async () => {
+    await seedBilling(prisma);
+    let stored = 0;
+    let inFlight = 0;
+    let overlap = false;
+    const seen: number[] = [];
+    const registre = {
+      snapshot: async () => {
+        if (inFlight > 0) overlap = true;
+        return directory;
+      },
+      putEntitlements: async (body: EntitlementsPush) => {
+        inFlight += 1;
+        if (inFlight > 1) overlap = true;
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        inFlight -= 1;
+        if (body.revision < stored) throw new StaleRevisionError(stored);
+        stored = body.revision;
+        seen.push(body.revision);
+      },
+    };
+    const a = new EntitlementPusher(prisma, registre, silent);
+    const b = new EntitlementPusher(prisma, registre, silent);
+    const outcomes = await Promise.all([a.push(), b.push(), a.push(), b.push()]);
+    expect(outcomes.every((o) => o.status === 'pushed')).toBe(true);
+    expect(overlap).toBe(false);
+    expect(seen).toEqual([1, 2, 3, 4]);
+    expect((await prisma.entitlementPushState.findUniqueOrThrow({ where: { id: 'singleton' } })).revision).toBe(4);
+  });
+
   it('records a push failure without throwing', async () => {
     const pusher = new EntitlementPusher(
       prisma,

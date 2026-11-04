@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@repo/database';
+import type { Prisma, PrismaClient } from '@repo/database';
 import { resolveEntitlements, type Resolution } from './resolve';
 import { loadResolveInput, sameEntitlements, type DirectorySource, type DirectoryView } from './state';
 import type { Entitlements } from './values';
@@ -117,20 +117,13 @@ export class EntitlementPusher {
 
   private async pushOnce(): Promise<PushOutcome> {
     try {
-      const directory = await this.remote.snapshot();
-      const { input, unresolvedComps } = await loadResolveInput(this.db, directory);
-      if (unresolvedComps.length > 0) {
-        this.logger.warn({ count: unresolvedComps.length }, '[BILLING] Comped people missing from the Registre snapshot');
-      }
-      const resolution = resolveEntitlements(input);
-      if (alreadyApplied(directory, resolution)) {
-        await this.record({ lastError: null });
-        return { status: 'unchanged', unresolvedComps };
-      }
-      const revision = await this.send(resolution);
-      await this.record({ revision, lastPushedAt: new Date(), lastError: null });
-      this.logger.info({ revision, spaces: resolution.spaces.length, people: resolution.people.length }, '[BILLING] Entitlements pushed');
-      return { status: 'pushed', revision, unresolvedComps };
+      return await this.db.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PUSH_LOCK_KEY})`;
+          return this.pushLocked(tx);
+        },
+        { maxWait: LOCK_WAIT_MS, timeout: LOCK_WAIT_MS }
+      );
     } catch (error) {
       const message = describe(error);
       this.logger.warn({ error: message }, '[BILLING] Entitlement push failed');
@@ -139,27 +132,68 @@ export class EntitlementPusher {
     }
   }
 
-  private async send(resolution: Resolution): Promise<number> {
-    const state = await this.db.entitlementPushState.findUnique({ where: { id: STATE_ID } });
-    const revision = (state?.revision ?? 0) + 1;
+  /** Computes and sends one push while holding the cluster-wide push lock. */
+  private async pushLocked(tx: Tx): Promise<PushOutcome> {
+    const directory = await this.remote.snapshot();
+    const { input, unresolvedComps } = await loadResolveInput(tx as PrismaClient, directory);
+    if (unresolvedComps.length > 0) {
+      this.logger.warn({ count: unresolvedComps.length }, '[BILLING] Comped people missing from the Registre snapshot');
+    }
+    const resolution = resolveEntitlements(input);
+    if (alreadyApplied(directory, resolution)) {
+      await this.record({ lastError: null }, tx);
+      return { status: 'unchanged', unresolvedComps };
+    }
+    let revision = await allocateRevision(tx);
     try {
       await this.remote.putEntitlements(toPushBody(resolution, revision));
-      return revision;
     } catch (error) {
       if (!(error instanceof StaleRevisionError)) throw error;
-      const retry = error.current + 1;
-      await this.remote.putEntitlements(toPushBody(resolution, retry));
-      return retry;
+      revision = await allocateRevision(tx, error.current + 1);
+      await this.remote.putEntitlements(toPushBody(resolution, revision));
     }
+    await this.record({ lastPushedAt: new Date(), lastError: null }, tx);
+    this.logger.info(
+      { revision, spaces: resolution.spaces.length, people: resolution.people.length },
+      '[BILLING] Entitlements pushed'
+    );
+    return { status: 'pushed', revision, unresolvedComps };
   }
 
-  private async record(data: { revision?: number; lastPushedAt?: Date; lastError: string | null }) {
-    await this.db.entitlementPushState.upsert({
+  private async record(data: { lastPushedAt?: Date; lastError: string | null }, db: Tx | PrismaClient = this.db) {
+    await db.entitlementPushState.upsert({
       where: { id: STATE_ID },
       create: { id: STATE_ID, ...data },
       update: data,
     });
   }
+}
+
+type Tx = Prisma.TransactionClient;
+
+/** The pg advisory lock every Ardoise instance takes before pushing, so pushes never overlap. */
+const PUSH_LOCK_KEY = 724_300_117;
+
+/** How long a push may wait for the lock and hold it (snapshot, compute, two PUTs). */
+const LOCK_WAIT_MS = 60_000;
+
+/**
+ * Bumps the stored revision in one statement and returns it: the next
+ * revision, or exactly `next` when Registre told us where it stands.
+ */
+async function allocateRevision(tx: Tx, next?: number): Promise<number> {
+  const rows = next === undefined
+    ? await tx.$queryRaw<{ revision: number }[]>`
+        INSERT INTO "EntitlementPushState" ("id", "revision", "updatedAt")
+        VALUES (${STATE_ID}, 1, NOW())
+        ON CONFLICT ("id") DO UPDATE SET "revision" = "EntitlementPushState"."revision" + 1, "updatedAt" = NOW()
+        RETURNING "revision"`
+    : await tx.$queryRaw<{ revision: number }[]>`
+        INSERT INTO "EntitlementPushState" ("id", "revision", "updatedAt")
+        VALUES (${STATE_ID}, ${next}, NOW())
+        ON CONFLICT ("id") DO UPDATE SET "revision" = ${next}, "updatedAt" = NOW()
+        RETURNING "revision"`;
+  return Number(rows[0]!.revision);
 }
 
 let registered: EntitlementPusher | null = null;
