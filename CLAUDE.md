@@ -94,7 +94,7 @@ The web app (`apps/web`) serves both client and admin interfaces from a single S
 
 ### tRPC modules
 
-Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe. Three procedure levels: `publicProcedure`, `protectedProcedure`, `adminProcedure`.
+Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe, billing. Three procedure levels: `publicProcedure`, `protectedProcedure`, `adminProcedure`.
 
 ### Authentication
 
@@ -166,6 +166,17 @@ All optional and all-or-nothing (`NUAGE_*`, `PLUME_*`, `GLOUTON_*`, see `docs/co
 - `document.sendForSignature({ id })` sends the stored PDF to Plume with the mission's client and the provider as signers, `external_ref` `ardoise:contract:<id>`, and sets `signatureStatus` to `sent`. `document.signatureEnabled` tells the UI whether Plume is configured.
 - `POST /webhooks/plume` verifies `x-plume-signature-256` and moves the document to `signed` or `declined`, and stamps `nuageArchivedAt` on `document.archived`. Replays change nothing.
 - Glouton: client and mission events go to Glouton after the response (`packages/trpc/src/modules/webhook/glouton.ts`); Glouton writes come in on `/api/integrations/glouton/clients` (`apps/backend/src/handlers/glouton.ts`), last write wins on `updatedAt`, and are never sent back to Glouton.
+
+## Suite billing (forfait)
+
+`packages/trpc/src/modules/billing/` makes Ardoise the suite's billing backoffice. Billing customers are Registre spaces (`SpaceSubscription`), not Ardoise `Client` rows. Schema in `prisma/schema/billing.prisma`.
+
+- `resolve.ts` is the one pure resolution: override > owner comp > subscription plan version (past_due keeps it 7 days) > feature default; a person gets the most generous value across the spaces they own. Never recompute it elsewhere.
+- Staff gate: every `billing.*` procedure uses `billingStaffProcedure` (`staff.ts`), which re-reads the user and requires a verified, active ADMIN listed in `BILLING_STAFF_EMAILS`. Every SSO sign-in is ADMIN, so never gate billing on the role alone. `/admin/offres/+layout.server.ts` checks `billing.access` server side.
+- Published plan versions are immutable; `publish` (`stripe-sync.ts`) creates Stripe prices with lookup keys `plan_<key>_<interval>`. Comps use the latest version of the plan, even a draft.
+- `/billing/*` (`apps/backend/src/handlers/billing.ts`) is server-to-server for Registre: Bearer `BILLING_API_TOKEN` only, never an Ardoise session. Checkout prices come only from a published lookup key.
+- `/webhook` sends events whose subscription metadata has `registre_space_id` to `webhook.ts` (dedupe in `BillingEvent`, customer cross-check); everything else stays on `paymentService.handleWebhook`.
+- `push.ts` PUTs every space and person entitlement to Registre (`DirectoryClient.putEntitlements`, OIDC client Basic auth) when anything changes and every 10 minutes; `apps/backend/src/billing.ts` starts it. Seed: `mise run billing:seed` or `BILLING_SEED_ON_BOOT=true`.
 
 ## Releasing
 
