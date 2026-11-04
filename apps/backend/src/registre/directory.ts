@@ -30,6 +30,7 @@ export interface DirectoryMember {
   name: string;
   picture: string;
   role: string;
+  email_verified?: boolean;
 }
 
 /** One shared space; `id` is Registre's and survives renames. */

@@ -171,8 +171,11 @@ async function syncMembers(tx: Tx, deps: DirectoryDeps, spaceId: string, members
 /**
  * Returns the local user for a snapshot member: by Registre identity, then by
  * email (recording the identity), else a pre-provisioned SSO-only admin whose
- * first sign-in lands on the row through the recorded identity. An email match
- * already bound to another subject is skipped, as `oidc/identity.ts` refuses it.
+ * first sign-in lands on the row through the recorded identity. The email
+ * match happens only when the snapshot marks the email verified, and never
+ * binds a CLIENT row or a user already bound to another subject; those
+ * members are skipped and logged. Registre does not send `email_verified`
+ * yet, so today an email already used locally is never linked.
  */
 async function resolveMember(tx: Tx, deps: DirectoryDeps, member: DirectoryMember): Promise<string | null> {
   const account = await tx.account.findUnique({
@@ -181,18 +184,12 @@ async function resolveMember(tx: Tx, deps: DirectoryDeps, member: DirectoryMembe
   });
   if (account) return account.userId;
   const email = member.email.trim();
-  const existing = email
-    ? await tx.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, select: { id: true } })
-    : null;
-  if (existing) {
-    const other = await tx.account.findFirst({ where: { userId: existing.id, providerId: deps.issuer } });
-    if (other) {
-      deps.logger.warn({ email }, '[REGISTRE] Skipped a member whose email is bound to another identity');
-      return null;
-    }
-  } else if (!email) {
-    return null;
-  }
+  if (!email) return null;
+  const existing = await tx.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+    select: { id: true, role: true },
+  });
+  if (existing && !(await linkable(tx, deps, existing, member))) return null;
   const userId = existing?.id ?? (await provisionUser(tx, member, email));
   await tx.account.create({
     data: { id: crypto.randomUUID(), userId, providerId: deps.issuer, accountId: member.sub },
@@ -200,10 +197,33 @@ async function resolveMember(tx: Tx, deps: DirectoryDeps, member: DirectoryMembe
   return userId;
 }
 
+/** Whether a snapshot member may be bound to an existing local user found by email. */
+async function linkable(
+  tx: Tx,
+  deps: DirectoryDeps,
+  user: { id: string; role: string },
+  member: DirectoryMember
+): Promise<boolean> {
+  if (member.email_verified !== true) {
+    deps.logger.warn({ sub: member.sub }, '[REGISTRE] Skipped a member whose unverified email matches a local user');
+    return false;
+  }
+  if (user.role === 'CLIENT') {
+    deps.logger.warn({ sub: member.sub }, '[REGISTRE] Skipped a member whose email belongs to a client account');
+    return false;
+  }
+  const other = await tx.account.findFirst({ where: { userId: user.id, providerId: deps.issuer } });
+  if (other) {
+    deps.logger.warn({ sub: member.sub }, '[REGISTRE] Skipped a member whose email is bound to another identity');
+    return false;
+  }
+  return true;
+}
+
 /** Creates the SSO-only admin a Registre member signs in to for the first time. */
 async function provisionUser(tx: Tx, member: DirectoryMember, email: string): Promise<string> {
   const user = await tx.user.create({
-    data: { email, ...splitName(member.name, email), role: 'ADMIN', emailVerified: true },
+    data: { email, ...splitName(member.name, email), role: 'ADMIN', emailVerified: member.email_verified === true },
     select: { id: true },
   });
   return user.id;

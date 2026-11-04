@@ -79,6 +79,7 @@ describe.skipIf(!url)('applySnapshot', () => {
     await user('dave');
     await user('frank', 'sub-frank-old');
     await user('gina', undefined, 'CLIENT');
+    await user('hank');
     const acme = await db.space.create({
       data: {
         name: 'acme',
@@ -99,18 +100,19 @@ describe.skipIf(!url)('applySnapshot', () => {
     ids.solo = solo.id;
   }, 60_000);
 
-  test('links by name, provisions admins, maps roles, spares local-only users, and is idempotent', async () => {
+  test('links by name, provisions admins, maps roles, links emails only when verified, and is idempotent', async () => {
     const payload = await buildImport(db, issuer);
     const acmeImport = payload.find((space) => space.name === 'acme');
     expect(acmeImport?.members).toContainEqual({ sub: 'sub-alice', role: 'owner' });
     expect(acmeImport?.members).toContainEqual({ email: 'bob@example.test', role: 'member' });
 
-    const member = (sub: string, email: string, role: string, name = '') => ({
+    const member = (sub: string, email: string, role: string, name = '', verified?: boolean) => ({
       sub,
       email,
       name,
       picture: '',
       role,
+      ...(verified === undefined ? {} : { email_verified: verified }),
     });
     const snapshot = {
       version: 1,
@@ -120,10 +122,11 @@ describe.skipIf(!url)('applySnapshot', () => {
           name: 'Acme',
           members: [
             member('sub-alice', 'alice@example.test', 'owner'),
-            member('sub-bob', 'BOB@example.test', 'admin'),
+            member('sub-bob', 'BOB@example.test', 'admin', '', true),
             member('sub-erin', 'erin@example.test', 'member', 'Erin Example'),
-            member('sub-frank-new', 'frank@example.test', 'member'),
-            member('sub-gina', 'gina@example.test', 'member'),
+            member('sub-frank-new', 'frank@example.test', 'member', '', true),
+            member('sub-gina', 'gina@example.test', 'member', '', true),
+            member('sub-hank', 'hank@example.test', 'member'),
           ],
         },
       ],
@@ -143,14 +146,16 @@ describe.skipIf(!url)('applySnapshot', () => {
       'bob@example.test': 'ADMIN',
       'dave@example.test': 'MEMBER',
       'erin@example.test': 'MEMBER',
-      'gina@example.test': 'MEMBER',
     });
     const erin = acme.members.find((m) => m.user.email === 'erin@example.test')!.user;
     expect(erin.firstName).toBe('Erin');
     expect(erin.role).toBe('ADMIN');
     expect(erin.password).toBeNull();
-    const gina = acme.members.find((m) => m.user.email === 'gina@example.test')!.user;
-    expect(gina.role).toBe('CLIENT');
+    expect(erin.emailVerified).toBe(false);
+    expect(await db.account.count({ where: { accountId: 'sub-gina' } })).toBe(0);
+    expect((await db.user.findUniqueOrThrow({ where: { id: ids.gina } })).role).toBe('CLIENT');
+    expect(await db.account.count({ where: { accountId: 'sub-hank' } })).toBe(0);
+    expect(await db.user.count({ where: { email: { equals: 'hank@example.test', mode: 'insensitive' } } })).toBe(1);
     expect(await db.account.count({ where: { providerId: issuer, accountId: 'sub-bob', userId: ids.bob } })).toBe(1);
     expect(await db.account.count({ where: { accountId: 'sub-frank-new' } })).toBe(0);
     const solo = await db.space.findUniqueOrThrow({ where: { id: ids.solo }, include: { members: true } });
