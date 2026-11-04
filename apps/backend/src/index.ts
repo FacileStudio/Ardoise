@@ -24,6 +24,10 @@ import { prisma } from '@repo/database';
 import { DirectoryClient, SyncPath } from './registre/directory';
 import { applySnapshot, buildImport } from './registre/spaces';
 import { startDirectorySync } from './registre/boot';
+import { createBillingRoutes } from './handlers/billing';
+import { startBilling } from './billing';
+import { getStripeService } from '@repo/trpc/settings';
+import { requestEntitlementPush } from '@repo/trpc/billing';
 
 const app = new Hono();
 
@@ -48,14 +52,21 @@ const storage = new StorageService({
 });
 
 const issuer = env.OIDC_ISSUER && env.OIDC_CLIENT_ID && env.OIDC_CLIENT_SECRET ? env.OIDC_ISSUER : null;
-const directory = issuer
-  ? startDirectorySync({
-      remote: new DirectoryClient(issuer, env.OIDC_CLIENT_ID!, env.OIDC_CLIENT_SECRET!),
-      collect: () => buildImport(prisma, issuer),
-      apply: (snapshot) => applySnapshot({ db: prisma, issuer, logger }, snapshot),
-      logger,
-    }).syncer
-  : null;
+const registre = issuer ? new DirectoryClient(issuer, env.OIDC_CLIENT_ID!, env.OIDC_CLIENT_SECRET!) : null;
+const directory =
+  issuer && registre
+    ? startDirectorySync({
+        remote: registre,
+        collect: () => buildImport(prisma, issuer),
+        apply: async (snapshot) => {
+          await applySnapshot({ db: prisma, issuer, logger }, snapshot);
+          requestEntitlementPush();
+        },
+        logger,
+      }).syncer
+    : null;
+
+startBilling({ db: prisma, registre, seedOnBoot: env.BILLING_SEED_ON_BOOT, logger });
 
 const cors = corsHandler([env.FRONTEND_URL, env.BACKEND_URL]);
 
@@ -72,6 +83,16 @@ app.options('*', (c) => c.body(null, 204));
 app.post('/webhook', createStripeWebhookHandler(storage, env));
 app.post('/webhooks/plume', createPlumeWebhookHandler(env));
 app.route(GLOUTON_ROUTES_PREFIX, createGloutonRoutes(env, prisma));
+app.route(
+  '/',
+  createBillingRoutes({
+    db: prisma,
+    env,
+    directory: registre,
+    getStripe: () => getStripeService(prisma),
+    logger,
+  })
+);
 
 if (directory) {
   app.post(SyncPath, (c) => {

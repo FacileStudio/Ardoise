@@ -7,6 +7,8 @@
  * idempotently, so a lost, repeated or reordered nudge costs nothing.
  */
 
+import { StaleRevisionError } from '@repo/trpc/billing';
+
 /** Registre's three ranks, lowest to highest. */
 export const RoleMember = 'member';
 export const RoleAdmin = 'admin';
@@ -35,13 +37,53 @@ export interface DirectorySpace {
   id: string;
   name: string;
   members: DirectoryMember[];
+  entitlements?: Record<string, unknown>;
+}
+
+/** One person's personal entitlements, as Registre last received them from Ardoise. */
+export interface DirectoryPerson {
+  sub: string;
+  entitlements?: Record<string, unknown>;
 }
 
 /** Every shared space as Registre holds it now; `version` rises on every change. */
 export interface Snapshot {
   version: number;
   spaces: DirectorySpace[];
+  people?: DirectoryPerson[];
 }
+
+/** The largest directory response read, so a broken peer cannot exhaust memory. */
+const MaxResponseBytes = 16 * 1024 * 1024;
+
+/** The largest error body read from a write answer. */
+const MaxErrorBytes = 64 * 1024;
+
+/** Reads a response body as text, failing once it passes `limit` bytes. */
+async function readCapped(response: Response, limit: number): Promise<string> {
+  const declared = Number(response.headers.get('content-length') ?? 0);
+  if (declared > limit) {
+    await response.body?.cancel().catch(() => {});
+    throw new DirectoryUnavailableError('response too large');
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return '';
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel().catch(() => {});
+      throw new DirectoryUnavailableError('response too large');
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+
 
 /** One person an app already had in a space before Registre owned spaces. */
 export interface ImportMember {
@@ -78,7 +120,7 @@ export class DirectoryClient implements SnapshotSource {
     private readonly issuer: string,
     private readonly clientId: string,
     private readonly clientSecret: string,
-    private readonly timeoutMs = 15_000
+    private readonly timeoutMs = 10_000
   ) {}
 
   /** Fetches every shared space as Registre holds it now. */
@@ -95,28 +137,64 @@ export class DirectoryClient implements SnapshotSource {
     return this.call('POST', '/api/directory/import', JSON.stringify({ spaces }));
   }
 
-  /** Sends one authenticated request and decodes the snapshot it answers. */
-  private async call(method: string, path: string, body?: string): Promise<Snapshot> {
+  /**
+   * Replaces every entitlement Registre holds with `body` (PUT
+   * /api/directory/entitlements). A 409 throws StaleRevisionError with
+   * the revision Registre holds; any other non-204 answer throws
+   * DirectoryUnavailableError.
+   */
+  async putEntitlements(body: { revision: number }): Promise<void> {
+    const response = await this.send('PUT', '/api/directory/entitlements', JSON.stringify(body));
+    if (response.status === 204 || response.status === 200) {
+      await response.body?.cancel().catch(() => {});
+      return;
+    }
+    if (response.status === 409) {
+      const text = await readCapped(response, MaxErrorBytes).catch(() => '');
+      let current = Number.NaN;
+      try {
+        current = Number((JSON.parse(text) as { current?: unknown }).current);
+      } catch {
+        current = Number.NaN;
+      }
+      if (Number.isSafeInteger(current) && current >= 0) throw new StaleRevisionError(current);
+    }
+    await response.body?.cancel().catch(() => {});
+    throw new DirectoryUnavailableError(`/api/directory/entitlements answered ${response.status}`);
+  }
+
+  /** Sends one authenticated request with the timeout. */
+  private async send(method: string, path: string, body?: string): Promise<Response> {
     const credentials = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
-    let response: Response;
     try {
-      response = await fetch(`${this.issuer.replace(/\/$/, '')}${path}`, {
+      return await fetch(`${this.issuer.replace(/\/$/, '')}${path}`, {
         method,
         body,
         headers: { Authorization: `Basic ${credentials}`, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(this.timeoutMs),
+        redirect: 'error',
       });
     } catch (error) {
       throw new DirectoryUnavailableError(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  /** Sends one authenticated request and decodes the snapshot it answers. */
+  private async call(method: string, path: string, body?: string): Promise<Snapshot> {
+    const response = await this.send(method, path, body);
     if (response.status !== 200) {
       await response.body?.cancel().catch(() => {});
       throw new DirectoryUnavailableError(`${path} answered ${response.status}`);
     }
     try {
-      const snapshot = (await response.json()) as Partial<Snapshot>;
-      return { version: Number(snapshot.version ?? 0), spaces: snapshot.spaces ?? [] };
+      const snapshot = JSON.parse(await readCapped(response, MaxResponseBytes)) as Partial<Snapshot>;
+      return {
+        version: Number(snapshot.version ?? 0),
+        spaces: snapshot.spaces ?? [],
+        ...(Array.isArray(snapshot.people) ? { people: snapshot.people } : {}),
+      };
     } catch (error) {
+      if (error instanceof DirectoryUnavailableError) throw error;
       throw new DirectoryUnavailableError(`decode the snapshot: ${String(error)}`);
     }
   }

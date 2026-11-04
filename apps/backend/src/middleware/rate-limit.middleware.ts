@@ -145,3 +145,24 @@ export function createTrpcRateLimit(limiter = new RateLimiter()) {
 }
 
 export const trpcRateLimit = createTrpcRateLimit();
+
+/**
+ * A per-IP fixed-window limit for one group of plain HTTP routes, such as
+ * the billing API. Each group gets its own key prefix and budget.
+ */
+export function createRouteRateLimit(
+  name: string,
+  config: RateLimitConfig,
+  limiter = new RateLimiter()
+) {
+  return async (c: Context, next: Next) => {
+    const result = limiter.check(`${getClientIp(c)}:${name}`, config);
+    c.header('X-RateLimit-Limit', String(config.maxRequests));
+    c.header('X-RateLimit-Remaining', String(result.remaining));
+    if (!result.allowed) {
+      c.header('Retry-After', String(Math.ceil((result.resetAt - Date.now()) / 1000)));
+      return c.json({ error: 'Too many requests' }, 429);
+    }
+    await next();
+  };
+}
