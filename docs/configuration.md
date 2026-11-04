@@ -65,7 +65,9 @@ boot. Empty values count as unset.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `BILLING_STAFF_EMAILS` | empty | Comma-separated emails, trimmed and compared case-insensitively. Only a verified, active ADMIN whose email is listed reaches `/admin/offres` and any `billing.*` procedure. Empty means nobody. Every SSO sign-in is ADMIN, so the role alone grants nothing here. Production: `yann@facile.studio,noah@facile.studio,camille@facile.studio,mazouz@facile.studio` |
+| `BILLING_STAFF_SUBS` | empty | Comma-separated Registre subjects. Only an active, unbanned ADMIN whose Facile SSO identity (`Account` with `providerId` = `OIDC_ISSUER`) has a listed subject reaches `/admin/offres` and any `billing.*` procedure. Empty (with no email fallback) means nobody. Every SSO sign-in is ADMIN, so the role alone grants nothing here |
+| `BILLING_STAFF_EMAILS` | empty | Fallback, trimmed and case-insensitive. Matches the email Registre's snapshot holds for the user's subject, and only when the snapshot marks it `email_verified: true`. Today's snapshot carries no verification flag, so set `BILLING_STAFF_SUBS`. `User.email` is never consulted |
+| `BILLING_SEED_COMP_SUBS` | empty | `email=sub` pairs. The seed gives the comped owners these Registre subjects when theirs is missing. Comps match by subject only (or a verified snapshot email), so a comp without one grants nothing |
 | `BILLING_API_TOKEN` | unset | Bearer token on `GET /billing/spaces/:id`, `POST /billing/checkout` and `POST /billing/portal`. Same value as Registre's. Only its SHA-256 digest is kept and compared in constant time. Missing or shorter than 32 characters: the routes answer 404 |
 | `BILLING_REDIRECT_ORIGINS` | `https://sso.facile.studio` | Comma-separated https origins. `success_url`, `cancel_url` and `return_url` must be absolute https URLs on one of them, without credentials |
 | `BILLING_SEED_ON_BOOT` | `false` | `true` runs the billing seed at boot (six features, draft Solo/Pro/Studio, comped owners). Idempotent; it never edits existing rows |
