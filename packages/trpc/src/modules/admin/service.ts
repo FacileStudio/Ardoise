@@ -1,12 +1,26 @@
 import type { PrismaClient } from '@repo/database';
 import { AdminEngine, PermissionService, AuditService } from '@repo/admin';
 import type { EntityConfig } from '@repo/admin';
-import {
-  MediaCreateInputSchema,
-  MediaUpdateInputSchema,
-  UserCreateInputSchema,
-  UserUpdateInputSchema,
-} from '@repo/database/zod';
+import { z } from 'zod';
+import { MediaCreateInputSchema, MediaUpdateInputSchema } from '@repo/database/zod';
+
+const name = z.string().trim().min(1).max(200);
+
+/**
+ * The only user fields the generic admin engine may write. Identity and
+ * privilege fields (email, emailVerified, role, status, bans, passwords,
+ * accounts) are refused: staff come from Facile SSO and clients from
+ * client.create, and billing staff are recognised by them.
+ */
+export const adminUserUpdateSchema = z
+  .object({ firstName: name.optional(), lastName: name.optional() })
+  .strict();
+
+/** The generic admin engine never creates users. */
+export const adminUserCreateSchema = z
+  .object({})
+  .strict()
+  .refine(() => false, { message: 'Users are created by Facile SSO or client.create' });
 
 export class AdminService {
   private engines: Map<string, AdminEngine> = new Map();
@@ -24,24 +38,12 @@ export class AdminService {
       name: 'user',
       displayName: 'User',
       schema: {
-        create: UserCreateInputSchema,
-        update: UserUpdateInputSchema,
+        create: adminUserCreateSchema,
+        update: adminUserUpdateSchema,
       },
       fields: [
-        { name: 'email', label: 'Email', type: 'email', required: true },
         { name: 'firstName', label: 'First Name', type: 'string', required: true },
         { name: 'lastName', label: 'Last Name', type: 'string', required: true },
-        {
-          name: 'role',
-          label: 'Role',
-          type: 'select',
-          required: true,
-          options: [
-            { value: 'CLIENT', label: 'Client' },
-            { value: 'ADMIN', label: 'Admin' },
-          ],
-        },
-        { name: 'emailVerified', label: 'Email Verified', type: 'boolean' },
       ],
       listFields: ['email', 'firstName', 'lastName', 'role', 'createdAt'],
       searchFields: ['email', 'firstName', 'lastName'],

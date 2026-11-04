@@ -205,12 +205,11 @@ describe('procedures never serialize secrets', () => {
 });
 
 describe('admin.create for users', () => {
-  it('drops a caller supplied password and never echoes a hash', async () => {
-    assertClean(
-      await caller().admin.create({
-        entity: 'user',
-        data: { email: 'n@b.fr', firstName: 'N', lastName: 'B', password: HASH },
-      })
-    );
+  it('is refused, and the refusal never echoes a hash', async () => {
+    const error = await caller()
+      .admin.create({ entity: 'user', data: { email: 'n@b.fr', firstName: 'N', lastName: 'B', password: HASH } })
+      .catch((e: unknown) => e);
+    expect(error).toMatchObject({ code: 'BAD_REQUEST' });
+    assertClean({ message: (error as Error).message });
   });
 });

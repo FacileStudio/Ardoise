@@ -13,6 +13,20 @@ import {
 } from './types';
 import { settingsRouter } from '../settings/router';
 import { dispatchConfiguredWebhook } from '../webhook/service';
+import { TRPCError } from '@trpc/server';
+import { ZodError } from 'zod';
+
+/** Turns a rejected admin payload into BAD_REQUEST instead of a 500. */
+async function validated<T>(write: () => Promise<T>): Promise<T> {
+  try {
+    return await write();
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'These fields cannot be written here', cause: error });
+    }
+    throw error;
+  }
+}
 
 export const adminRouter = router({
   settings: settingsRouter,
@@ -66,7 +80,7 @@ export const adminRouter = router({
       userAgent: ctx.userAgent,
     };
 
-    const record = await engine.create(context, input.data);
+    const record = await validated(() => engine.create(context, input.data));
 
     await dispatchConfiguredWebhook({
       db: ctx.db,
@@ -97,7 +111,7 @@ export const adminRouter = router({
       userAgent: ctx.userAgent,
     };
 
-    const record = await engine.update(context, input.id, input.data);
+    const record = await validated(() => engine.update(context, input.id, input.data));
 
     await dispatchConfiguredWebhook({
       db: ctx.db,
