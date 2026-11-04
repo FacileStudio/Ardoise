@@ -126,11 +126,12 @@ function subscriptionIdOf(event: Stripe.Event): string | null {
 }
 
 /**
- * Handles one verified billing event. The event id is recorded in
- * BillingEvent before any side effect, so a replay changes nothing; a
- * failure removes the record so Stripe's redelivery runs again. The
- * subscription is re-read from Stripe, which makes the order of deliveries
- * irrelevant.
+ * Handles one verified billing event. The event id is claimed in
+ * BillingEvent before any side effect, and an event already processed is
+ * skipped, so a replay changes nothing. A failure keeps the claim, marks it
+ * failed and rethrows, so the webhook answers 5xx and Stripe's redelivery
+ * (or the reconcile) runs it again. The subscription is re-read from
+ * Stripe, which makes the order of deliveries irrelevant.
  */
 export async function handleBillingEvent(
   db: PrismaClient,
@@ -138,11 +139,12 @@ export async function handleBillingEvent(
   event: Stripe.Event,
   logger: BillingLogger
 ): Promise<void> {
-  const recorded = await db.billingEvent.createMany({
+  await db.billingEvent.createMany({
     data: [{ stripeEventId: event.id, type: event.type }],
     skipDuplicates: true,
   });
-  if (recorded.count === 0) return;
+  const claim = await db.billingEvent.findUnique({ where: { stripeEventId: event.id } });
+  if (claim?.processedAt) return;
   try {
     const subscriptionId = subscriptionIdOf(event);
     if (subscriptionId) {
@@ -150,9 +152,15 @@ export async function handleBillingEvent(
       const failedAt = event.type === 'invoice.payment_failed' ? new Date(event.created * 1000) : undefined;
       await syncSubscription(db, stripe, subscription, logger, failedAt);
     }
-    await db.billingEvent.update({ where: { stripeEventId: event.id }, data: { processedAt: new Date() } });
+    await db.billingEvent.update({
+      where: { stripeEventId: event.id },
+      data: { processedAt: new Date(), failedAt: null, lastError: null },
+    });
   } catch (error) {
-    await db.billingEvent.delete({ where: { stripeEventId: event.id } }).catch(() => {});
+    const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+    await db.billingEvent
+      .update({ where: { stripeEventId: event.id }, data: { failedAt: new Date(), lastError: message } })
+      .catch(() => {});
     throw error;
   }
   requestEntitlementPush();

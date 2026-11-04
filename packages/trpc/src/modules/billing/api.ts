@@ -1,11 +1,10 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import type { PrismaClient } from '@repo/database';
+import type { Prisma, PrismaClient } from '@repo/database';
 import type Stripe from 'stripe';
 import { z } from 'zod';
 import { resolveEntitlements } from './resolve';
 import { OWNER_ROLE, loadResolveInput, type DirectoryView } from './state';
 import { SPACE_METADATA_KEY } from './webhook';
-import { LIVE_STATUSES } from './stripe-sync';
 
 /** The shortest BILLING_API_TOKEN accepted; anything shorter disables the billing routes. */
 export const MIN_TOKEN_LENGTH = 32;
@@ -13,7 +12,7 @@ export const MIN_TOKEN_LENGTH = 32;
 /** A billing API failure with a generic, caller-safe message. */
 export class BillingApiError extends Error {
   constructor(
-    readonly status: 400 | 401 | 403 | 404 | 409 | 503,
+    readonly status: 400 | 401 | 403 | 404 | 409 | 429 | 503,
     readonly code: string,
     message: string
   ) {
@@ -181,18 +180,40 @@ async function publishedPrice(db: PrismaClient, lookupKey: string) {
   return price.stripePriceId;
 }
 
-/** The space's Stripe customer, created once with registre_space_id metadata. */
-async function customerFor(deps: BillingDeps, spaceId: string, name: string, email: string) {
-  const row = await deps.db.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
-  if (row && LIVE_STATUSES.includes(row.status)) {
+/** Subscription statuses after which a space may check out again. */
+const ENDED = new Set(['canceled', 'incomplete_expired']);
+
+/** How long a checkout session stays open; Stripe's minimum. */
+const CHECKOUT_TTL_S = 30 * 60;
+
+type Tx = Prisma.TransactionClient;
+
+/**
+ * Refuses a second checkout while the space has a subscription that has not
+ * ended (incomplete and unpaid included) or a checkout session still open.
+ */
+async function assertCanCheckOut(tx: Tx, stripe: Stripe, spaceId: string) {
+  const row = await tx.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
+  if (row?.stripeSubscriptionId && !ENDED.has(row.status)) {
     throw new BillingApiError(409, 'already_subscribed', 'This space already has a subscription');
   }
-  if (row?.stripeCustomerId) return row.stripeCustomerId;
-  const customer = await deps.stripe.customers.create(
+  if (row?.checkoutSessionId && row.checkoutExpiresAt && row.checkoutExpiresAt.getTime() > Date.now()) {
+    const session = await stripe.checkout.sessions.retrieve(row.checkoutSessionId);
+    if (session.status === 'open') {
+      throw new BillingApiError(409, 'checkout_open', 'A checkout is already open for this space');
+    }
+  }
+  return row;
+}
+
+/** The space's Stripe customer, created once with registre_space_id metadata. */
+async function customerFor(tx: Tx, stripe: Stripe, spaceId: string, name: string, email: string, stored: string | null) {
+  if (stored) return stored;
+  const customer = await stripe.customers.create(
     { name, email, metadata: { [SPACE_METADATA_KEY]: spaceId } },
     { idempotencyKey: `ardoise_customer_${spaceId}` }
   );
-  await deps.db.spaceSubscription.upsert({
+  await tx.spaceSubscription.upsert({
     where: { registreSpaceId: spaceId },
     create: { registreSpaceId: spaceId, stripeCustomerId: customer.id },
     update: { stripeCustomerId: customer.id },
@@ -203,7 +224,9 @@ async function customerFor(deps: BillingDeps, spaceId: string, name: string, ema
 /**
  * POST /billing/checkout. The price comes only from a lookup key of a
  * published version; the space must exist in the Registre snapshot and
- * owner_email must be one of its owners.
+ * owner_email must be one of its owners. Checkouts of one space are
+ * serialised by a Postgres advisory lock, and a space with a live
+ * subscription or an open session cannot start another.
  */
 export async function createCheckout(deps: BillingDeps, body: unknown) {
   const parsed = checkoutSchema.safeParse(body);
@@ -216,20 +239,33 @@ export async function createCheckout(deps: BillingDeps, body: unknown) {
   const owner = space.members.some((m) => m.role === OWNER_ROLE && m.email.toLowerCase() === email);
   if (!owner) throw new BillingApiError(403, 'not_owner', 'Only an owner of the space can subscribe');
   const price = await publishedPrice(deps.db, input.lookup_key);
-  const customer = await customerFor(deps, space.id, input.space_name, email);
-  const metadata = { [SPACE_METADATA_KEY]: space.id };
-  const session = await deps.stripe.checkout.sessions.create({
-    mode: 'subscription',
-    customer,
-    line_items: [{ price, quantity: 1 }],
-    success_url: input.success_url,
-    cancel_url: input.cancel_url,
-    allow_promotion_codes: true,
-    metadata,
-    subscription_data: { metadata },
-  });
-  if (!session.url) throw new BillingApiError(503, 'stripe_unavailable', 'Checkout unavailable');
-  return { url: session.url };
+  return deps.db.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ardoise.checkout:${space.id}`}))`;
+      const row = await assertCanCheckOut(tx, deps.stripe, space.id);
+      const customer = await customerFor(tx, deps.stripe, space.id, input.space_name, email, row?.stripeCustomerId ?? null);
+      const metadata = { [SPACE_METADATA_KEY]: space.id };
+      const expiresAt = Math.floor(Date.now() / 1000) + CHECKOUT_TTL_S;
+      const session = await deps.stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer,
+        line_items: [{ price, quantity: 1 }],
+        success_url: input.success_url,
+        cancel_url: input.cancel_url,
+        allow_promotion_codes: true,
+        expires_at: expiresAt,
+        metadata,
+        subscription_data: { metadata },
+      });
+      if (!session.url) throw new BillingApiError(503, 'stripe_unavailable', 'Checkout unavailable');
+      await tx.spaceSubscription.update({
+        where: { registreSpaceId: space.id },
+        data: { checkoutSessionId: session.id, checkoutExpiresAt: new Date(expiresAt * 1000) },
+      });
+      return { url: session.url };
+    },
+    { maxWait: 30_000, timeout: 60_000 }
+  );
 }
 
 /** POST /billing/portal: a Stripe billing portal session for a space that has a customer. */

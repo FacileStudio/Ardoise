@@ -32,23 +32,24 @@ export interface SubscriptionState {
 export interface OverrideDef {
   scope: 'space' | 'person';
   registreSpaceId: string | null;
-  personEmail: string | null;
+  personSub: string | null;
   feature: string;
   value: unknown;
   expiresAt: Date | null;
 }
 
-/** A comped person, already resolved to a Registre subject from a verified snapshot email. */
+/** A comped person, identified by Registre subject. A person comp grants only their personal scope. */
 export interface CompDef {
   sub: string;
   plan: PlanValues | null;
 }
 
-/** One Registre space with its owners' subjects. */
+/** One Registre space with its owners' subjects and its explicit space comp, if staff set one. */
 export interface SpaceInput {
   id: string;
   ownerSubs: string[];
   subscription: SubscriptionState | null;
+  comp: PlanValues | null;
 }
 
 /** One Registre person. */
@@ -143,10 +144,12 @@ function applyOverrides(
 
 /**
  * Resolves every space and person scope, following the suite contract:
- * override > owner comp > active subscription's plan version > feature
- * defaults. past_due keeps the plan for seven days after the first failure
+ * override > comp > active subscription's plan version > feature defaults.
+ * A space is comped only by an explicit space comp; who owns it never
+ * matters. past_due keeps the plan for seven days after the first failure
  * (or the period end), then falls to free. A person gets, per feature, the
- * most generous value across every space they own and their own comp, then
+ * most generous of their own comp (or the defaults) and the paid plan of
+ * every space they own (space comps and overrides are not inherited), then
  * their own overrides. Expired overrides are ignored.
  */
 export function resolveEntitlements(input: ResolveInput): Resolution {
@@ -160,38 +163,32 @@ export function resolveEntitlements(input: ResolveInput): Resolution {
   }
 
   const spaces = input.spaces.map((space): ResolvedSpace => {
-    const compPlans = space.ownerSubs.flatMap((sub) => compsBySub.get(sub) ?? []);
-    const paid = effectivePlan(space.subscription, now);
-    const source = compPlans.length > 0 ? compPlans : [paid ?? free];
+    const source = space.comp ?? effectivePlan(space.subscription, now) ?? free;
     const overrides = active.filter((o) => o.scope === 'space' && o.registreSpaceId === space.id);
     return {
       id: space.id,
-      plan: source[0]!.key,
+      plan: source.key,
       status: space.subscription?.status ?? 'none',
-      comped: compPlans.length > 0,
-      entitlements: applyOverrides(features, mergePlans(features, source), overrides),
+      comped: space.comp !== null,
+      entitlements: applyOverrides(features, mergePlans(features, [source]), overrides),
     };
   });
 
-  const ownedBy = new Map<string, Entitlements[]>();
-  input.spaces.forEach((space, index) => {
-    for (const sub of new Set(space.ownerSubs)) {
-      ownedBy.set(sub, [...(ownedBy.get(sub) ?? []), spaces[index]!.entitlements]);
-    }
-  });
+  const paidBy = new Map<string, PlanValues[]>();
+  for (const space of input.spaces) {
+    const paid = effectivePlan(space.subscription, now);
+    if (!paid) continue;
+    for (const sub of new Set(space.ownerSubs)) paidBy.set(sub, [...(paidBy.get(sub) ?? []), paid]);
+  }
 
   const people = input.people.map((person): ResolvedPerson => {
-    const email = person.email.toLowerCase();
-    const base = mergePlans(features, compsBySub.get(person.sub) ?? [free]);
-    for (const owned of ownedBy.get(person.sub) ?? []) {
-      for (const feature of features) {
-        base[feature.key] = moreGenerous(feature.kind, base[feature.key]!, owned[feature.key]!);
-      }
-    }
-    const overrides = active.filter(
-      (o) => o.scope === 'person' && o.personEmail?.toLowerCase() === email
-    );
-    return { sub: person.sub, email: person.email, entitlements: applyOverrides(features, base, overrides) };
+    const plans = [...(compsBySub.get(person.sub) ?? [free]), ...(paidBy.get(person.sub) ?? [])];
+    const overrides = active.filter((o) => o.scope === 'person' && o.personSub === person.sub);
+    return {
+      sub: person.sub,
+      email: person.email,
+      entitlements: applyOverrides(features, mergePlans(features, plans), overrides),
+    };
   });
 
   return { spaces, people };
