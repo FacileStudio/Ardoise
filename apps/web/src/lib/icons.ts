@@ -11,6 +11,7 @@ export const ardoise = {
   invoice: 'solar:bill-list-linear',
   quote: 'solar:document-text-linear',
   payment: 'solar:wallet-linear',
+  offer: 'solar:tag-price-linear',
   send: 'solar:plain-linear',
   pdf: 'solar:file-download-linear',
   transfer: 'solar:transfer-horizontal-linear',

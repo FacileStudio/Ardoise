@@ -4,6 +4,30 @@ import type { SessionUser } from '@repo/auth-shared';
 
 const AUTH_COOKIE = 'auth_token';
 
+function serverClient(token: string, apiUrl: string | undefined, fetchFn: typeof fetch) {
+  const base = apiUrl
+    ? apiUrl.replace(/\/trpc\/?$/, '').replace(/\/$/, '')
+    : '';
+  const url = base ? `${base}/trpc` : '/trpc';
+
+  return createTRPCProxyClient<AppRouter>({
+    links: [
+      httpBatchLink({
+        url,
+        fetch: (input, init) =>
+          fetchFn(input, {
+            ...init,
+            headers: {
+              ...(init?.headers as Record<string, string> | undefined),
+              cookie: `${AUTH_COOKIE}=${encodeURIComponent(token)}`,
+              'x-trpc-source': 'web-server-guard',
+            },
+          }),
+      }),
+    ],
+  });
+}
+
 export async function fetchSessionUser(
   token: string | undefined,
   apiUrl: string | undefined,
@@ -11,34 +35,31 @@ export async function fetchSessionUser(
 ): Promise<SessionUser | null> {
   if (!token) return null;
 
-  const base = apiUrl
-    ? apiUrl.replace(/\/trpc\/?$/, '').replace(/\/$/, '')
-    : '';
-  const url = base ? `${base}/trpc` : '/trpc';
-
   try {
-    const client = createTRPCProxyClient<AppRouter>({
-      links: [
-        httpBatchLink({
-          url,
-          fetch: (input, init) =>
-            fetchFn(input, {
-              ...init,
-              headers: {
-                ...(init?.headers as Record<string, string> | undefined),
-                cookie: `${AUTH_COOKIE}=${encodeURIComponent(token)}`,
-                'x-trpc-source': 'web-server-guard',
-              },
-            }),
-        }),
-      ],
-    });
-
-    const user = await client.auth.me.query({});
+    const user = await serverClient(token, apiUrl, fetchFn).auth.me.query({});
     return (user as SessionUser) ?? null;
   } catch (error) {
     if (isUnauthorized(error)) return null;
     throw error;
+  }
+}
+
+/**
+ * Asks the backend whether the session belongs to billing staff
+ * (BILLING_STAFF_EMAILS). Any failure answers false, so the billing pages
+ * stay closed.
+ */
+export async function fetchBillingStaff(
+  token: string | undefined,
+  apiUrl: string | undefined,
+  fetchFn: typeof fetch
+): Promise<boolean> {
+  if (!token) return false;
+  try {
+    const access = await serverClient(token, apiUrl, fetchFn).billing.access.query();
+    return access.staff === true;
+  } catch {
+    return false;
   }
 }
 

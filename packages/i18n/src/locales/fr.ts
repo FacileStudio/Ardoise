@@ -172,6 +172,7 @@ export const fr: EnTranslations = {
     statistics: 'Statistiques',
     users: 'Utilisateurs',
     spaces: 'Espaces',
+    offers: 'Offres',
     missions: 'Missions',
     signatures: 'Signatures',
     providers: 'Prestataires',
