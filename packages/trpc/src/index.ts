@@ -12,6 +12,7 @@ import { spaceRouter } from './modules/space/router';
 import { missionRouter } from './modules/mission/router';
 import { magicLinkRouter } from './modules/magic-link/router';
 import { portalRouter } from './modules/portal/router';
+import { billingRouter } from './modules/billing/router';
 import { createOpenApiDocument } from './openapi';
 
 export const appRouter = router({
@@ -28,6 +29,7 @@ export const appRouter = router({
   mission: missionRouter,
   magicLink: magicLinkRouter,
   portal: portalRouter,
+  billing: billingRouter,
 });
 export const openApiDocument = createOpenApiDocument(appRouter);
 
@@ -40,3 +42,6 @@ export { paymentService } from './modules/payment/service';
 export { spaceService } from './modules/space/service';
 export type { Scope } from './modules/space/service';
 export type * from './modules/portal/types';
+export type { EntitlementValue } from './modules/billing/values';
+export type { PushOutcome } from './modules/billing/push';
+export type { MigrationResult, PublishPreview } from './modules/billing/stripe-sync';
