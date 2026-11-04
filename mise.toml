@@ -86,3 +86,8 @@ run = 'mise run //packages/database:studio'
 description = "Seed a demo dataset: missions at every stage, quotes, invoices, payments (dev only, wipes business data)"
 depends = [":install"]
 run = 'mise run //packages/database:seed'
+
+[tasks."billing:seed"]
+description = "Seed billing features, draft Solo/Pro/Studio plans and comped owners (idempotent, reads DATABASE_URL)"
+depends = [":install"]
+run = 'PATH="$NODE_BIN_DIR:$PATH" "$BUN_BIN" scripts/seed-billing.ts'
