@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./settings": "./src/modules/settings/service.ts",
+    "./billing": "./src/modules/billing/index.ts",
     "./context": "./src/context.ts",
     "./client-ip": "./src/client-ip.ts",
     "./auth/session": "./src/modules/auth/session.ts",

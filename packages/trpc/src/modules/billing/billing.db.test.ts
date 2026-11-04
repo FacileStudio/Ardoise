@@ -1,0 +1,327 @@
+import { beforeEach, describe, expect, it } from 'bun:test';
+import { prisma } from '@repo/database';
+import type Stripe from 'stripe';
+import { billingRouter } from './router';
+import { createCheckout, cachedCatalog, invalidateCatalog, spaceStatus } from './api';
+import { EntitlementPusher, StaleRevisionError, type EntitlementsPush } from './push';
+import { seedBilling } from './seed';
+import { publishVersion } from './stripe-sync';
+import { handleBillingEvent, reconcileSubscriptions } from './webhook';
+import type { DirectoryView } from './state';
+
+/**
+ * Run with DATABASE_URL and TEST_DATABASE_URL pointing at a throwaway,
+ * fully migrated database: these tests truncate every billing table.
+ */
+const enabled = !!process.env.TEST_DATABASE_URL;
+const silent = { info() {}, warn() {}, error() {}, debug() {} };
+
+const directory: DirectoryView = {
+  version: 3,
+  spaces: [
+    {
+      id: 'spc_facile',
+      members: [
+        { sub: 'sub_yann', email: 'Yann@facile.studio', role: 'owner' },
+        { sub: 'sub_guest', email: 'guest@client.fr', role: 'member' },
+      ],
+    },
+    {
+      id: 'spc_client',
+      members: [
+        { sub: 'sub_client', email: 'boss@client.fr', role: 'owner' },
+        { sub: 'sub_guest', email: 'guest@client.fr', role: 'admin' },
+      ],
+    },
+  ],
+};
+
+interface Call {
+  method: string;
+  args: unknown[];
+}
+
+function fakeStripe(subscriptions: Record<string, Partial<Stripe.Subscription>> = {}, customers: Record<string, unknown> = {}) {
+  const calls: Call[] = [];
+  let next = 0;
+  const record = (method: string, result: (...args: any[]) => unknown) =>
+    async (...args: any[]) => {
+      calls.push({ method, args });
+      return result(...args);
+    };
+  const stripe = {
+    products: {
+      retrieve: record('products.retrieve', () => {
+        throw Object.assign(new Error('No such product'), { statusCode: 404 });
+      }),
+      create: record('products.create', (params: any) => ({ id: params.id })),
+      update: record('products.update', () => ({})),
+    },
+    prices: {
+      create: record('prices.create', () => ({ id: `price_${++next}` })),
+      update: record('prices.update', () => ({})),
+    },
+    customers: {
+      create: record('customers.create', () => ({ id: 'cus_new' })),
+      retrieve: record('customers.retrieve', (id: string) => customers[id] ?? { id, deleted: true }),
+    },
+    subscriptions: {
+      retrieve: record('subscriptions.retrieve', (id: string) => subscriptions[id]),
+      list: (..._args: unknown[]) => Object.values(subscriptions),
+    },
+    checkout: { sessions: { create: record('checkout.create', () => ({ url: 'https://checkout.stripe.com/c/1' })) } },
+  };
+  return { stripe: stripe as unknown as Stripe, calls };
+}
+
+async function reset() {
+  await prisma.billingEvent.deleteMany();
+  await prisma.entitlementPushState.deleteMany();
+  await prisma.spaceSubscription.deleteMany();
+  await prisma.entitlementOverride.deleteMany();
+  await prisma.compedPerson.deleteMany();
+  await prisma.planPrice.deleteMany();
+  await prisma.planVersionFeature.deleteMany();
+  await prisma.planVersion.deleteMany();
+  await prisma.plan.deleteMany();
+  await prisma.feature.deleteMany();
+  invalidateCatalog();
+}
+
+async function versionOf(planKey: string) {
+  return prisma.planVersion.findFirstOrThrow({ where: { plan: { key: planKey } }, orderBy: { version: 'desc' } });
+}
+
+const subscription = (overrides: Record<string, unknown> = {}) =>
+  ({
+    id: 'sub_1',
+    customer: 'cus_new',
+    status: 'active',
+    cancel_at_period_end: false,
+    metadata: { registre_space_id: 'spc_client' },
+    items: { data: [{ id: 'si_1', price: { id: 'price_1', recurring: { interval: 'month' } }, current_period_end: 1_900_000_000 }] },
+    ...overrides,
+  }) as unknown as Stripe.Subscription;
+
+const event = (id: string, type: string, object: unknown) =>
+  ({ id, type, created: 1_800_000_000, data: { object } }) as unknown as Stripe.Event;
+
+describe.skipIf(!enabled)('billing against Postgres', () => {
+  beforeEach(reset);
+
+  it('seeds idempotently and comps the owners on the draft Studio plan', async () => {
+    expect(await seedBilling(prisma)).toEqual({ features: 6, plans: 3, versions: 3, comps: 4 });
+    expect(await seedBilling(prisma)).toEqual({ features: 0, plans: 0, versions: 0, comps: 0 });
+    expect(await prisma.planVersion.count({ where: { status: 'draft' } })).toBe(3);
+
+    const facile = await spaceStatus(prisma, directory, 'spc_facile');
+    expect(facile).toMatchObject({ plan: 'studio', comped: true, status: 'none' });
+    expect(facile.entitlements['glouton.access']).toBe(true);
+    expect(facile.entitlements['courrier.mailboxes']).toBe(-1);
+
+    const client = await spaceStatus(prisma, directory, 'spc_client');
+    expect(client).toMatchObject({ plan: 'solo', comped: false });
+    expect(client.entitlements['glouton.access']).toBe(false);
+  });
+
+  it('keeps drafts out of the catalog and out of checkout', async () => {
+    await seedBilling(prisma);
+    expect((await cachedCatalog(prisma)).plans).toEqual([]);
+    const { stripe, calls } = fakeStripe();
+    const body = {
+      space_id: 'spc_client',
+      space_name: 'Client',
+      owner_email: 'boss@client.fr',
+      lookup_key: 'plan_pro_month',
+      success_url: 'https://sso.facile.studio/spaces/spc_client',
+      cancel_url: 'https://sso.facile.studio/spaces/spc_client',
+    };
+    const deps = { db: prisma, stripe, directory, redirectOrigins: new Set(['https://sso.facile.studio']) };
+    await expect(createCheckout(deps, body)).rejects.toMatchObject({ code: 'unknown_price' });
+    expect(calls).toEqual([]);
+  });
+
+  it('publishes to Stripe with lookup keys and idempotency keys, then sells only published prices', async () => {
+    await seedBilling(prisma);
+    const draft = await versionOf('pro');
+    const { stripe, calls } = fakeStripe();
+    await publishVersion(prisma, stripe, draft.id);
+
+    expect(calls.find((c) => c.method === 'products.create')!.args[0]).toMatchObject({ id: 'plan_pro' });
+    const prices = calls.filter((c) => c.method === 'prices.create');
+    expect(prices.map((c) => (c.args[0] as any).lookup_key).sort()).toEqual(['plan_pro_month', 'plan_pro_year']);
+    expect(prices.every((c) => (c.args[0] as any).transfer_lookup_key === true)).toBe(true);
+    expect(prices.every((c) => (c.args[1] as any).idempotencyKey.startsWith(`ardoise_publish_${draft.id}_`))).toBe(true);
+    expect((await prisma.planVersion.findUniqueOrThrow({ where: { id: draft.id } })).status).toBe('published');
+
+    const catalog = await cachedCatalog(prisma, Date.now() + 61_000);
+    expect(catalog.plans.map((p) => p.key)).toEqual(['pro']);
+    expect(catalog.plans[0]!.prices).toContainEqual({ interval: 'month', amount: 1200, currency: 'eur', lookup_key: 'plan_pro_month' });
+
+    const deps = { db: prisma, stripe, directory, redirectOrigins: new Set(['https://sso.facile.studio']) };
+    const body = {
+      space_id: 'spc_client',
+      space_name: 'Client',
+      owner_email: 'BOSS@client.fr',
+      lookup_key: 'plan_pro_month',
+      success_url: 'https://sso.facile.studio/ok',
+      cancel_url: 'https://sso.facile.studio/ko',
+    };
+    await expect(createCheckout(deps, { ...body, lookup_key: 'plan_studio_month' })).rejects.toMatchObject({ code: 'unknown_price' });
+    await expect(createCheckout(deps, { ...body, owner_email: 'guest@client.fr' })).rejects.toMatchObject({ code: 'not_owner' });
+    await expect(createCheckout(deps, { ...body, space_id: 'spc_nope' })).rejects.toMatchObject({ code: 'unknown_space' });
+    await expect(createCheckout(deps, { ...body, success_url: 'https://evil.example/ok' })).rejects.toMatchObject({ code: 'invalid_redirect' });
+    await expect(createCheckout(deps, { ...body, amount: 1 })).rejects.toMatchObject({ code: 'invalid_body' });
+
+    expect(await createCheckout(deps, body)).toEqual({ url: 'https://checkout.stripe.com/c/1' });
+    const session = calls.find((c) => c.method === 'checkout.create')!.args[0] as any;
+    expect(session).toMatchObject({
+      mode: 'subscription',
+      customer: 'cus_new',
+      allow_promotion_codes: true,
+      line_items: [{ price: 'price_1', quantity: 1 }],
+      subscription_data: { metadata: { registre_space_id: 'spc_client' } },
+    });
+    expect(session.automatic_tax).toBeUndefined();
+    const customer = calls.find((c) => c.method === 'customers.create')!.args as any[];
+    expect(customer[0].metadata).toEqual({ registre_space_id: 'spc_client' });
+    expect(customer[1].idempotencyKey).toBe('ardoise_customer_spc_client');
+  });
+
+  it('refuses to edit a published version and archives the previous one on republish', async () => {
+    await seedBilling(prisma);
+    const { stripe, calls } = fakeStripe();
+    const v1 = await versionOf('pro');
+    await publishVersion(prisma, stripe, v1.id);
+    await expect(publishVersion(prisma, stripe, v1.id)).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    const staff = await prisma.user.upsert({
+      where: { email: 'yann@facile.studio' },
+      create: { email: 'yann@facile.studio', firstName: 'Y', lastName: 'T', role: 'ADMIN', emailVerified: true },
+      update: { role: 'ADMIN', emailVerified: true, status: 'ACTIVE', isBanned: false },
+    });
+    const caller = billingRouter.createCaller({
+      db: prisma,
+      user: { id: staff.id, role: 'ADMIN', email: staff.email },
+      env: { BILLING_STAFF_EMAILS: 'yann@facile.studio' },
+      getStripe: async () => ({ client: stripe }),
+      log: silent,
+    } as never);
+    await expect(
+      caller.saveDraft({ id: v1.id, values: { 'glouton.access': false }, prices: { month: 1, year: 1 } })
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+    const v2 = await caller.createDraft({ planId: v1.planId });
+    expect(v2.version).toBe(2);
+    await expect(
+      caller.saveDraft({ id: v2.id, values: { 'glouton.access': 3 }, prices: { month: 1500, year: null } })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await caller.saveDraft({ id: v2.id, values: { 'nuage.storage_gb': 200, 'glouton.access': true }, prices: { month: 1500, year: null } });
+    const preview = await caller.previewPublish({ id: v2.id });
+    expect(preview.features).toContainEqual({ key: 'nuage.storage_gb', before: 100, after: 200 });
+    expect(preview.prices).toEqual([
+      { interval: 'month', before: 1200, after: 1500 },
+      { interval: 'year', before: 12000, after: null },
+    ]);
+    await caller.publish({ id: v2.id });
+
+    expect((await prisma.planVersion.findUniqueOrThrow({ where: { id: v1.id } })).status).toBe('archived');
+    const archived = calls.filter((c) => c.method === 'prices.update').map((c) => c.args[0]);
+    expect(archived.sort()).toEqual(['price_1', 'price_2']);
+    const audits = await prisma.auditLog.findMany({ where: { userId: staff.id, entity: 'billing.planVersion' } });
+    expect(audits.length).toBeGreaterThanOrEqual(3);
+    expect((audits.at(-1)!.changes as any).before).toBeTruthy();
+    await prisma.auditLog.deleteMany({ where: { userId: staff.id } });
+  });
+
+  it('mirrors subscription events once, ignoring replays and foreign customers', async () => {
+    await seedBilling(prisma);
+    const { stripe: publisher } = fakeStripe();
+    await publishVersion(prisma, publisher, (await versionOf('pro')).id);
+    await prisma.spaceSubscription.create({ data: { registreSpaceId: 'spc_client', stripeCustomerId: 'cus_new' } });
+
+    const { stripe, calls } = fakeStripe({ sub_1: subscription() });
+    const created = event('evt_1', 'customer.subscription.created', subscription());
+    await handleBillingEvent(prisma, stripe, created, silent);
+    await handleBillingEvent(prisma, stripe, created, silent);
+    expect(calls.filter((c) => c.method === 'subscriptions.retrieve').length).toBe(1);
+
+    const row = await prisma.spaceSubscription.findUniqueOrThrow({ where: { registreSpaceId: 'spc_client' } });
+    expect(row).toMatchObject({ status: 'active', stripeSubscriptionId: 'sub_1' });
+    expect(row.planVersionId).toBe((await versionOf('pro')).id);
+    expect((await spaceStatus(prisma, directory, 'spc_client')).entitlements['glouton.access']).toBe(true);
+
+    const forged = fakeStripe({ sub_2: subscription({ id: 'sub_2', customer: 'cus_attacker' }) });
+    await handleBillingEvent(prisma, forged.stripe, event('evt_2', 'customer.subscription.updated', subscription({ id: 'sub_2' })), silent);
+    expect((await prisma.spaceSubscription.findUniqueOrThrow({ where: { registreSpaceId: 'spc_client' } })).stripeSubscriptionId).toBe('sub_1');
+
+    const failing = fakeStripe({ sub_1: subscription({ status: 'past_due' }) });
+    const invoice = { parent: { subscription_details: { subscription: 'sub_1', metadata: { registre_space_id: 'spc_client' } } } };
+    await handleBillingEvent(prisma, failing.stripe, event('evt_3', 'invoice.payment_failed', invoice), silent);
+    const pastDue = await prisma.spaceSubscription.findUniqueOrThrow({ where: { registreSpaceId: 'spc_client' } });
+    expect(pastDue.status).toBe('past_due');
+    expect(pastDue.pastDueSince?.getTime()).toBe(1_800_000_000_000);
+  });
+
+  it('reconciles a lost row only when the customer metadata names the same space', async () => {
+    await seedBilling(prisma);
+    const good = subscription();
+    const bad = subscription({ id: 'sub_9', customer: 'cus_other', metadata: { registre_space_id: 'spc_facile' } });
+    const { stripe } = fakeStripe(
+      { sub_1: good, sub_9: bad },
+      {
+        cus_new: { id: 'cus_new', metadata: { registre_space_id: 'spc_client' } },
+        cus_other: { id: 'cus_other', metadata: { registre_space_id: 'spc_client' } },
+      }
+    );
+    expect(await reconcileSubscriptions(prisma, stripe, silent)).toEqual({ repaired: 1, skipped: 1 });
+    expect(await prisma.spaceSubscription.count()).toBe(1);
+  });
+
+  it('pushes with a monotonic revision, adopts current+1 on 409 and skips unchanged state', async () => {
+    await seedBilling(prisma);
+    const bodies: EntitlementsPush[] = [];
+    let applied: EntitlementsPush | null = null;
+    let stale = true;
+    const remote = {
+      snapshot: async (): Promise<DirectoryView> =>
+        applied
+          ? {
+              ...directory,
+              spaces: directory.spaces.map((s) => ({ ...s, entitlements: applied!.spaces.find((x) => x.id === s.id)!.entitlements })),
+              people: applied.people.map((p) => ({ sub: p.sub, entitlements: p.entitlements })),
+            }
+          : directory,
+      putEntitlements: async (body: EntitlementsPush) => {
+        bodies.push(body);
+        if (stale) {
+          stale = false;
+          throw new StaleRevisionError(41);
+        }
+        applied = body;
+      },
+    };
+    const pusher = new EntitlementPusher(prisma, remote, silent);
+    const first = await pusher.push();
+    expect(first).toMatchObject({ status: 'pushed', revision: 42 });
+    expect(bodies.map((b) => b.revision)).toEqual([1, 42]);
+    const yann = bodies[1]!.people.find((p) => p.sub === 'sub_yann')!;
+    expect(yann.entitlements['glouton.access']).toBe(true);
+    expect(bodies[1]!.people.find((p) => p.sub === 'sub_guest')!.entitlements['glouton.access']).toBe(false);
+    expect(await pusher.push()).toMatchObject({ status: 'unchanged' });
+
+    await prisma.compedPerson.deleteMany({ where: { email: 'yann@facile.studio' } });
+    expect(await pusher.push()).toMatchObject({ status: 'pushed', revision: 43 });
+    expect((await prisma.entitlementPushState.findUniqueOrThrow({ where: { id: 'singleton' } })).revision).toBe(43);
+  });
+
+  it('records a push failure without throwing', async () => {
+    const pusher = new EntitlementPusher(
+      prisma,
+      { snapshot: async () => directory, putEntitlements: async () => { throw new Error('/api/directory/entitlements answered 401'); } },
+      silent
+    );
+    expect(await pusher.push()).toMatchObject({ status: 'failed' });
+    expect((await prisma.entitlementPushState.findUniqueOrThrow({ where: { id: 'singleton' } })).lastError).toContain('401');
+  });
+});
