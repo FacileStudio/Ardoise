@@ -1,0 +1,148 @@
+enum BillingFeatureKind {
+  bool
+  limit
+}
+
+enum PlanVersionStatus {
+  draft
+  published
+  archived
+}
+
+enum PriceInterval {
+  month
+  year
+}
+
+enum EntitlementScope {
+  space
+  person
+}
+
+model Feature {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  app          String
+  kind         BillingFeatureKind
+  unit         String?
+  defaultValue Json
+  description  String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  versionValues PlanVersionFeature[]
+  overrides     EntitlementOverride[]
+}
+
+model Plan {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  versions PlanVersion[]
+}
+
+model PlanVersion {
+  id          String            @id @default(cuid())
+  planId      String
+  plan        Plan              @relation(fields: [planId], references: [id], onDelete: Restrict)
+  version     Int
+  status      PlanVersionStatus @default(draft)
+  publishedAt DateTime?         @db.Timestamptz(3)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+
+  features      PlanVersionFeature[]
+  prices        PlanPrice[]
+  subscriptions SpaceSubscription[]
+
+  @@unique([planId, version])
+  @@index([status])
+}
+
+model PlanVersionFeature {
+  id        String      @id @default(cuid())
+  versionId String
+  version   PlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  featureId String
+  feature   Feature     @relation(fields: [featureId], references: [id], onDelete: Restrict)
+  value     Json
+
+  @@unique([versionId, featureId])
+}
+
+model PlanPrice {
+  id            String        @id @default(cuid())
+  versionId     String
+  version       PlanVersion   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  interval      PriceInterval
+  amount        Int
+  currency      String        @default("eur")
+  stripePriceId String?       @unique
+  lookupKey     String
+
+  @@unique([versionId, interval])
+  @@index([lookupKey])
+}
+
+model SpaceSubscription {
+  id                   String       @id @default(cuid())
+  registreSpaceId      String       @unique
+  stripeCustomerId     String?      @unique
+  stripeSubscriptionId String?      @unique
+  planVersionId        String?
+  planVersion          PlanVersion? @relation(fields: [planVersionId], references: [id], onDelete: SetNull)
+  status               String       @default("none")
+  currentPeriodEnd     DateTime?    @db.Timestamptz(3)
+  pastDueSince         DateTime?    @db.Timestamptz(3)
+  cancelAtPeriodEnd    Boolean      @default(false)
+  createdAt            DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([planVersionId])
+}
+
+model EntitlementOverride {
+  id              String           @id @default(cuid())
+  scope           EntitlementScope
+  registreSpaceId String?
+  personEmail     String?
+  featureId       String
+  feature         Feature          @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  value           Json
+  reason          String
+  expiresAt       DateTime?        @db.Timestamptz(3)
+  createdBy       String
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([registreSpaceId])
+  @@index([personEmail])
+}
+
+model CompedPerson {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String
+  planKey   String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model BillingEvent {
+  id            String    @id @default(cuid())
+  stripeEventId String    @unique
+  type          String
+  receivedAt    DateTime  @default(now()) @db.Timestamptz(3)
+  processedAt   DateTime? @db.Timestamptz(3)
+}
+
+model EntitlementPushState {
+  id           String    @id @default("singleton")
+  revision     Int       @default(0)
+  lastPushedAt DateTime? @db.Timestamptz(3)
+  lastError    String?
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+}
