@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { trpc } from '$lib/trpc';
   import { page } from '$app/state';
+  import { resolve } from '$app/paths';
   import {
     Alert,
     Button,
@@ -251,6 +252,14 @@
   {:else if section === 'appearance'}
     <AppearanceSection />
   {:else if section === 'advanced'}
+    <SettingsSection
+      title="Espaces"
+      description="Les espaces viennent de Registre et décident qui voit quels clients."
+    >
+      <SettingsRow label="Espaces et membres">
+        <Button variant="ghost" href={resolve('/admin/spaces')}>Gérer les espaces</Button>
+      </SettingsRow>
+    </SettingsSection>
     <SettingsSection title="Instance" description="Faits utiles quand quelque chose casse.">
       <SettingsRow label="Application">
         <span class="text-fc-sm text-fc-fg">Ardoise</span>

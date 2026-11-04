@@ -34,7 +34,7 @@ The team runs one space per client (mirrored from Registre). The admin layout ho
 2. Drop `Provider.spaceId`.
 3. Abort if any Client, Mission, Document or Payment has a null `spaceId`. Then set the four columns `NOT NULL` with `ON DELETE RESTRICT` (`space.delete` already refuses a space that holds data).
 
-Expected on prod: 12 providers become 6 (Camille, Kaktuse, Mohamed Mazouz, Noah Steiniger, Yann Thevenin, plus the one Yann row with a different email if any). The survivors keep the `...00022` SIRETs. Fix any wrong field by editing the provider afterwards.
+Result on prod (2026-11-03): 12 providers became 5 (Camille Bonnet-Crevel, Kaktuse, Mohamed Mazouz, Noah Steiniger, Yann Thevenin). The survivors kept the `...00022` SIRETs, which the newest invoices (June to October 2026) also carry; `...00014` only appears on older documents.
 
 ## Steps
 
