@@ -2,7 +2,6 @@ import type { PrismaClient } from '@repo/database';
 import { AdminEngine, PermissionService, AuditService } from '@repo/admin';
 import type { EntityConfig } from '@repo/admin';
 import { z } from 'zod';
-import { MediaCreateInputSchema, MediaUpdateInputSchema } from '@repo/database/zod';
 
 const name = z.string().trim().min(1).max(200);
 
@@ -15,6 +14,19 @@ const name = z.string().trim().min(1).max(200);
 export const adminUserUpdateSchema = z
   .object({ firstName: name.optional(), lastName: name.optional() })
   .strict();
+
+const mediaFields = {
+  url: z.string().trim().min(1).max(2048),
+  key: z.string().trim().min(1).max(1024),
+  mimeType: z.string().trim().min(1).max(200),
+  size: z.number().int().min(0).max(1_000_000_000_000),
+};
+
+/** Media rows through the admin engine: scalar columns only, never the avatar or cover user relations. */
+export const adminMediaCreateSchema = z.object(mediaFields).strict();
+
+/** Media updates through the admin engine: the same scalar columns, all optional. */
+export const adminMediaUpdateSchema = z.object(mediaFields).partial().strict();
 
 /** The generic admin engine never creates users. */
 export const adminUserCreateSchema = z
@@ -55,8 +67,8 @@ export class AdminService {
       name: 'media',
       displayName: 'Media',
       schema: {
-        create: MediaCreateInputSchema,
-        update: MediaUpdateInputSchema,
+        create: adminMediaCreateSchema,
+        update: adminMediaUpdateSchema,
       },
       fields: [
         { name: 'url', label: 'URL', type: 'string', required: true },
