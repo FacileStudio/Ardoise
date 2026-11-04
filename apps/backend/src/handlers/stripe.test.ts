@@ -7,7 +7,7 @@ import { createStripeWebhookHandler, type StripeWebhookDeps } from './stripe';
 const SECRET = 'whsec_test_secret';
 const service = new StripeService({ apiKey: 'sk_test_x', webhookSecret: SECRET });
 
-function setup() {
+function setup(failBilling = false) {
   const routed: string[] = [];
   const deps = {
     db: {},
@@ -15,7 +15,10 @@ function setup() {
     getSmtp: async () => ({}),
     handlePayment: async (_db: unknown, _s: unknown, _m: unknown, _e: unknown, event: { id: string }) =>
       void routed.push(`payment:${event.id}`),
-    handleBilling: async (_db: unknown, _s: unknown, event: { id: string }) => void routed.push(`billing:${event.id}`),
+    handleBilling: async (_db: unknown, _s: unknown, event: { id: string }) => {
+      if (failBilling) throw new Error('No such customer');
+      routed.push(`billing:${event.id}`);
+    },
   } as unknown as StripeWebhookDeps;
   const app = new Hono();
   app.post('/webhook', createStripeWebhookHandler({} as never, {} as never, deps));
@@ -65,5 +68,13 @@ describe('Stripe webhook routing', () => {
     const unsigned = await app.request(new Request('http://api.test/webhook', { method: 'POST', body: '{}' }));
     expect(unsigned.status).toBe(400);
     expect(routed).toEqual([]);
+  });
+
+  it('answers 500 on any billing failure so Stripe retries', async () => {
+    const { app } = setup(true);
+    const res = await app.request(
+      signed(event('evt_x', 'customer.subscription.updated', { id: 'sub_1', metadata: { registre_space_id: 'spc_a' } }))
+    );
+    expect(res.status).toBe(500);
   });
 });

@@ -66,7 +66,13 @@ const directory =
       }).syncer
     : null;
 
-startBilling({ db: prisma, registre, seedOnBoot: env.BILLING_SEED_ON_BOOT, logger });
+startBilling({
+  db: prisma,
+  registre,
+  seedOnBoot: env.BILLING_SEED_ON_BOOT,
+  seedCompSubs: env.BILLING_SEED_COMP_SUBS,
+  logger,
+});
 
 const cors = corsHandler([env.FRONTEND_URL, env.BACKEND_URL]);
 
