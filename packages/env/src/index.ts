@@ -62,6 +62,17 @@ export const serverEnvSchema = baseSchema.extend({
   GLOUTON_URL: optionalUrl,
   GLOUTON_API_TOKEN: optionalString,
   GLOUTON_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
+
+  BILLING_API_TOKEN: optionalString,
+  BILLING_REDIRECT_ORIGINS: z.preprocess(
+    emptyToUndefined,
+    z.string().default('https://sso.facile.studio')
+  ),
+  BILLING_STAFF_EMAILS: z.string().default(''),
+  BILLING_SEED_ON_BOOT: z.preprocess(
+    emptyToUndefined,
+    z.enum(['true', 'false']).default('false').transform((value) => value === 'true')
+  ),
 }).superRefine((env, ctx) => {
   if (env.NODE_ENV === 'production' && !env.OIDC_ISSUER) {
     ctx.addIssue({
