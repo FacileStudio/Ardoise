@@ -62,9 +62,17 @@ the account.
 | `OIDC_ISSUER` | Facile SSO issuer, required in production; staff sign in only through it |
 | `BACKEND_URL` | Public API origin, also the base for storage URLs |
 | `FRONTEND_URL` | Public web origin, drives the CORS allow-list |
+| `BILLING_STAFF_EMAILS` | Comma-separated emails allowed into the billing backoffice (`/admin/offres`, `billing.*`). Empty means nobody. Being ADMIN is not enough |
+| `BILLING_API_TOKEN` | Bearer token Registre sends to `/billing/*`; same value in Registre. Missing or under 32 characters disables those routes |
+| `BILLING_REDIRECT_ORIGINS` | Comma-separated https origins checkout and portal may redirect back to. Default `https://sso.facile.studio` |
+| `BILLING_SEED_ON_BOOT` | `true` runs the idempotent billing seed at boot. Default `false` |
 
 Stripe keys, SMTP credentials and company details are **not** environment variables —
 they live in the `Settings` table and are edited in the admin UI.
+
+Entitlements are pushed to Registre with the existing `OIDC_ISSUER`, `OIDC_CLIENT_ID` and
+`OIDC_CLIENT_SECRET` (HTTP Basic); without them the push is off. Registre must list Ardoise's
+client id in its `ENTITLEMENTS_WRITER`.
 
 Full reference: [docs/configuration.md](docs/configuration.md).
 

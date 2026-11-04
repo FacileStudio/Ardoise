@@ -61,6 +61,20 @@ boot. Empty values count as unset.
 | `GLOUTON_API_TOKEN` | Bearer token Glouton sends on `/api/integrations/glouton/*`. Same value as Glouton's `ARDOISE_API_TOKEN` |
 | `GLOUTON_WEBHOOK_SECRET` | 16+ characters. Signs outbound events in `X-Ardoise-Signature-256`. Same value as Glouton's `ARDOISE_WEBHOOK_SECRET` |
 
+### Suite billing (forfait)
+
+| Variable | Default | What it does |
+|---|---|---|
+| `BILLING_STAFF_EMAILS` | empty | Comma-separated emails, trimmed and compared case-insensitively. Only a verified, active ADMIN whose email is listed reaches `/admin/offres` and any `billing.*` procedure. Empty means nobody. Every SSO sign-in is ADMIN, so the role alone grants nothing here. Production: `yann@facile.studio,noah@facile.studio,camille@facile.studio,mazouz@facile.studio` |
+| `BILLING_API_TOKEN` | unset | Bearer token on `GET /billing/spaces/:id`, `POST /billing/checkout` and `POST /billing/portal`. Same value as Registre's. Only its SHA-256 digest is kept and compared in constant time. Missing or shorter than 32 characters: the routes answer 404 |
+| `BILLING_REDIRECT_ORIGINS` | `https://sso.facile.studio` | Comma-separated https origins. `success_url`, `cancel_url` and `return_url` must be absolute https URLs on one of them, without credentials |
+| `BILLING_SEED_ON_BOOT` | `false` | `true` runs the billing seed at boot (six features, draft Solo/Pro/Studio, comped owners). Idempotent; it never edits existing rows |
+
+The entitlement push reuses `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET`: Ardoise
+sends `PUT {OIDC_ISSUER}/api/directory/entitlements` with HTTP Basic, so Registre's
+`ENTITLEMENTS_WRITER` must equal Ardoise's client id. Without the OIDC variables the push is
+disabled and logged once at boot.
+
 ## Web
 
 | Variable | Required | Default | What it does |

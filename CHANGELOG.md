@@ -14,6 +14,17 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Added
+
+- Suite billing backoffice at `/admin/offres` (Offres in the sidebar): features, versioned plans with monthly and yearly prices, a publish dialog with the diff and the subscribers it affects, subscriber migration, overrides, comped people and the subscriptions list. Published versions are immutable; editing means a new draft.
+- **Security:** the backoffice and every `billing.*` procedure are restricted to `BILLING_STAFF_EMAILS` (verified email, active ADMIN). Every SSO sign-in is ADMIN, so the role alone is not enough. Empty means nobody. Every billing mutation writes an audit row with before and after.
+- Publishing a version mirrors it to Stripe: product `plan_<key>`, prices with lookup keys `plan_<key>_month|year` (`transfer_lookup_key`), previous prices archived, idempotency keys on every write.
+- Registre billing API: public `GET /api/catalog` (published versions only, cached 60 s) and, behind `BILLING_API_TOKEN` (32+ characters, constant-time SHA-256 compare, rate limited), `GET /billing/spaces/:spaceId`, `POST /billing/checkout` (one Stripe customer per space, price only from a published lookup key, owner checked against the Registre snapshot) and `POST /billing/portal`. Redirects must match `BILLING_REDIRECT_ORIGINS`.
+- Entitlements resolution (override, owner comp, subscription plan with a 7-day past_due grace, defaults) pushed to Registre `PUT /api/directory/entitlements` with a monotonic revision on publish, webhook, override or comp change, directory change, at boot and every 10 minutes. Failures land in `EntitlementPushState.lastError` and never stop the server.
+- Stripe subscription webhooks (`customer.subscription.*`, `invoice.paid`, `invoice.payment_failed`) tagged with `registre_space_id` update `SpaceSubscription`, deduplicated through `BillingEvent` and cross-checked against the space's Stripe customer. A nightly reconcile repairs the rows. Client invoice payments keep their flow.
+- `mise run billing:seed` (or `BILLING_SEED_ON_BOOT=true`) seeds six features, Solo, Pro and Studio as drafts and comps the four Facile Studio owners on Studio, so they get Glouton access before anything is published.
+- Migration `20261104120000_add_billing`.
+
 ## [0.12.1] - 2026-11-04
 
 ### Fixed

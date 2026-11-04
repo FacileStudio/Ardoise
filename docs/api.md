@@ -273,13 +273,36 @@ Every procedure is admin-level.
 `data` and `filters` are untyped records — the shape is validated by the entity registry in
 `packages/admin`, not by the tRPC input schema.
 
+## `billing`
+
+The suite billing backoffice. Every procedure except `access` runs `billingStaffProcedure`: the
+caller is read back from the database and must be an active ADMIN with a verified email listed in
+`BILLING_STAFF_EMAILS`. A plain ADMIN gets `FORBIDDEN`. Every mutation writes an `AuditLog` row
+(`entity` `billing.*`, `changes: {before, after}`).
+
+| Procedure | Type | What it does |
+|---|---|---|
+| `access` | query | `{ staff }`, for the sidebar and the `/admin/offres` server guard |
+| `features`, `saveFeature` | query, mutation | List, create or update features. Key `app.feature`, kind fixed after creation |
+| `plans`, `savePlan` | query, mutation | Plans with their versions and live subscriber counts |
+| `version`, `createDraft`, `saveDraft`, `deleteDraft` | query, mutations | A version's values and prices. Only drafts change; `createDraft` copies the latest version |
+| `previewPublish`, `publish` | query, mutation | Diff against the published version and subscribers affected, then publish: Stripe product `plan_<key>`, prices with lookup key `plan_<key>_<interval>` and `transfer_lookup_key`, previous prices and version archived |
+| `migrateSubscribers` | mutation | `{ planId, mode: 'period_end' \| 'immediate' }` moves live subscriptions on older versions to the published price |
+| `overrides`, `createOverride`, `deleteOverride` | query, mutations | Space or person overrides with reason and optional expiry |
+| `comps`, `saveComp`, `deleteComp` | query, mutations | Comped people (latest version of the plan, even a draft) |
+| `subscriptions`, `pushState`, `pushNow` | queries, mutation | Mirrored subscriptions, the last Registre push, and a push on demand |
+
 ## Plain HTTP routes
 
 Not tRPC — these exist because of raw bodies, redirects, or callers that cannot speak tRPC.
 
 | Method | Path | Auth | What it does |
 |---|---|---|---|
-| `POST` | `/webhook` | Stripe signature | Stripe events. Idempotent via `WebhookEvent` |
+| `POST` | `/webhook` | Stripe signature | Stripe events. Subscription and invoice events whose metadata carries `registre_space_id` go to the billing module (idempotent via `BillingEvent`); everything else goes to the client-invoice payment flow (idempotent via `WebhookEvent`) |
+| `GET` | `/api/catalog` | none | Published plan versions: `{plans:[{key, name, features, prices:[{interval, amount, currency, lookup_key}]}]}`. Cached 60 s, rate limited |
+| `GET` | `/billing/spaces/{spaceId}` | Bearer `BILLING_API_TOKEN` | `{plan, status, current_period_end, comped, entitlements}` for a Registre space |
+| `POST` | `/billing/checkout` | Bearer `BILLING_API_TOKEN` | `{space_id, space_name, owner_email, lookup_key, success_url, cancel_url}` -> `{url}`. The price comes only from the lookup key of a published version; the space must be in the Registre snapshot and `owner_email` one of its owners. 409 when the space already has a live subscription |
+| `POST` | `/billing/portal` | Bearer `BILLING_API_TOKEN` | `{space_id, return_url}` -> `{url}` (Stripe billing portal). The three `/billing/*` routes answer 404 when the token is unset or short, 401 on a wrong token, 400 on an unknown field or a redirect off `BILLING_REDIRECT_ORIGINS`, 413 over 16 KiB, 429 over 60 calls a minute per IP |
 | `POST` | `/webhooks/plume` | `x-plume-signature-256` HMAC | Plume `document.completed`, `document.declined` and `document.archived` events, matched by `external_ref` `ardoise:contract:<id>`. 404 when Plume is not configured |
 | `POST` | `/api/integrations/glouton/clients` | Bearer `GLOUTON_API_TOKEN` | Creates a client from a Glouton `ClientPayload`, or updates the one already linked to its `gloutonCompanyId`. Answers `{data:{id, updatedAt}}` |
 | `PUT` | `/api/integrations/glouton/clients/{id}` | Bearer `GLOUTON_API_TOKEN` | Updates and links that client. A payload whose `updatedAt` is not newer than the stored one changes nothing and answers `skipped: true` |
