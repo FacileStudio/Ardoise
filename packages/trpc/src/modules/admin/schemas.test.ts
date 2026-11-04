@@ -27,6 +27,11 @@ describe('admin engine schemas', () => {
     expect(entities).toEqual(expect.arrayContaining(['user', 'media']));
   });
 
+  it('lets the user update schema write exactly firstName and lastName', () => {
+    const { schema } = service.getEntityConfig('user') as unknown as { schema: { update: z.ZodObject } };
+    expect(Object.keys(schema.update.shape).sort()).toEqual(['firstName', 'lastName']);
+  });
+
   for (const entity of entities) {
     const { schema } = service.getEntityConfig(entity) as unknown as {
       schema: { create: z.ZodType; update: z.ZodType };
