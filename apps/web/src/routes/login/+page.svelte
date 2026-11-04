@@ -30,6 +30,7 @@
     email_unverified: "Votre adresse email n'est pas vérifiée auprès du fournisseur SSO.",
     identity_conflict: 'Ce compte est déjà lié à une autre identité SSO.',
     blocked: 'Ce compte est suspendu ou banni.',
+    client_account: 'Cette adresse est celle d’un compte client: connectez-vous avec le lien par email.',
   };
 
   function redirectForRole(user: SessionUser) {

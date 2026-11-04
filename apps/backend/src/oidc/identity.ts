@@ -7,7 +7,7 @@ import {
 } from '@repo/trpc/auth/session';
 import type { OidcClaims } from './flow';
 
-export type IdentityFailure = 'email_unverified' | 'identity_conflict' | 'blocked';
+export type IdentityFailure = 'email_unverified' | 'identity_conflict' | 'blocked' | 'client_account';
 
 export class IdentityError extends Error {
   constructor(readonly code: IdentityFailure) {
@@ -37,7 +37,8 @@ export function ssoProfile(claims: OidcClaims) {
  * through SSO is staff: Ardoise keeps no separate admin list, so the user is
  * found by identity, then by verified email, else created, and every sign-in
  * makes them ADMIN and refreshes their name and picture from SSO. Clients never
- * hold an SSO account; they sign in with magic links.
+ * hold an SSO account; they sign in with magic links, so a CLIENT row is never
+ * linked by email nor promoted, even when already linked: `client_account`.
  */
 export async function resolveUser(db: PrismaClient, issuer: string, claims: OidcClaims) {
   const linked = await db.account.findUnique({
@@ -64,6 +65,7 @@ export async function resolveUser(db: PrismaClient, issuer: string, claims: Oidc
     }
   }
 
+  if (user?.role === 'CLIENT') throw new IdentityError('client_account');
   if (user && loginBlockReason(user)) throw new IdentityError('blocked');
 
   const profile = ssoProfile(claims);

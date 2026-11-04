@@ -89,9 +89,15 @@ describe('resolveUser', () => {
     suspendedUntil: null,
   };
 
-  const fakeDb = (opts: { linked?: boolean; byEmail?: boolean; issuerAccount?: boolean; banned?: boolean }) => {
+  const fakeDb = (opts: {
+    linked?: boolean;
+    byEmail?: boolean;
+    issuerAccount?: boolean;
+    banned?: boolean;
+    role?: string;
+  }) => {
     const calls: string[] = [];
-    const row = { ...user, isBanned: opts.banned ?? false };
+    const row = { ...user, role: opts.role ?? 'ADMIN', isBanned: opts.banned ?? false };
     const db = {
       account: {
         findUnique: async () => (opts.linked ? { user: row } : null),
@@ -142,6 +148,15 @@ describe('resolveUser', () => {
   test('invited user links by verified email', async () => {
     const { db } = fakeDb({ byEmail: true });
     expect((await resolveUser(db, ISSUER, claims)).id).toBe('user-1');
+  });
+
+  test('a CLIENT row is never linked by email nor promoted', async () => {
+    const byEmail = fakeDb({ byEmail: true, role: 'CLIENT' });
+    expect(await code(resolveUser(byEmail.db, ISSUER, claims))).toBe('client_account');
+    expect(byEmail.calls).toEqual([]);
+    const linked = fakeDb({ linked: true, role: 'CLIENT' });
+    expect(await code(resolveUser(linked.db, ISSUER, claims))).toBe('client_account');
+    expect(linked.calls).toEqual([]);
   });
 
   test('user already bound to another sub is refused', async () => {
