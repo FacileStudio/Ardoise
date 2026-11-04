@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
+    Badge,
     Button,
     Card,
     ConfirmModal,
@@ -26,7 +27,7 @@
   let editing = $state(false);
   let pending = $state<BillingComp | null>(null);
   let confirm = $state(false);
-  let form = $state({ email: '', reason: '', planKey: '' });
+  let form = $state({ email: '', registreSub: '', reason: '', planKey: '' });
 
   onMount(load);
 
@@ -47,8 +48,8 @@
   function edit(comp: BillingComp | null) {
     editing = !!comp;
     form = comp
-      ? { email: comp.email, reason: comp.reason, planKey: comp.planKey }
-      : { email: '', reason: '', planKey: plans.at(-1)?.key ?? '' };
+      ? { email: comp.email, registreSub: comp.registreSub ?? '', reason: comp.reason, planKey: comp.planKey }
+      : { email: '', registreSub: '', reason: '', planKey: plans.at(-1)?.key ?? '' };
     open = true;
   }
 
@@ -58,6 +59,7 @@
     try {
       await trpc.billing.saveComp.mutate({
         email: form.email.trim(),
+        registreSub: form.registreSub.trim() || null,
         reason: form.reason.trim(),
         planKey: form.planKey,
       });
@@ -88,8 +90,9 @@
 <div class="flex flex-col gap-4">
   <p class="text-fc-sm text-fc-fg-muted">
     Une personne offerte reçoit la dernière version de l’offre choisie, même en brouillon, sur ses
-    espaces et ses ressources personnelles, sans objet Stripe. Elle est reconnue par son email
-    vérifié dans Registre.
+    ressources personnelles seulement, sans objet Stripe. Ses espaces ne sont pas offerts: utilisez
+    « Espaces offerts ». Elle est reconnue par son identifiant Registre; sans identifiant, l’offre
+    reste inactive.
   </p>
   <div class="flex justify-end">
     <Button icon={icons.plus} onclick={() => edit(null)} disabled={plans.length === 0}>Offrir une offre</Button>
@@ -105,6 +108,7 @@
         <thead>
           <tr>
             <th scope="col">Email</th>
+            <th scope="col">Identifiant Registre</th>
             <th scope="col">Offre</th>
             <th scope="col">Motif</th>
             <th scope="col">Depuis</th>
@@ -115,6 +119,13 @@
           {#each comps as comp (comp.id)}
             <tr>
               <td class="text-fc-fg">{comp.email}</td>
+              <td>
+                {#if comp.registreSub}
+                  <span class="font-mono text-fc-xs text-fc-fg-muted">{comp.registreSub}</span>
+                {:else}
+                  <Badge tone="warning">Inactif</Badge>
+                {/if}
+              </td>
               <td class="text-fc-fg">{planName(comp.planKey)}</td>
               <td class="text-fc-fg-muted">{comp.reason}</td>
               <td class="text-fc-fg-muted">{formatDate(comp.createdAt)}</td>
@@ -135,7 +146,9 @@
         <Card class="flex items-center justify-between gap-2">
           <button type="button" class="flex min-w-0 flex-col text-left" onclick={() => edit(comp)}>
             <span class="truncate text-fc-sm font-medium text-fc-fg">{comp.email}</span>
-            <span class="text-fc-xs text-fc-fg-muted">{planName(comp.planKey)} · {comp.reason}</span>
+            <span class="text-fc-xs text-fc-fg-muted">
+              {planName(comp.planKey)} · {comp.registreSub ? comp.reason : 'Inactif: identifiant Registre manquant'}
+            </span>
           </button>
           <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Retirer"
             onclick={() => ((pending = comp), (confirm = true))} />
@@ -149,6 +162,9 @@
   <form class="flex flex-col gap-4" onsubmit={save}>
     <Field label="Email">
       <Input type="email" bind:value={form.email} required disabled={editing} />
+    </Field>
+    <Field label="Identifiant Registre (sub)" helper="Sans identifiant, l’offre ne s’applique pas">
+      <Input bind:value={form.registreSub} />
     </Field>
     <Field label="Offre">
       <Select bind:value={form.planKey}>
@@ -171,7 +187,7 @@
   bind:open={confirm}
   tone="danger"
   title="Retirer {pending?.email ?? 'cette personne'} ?"
-  description="Ses espaces reviennent à leur abonnement, ou à l’offre gratuite, au prochain envoi vers Registre."
+  description="Ses ressources personnelles reviennent à l’offre de ses espaces payants, ou à l’offre gratuite, au prochain envoi vers Registre."
   confirmLabel="Retirer"
   cancelLabel="Garder"
   onConfirm={remove}

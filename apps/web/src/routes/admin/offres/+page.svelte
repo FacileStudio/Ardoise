@@ -8,6 +8,7 @@
   import FeaturesTab from '$lib/components/offres/FeaturesTab.svelte';
   import OverridesTab from '$lib/components/offres/OverridesTab.svelte';
   import CompsTab from '$lib/components/offres/CompsTab.svelte';
+  import SpaceCompsTab from '$lib/components/offres/SpaceCompsTab.svelte';
   import SubscriptionsTab from '$lib/components/offres/SubscriptionsTab.svelte';
 
   type PushState = Awaited<ReturnType<typeof trpc.billing.pushState.query>>;
@@ -16,7 +17,8 @@
     { id: 'plans', label: 'Offres' },
     { id: 'features', label: 'Fonctionnalités' },
     { id: 'overrides', label: 'Dérogations' },
-    { id: 'comps', label: 'Offerts' },
+    { id: 'comps', label: 'Personnes offertes' },
+    { id: 'spaceComps', label: 'Espaces offerts' },
     { id: 'subscriptions', label: 'Abonnements' },
   ];
 
@@ -85,6 +87,8 @@
     <OverridesTab />
   {:else if tab === 'comps'}
     <CompsTab />
+  {:else if tab === 'spaceComps'}
+    <SpaceCompsTab />
   {:else}
     <SubscriptionsTab />
   {/if}

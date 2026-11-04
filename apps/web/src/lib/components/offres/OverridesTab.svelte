@@ -37,6 +37,7 @@
   let form = $state({
     scope: 'space' as 'space' | 'person',
     target: '',
+    email: '',
     feature: '',
     value: '' as string | boolean,
     reason: '',
@@ -61,7 +62,7 @@
   }
 
   function create() {
-    form = { scope: 'space', target: '', feature: features[0]?.key ?? '', value: '', reason: '', expiresAt: '' };
+    form = { scope: 'space', target: '', email: '', feature: features[0]?.key ?? '', value: '', reason: '', expiresAt: '' };
     open = true;
   }
 
@@ -82,7 +83,8 @@
       await trpc.billing.createOverride.mutate({
         scope: form.scope,
         registreSpaceId: form.scope === 'space' ? form.target.trim() : null,
-        personEmail: form.scope === 'person' ? form.target.trim() : null,
+        personSub: form.scope === 'person' ? form.target.trim() : null,
+        personEmail: form.scope === 'person' && form.email.trim() ? form.email.trim() : null,
         feature: selected.key,
         value,
         reason: form.reason.trim(),
@@ -146,7 +148,9 @@
                   <Badge tone={override.scope === 'space' ? 'info' : 'accent'}>
                     {override.scope === 'space' ? 'Espace' : 'Personne'}
                   </Badge>
-                  <span class="font-mono text-fc-xs text-fc-fg-muted">{override.registreSpaceId ?? override.personEmail}</span>
+                  <span class="font-mono text-fc-xs text-fc-fg-muted">
+                    {override.registreSpaceId ?? override.personEmail ?? override.personSub}
+                  </span>
                 </div>
               </td>
               <td class="font-mono text-fc-sm">{override.feature.key}</td>
@@ -172,7 +176,9 @@
             <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Supprimer"
               onclick={() => ((pending = override), (confirm = true))} />
           </div>
-          <span class="truncate text-fc-xs text-fc-fg-muted">{override.registreSpaceId ?? override.personEmail}</span>
+          <span class="truncate text-fc-xs text-fc-fg-muted">
+            {override.registreSpaceId ?? override.personEmail ?? override.personSub}
+          </span>
           <span class="text-fc-xs text-fc-fg-muted">{override.reason} · {expired(override) ? 'Expirée' : formatDate(override.expiresAt)}</span>
         </Card>
       {/each}
@@ -188,9 +194,14 @@
         <option value="person">Une personne</option>
       </Select>
     </Field>
-    <Field label={form.scope === 'space' ? 'Identifiant Registre de l’espace' : 'Email de la personne'}>
-      <Input bind:value={form.target} required type={form.scope === 'person' ? 'email' : 'text'} />
+    <Field label={form.scope === 'space' ? 'Identifiant Registre de l’espace' : 'Identifiant Registre de la personne (sub)'}>
+      <Input bind:value={form.target} required />
     </Field>
+    {#if form.scope === 'person'}
+      <Field label="Email (repère, facultatif)">
+        <Input type="email" bind:value={form.email} />
+      </Field>
+    {/if}
     <Field label="Fonctionnalité">
       <Select bind:value={form.feature}>
         {#each features as feature (feature.id)}

@@ -8,6 +8,7 @@ export type BillingPlan = BillingOutput['plans'][number];
 export type BillingVersion = BillingOutput['version'];
 export type BillingOverride = BillingOutput['overrides'][number];
 export type BillingComp = BillingOutput['comps'][number];
+export type BillingSpaceComp = BillingOutput['spaceComps'][number];
 export type BillingSubscription = BillingOutput['subscriptions'][number];
 export type PublishPreview = BillingOutput['previewPublish'];
 
