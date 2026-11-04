@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-04
+
 ### Security
 
 - The generic admin engine (`admin.create`, `admin.update`) no longer writes a user's email, email verification, role, status or ban, and no longer creates users. Only first and last name stay editable.
