@@ -13,13 +13,25 @@ import {
   type BillingDeps,
   type DirectorySource,
 } from '@repo/trpc/billing';
-import { createRouteRateLimit } from '../middleware/rate-limit.middleware';
+import { RateLimiter, createRouteRateLimit, getClientIp } from '../middleware/rate-limit.middleware';
 
 /** Minimal logger shape, satisfied by pino. */
 interface BillingRouteLogger {
   warn(object: unknown, message?: string): void;
   error(object: unknown, message?: string): void;
 }
+
+/** Per-minute ceilings of the billing routes. */
+export interface BillingLimits {
+  catalog: number;
+  token: number;
+  space: number;
+  failures: number;
+}
+
+const DEFAULT_LIMITS: BillingLimits = { catalog: 120, token: 600, space: 30, failures: 20 };
+
+const minute = (maxRequests: number) => ({ windowMs: 60_000, maxRequests });
 
 /** What the billing routes need from the server. */
 export interface BillingRouteOptions {
@@ -28,7 +40,7 @@ export interface BillingRouteOptions {
   directory: DirectorySource | null;
   getStripe: () => Promise<{ client: BillingDeps['stripe'] }>;
   logger: BillingRouteLogger;
-  limits?: { catalog: number; billing: number };
+  limits?: Partial<BillingLimits>;
 }
 
 const fail = (c: Context, status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500 | 503, code: string, message: string) =>
@@ -45,7 +57,8 @@ export function createBillingRoutes(options: BillingRouteOptions) {
   const { db, logger } = options;
   const verify = bearerVerifier(options.env.BILLING_API_TOKEN);
   const origins = parseRedirectOrigins(options.env.BILLING_REDIRECT_ORIGINS);
-  const limits = options.limits ?? { catalog: 120, billing: 60 };
+  const limits = { ...DEFAULT_LIMITS, ...options.limits };
+  const limiter = new RateLimiter();
   if (!verify) logger.warn({}, '[BILLING] BILLING_API_TOKEN missing or shorter than 32 characters, billing routes disabled');
 
   const app = new Hono();
@@ -57,16 +70,25 @@ export function createBillingRoutes(options: BillingRouteOptions) {
     return fail(c, 500, 'internal', 'Internal server error');
   });
 
-  app.use('/api/catalog', createRouteRateLimit('catalog', { windowMs: 60_000, maxRequests: limits.catalog }));
+  app.use('/api/catalog', createRouteRateLimit('catalog', minute(limits.catalog), limiter));
   app.get('/api/catalog', async (c) => {
     c.header('Cache-Control', 'public, max-age=60');
     return c.json(await cachedCatalog(db));
   });
 
-  app.use('/billing/*', createRouteRateLimit('billing', { windowMs: 60_000, maxRequests: limits.billing }));
   app.use('/billing/*', async (c, next) => {
     if (!verify) return fail(c, 404, 'not_configured', 'Billing is not configured');
-    if (!verify(c.req.header('authorization'))) return fail(c, 401, 'unauthorized', 'Invalid token');
+    const failures = `${getClientIp(c)}:billing-auth-failures`;
+    if (limiter.check(failures, minute(limits.failures), 0).remaining === 0) {
+      return fail(c, 429, 'rate_limited', 'Too many requests');
+    }
+    if (!verify(c.req.header('authorization'))) {
+      limiter.check(failures, minute(limits.failures));
+      return fail(c, 401, 'unauthorized', 'Invalid token');
+    }
+    if (!limiter.check('billing-token', minute(limits.token)).allowed) {
+      return fail(c, 429, 'rate_limited', 'Too many requests');
+    }
     return next();
   });
   app.use(
@@ -92,11 +114,18 @@ export function createBillingRoutes(options: BillingRouteOptions) {
     }
   };
 
-  const json = (c: Context) =>
-    c.req.json().catch((error: unknown) => {
+  const json = async (c: Context) => {
+    const body: unknown = await c.req.json().catch((error: unknown) => {
       if (error instanceof Error && error.name === 'BodyLimitError') throw error;
       throw new BillingApiError(400, 'invalid_body', 'Invalid request body');
     });
+    const spaceId = (body as { space_id?: unknown } | null)?.space_id;
+    const key = `billing-space:${typeof spaceId === 'string' ? spaceId.slice(0, 200) : ''}`;
+    if (!limiter.check(key, minute(limits.space)).allowed) {
+      throw new BillingApiError(429, 'rate_limited', 'Too many requests for this space');
+    }
+    return body;
+  };
 
   app.get('/billing/spaces/:spaceId', async (c) => {
     const spaceId = parseSpaceId(c.req.param('spaceId'));

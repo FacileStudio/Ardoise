@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { PrismaClient } from '@repo/database';
-import { createBillingRoutes } from './billing';
+import { createBillingRoutes, type BillingLimits } from './billing';
 
 const TOKEN = 't'.repeat(40);
 const silent = { warn() {}, error() {} };
@@ -26,7 +26,7 @@ const getStripe = async () =>
     },
   }) as never;
 
-function app(token: string | undefined, limits?: { catalog: number; billing: number }) {
+function app(token: string | undefined, limits?: Partial<BillingLimits>) {
   return createBillingRoutes({
     db,
     env: { BILLING_API_TOKEN: token, BILLING_REDIRECT_ORIGINS: 'https://sso.facile.studio' },
@@ -112,13 +112,34 @@ describe('billing routes', () => {
     expect(stripeCalls).toEqual([]);
   });
 
-  it('rate limits the billing routes', async () => {
-    const limited = app(TOKEN, { catalog: 1, billing: 2 });
+  it('rate limits per token after auth, not per IP, with a higher ceiling', async () => {
+    const limited = app(TOKEN, { catalog: 1, token: 3, space: 100 });
+    const authed = { headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.0.0.1' } };
     const statuses = [];
-    for (let i = 0; i < 3; i++) statuses.push((await limited.request('/billing/spaces/spc_a')).status);
-    expect(statuses[2]).toBe(429);
+    for (let i = 0; i < 4; i++) statuses.push((await limited.request('/billing/spaces/spc_a', authed)).status);
+    expect(statuses.slice(0, 3)).not.toContain(429);
+    expect(statuses[3]).toBe(429);
     await limited.request('/api/catalog');
     expect((await limited.request('/api/catalog')).status).toBe(429);
+  });
+
+  it('rate limits checkout and portal per space', async () => {
+    const limited = app(TOKEN, { space: 2 });
+    const member = { ...checkout, owner_email: 'm@a.fr' };
+    const codes = [];
+    for (let i = 0; i < 3; i++) codes.push((await limited.request(post('/billing/checkout', member))).status);
+    expect(codes).toEqual([403, 403, 429]);
+    const other = await limited.request(post('/billing/checkout', { ...member, space_id: 'spc_z' }));
+    expect(other.status).toBe(404);
+  });
+
+  it('locks an IP out after repeated wrong tokens, even with the right one', async () => {
+    const limited = app(TOKEN, { failures: 2 });
+    const wrong = `Bearer ${'x'.repeat(40)}`;
+    expect((await limited.request(post('/billing/portal', {}, wrong))).status).toBe(401);
+    expect((await limited.request(post('/billing/portal', {}, wrong))).status).toBe(401);
+    expect((await limited.request(post('/billing/portal', {}, wrong))).status).toBe(429);
+    expect((await limited.request('/billing/spaces/spc_a', { headers: { authorization: `Bearer ${TOKEN}` } })).status).toBe(429);
   });
 
   it('never echoes the token or internal errors', async () => {

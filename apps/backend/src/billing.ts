@@ -2,6 +2,7 @@ import type { PrismaClient } from '@repo/database';
 import {
   EntitlementPusher,
   reconcileSubscriptions,
+  registerDirectorySource,
   registerEntitlementPusher,
   seedBilling,
   type EntitlementsRemote,
@@ -12,7 +13,7 @@ import { getStripeService } from '@repo/trpc/settings';
 export const PUSH_INTERVAL_MS = 10 * 60 * 1000;
 
 /** How often Stripe subscriptions are reconciled with SpaceSubscription rows. */
-export const RECONCILE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+export const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
 
 interface BootLogger {
   info(object: unknown, message?: string): void;
@@ -40,15 +41,17 @@ export async function reconcileOnce(db: PrismaClient, logger: BootLogger): Promi
 /**
  * Starts the billing background work: the optional seed, the entitlement
  * pusher (at boot and every ten minutes, only when Registre is configured)
- * and the nightly Stripe reconcile. Nothing here can crash the server.
+ * and the hourly Stripe reconcile. Nothing here can crash the server.
  */
 export function startBilling(options: {
   db: PrismaClient;
   registre: EntitlementsRemote | null;
   seedOnBoot: boolean;
+  seedCompSubs?: string;
   logger: BootLogger;
 }): void {
   const { db, logger } = options;
+  registerDirectorySource(options.registre);
   const pusher = options.registre ? new EntitlementPusher(db, options.registre, logger) : null;
   registerEntitlementPusher(pusher);
   if (!pusher) logger.info({}, '[BILLING] Registre not configured, entitlement push disabled');
@@ -56,7 +59,7 @@ export function startBilling(options: {
   void (async () => {
     if (options.seedOnBoot) {
       try {
-        logger.info(await seedBilling(db), '[BILLING] Seed applied');
+        logger.info(await seedBilling(db, options.seedCompSubs), '[BILLING] Seed applied');
       } catch (error) {
         logger.warn({ error: message(error) }, '[BILLING] Seed failed');
       }

@@ -68,7 +68,15 @@ export const createStripeWebhookHandler = (
       const event = await stripe.constructEvent(rawBody, signature);
 
       if (isBillingEvent(event)) {
-        await deps.handleBilling(deps.db, stripe.client, event, logger);
+        try {
+          await deps.handleBilling(deps.db, stripe.client, event, logger);
+        } catch (error) {
+          logger.error(
+            { error: error instanceof Error ? error.message : 'Unknown error', type: 'stripe-webhook', event: event.id },
+            'Billing webhook failed, Stripe will retry'
+          );
+          return c.json({ error: 'Webhook processing failed' }, 500);
+        }
       } else {
         await deps.handlePayment(deps.db, storage, await deps.getSmtp(deps.db), env, event);
       }

@@ -60,7 +60,8 @@ export class RateLimiter {
   }
 }
 
-function getClientIp(c: Context): string {
+/** The caller's IP: the rightmost X-Forwarded-For entry, else the connection address. */
+export function getClientIp(c: Context): string {
   let peer: string | undefined;
   try {
     peer = getConnInfo(c)?.remote?.address;
