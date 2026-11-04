@@ -85,13 +85,13 @@ describe('effectivePlan', () => {
 
 describe('resolveEntitlements spaces', () => {
   it('gives a space without subscription the defaults and the free plan key', () => {
-    const out = resolveEntitlements(input({ spaces: [{ id: 's1', ownerSubs: [], subscription: null }] }));
+    const out = resolveEntitlements(input({ spaces: [{ id: 's1', comp: null, ownerSubs: [], subscription: null }] }));
     expect(out.spaces[0]).toEqual({ id: 's1', plan: 'solo', status: 'none', comped: false, entitlements: solo });
   });
 
   it('gives an active subscription its plan values', () => {
     const out = resolveEntitlements(
-      input({ spaces: [{ id: 's1', ownerSubs: [], subscription: active(pro) }] })
+      input({ spaces: [{ id: 's1', comp: null, ownerSubs: [], subscription: active(pro) }] })
     );
     expect(out.spaces[0]!.plan).toBe('pro');
     expect(out.spaces[0]!.entitlements).toEqual(pro.values as any);
@@ -100,7 +100,7 @@ describe('resolveEntitlements spaces', () => {
   it('falls back to the default for a feature the plan version lacks or stores malformed', () => {
     const partial: PlanValues = { key: 'pro', values: { 'nuage.storage_gb': 'lots', 'glouton.access': true } };
     const out = resolveEntitlements(
-      input({ spaces: [{ id: 's1', ownerSubs: [], subscription: active(partial) }] })
+      input({ spaces: [{ id: 's1', comp: null, ownerSubs: [], subscription: active(partial) }] })
     );
     expect(out.spaces[0]!.entitlements).toEqual({
       'nuage.storage_gb': 5,
@@ -109,25 +109,34 @@ describe('resolveEntitlements spaces', () => {
     });
   });
 
-  it('puts a space owned by a comped person on the comp plan over its subscription', () => {
+  it('never comps a space because an owner is comped', async () => {
     const out = resolveEntitlements(
       input({
-        comps: [{ sub: 'owner', plan: studio }],
-        spaces: [{ id: 's1', ownerSubs: ['owner'], subscription: active(pro) }],
+        comps: [{ sub: 'noah', plan: studio }],
+        spaces: [{ id: 's1', comp: null, ownerSubs: ['attacker', 'noah'], subscription: null }],
+        people: [{ sub: 'attacker', email: 'a@x.fr' }, { sub: 'noah', email: 'noah@facile.studio' }],
       })
+    );
+    expect(out.spaces[0]).toMatchObject({ plan: 'solo', comped: false, entitlements: solo });
+    expect(out.people[0]!.entitlements).toEqual(solo);
+    expect(out.people[1]!.entitlements).toEqual(studio.values as any);
+  });
+
+  it('puts an explicitly comped space on the comp plan over its subscription', () => {
+    const out = resolveEntitlements(
+      input({ spaces: [{ id: 's1', comp: studio, ownerSubs: ['owner'], subscription: active(pro) }] })
     );
     expect(out.spaces[0]!.comped).toBe(true);
     expect(out.spaces[0]!.plan).toBe('studio');
     expect(out.spaces[0]!.entitlements['courrier.mailboxes']).toBe(-1);
   });
 
-  it('lets an override beat the comp, even when less generous', () => {
+  it('lets an override beat the space comp, even when less generous', () => {
     const out = resolveEntitlements(
       input({
-        comps: [{ sub: 'owner', plan: studio }],
-        spaces: [{ id: 's1', ownerSubs: ['owner'], subscription: null }],
+        spaces: [{ id: 's1', comp: studio, ownerSubs: ['owner'], subscription: null }],
         overrides: [
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'nuage.storage_gb', value: 42, expiresAt: null },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'nuage.storage_gb', value: 42, expiresAt: null },
         ],
       })
     );
@@ -137,13 +146,13 @@ describe('resolveEntitlements spaces', () => {
   it('ignores expired overrides, malformed values, unknown features and other spaces', () => {
     const out = resolveEntitlements(
       input({
-        spaces: [{ id: 's1', ownerSubs: [], subscription: null }],
+        spaces: [{ id: 's1', comp: null, ownerSubs: [], subscription: null }],
         overrides: [
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'nuage.storage_gb', value: 99, expiresAt: new Date(now.getTime() - 1) },
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'glouton.access', value: 1, expiresAt: null },
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'nope.nope', value: true, expiresAt: null },
-          { scope: 'space', registreSpaceId: 's2', personEmail: null, feature: 'courrier.mailboxes', value: 9, expiresAt: null },
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'courrier.mailboxes', value: -2, expiresAt: null },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'nuage.storage_gb', value: 99, expiresAt: new Date(now.getTime() - 1) },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'glouton.access', value: 1, expiresAt: null },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'nope.nope', value: true, expiresAt: null },
+          { scope: 'space', registreSpaceId: 's2', personSub: null, feature: 'courrier.mailboxes', value: 9, expiresAt: null },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'courrier.mailboxes', value: -2, expiresAt: null },
         ],
       })
     );
@@ -153,10 +162,10 @@ describe('resolveEntitlements spaces', () => {
   it('applies the latest of two overrides on one feature', () => {
     const out = resolveEntitlements(
       input({
-        spaces: [{ id: 's1', ownerSubs: [], subscription: null }],
+        spaces: [{ id: 's1', comp: null, ownerSubs: [], subscription: null }],
         overrides: [
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'nuage.storage_gb', value: 10, expiresAt: null },
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'nuage.storage_gb', value: 20, expiresAt: new Date(now.getTime() + day) },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'nuage.storage_gb', value: 10, expiresAt: null },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'nuage.storage_gb', value: 20, expiresAt: new Date(now.getTime() + day) },
         ],
       })
     );
@@ -165,15 +174,15 @@ describe('resolveEntitlements spaces', () => {
 
   it('drops a past_due space to free after the grace period', () => {
     const sub = { ...active(pro, 'past_due'), pastDueSince: new Date(now.getTime() - 8 * day) };
-    const out = resolveEntitlements(input({ spaces: [{ id: 's1', ownerSubs: [], subscription: sub }] }));
+    const out = resolveEntitlements(input({ spaces: [{ id: 's1', comp: null, ownerSubs: [], subscription: sub }] }));
     expect(out.spaces[0]).toMatchObject({ plan: 'solo', status: 'past_due', entitlements: solo });
   });
 
   it('skips comps whose plan does not exist', () => {
     const out = resolveEntitlements(
-      input({ comps: [{ sub: 'owner', plan: null }], spaces: [{ id: 's1', ownerSubs: ['owner'], subscription: null }] })
+      input({ comps: [{ sub: 'owner', plan: null }], people: [{ sub: 'owner', email: 'o@x.fr' }] })
     );
-    expect(out.spaces[0]!.comped).toBe(false);
+    expect(out.people[0]!.entitlements).toEqual(solo);
   });
 
   it('a malformed feature default falls back to false or 0', () => {
@@ -183,7 +192,7 @@ describe('resolveEntitlements spaces', () => {
           { key: 'a.b', kind: 'bool', defaultValue: 'yes' },
           { key: 'a.c', kind: 'limit', defaultValue: 2.5 },
         ],
-        spaces: [{ id: 's1', ownerSubs: [], subscription: null }],
+        spaces: [{ id: 's1', comp: null, ownerSubs: [], subscription: null }],
       })
     );
     expect(out.spaces[0]!.entitlements).toEqual({ 'a.b': false, 'a.c': 0 });
@@ -199,9 +208,9 @@ describe('resolveEntitlements people', () => {
     const out = resolveEntitlements(
       input({
         spaces: [
-          { id: 's1', ownerSubs: ['p'], subscription: active(pro) },
-          { id: 's2', ownerSubs: ['p'], subscription: active(mixed) },
-          { id: 's3', ownerSubs: ['other'], subscription: active(studio) },
+          { id: 's1', comp: null, ownerSubs: ['p'], subscription: active(pro) },
+          { id: 's2', comp: null, ownerSubs: ['p'], subscription: active(mixed) },
+          { id: 's3', comp: null, ownerSubs: ['other'], subscription: active(studio) },
         ],
         people: [{ sub: 'p', email: 'p@x.fr' }],
       })
@@ -213,23 +222,23 @@ describe('resolveEntitlements people', () => {
     });
   });
 
-  it('includes space overrides in what a person inherits from an owned space', () => {
+  it('inherits only the paid plan of owned spaces, never their comp or overrides', () => {
     const out = resolveEntitlements(
       input({
-        spaces: [{ id: 's1', ownerSubs: ['p'], subscription: null }],
+        spaces: [{ id: 's1', comp: studio, ownerSubs: ['p'], subscription: null }],
         people: [{ sub: 'p', email: 'p@x.fr' }],
         overrides: [
-          { scope: 'space', registreSpaceId: 's1', personEmail: null, feature: 'glouton.access', value: true, expiresAt: null },
+          { scope: 'space', registreSpaceId: 's1', personSub: null, feature: 'glouton.access', value: true, expiresAt: null },
         ],
       })
     );
-    expect(out.people[0]!.entitlements['glouton.access']).toBe(true);
+    expect(out.people[0]!.entitlements).toEqual(solo);
   });
 
   it('gives a person who owns nothing the defaults', () => {
     const out = resolveEntitlements(
       input({
-        spaces: [{ id: 's1', ownerSubs: ['owner'], subscription: active(studio) }],
+        spaces: [{ id: 's1', comp: null, ownerSubs: ['owner'], subscription: active(studio) }],
         people: [{ sub: 'member', email: 'm@x.fr' }],
       })
     );
@@ -243,14 +252,14 @@ describe('resolveEntitlements people', () => {
     expect(out.people[0]!.entitlements).toEqual(studio.values as any);
   });
 
-  it('applies person overrides by case-insensitive email, last one winning, after the merge', () => {
+  it('applies person overrides by Registre subject after the merge', () => {
     const out = resolveEntitlements(
       input({
-        spaces: [{ id: 's1', ownerSubs: ['p'], subscription: active(studio) }],
+        spaces: [{ id: 's1', comp: null, ownerSubs: ['p'], subscription: active(studio) }],
         people: [{ sub: 'p', email: 'P@X.fr' }],
         overrides: [
-          { scope: 'person', registreSpaceId: null, personEmail: 'p@x.fr', feature: 'nuage.storage_gb', value: 1, expiresAt: null },
-          { scope: 'person', registreSpaceId: null, personEmail: 'other@x.fr', feature: 'glouton.access', value: false, expiresAt: null },
+          { scope: 'person', registreSpaceId: null, personSub: 'p', feature: 'nuage.storage_gb', value: 1, expiresAt: null },
+          { scope: 'person', registreSpaceId: null, personSub: 'other', feature: 'glouton.access', value: false, expiresAt: null },
         ],
       })
     );

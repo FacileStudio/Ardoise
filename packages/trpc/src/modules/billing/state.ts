@@ -15,6 +15,7 @@ export interface DirectoryMemberView {
   sub: string;
   email: string;
   role: string;
+  email_verified?: boolean;
 }
 
 /** One space as Registre's directory snapshot lists it, with the entitlements it last received. */
@@ -88,15 +89,44 @@ async function latestVersion(db: PrismaClient, planKey: string) {
   });
 }
 
-/** Indexes every snapshot member by lowercased email, as Registre verified it. */
-function subsByEmail(directory: DirectoryView): Map<string, string> {
+/**
+ * Indexes snapshot members by lowercased email, keeping only emails the
+ * snapshot marks verified (`email_verified: true`). Today's snapshot carries
+ * no such flag, so this is empty and matching relies on Registre subjects.
+ */
+export function verifiedSubsByEmail(directory: DirectoryView): Map<string, string> {
   const out = new Map<string, string>();
   for (const space of directory.spaces) {
     for (const member of space.members) {
-      if (member.email && member.sub) out.set(member.email.toLowerCase(), member.sub);
+      if (member.email && member.sub && member.email_verified === true) {
+        out.set(member.email.toLowerCase(), member.sub);
+      }
     }
   }
   return out;
+}
+
+const SNAPSHOT_TTL_MS = 30_000;
+
+let directorySource: DirectorySource | null = null;
+let snapshotCache: { at: number; value: Promise<DirectoryView> } | null = null;
+
+/** Registers where billing reads Registre's snapshot from; null when Registre is not configured. */
+export function registerDirectorySource(source: DirectorySource | null): void {
+  directorySource = source;
+  snapshotCache = null;
+}
+
+/** The registered Registre snapshot, cached 30 seconds, or null when Registre is not configured. */
+export function cachedDirectory(now = Date.now()): Promise<DirectoryView> | null {
+  if (!directorySource) return null;
+  if (snapshotCache && now - snapshotCache.at < SNAPSHOT_TTL_MS) return snapshotCache.value;
+  const value = directorySource.snapshot();
+  snapshotCache = { at: now, value };
+  value.catch(() => {
+    if (snapshotCache?.value === value) snapshotCache = null;
+  });
+  return value;
 }
 
 /** Every distinct person in the snapshot. */
@@ -110,43 +140,59 @@ function peopleOf(directory: DirectoryView): PersonInput[] {
   return [...seen.values()];
 }
 
+/** Loads the latest version of each plan key once. */
+function planLoader(db: PrismaClient) {
+  const plans = new Map<string, Promise<PlanValues | null>>();
+  return (key: string) => {
+    if (!plans.has(key)) {
+      plans.set(key, latestVersion(db, key).then((version) => (version ? toPlanValues(version) : null)));
+    }
+    return plans.get(key)!;
+  };
+}
+
 /**
- * Comped people resolved to Registre subjects through the verified emails of
- * the snapshot. Emails Registre does not know are returned in `unresolved`
- * and grant nothing.
+ * Comped people by Registre subject: the subject staff stored, else one the
+ * snapshot maps from a verified email. A comp nobody can resolve is returned
+ * in `unresolved` and grants nothing.
  */
-async function loadComps(db: PrismaClient, directory: DirectoryView) {
+async function loadComps(db: PrismaClient, directory: DirectoryView, plan: ReturnType<typeof planLoader>) {
   const rows = await db.compedPerson.findMany({ orderBy: { email: 'asc' } });
-  const subs = subsByEmail(directory);
-  const plans = new Map<string, PlanValues | null>();
+  const verified = verifiedSubsByEmail(directory);
   const comps: CompDef[] = [];
   const unresolved: string[] = [];
   for (const row of rows) {
-    const sub = subs.get(row.email.toLowerCase());
+    const sub = row.registreSub ?? verified.get(row.email.toLowerCase());
     if (!sub) {
       unresolved.push(row.email);
       continue;
     }
-    if (!plans.has(row.planKey)) {
-      const version = await latestVersion(db, row.planKey);
-      plans.set(row.planKey, version ? toPlanValues(version) : null);
-    }
-    comps.push({ sub, plan: plans.get(row.planKey) ?? null });
+    comps.push({ sub, plan: await plan(row.planKey) });
   }
   return { comps, unresolved };
 }
 
-async function loadSpaces(db: PrismaClient, directory: DirectoryView): Promise<SpaceInput[]> {
+async function loadSpaces(
+  db: PrismaClient,
+  directory: DirectoryView,
+  plan: ReturnType<typeof planLoader>
+): Promise<SpaceInput[]> {
   const ids = directory.spaces.map((space) => space.id);
-  const rows = await db.spaceSubscription.findMany({
-    where: { registreSpaceId: { in: ids } },
-    include: { planVersion: { include: versionInclude } },
-  });
+  const [rows, spaceComps] = await Promise.all([
+    db.spaceSubscription.findMany({
+      where: { registreSpaceId: { in: ids } },
+      include: { planVersion: { include: versionInclude } },
+    }),
+    db.compedSpace.findMany({ where: { registreSpaceId: { in: ids } } }),
+  ]);
   const byId = new Map(rows.map((row) => [row.registreSpaceId, row]));
+  const compPlans = new Map<string, PlanValues | null>();
+  for (const comp of spaceComps) compPlans.set(comp.registreSpaceId, await plan(comp.planKey));
   return directory.spaces.map((space) => {
     const row = byId.get(space.id);
     return {
       id: space.id,
+      comp: compPlans.get(space.id) ?? null,
       ownerSubs: space.members.filter((m) => m.role === OWNER_ROLE && m.sub).map((m) => m.sub),
       subscription: row
         ? {
@@ -168,7 +214,7 @@ async function loadOverrides(db: PrismaClient): Promise<OverrideDef[]> {
   return rows.map((row) => ({
     scope: row.scope,
     registreSpaceId: row.registreSpaceId,
-    personEmail: row.personEmail,
+    personSub: row.personSub,
     feature: row.feature.key,
     value: row.value,
     expiresAt: row.expiresAt,
@@ -181,11 +227,12 @@ export async function loadResolveInput(
   directory: DirectoryView,
   now = new Date()
 ): Promise<{ input: ResolveInput; unresolvedComps: string[] }> {
+  const plan = planLoader(db);
   const [features, free, { comps, unresolved }, spaces, overrides] = await Promise.all([
     loadFeatures(db),
     freePlanKey(db),
-    loadComps(db, directory),
-    loadSpaces(db, directory),
+    loadComps(db, directory, plan),
+    loadSpaces(db, directory, plan),
     loadOverrides(db),
   ]);
   return {

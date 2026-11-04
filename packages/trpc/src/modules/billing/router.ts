@@ -54,6 +54,8 @@ async function audit(
 }
 
 const text = (max: number) => z.string().trim().max(max);
+const spaceIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,200}$/);
+const subjectSchema = z.string().trim().min(1).max(200).regex(/^[\x21-\x7e]+$/);
 const id = z.string().min(1).max(100);
 const amount = z.number().int().min(0).max(MAX_AMOUNT_CENTS).nullable();
 
@@ -85,7 +87,8 @@ const draftInput = z
 const overrideInput = z
   .object({
     scope: z.enum(['space', 'person']),
-    registreSpaceId: z.string().regex(/^[A-Za-z0-9_-]{1,200}$/).nullable(),
+    registreSpaceId: spaceIdSchema.nullable(),
+    personSub: subjectSchema.nullable(),
     personEmail: z.email().max(320).nullable(),
     feature: featureKeySchema,
     value: entitlementValueSchema,
@@ -93,12 +96,21 @@ const overrideInput = z
     expiresAt: z.coerce.date().nullable(),
   })
   .strict()
-  .refine((o) => (o.scope === 'space' ? !!o.registreSpaceId && !o.personEmail : !!o.personEmail && !o.registreSpaceId), {
+  .refine((o) => (o.scope === 'space' ? !!o.registreSpaceId && !o.personSub : !!o.personSub && !o.registreSpaceId), {
     message: 'Un espace ou une personne, selon la portée',
   });
 
 const compInput = z
-  .object({ email: z.email().max(320), reason: text(500).min(1), planKey: planKeySchema })
+  .object({
+    email: z.email().max(320),
+    registreSub: subjectSchema.nullable(),
+    reason: text(500).min(1),
+    planKey: planKeySchema,
+  })
+  .strict();
+
+const spaceCompInput = z
+  .object({ registreSpaceId: spaceIdSchema, reason: text(500).min(1), planKey: planKeySchema })
   .strict();
 
 function badRequest(message: string): never {
@@ -136,7 +148,7 @@ const versionSummary = {
 /** The billing backoffice: features, versioned plans, overrides, comps and subscriptions. Staff only. */
 export const billingRouter = router({
   access: adminProcedure.query(async ({ ctx }) => ({
-    staff: await isBillingStaff(ctx.db, ctx.user.id, ctx.env.BILLING_STAFF_EMAILS),
+    staff: await isBillingStaff(ctx.db, ctx.user.id, ctx.env),
   })),
 
   features: billingStaffProcedure.query(async ({ ctx }) => {
@@ -238,10 +250,11 @@ export const billingRouter = router({
       ...intervals.map((interval) => {
         const cents = input.prices[interval];
         if (cents === null) return ctx.db.planPrice.deleteMany({ where: { versionId: before.id, interval } });
+        const stored = before.prices.find((price) => price.interval === interval);
         return ctx.db.planPrice.upsert({
           where: { versionId_interval: { versionId: before.id, interval } },
           create: { versionId: before.id, interval, amount: cents, currency: 'eur', lookupKey: lookupKeyFor(before.plan.key, interval) },
-          update: { amount: cents },
+          update: stored?.amount === cents ? { amount: cents } : { amount: cents, stripePriceId: null },
         });
       }),
     ]);
@@ -302,6 +315,7 @@ export const billingRouter = router({
       data: {
         scope: input.scope,
         registreSpaceId: input.registreSpaceId,
+        personSub: input.personSub,
         personEmail: input.personEmail?.toLowerCase() ?? null,
         featureId: features.get(input.feature)!.id,
         value: input.value,
@@ -330,10 +344,11 @@ export const billingRouter = router({
     const email = input.email.toLowerCase();
     if (!(await ctx.db.plan.findUnique({ where: { key: input.planKey } }))) badRequest('Offre inconnue');
     const before = await ctx.db.compedPerson.findUnique({ where: { email } });
+    const fields = { registreSub: input.registreSub, reason: input.reason, planKey: input.planKey };
     const after = await ctx.db.compedPerson.upsert({
       where: { email },
-      create: { email, reason: input.reason, planKey: input.planKey },
-      update: { reason: input.reason, planKey: input.planKey },
+      create: { email, ...fields },
+      update: fields,
     });
     await audit(ctx, 'comp', after.id, before ? 'UPDATE' : 'CREATE', before, after);
     requestEntitlementPush();
@@ -345,6 +360,33 @@ export const billingRouter = router({
     if (!before) throw new TRPCError({ code: 'NOT_FOUND', message: 'Personne introuvable' });
     await ctx.db.compedPerson.delete({ where: { id: input.id } });
     await audit(ctx, 'comp', before.id, 'DELETE', before, null);
+    requestEntitlementPush();
+    return { ok: true };
+  }),
+
+  spaceComps: billingStaffProcedure.query(({ ctx }) =>
+    ctx.db.compedSpace.findMany({ orderBy: { createdAt: 'desc' } })
+  ),
+
+  saveSpaceComp: billingStaffProcedure.input(spaceCompInput).mutation(async ({ ctx, input }) => {
+    if (!(await ctx.db.plan.findUnique({ where: { key: input.planKey } }))) badRequest('Offre inconnue');
+    const before = await ctx.db.compedSpace.findUnique({ where: { registreSpaceId: input.registreSpaceId } });
+    const fields = { reason: input.reason, planKey: input.planKey };
+    const after = await ctx.db.compedSpace.upsert({
+      where: { registreSpaceId: input.registreSpaceId },
+      create: { registreSpaceId: input.registreSpaceId, createdBy: ctx.user.email, ...fields },
+      update: fields,
+    });
+    await audit(ctx, 'spaceComp', after.id, before ? 'UPDATE' : 'CREATE', before, after);
+    requestEntitlementPush();
+    return after;
+  }),
+
+  deleteSpaceComp: billingStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
+    const before = await ctx.db.compedSpace.findUnique({ where: { id: input.id } });
+    if (!before) throw new TRPCError({ code: 'NOT_FOUND', message: 'Espace introuvable' });
+    await ctx.db.compedSpace.delete({ where: { id: input.id } });
+    await audit(ctx, 'spaceComp', before.id, 'DELETE', before, null);
     requestEntitlementPush();
     return { ok: true };
   }),

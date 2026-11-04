@@ -61,6 +61,57 @@ async function upsertProduct(stripe: Stripe, plan: { key: string; name: string }
   return id;
 }
 
+type PriceRow = { id: string; interval: 'month' | 'year'; amount: number; currency: string; stripePriceId: string | null };
+
+/** Whether a Stripe price bills exactly this amount, currency and interval. */
+export function priceMatches(stripePrice: Stripe.Price, row: PriceRow): boolean {
+  return (
+    stripePrice.unit_amount === row.amount &&
+    stripePrice.currency === row.currency &&
+    stripePrice.recurring?.interval === row.interval
+  );
+}
+
+/**
+ * The Stripe price for one plan price: the stored one when it still bills
+ * the same amount, currency and interval (its lookup key moved back here if
+ * needed), else a new one. The idempotency key carries the amount and
+ * currency, so a retry after a price change never reuses the old price.
+ */
+async function ensurePrice(
+  stripe: Stripe,
+  product: string,
+  version: { id: string; version: number; plan: { key: string } },
+  row: PriceRow
+): Promise<string> {
+  const lookupKey = lookupKeyFor(version.plan.key, row.interval);
+  if (row.stripePriceId) {
+    const existing = await stripe.prices.retrieve(row.stripePriceId).catch((error) => {
+      if (isMissing(error)) return null;
+      throw error;
+    });
+    if (existing && priceMatches(existing, row)) {
+      if (existing.lookup_key !== lookupKey || !existing.active) {
+        await stripe.prices.update(existing.id, { lookup_key: lookupKey, transfer_lookup_key: true, active: true });
+      }
+      return existing.id;
+    }
+  }
+  const created = await stripe.prices.create(
+    {
+      product,
+      currency: row.currency,
+      unit_amount: row.amount,
+      recurring: { interval: row.interval },
+      lookup_key: lookupKey,
+      transfer_lookup_key: true,
+      metadata: { plan_key: version.plan.key, plan_version: String(version.version) },
+    },
+    { idempotencyKey: `ardoise_publish_${version.id}_${row.interval}_${row.amount}_${row.currency}` }
+  );
+  return created.id;
+}
+
 /** How a published version compares to the one before it. */
 export interface PublishPreview {
   features: { key: string; before: unknown; after: unknown }[];
@@ -114,20 +165,10 @@ export async function publishVersion(db: PrismaClient, stripe: Stripe | null, ve
     }
     const product = await upsertProduct(stripe, version.plan);
     for (const price of version.prices) {
-      if (price.stripePriceId) continue;
-      const created = await stripe.prices.create(
-        {
-          product,
-          currency: price.currency,
-          unit_amount: price.amount,
-          recurring: { interval: price.interval },
-          lookup_key: lookupKeyFor(version.plan.key, price.interval),
-          transfer_lookup_key: true,
-          metadata: { plan_key: version.plan.key, plan_version: String(version.version) },
-        },
-        { idempotencyKey: `ardoise_publish_${version.id}_${price.interval}` }
-      );
-      await db.planPrice.update({ where: { id: price.id }, data: { stripePriceId: created.id } });
+      const stripePriceId = await ensurePrice(stripe, product, version, price);
+      if (stripePriceId !== price.stripePriceId) {
+        await db.planPrice.update({ where: { id: price.id }, data: { stripePriceId } });
+      }
     }
     for (const price of previous?.prices ?? []) {
       if (!price.stripePriceId) continue;

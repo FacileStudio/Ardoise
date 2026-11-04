@@ -35,22 +35,39 @@ export const SEED_COMPS = [
   'mazouz@facile.studio',
 ];
 
+/**
+ * Parses BILLING_SEED_COMP_SUBS, `email=sub` pairs separated by commas, into
+ * a map of lowercased email to Registre subject. Malformed pairs are dropped.
+ */
+export function parseCompSubs(raw: string | undefined): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const pair of (raw ?? '').split(',')) {
+    const [email, sub] = pair.split('=').map((part) => part.trim());
+    if (email && sub && email.includes('@') && /^[\x21-\x7e]{1,200}$/.test(sub)) out.set(email.toLowerCase(), sub);
+  }
+  return out;
+}
+
 /** What one seed run created; a rerun on a seeded database creates nothing. */
 export interface SeedResult {
   features: number;
   plans: number;
   versions: number;
   comps: number;
+  subjects: number;
 }
 
 /**
  * Seeds the billing catalog: the six features with Solo defaults, Solo, Pro
  * and Studio as DRAFT version 1 with the contract values and prices, and the
- * comped owners on Studio. Idempotent: it only creates what is missing and
- * never edits rows an admin may have changed.
+ * comped owners on Studio. A comp grants nothing until it carries the
+ * owner's Registre subject: `compSubs` (BILLING_SEED_COMP_SUBS) fills the
+ * subjects still missing. Idempotent: it only creates what is missing and
+ * never edits values an admin may have changed.
  */
-export async function seedBilling(db: PrismaClient): Promise<SeedResult> {
-  const result: SeedResult = { features: 0, plans: 0, versions: 0, comps: 0 };
+export async function seedBilling(db: PrismaClient, compSubs?: string): Promise<SeedResult> {
+  const result: SeedResult = { features: 0, plans: 0, versions: 0, comps: 0, subjects: 0 };
+  const subjects = parseCompSubs(compSubs);
   const featureIds = new Map<string, string>();
   for (const feature of SEED_FEATURES) {
     const existing = await db.feature.findUnique({ where: { key: feature.key } });
@@ -100,10 +117,16 @@ export async function seedBilling(db: PrismaClient): Promise<SeedResult> {
   }
 
   for (const email of SEED_COMPS) {
+    const registreSub = subjects.get(email) ?? null;
     const existing = await db.compedPerson.findUnique({ where: { email } });
-    if (existing) continue;
-    await db.compedPerson.create({ data: { email, reason: 'Facile Studio owner', planKey: 'studio' } });
-    result.comps += 1;
+    if (!existing) {
+      await db.compedPerson.create({ data: { email, registreSub, reason: 'Facile Studio owner', planKey: 'studio' } });
+      result.comps += 1;
+      if (registreSub) result.subjects += 1;
+    } else if (!existing.registreSub && registreSub) {
+      await db.compedPerson.update({ where: { id: existing.id }, data: { registreSub } });
+      result.subjects += 1;
+    }
   }
   return result;
 }
