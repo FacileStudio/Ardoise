@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { StorageService } from '@repo/storage';
 import { paymentService } from '@repo/trpc';
+import { handleBillingEvent, isBillingEvent } from '@repo/trpc/billing';
 import { prisma } from '@repo/database';
 import { logger } from '../lib/logger';
 import type { ServerEnv } from '@repo/env';
@@ -26,9 +27,32 @@ const isTransientError = (error: unknown): boolean => {
   return false;
 };
 
+/** What the webhook handler talks to, replaced in tests. */
+export interface StripeWebhookDeps {
+  db: typeof prisma;
+  getStripe: typeof getStripeService;
+  getSmtp: typeof getSmtpClient;
+  handlePayment: typeof paymentService.handleWebhook;
+  handleBilling: typeof handleBillingEvent;
+}
+
+const defaultDeps: StripeWebhookDeps = {
+  db: prisma,
+  getStripe: getStripeService,
+  getSmtp: getSmtpClient,
+  handlePayment: (...args) => paymentService.handleWebhook(...args),
+  handleBilling: handleBillingEvent,
+};
+
+/**
+ * POST /webhook: verifies the Stripe signature on the raw body, then sends
+ * subscription events tagged with registre_space_id to the billing module
+ * and everything else to the client-invoice payment flow.
+ */
 export const createStripeWebhookHandler = (
   storage: StorageService,
-  env: ServerEnv
+  env: ServerEnv,
+  deps: StripeWebhookDeps = defaultDeps
 ) => {
   return async (c: Context) => {
     try {
@@ -40,13 +64,14 @@ export const createStripeWebhookHandler = (
 
       const rawBody = await c.req.text();
 
-      const [stripe, smtp] = await Promise.all([
-        getStripeService(prisma),
-        getSmtpClient(prisma),
-      ]);
+      const stripe = await deps.getStripe(deps.db);
       const event = await stripe.constructEvent(rawBody, signature);
 
-      await paymentService.handleWebhook(prisma, storage, smtp, env, event);
+      if (isBillingEvent(event)) {
+        await deps.handleBilling(deps.db, stripe.client, event, logger);
+      } else {
+        await deps.handlePayment(deps.db, storage, await deps.getSmtp(deps.db), env, event);
+      }
 
       return c.json({ received: true });
     } catch (error: unknown) {

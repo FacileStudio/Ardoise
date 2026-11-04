@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
+    "@repo/stripe": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@types/bun": "^1.3.8",
     "eslint": "^9.39.2",
