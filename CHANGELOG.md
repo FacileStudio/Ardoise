@@ -17,6 +17,8 @@ deploys from the tag. A tag publishes the backend image to
 ### Security
 
 - The generic admin engine (`admin.create`, `admin.update`) no longer writes a user's email, email verification, role, status or ban, and no longer creates users. Only first and last name stay editable.
+- Media rows through the admin engine accept only `url`, `key`, `mimeType` and `size`. The generated Prisma schemas used before allowed nested writes on the linked avatar or cover user, including its email, role and SSO accounts. A guard test fails if any admin engine schema accepts a relation or foreign key.
+- The Registre directory sync links a snapshot member to an existing local user by email only when the snapshot marks the email verified, and never to a client account. Registre does not send `email_verified` yet, so such members are skipped and logged. Accounts it provisions keep `emailVerified` false unless Registre verified the email.
 
 ### Added
 
