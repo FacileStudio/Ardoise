@@ -39,6 +39,7 @@ model Plan {
   key       String   @unique
   name      String
   sortOrder Int      @default(0)
+  isFree    Boolean  @default(false)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -161,4 +162,16 @@ model EntitlementPushState {
   lastPushedAt DateTime? @db.Timestamptz(3)
   lastError    String?
   updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+}
+
+model DuplicateSubscription {
+  id                   String    @id @default(cuid())
+  registreSpaceId      String
+  stripeSubscriptionId String    @unique
+  stripeCustomerId     String
+  status               String
+  detectedAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([registreSpaceId])
 }
