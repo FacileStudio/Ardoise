@@ -6,6 +6,9 @@ import { resolveEntitlements } from './resolve';
 import { OWNER_ROLE, loadResolveInput, type DirectorySpaceView, type DirectoryView } from './state';
 import { SPACE_METADATA_KEY, syncSubscriptionIn, type BillingLogger } from './webhook';
 
+/** Printed on every Stripe invoice of a customer Ardoise creates: the micro-entreprise is exempt from VAT. */
+export const VAT_EXEMPT_FOOTER = 'Yann THEVENIN EI · SIRET 924 415 714 00022 · TVA non applicable, art. 293 B du CGI';
+
 /** The shortest BILLING_API_TOKEN accepted; anything shorter disables the billing routes. */
 export const MIN_TOKEN_LENGTH = 32;
 
@@ -240,8 +243,8 @@ function requireOwner(space: DirectorySpaceView, email: string) {
 async function customerFor(tx: Tx, stripe: Stripe, spaceId: string, name: string, email: string, stored: string | null) {
   if (stored) return stored;
   const customer = await stripe.customers.create(
-    { name, email, metadata: { [SPACE_METADATA_KEY]: spaceId } },
-    { idempotencyKey: `ardoise_customer_${spaceId}_${digest(name, email)}` }
+    { name, email, invoice_settings: { footer: VAT_EXEMPT_FOOTER }, metadata: { [SPACE_METADATA_KEY]: spaceId } },
+    { idempotencyKey: `ardoise_customer_${spaceId}_${digest(name, email, VAT_EXEMPT_FOOTER)}` }
   );
   await tx.spaceSubscription.upsert({
     where: { registreSpaceId: spaceId },
@@ -283,6 +286,7 @@ export async function createCheckout(deps: BillingDeps, body: unknown) {
         success_url: input.success_url,
         cancel_url: input.cancel_url,
         allow_promotion_codes: true,
+        billing_address_collection: 'required',
         expires_at: expiresAt,
         metadata,
         subscription_data: { metadata },

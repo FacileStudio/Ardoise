@@ -3,7 +3,7 @@ import { lockTestDatabase } from '@repo/database/test-lock';
 import { prisma } from '@repo/database';
 import type Stripe from 'stripe';
 import { billingRouter } from './router';
-import { createCheckout, createPortal, cachedCatalog, digest, invalidateCatalog, spaceStatus } from './api';
+import { VAT_EXEMPT_FOOTER, createCheckout, createPortal, cachedCatalog, digest, invalidateCatalog, spaceStatus } from './api';
 import { EntitlementPusher, StaleRevisionError, type EntitlementsPush } from './push';
 import { seedBilling } from './seed';
 import { adminRouter } from '../admin/router';
@@ -299,13 +299,18 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
       mode: 'subscription',
       customer: 'cus_new',
       allow_promotion_codes: true,
+      billing_address_collection: 'required',
       line_items: [{ price: 'price_1', quantity: 1 }],
       subscription_data: { metadata: { registre_space_id: 'spc_client' } },
     });
     expect(session.automatic_tax).toBeUndefined();
+    expect(session.tax_id_collection).toBeUndefined();
+    expect(session.line_items[0].tax_rates).toBeUndefined();
+    expect(session.subscription_data.default_tax_rates).toBeUndefined();
     const customer = calls.find((c) => c.method === 'customers.create')!.args as any[];
     expect(customer[0].metadata).toEqual({ registre_space_id: 'spc_client' });
-    expect(customer[1].idempotencyKey).toBe(`ardoise_customer_spc_client_${digest('Client', 'boss@client.fr')}`);
+    expect(customer[0].invoice_settings).toEqual({ footer: 'Yann THEVENIN EI · SIRET 924 415 714 00022 · TVA non applicable, art. 293 B du CGI' });
+    expect(customer[1].idempotencyKey).toBe(`ardoise_customer_spc_client_${digest('Client', 'boss@client.fr', VAT_EXEMPT_FOOTER)}`);
   });
 
   it('refuses to edit a published version and archives the previous one on republish', async () => {
