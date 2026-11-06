@@ -58,7 +58,7 @@ const ACCESS: Record<string, Access> = {
      document.previewPrestationBtp document.createPrestationBtp
      provider.list provider.get provider.create provider.update provider.delete
      space.get space.update space.delete space.getMembers space.addMember space.removeMember
-     space.updateMemberRole space.leave
+     space.updateMemberRole space.leave space.getSettings space.updateSettings
      mission.list mission.getById mission.create mission.update mission.setPrestations mission.generateQuote
      mission.acceptQuote mission.generateInvoice mission.setStatus mission.attachDocument
      mission.detachDocument mission.createPayment mission.delete`
@@ -178,6 +178,8 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
           documents: true,
           payments: true,
           providers: true,
+          settings: true,
+          counters: true,
         },
       })
     );
@@ -505,6 +507,9 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
       'payment.update': { description: 'Changed' },
       'mission.update': { providers: undefined },
     };
+    if (path === 'space.updateSettings') {
+      return { id: ids.spaceB, paymentTermsDays: 5, webhookUrl: 'https://attacker.example.test/in' };
+    }
     return { ...base, ...(overrides[path] ?? {}) };
   }
 

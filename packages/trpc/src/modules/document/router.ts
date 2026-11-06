@@ -24,7 +24,7 @@ import {
   PrestationPhotoInputSchema,
   PrestationVideoInputSchema,
 } from './services/schemas';
-import { generateNextDocumentNumber, previewDocumentNumber } from './numbering';
+import { previewDocumentNumber, withDocumentNumber } from './numbering';
 import { generateDocumentWithLogo } from './render';
 import spaceService, { scopeSpaceId, scopeWhere, requireRowScope } from '../space/service';
 import { z } from 'zod';
@@ -136,8 +136,8 @@ async function previewSpecializedPrestation(
   typeSpecificData: Record<string, unknown>,
   ctx: any
 ) {
-  const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-  const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+  const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+  const invoiceNumber = await previewDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice');
 
   const documentData = {
     type,
@@ -172,61 +172,61 @@ async function createSpecializedPrestation(
   ctx: any
 ) {
   const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-  const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-  const documentData = {
-    type,
-    invoice_number: invoiceNumber,
-    invoice_date: input.invoice_date,
-    due_date: input.due_date,
-    clientId: input.clientId,
-    providerId: input.providerId,
-    ...buildPartyAndLegalData(client, provider, settings),
-    items: input.items,
-    tva_rate: tvaRate,
-    railway_estimate: 0,
-    providers: [],
-    features: [],
-    payment_providers: [],
-    ...typeSpecificData,
-  };
-
-  const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-  const fileName = `${fileNamePrefix}_${invoiceNumber}.pdf`;
-  const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate);
-  const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
-
-  const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
-
-  const document = await ctx.db.document.create({
-    data: {
+  return withDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx) => {
+    const documentData = {
       type,
-      name: fileName,
-      invoiceNumber,
-      ...buildDocumentPersistenceBase(
-        documentData,
-        input.providerId,
-        pdfBuffer.length,
-        ctx.user!.id,
-        legalPersistence,
-        scope,
-        missionId,
-        stored
-      ),
+      invoice_number: invoiceNumber,
+      invoice_date: input.invoice_date,
+      due_date: input.due_date,
+      clientId: input.clientId,
+      providerId: input.providerId,
+      ...buildPartyAndLegalData(client, provider, settings),
       items: input.items,
-      subtotal,
-      tva,
-      total,
-      tvaRate,
-      serviceData: typeSpecificData as Record<string, unknown>,
-    },
-  });
+      tva_rate: tvaRate,
+      railway_estimate: 0,
+      providers: [],
+      features: [],
+      payment_providers: [],
+      ...typeSpecificData,
+    };
 
-  return {
-    document,
-    pdf: pdfBuffer.toString('base64'),
-    fileName,
-  };
+    const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
+    const fileName = `${fileNamePrefix}_${invoiceNumber}.pdf`;
+    const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate);
+    const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
+
+    const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
+    const document = await tx.document.create({
+      data: {
+        type,
+        name: fileName,
+        invoiceNumber,
+        ...buildDocumentPersistenceBase(
+          documentData,
+          input.providerId,
+          pdfBuffer.length,
+          ctx.user!.id,
+          legalPersistence,
+          scope,
+          missionId,
+          stored
+        ),
+        items: input.items,
+        subtotal,
+        tva,
+        total,
+        tvaRate,
+        serviceData: typeSpecificData as Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      document,
+      pdf: pdfBuffer.toString('base64'),
+      fileName,
+    };
+  });
 }
 
 async function resolveSubProvidersForAppel(db: PrismaClient, spaceId: string, inputs: Array<{ id: string; amount_to_pay: number }>) {
@@ -646,8 +646,8 @@ export const documentRouter = router({
     .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const invoiceNumber = await previewDocumentNumber(ctx.db, 'invoice');
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const invoiceNumber = await previewDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice');
 
         const documentData = {
           type: 'facture_prestation' as const,
@@ -683,51 +683,51 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        const invoiceNumber = await generateNextDocumentNumber(ctx.db, 'invoice');
-
-        const documentData = {
-          type: 'facture_prestation' as const,
-          invoice_number: invoiceNumber,
-          invoice_date: input.invoice_date,
-          due_date: input.due_date,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          ...buildPartyAndLegalData(client, provider, settings),
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: input.railway_estimate,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `facture_prestation_${invoiceNumber}.pdf`;
-        const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
-        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
-
-        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'facture_prestation',
-            name: fileName,
-            invoiceNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+        return await withDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx) => {
+          const documentData = {
+            type: 'facture_prestation' as const,
+            invoice_number: invoiceNumber,
+            invoice_date: input.invoice_date,
+            due_date: input.due_date,
+            clientId: input.clientId,
+            providerId: input.providerId,
+            ...buildPartyAndLegalData(client, provider, settings),
             items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate,
-            railwayEstimate: input.railway_estimate,
-          },
-        });
+            tva_rate: tvaRate,
+            railway_estimate: input.railway_estimate,
+            providers: [],
+            features: [],
+            payment_providers: [],
+          };
 
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
+          const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
+          const fileName = `facture_prestation_${invoiceNumber}.pdf`;
+          const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
+          const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
+
+          const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
+          const document = await tx.document.create({
+            data: {
+              type: 'facture_prestation',
+              name: fileName,
+              invoiceNumber,
+              ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+              items: input.items,
+              subtotal,
+              tva,
+              total,
+              tvaRate,
+              railwayEstimate: input.railway_estimate,
+            },
+          });
+
+          return {
+            document,
+            pdf: pdfBuffer.toString('base64'),
+            fileName,
+          };
+        });
       } catch (error) {
         rethrowUnexpected(error, 'Failed to create facture prestation');
       }
@@ -737,8 +737,8 @@ export const documentRouter = router({
     .input(spaceScoped(MaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const quoteNumber = await previewDocumentNumber(ctx.db, 'quote');
-        const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const { client, provider, settings, tvaRate, scope } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
+        const quoteNumber = await previewDocumentNumber(ctx.db, scopeSpaceId(scope), 'quote');
 
         const documentData = {
           type: 'maintenance' as const,
@@ -775,52 +775,52 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        const quoteNumber = await generateNextDocumentNumber(ctx.db, 'quote');
-
-        const documentData = {
-          type: 'maintenance' as const,
-          quote_number: quoteNumber,
-          quote_date: input.quote_date,
-          validity_date: input.validity_date,
-          maintenance_period: input.maintenance_period,
-          clientId: input.clientId,
-          providerId: input.providerId,
-          ...buildPartyAndLegalData(client, provider, settings),
-          items: input.items,
-          tva_rate: tvaRate,
-          railway_estimate: input.railway_estimate,
-          providers: [],
-          features: [],
-          payment_providers: [],
-        };
-
-        const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
-        const fileName = `maintenance_${quoteNumber}.pdf`;
-        const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
-        const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
-
-        const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
-
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'maintenance',
-            name: fileName,
-            quoteNumber,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+        return await withDocumentNumber(ctx.db, scopeSpaceId(scope), 'quote', async (quoteNumber, tx) => {
+          const documentData = {
+            type: 'maintenance' as const,
+            quote_number: quoteNumber,
+            quote_date: input.quote_date,
+            validity_date: input.validity_date,
+            maintenance_period: input.maintenance_period,
+            clientId: input.clientId,
+            providerId: input.providerId,
+            ...buildPartyAndLegalData(client, provider, settings),
             items: input.items,
-            subtotal,
-            tva,
-            total,
-            tvaRate,
-            railwayEstimate: input.railway_estimate,
-          },
-        });
+            tva_rate: tvaRate,
+            railway_estimate: input.railway_estimate,
+            providers: [],
+            features: [],
+            payment_providers: [],
+          };
 
-        return {
-          document,
-          pdf: pdfBuffer.toString('base64'),
-          fileName,
-        };
+          const pdfBuffer = await generateDocumentWithLogo(documentData, provider.logoUrl, ctx.storage);
+          const fileName = `maintenance_${quoteNumber}.pdf`;
+          const { subtotal, tva, total } = computeInvoiceTotals(input.items, tvaRate, input.railway_estimate);
+          const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
+
+          const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+
+          const document = await tx.document.create({
+            data: {
+              type: 'maintenance',
+              name: fileName,
+              quoteNumber,
+              ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+              items: input.items,
+              subtotal,
+              tva,
+              total,
+              tvaRate,
+              railwayEstimate: input.railway_estimate,
+            },
+          });
+
+          return {
+            document,
+            pdf: pdfBuffer.toString('base64'),
+            fileName,
+          };
+        });
       } catch (error) {
         rethrowUnexpected(error, 'Failed to create maintenance');
       }

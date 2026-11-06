@@ -53,6 +53,7 @@ function setup(overrides: {
     space: { findUnique: async () => ({ platformStudio: true }) },
     mission: { findFirst: async () => ({ id: 'm-1', status: 'ACCEPTED' }) },
     settings: { findFirst: async () => ({ id: 'global' }), findUnique: async () => ({ id: 'global' }) },
+    spaceSettings: { findUnique: async () => null },
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
     ...overrides.db,
   };

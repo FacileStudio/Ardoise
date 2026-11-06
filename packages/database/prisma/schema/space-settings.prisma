@@ -1,0 +1,31 @@
+model SpaceSettings {
+  spaceId String @id @db.Text
+
+  invoiceNumberFormat String @default("FAC-{{year}}-{{number}}")
+  quoteNumberFormat   String @default("DEVIS-{{year}}-{{number}}")
+
+  paymentTermsDays    Int     @default(30)
+  lateFeeRate         String  @default("3 fois le taux d'intérêt légal en vigueur")
+  recoveryFeeAmount   Decimal @default(40) @db.Decimal(10, 2)
+  vatExemptionMention String?
+  legalMentions       String?
+
+  webhookUrl    String?
+  webhookSecret String?
+  webhookEvents String[] @default([])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+}
+
+model DocumentCounter {
+  spaceId String @db.Text
+  kind    String @db.Text
+  next    Int    @default(1)
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@id([spaceId, kind])
+}

@@ -19,6 +19,8 @@ model Space {
   payments    Payment[]
   missions Mission[]
   providers   Provider[]
+  settings    SpaceSettings?
+  counters    DocumentCounter[]
 }
 
 model SpaceMember {

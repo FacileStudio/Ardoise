@@ -17,6 +17,7 @@ export const legalLetDeclarations: string = `
 #let late_fee_rate = "{{late_fee_rate}}"
 #let recovery_fee_amount = {{recovery_fee_amount}}
 #let vat_exemption_mention = "{{vat_exemption_mention}}"
+#let legal_mentions = "{{legal_mentions}}"
 `;
 
 /**
@@ -32,7 +33,8 @@ export const legalInvoiceFooter: string = `
   #if vat_exemption_mention != "" [#vat_exemption_mention \\ ]
   En cas de retard de paiement, pénalités égales à #late_fee_rate. \\
   Indemnité forfaitaire pour frais de recouvrement de #fmt(recovery_fee_amount) (Art. L441-10 Code de commerce). \\
-  Pas d'escompte en cas de paiement anticipé.
+  Pas d'escompte en cas de paiement anticipé.#if legal_mentions != "" [ \\
+  #legal_mentions]
 ]
 `;
 
@@ -46,6 +48,7 @@ export const legalContractFooter: string = `
 #text(size: 8pt, fill: rgb("#888888"))[
   #provider_legal #if provider_legal_form != "" [ \u{00B7} #provider_legal_form]#if provider_share_capital != "" [ au capital de #provider_share_capital\u{00A0}€]#if provider_rcs_city != "" [ \u{00B7} RCS #provider_rcs_city]#if provider_ape_code != "" [ \u{00B7} APE #provider_ape_code] \\
   SIRET #provider_siret#if provider_tva_intracom != "" [ \u{00B7} TVA intracommunautaire #provider_tva_intracom] \\
-  #if vat_exemption_mention != "" [#vat_exemption_mention]
+  #if vat_exemption_mention != "" [#vat_exemption_mention]#if legal_mentions != "" [ \\
+  #legal_mentions]
 ]
 `;

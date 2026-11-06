@@ -651,6 +651,7 @@ describe('loadDocumentContext', () => {
           options.member ? [{ spaceId: 'space-a' }, { spaceId: 'space-b' }] : [],
       },
       settings: { findUnique: async () => ({ id: 'settings' }) },
+      spaceSettings: { findUnique: async () => null },
       client: {
         findFirst: async ({ where }: any) => (matches(options.client, where) ? options.client : null),
         findUnique: async () => options.client ?? null,
