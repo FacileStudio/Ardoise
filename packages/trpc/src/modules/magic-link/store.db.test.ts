@@ -1,4 +1,5 @@
-import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { lockTestDatabase } from '@repo/database/test-lock';
 import { createHash } from 'node:crypto';
 import { prisma } from '@repo/database';
 import { AuthManager } from '@repo/auth';
@@ -61,9 +62,12 @@ describe.skipIf(!enabled)('magic links against Postgres', () => {
     await prisma.user.deleteMany();
   });
 
-  afterAll(async () => {
-    await prisma.$disconnect();
-  });
+  let release: () => Promise<void> = async () => {};
+  beforeAll(async () => {
+    release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
+  }, 600_000);
+
+  afterAll(() => release());
 
   test('exactly one of two concurrent consumes wins', async () => {
     const store = createPrismaMagicLinkStore(db);

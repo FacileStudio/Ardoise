@@ -8,6 +8,7 @@
       "browser": "./src/browser.ts",
       "default": "./src/index.ts"
     },
+    "./test-lock": "./src/test-lock.ts",
     "./zod": {
       "types": "./src/zod/index.ts",
       "default": "./src/zod/index.ts"

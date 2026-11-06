@@ -1,4 +1,5 @@
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { lockTestDatabase } from '@repo/database/test-lock';
 import type { PrismaClient } from '@repo/types';
 
 import { PrismaClient as Client } from '@prisma/client';
@@ -60,7 +61,11 @@ describe.skipIf(!url)('applySnapshot', () => {
   }) as unknown as PrismaClient;
   const ids: Record<string, string> = {};
 
+  let release: () => Promise<void> = async () => {};
+  afterAll(() => release());
+
   beforeAll(async () => {
+    release = await lockTestDatabase(url!);
     await db.$executeRawUnsafe('TRUNCATE "User", "Space" CASCADE');
     const user = async (key: string, sub?: string, role: 'MEMBER' | 'CLIENT' = 'MEMBER') => {
       const row = await db.user.create({
@@ -98,7 +103,7 @@ describe.skipIf(!url)('applySnapshot', () => {
     });
     ids.acme = acme.id;
     ids.solo = solo.id;
-  }, 60_000);
+  }, 600_000);
 
   test('links by name, provisions members (never ADMIN), maps roles, links emails only when verified, and is idempotent', async () => {
     const payload = await buildImport(db, issuer);
