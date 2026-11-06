@@ -68,3 +68,13 @@ describe('glouton env', () => {
     ]);
   });
 });
+
+describe('Nuage env', () => {
+  test('NUAGE_URL and NUAGE_AUDIENCE come together and need OIDC_ISSUER', () => {
+    const nuage = { NUAGE_URL: 'https://nuage.example.test', NUAGE_AUDIENCE: 'nuage-client' };
+    expect(failures({ ...base, ...oidc, ...nuage })).toEqual([]);
+    expect(failures({ ...base, ...oidc, NUAGE_URL: nuage.NUAGE_URL })).toEqual(['NUAGE_AUDIENCE']);
+    expect(failures({ ...base, ...oidc, NUAGE_AUDIENCE: nuage.NUAGE_AUDIENCE })).toEqual(['NUAGE_URL']);
+    expect(failures({ ...base, ...nuage })).toEqual(['NUAGE_URL']);
+  });
+});

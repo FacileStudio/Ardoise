@@ -4,6 +4,7 @@ import { prisma } from '@repo/database';
 import type { AuthManager } from '@repo/auth';
 import type { ServerEnv } from '@repo/env';
 import { authCookies, issueSession } from '@repo/trpc/auth/session';
+import { saveSsoTokens } from '@repo/trpc/auth/sso-tokens';
 import { clientIp } from '@repo/trpc/client-ip';
 import { logger } from '../lib/logger';
 import { oidcConfig } from './config';
@@ -56,7 +57,7 @@ export function createOIDCRoutes(
     deleteCookie(c, STATE_COOKIE, cookieOptions);
 
     try {
-      const { claims, redirect } = await finishLogin(config, {
+      const { claims, redirect, tokens } = await finishLogin(config, {
         code: c.req.query('code'),
         state: c.req.query('state'),
         cookie,
@@ -64,6 +65,9 @@ export function createOIDCRoutes(
 
       try {
         const user = await resolveUser(prisma, config.issuer, claims);
+        await saveSsoTokens(prisma, config.issuer, claims.sub, tokens, env.ENCRYPTION_SECRET).catch(
+          (error) => logger.warn({ error }, '[OIDC] Could not keep the Registre tokens')
+        );
 
         const session = await issueSession(prisma, authManager, user, {
           ipAddress: clientIp(c.req.header('x-forwarded-for')),

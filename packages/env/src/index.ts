@@ -15,7 +15,7 @@ const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 const optionalUrl = z.preprocess(emptyToUndefined, z.string().url().optional());
 const optionalString = z.preprocess(emptyToUndefined, z.string().min(1).optional());
 
-const nuageKeys = ['NUAGE_URL', 'NUAGE_API_TOKEN', 'NUAGE_SPACE_FACILE_ID'] as const;
+const nuageKeys = ['NUAGE_URL', 'NUAGE_AUDIENCE'] as const;
 const plumeKeys = ['PLUME_URL', 'PLUME_API_TOKEN', 'PLUME_WEBHOOK_SECRET'] as const;
 const gloutonKeys = ['GLOUTON_URL', 'GLOUTON_API_TOKEN', 'GLOUTON_WEBHOOK_SECRET'] as const;
 
@@ -45,15 +45,7 @@ export const serverEnvSchema = baseSchema.extend({
   OIDC_SUCCESS_URL: optionalUrl,
 
   NUAGE_URL: optionalUrl,
-  NUAGE_API_TOKEN: optionalString,
-  NUAGE_SPACE_FACILE_ID: z.preprocess(
-    emptyToUndefined,
-    z
-      .string()
-      .regex(/^fac_[0-9a-f]{24}$/, 'NUAGE_SPACE_FACILE_ID must be fac_ followed by 24 lowercase hex')
-      .optional()
-  ),
-  NUAGE_SPACE_NAME: optionalString,
+  NUAGE_AUDIENCE: optionalString,
 
   PLUME_URL: optionalUrl,
   PLUME_API_TOKEN: optionalString,
@@ -91,6 +83,14 @@ export const serverEnvSchema = baseSchema.extend({
       code: z.ZodIssueCode.custom,
       path: ['OIDC_CLIENT_ID'],
       message: 'OIDC_CLIENT_ID and OIDC_CLIENT_SECRET are required when OIDC_ISSUER is set',
+    });
+  }
+
+  if (env.NUAGE_URL && !env.OIDC_ISSUER) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['NUAGE_URL'],
+      message: 'NUAGE_URL requires OIDC_ISSUER: Ardoise reaches Nuage with a token Registre issues for the user',
     });
   }
 

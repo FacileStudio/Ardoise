@@ -162,7 +162,7 @@ See `apps/backend/.env.example` for reference.
 
 All optional and all-or-nothing (`NUAGE_*`, `PLUME_*`, `GLOUTON_*`, see `docs/configuration.md`).
 
-- Creating a `contrat_prestation`, `contrat_maintenance` or `back_contractuel` uploads the stored PDF to Nuage, fire and forget, with `linked_to` `ardoise:contract:<id>`.
+- Creating a `contrat_prestation`, `contrat_maintenance` or `back_contractuel` uploads the stored PDF to the creating user's Ardoise folder in Nuage (`PUT /api/app/object?key=ardoise:contract:<id>`), fire and forget, platform studio spaces only. The token is a Registre token exchange (`packages/nuage`) from the SSO tokens `apps/backend/src/oidc` keeps, sealed, on `Account` (`packages/trpc/src/modules/auth/sso-tokens.ts`). The OIDC login now asks for `offline_access`.
 - `document.sendForSignature({ id })` sends the stored PDF to Plume with the mission's client and the provider as signers, `external_ref` `ardoise:contract:<id>`, and sets `signatureStatus` to `sent`. `document.signatureEnabled` tells the UI whether Plume is configured.
 - `POST /webhooks/plume` verifies `x-plume-signature-256` and moves the document to `signed` or `declined`, and stamps `nuageArchivedAt` on `document.archived`. Replays change nothing.
 - Glouton: client and mission events go to Glouton after the response (`packages/trpc/src/modules/webhook/glouton.ts`); Glouton writes come in on `/api/integrations/glouton/clients` (`apps/backend/src/handlers/glouton.ts`), last write wins on `updatedAt`, and are never sent back to Glouton.

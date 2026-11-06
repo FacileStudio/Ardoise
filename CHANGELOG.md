@@ -14,6 +14,23 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- Contract PDFs are archived in the creating user's private Ardoise folder in Nuage (app folders)
+  instead of a Nuage space. Ardoise exchanges the user's stored Registre session for a 5-minute
+  `nuage.write` token and calls `PUT /api/app/object`.
+- Facile SSO sign-in asks for `offline_access` and keeps the Registre access and refresh tokens,
+  sealed with `ENCRYPTION_SECRET`, on the user's `Account` row. Users get a refresh token at
+  their next sign-in; until then their contracts are not archived.
+- `NUAGE_AUDIENCE` (Nuage's Registre client id) replaces `NUAGE_API_TOKEN`,
+  `NUAGE_SPACE_FACILE_ID` and `NUAGE_SPACE_NAME`. `NUAGE_URL` now also needs `OIDC_ISSUER`.
+- Documents sent to Plume no longer carry `nuage_space_facile_id`. Plume stores the signed copy in
+  its own private folder; `nuage_linked_to` still tells Ardoise when it is archived.
+
+### Removed
+
+- The find-or-create Nuage space provisioning.
+
 ## [0.16.0] - 2026-11-07
 
 > **Before deploying:** apply migration `20261107120000_client_payments`. In the Stripe Dashboard, add `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `charge.refunded` and `charge.dispute.created` to the existing webhook endpoint, and enable card and SEPA Direct Debit under Settings, Payment methods.
