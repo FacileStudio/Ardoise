@@ -49,7 +49,7 @@ export const createContext = async ({
     if (user) break;
   }
   const contextLogger = user ? logger.child({ userId: user.id, email: user.email }) : logger;
-  const ipAddress = clientIp(req.headers.get('x-forwarded-for'));
+  const ipAddress = clientIp(req.headers.get('x-forwarded-for'), undefined, req.headers.get('cf-connecting-ip'));
   const userAgent = req.headers.get('user-agent') || undefined;
   const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
   const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host');

@@ -9,6 +9,9 @@ ALTER TABLE "Payment"
   ADD COLUMN "declaredPaidOn" TIMESTAMP(3),
   ADD COLUMN "declaredAt" TIMESTAMP(3),
   ADD COLUMN "declaredVia" TEXT,
+  ADD COLUMN "declaredPriorStatus" "PaymentStatus",
+  ADD COLUMN "needsAttention" TEXT,
+  ADD COLUMN "attentionAt" TIMESTAMP(3),
   ADD COLUMN "stripeCheckoutSessionId" TEXT;
 
 ALTER TABLE "AuditLog" ALTER COLUMN "userId" DROP NOT NULL;

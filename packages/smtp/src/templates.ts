@@ -54,6 +54,15 @@ const DECLARED_METHOD_LABELS = {
   OTHER: 'Autre moyen',
 } as const;
 
+export interface PaymentAlertData {
+  to: string[];
+  clientName: string;
+  amount: number;
+  paymentReference: string;
+  message: string;
+  adminLink: string;
+}
+
 export interface MagicLinkData {
   to: string;
   link: string;
@@ -358,6 +367,36 @@ export class EmailTemplates {
     await this.smtpClient.sendEmail({
       to: data.to,
       subject: `Paiement déclaré à confirmer - ${amount}`,
+      html,
+    });
+  }
+
+  async sendPaymentAlert(data: PaymentAlertData): Promise<void> {
+    const amount = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(
+      data.amount
+    );
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h1>Paiement à vérifier</h1>
+    <p>${escapeHtml(data.message)}</p>
+    <ul>
+      <li><strong>Client :</strong> ${escapeHtml(data.clientName)}</li>
+      <li><strong>Facture :</strong> ${escapeHtml(data.paymentReference)}</li>
+      <li><strong>Montant attendu :</strong> ${escapeHtml(amount)}</li>
+    </ul>
+    <p><a href="${escapeHtml(data.adminLink)}">Ouvrir le paiement</a></p>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    await this.smtpClient.sendEmail({
+      to: data.to,
+      subject: `Paiement à vérifier - ${data.paymentReference}`,
       html,
     });
   }

@@ -15,7 +15,6 @@
     StatCard,
     toast,
   } from '@facile/muse';
-  import { resolve } from '$app/paths';
   import { i18n, locale } from '@repo/i18n/svelte';
   import { ardoise, icons } from '$lib/icons';
   import { safeHttpUrl } from '$lib/safe-url';

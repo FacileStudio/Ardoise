@@ -69,6 +69,7 @@
     declaredReference?: string | null;
     declaredPaidOn?: Date | null;
     declaredVia?: string | null;
+    needsAttention?: string | null;
     dueDate: Date;
     paidAt: Date | null;
     createdAt: Date;
@@ -255,6 +256,17 @@
       toast.danger(err?.message || 'Erreur');
     } finally {
       declaredBusy = false;
+    }
+  }
+
+  async function handleDismissAttention() {
+    if (!payment) return;
+    try {
+      await trpc.payment.dismissAttention.mutate({ id: payment.id });
+      toast.success($i18n.t('admin.payments.attention.dismissed'));
+      await fetchPayment();
+    } catch (err: any) {
+      toast.danger(err?.message || 'Erreur');
     }
   }
 
@@ -632,6 +644,15 @@
           </Section>
         {:else}
           <Alert tone="neutral">{$i18n.t('import.payment.manualOnly')}</Alert>
+        {/if}
+
+        {#if payment.needsAttention}
+          <Alert tone="danger" title={$i18n.t('admin.payments.attention.title')}>
+            {$i18n.t(`admin.payments.attention.${payment.needsAttention}`)}
+            <Button variant="ghost" size="sm" class="mt-2" onclick={handleDismissAttention}>
+              {$i18n.t('admin.payments.attention.dismiss')}
+            </Button>
+          </Alert>
         {/if}
 
         {#if payment.status === 'AWAITING_CONFIRMATION' && payment.declaredMethod}

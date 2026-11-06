@@ -14,7 +14,7 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
-> **Before deploying:** apply migration `20261107120000_client_payments`. In the Stripe Dashboard, add `checkout.session.completed`, `checkout.session.async_payment_succeeded` and `checkout.session.async_payment_failed` to the existing webhook endpoint, and enable card and SEPA Direct Debit under Settings, Payment methods.
+> **Before deploying:** apply migration `20261107120000_client_payments`. In the Stripe Dashboard, add `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `charge.refunded` and `charge.dispute.created` to the existing webhook endpoint, and enable card and SEPA Direct Debit under Settings, Payment methods.
 
 ### Added
 
@@ -22,10 +22,16 @@ deploys from the tag. A tag publishes the backend image to
 - Pay link: the payment email and reminders carry `/pay/<token>`, a public page that shows only the amount, reference and issuer and starts Checkout. The token has 256 bits, is stored as a sha256 hash, expires after 90 days and can be revoked from the admin payment page. Own rate-limit bucket.
 - "I paid another way": the client declares a transfer, cheque or other payment (optional reference and date) from the dashboard or the pay page. The payment becomes `AWAITING_CONFIRMATION`, the space members get an email, and an admin confirms (`PAID`, `MANUAL`) or rejects it. Declare, confirm and reject are audit-logged. The bank details come from the existing `Settings` IBAN and BIC.
 - Payment statuses `PROCESSING` (SEPA debit not cleared) and `AWAITING_CONFIRMATION`.
-- Migration `20261107120000_client_payments`: the two statuses, the declaration columns, `Payment.stripeCheckoutSessionId`, the `PaymentLink` table, and a nullable `AuditLog.userId` so a pay-link action can be logged without a user.
+- Migration `20261107120000_client_payments`: the two statuses, the declaration columns, `Payment.stripeCheckoutSessionId`, the `PaymentLink` table, and `Payment.declaredPriorStatus`, `needsAttention` and `attentionAt`, a nullable `AuditLog.userId` so a pay-link action can be logged without a user.
 
 ### Changed
 
+- At most one Checkout Session per payment is live. The stored session is reused when it is still open with the same amount, currency, mode and return URL, and expired otherwise; a completed one blocks a new session until the webhook settles it. The idempotency key no longer contains the return URLs (and so no pay token): it is the payment id, amount and previous session id. Changing the amount of a Stripe payment expires its open session.
+- A legacy PaymentIntent or subscription is cleared only when Stripe confirms the cancel; if the cancel fails, the ids stay for the webhook and the new checkout is refused.
+- Money that no rule can settle is stored on the payment (`needsAttention`: `DUPLICATE_PAYMENT`, `DUPLICATE_SUBSCRIPTION`, `AMOUNT_MISMATCH`, `REFUNDED`, `DISPUTED`), shown on the admin payment page until dismissed, and emailed to the space members. A second subscription for one payment is cancelled at once. `charge.refunded` and `charge.dispute.created` flag the payment.
+- A rejected declaration restores the status the payment had before it was declared. Pay links are revoked when the payment is paid or cancelled.
+- The client IP walks `X-Forwarded-For` right to left, skipping private and Cloudflare ranges (ported from tronc), and reads `CF-Connecting-IP` only when the last hop is a Cloudflare edge. Visitors behind one edge no longer share a rate-limit bucket, and the audit IP is the visitor.
+- `scripts/send-open-payment-links.ts` issues pay links and sends a reminder for every open Stripe payment, overdue ones included. Report only until `APPLY=1`.
 - **Ardoise no longer adds Stripe fees to the client total.** Card and SEPA surcharges are banned for consumers by PSD2 (directive 2015/2366 art. 62) and French Code monétaire et financier L112-12. New payments charge exactly the invoice amount (`stripeFee = 0`, `totalWithFees = amount`).
 - The webhook sets `PAID` only after checking the event's amount, currency, mode and space against the payment row, and follows asynchronous SEPA results. A mismatch is logged and never marks the payment paid.
 - Stripe objects are created when the client pays (Checkout Session with an idempotency key), not when the admin creates the payment. A still-unpaid legacy PaymentIntent or subscription is cancelled when the client pays again.

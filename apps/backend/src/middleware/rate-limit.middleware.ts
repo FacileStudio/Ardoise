@@ -60,7 +60,7 @@ export class RateLimiter {
   }
 }
 
-/** The caller's IP: the rightmost X-Forwarded-For entry, else the connection address. */
+/** The caller's IP: the first untrusted X-Forwarded-For hop, walking right to left, else the connection address. */
 export function getClientIp(c: Context): string {
   let peer: string | undefined;
   try {
@@ -68,7 +68,7 @@ export function getClientIp(c: Context): string {
   } catch {
     /* getConnInfo is unavailable outside a Bun server */
   }
-  return clientIp(c.req.header('x-forwarded-for'), peer) ?? c.req.header('x-real-ip') ?? 'unknown';
+  return clientIp(c.req.header('x-forwarded-for'), peer, c.req.header('cf-connecting-ip')) ?? c.req.header('x-real-ip') ?? 'unknown';
 }
 
 const BUCKETS = {

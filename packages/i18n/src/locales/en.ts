@@ -485,6 +485,7 @@ export const en = {
     },
     payments: {
       title: 'Payments',
+      attention: { title: 'Needs your attention', dismiss: 'Mark as handled', dismissed: 'Marked as handled.', DUPLICATE_PAYMENT: 'A second payment arrived for an invoice already settled or cancelled. A refund is probably needed.', DUPLICATE_SUBSCRIPTION: 'A second maintenance subscription was created and cancelled automatically. Check for stray debits.', AMOUNT_MISMATCH: 'Stripe collected a different amount or currency than expected. The payment was not marked paid.', REFUNDED: 'This payment was refunded in Stripe.', DISPUTED: 'This payment is disputed (chargeback) in Stripe.' },
       declared: { title: 'Declared payment', body: 'The client says they paid by {{method}}.', reference: 'Reference given: {{reference}}', paidOn: 'Payment date: {{date}}', via: 'Declared from the {{via}}', confirm: 'Funds received, mark as paid', reject: 'Reject', rejectReason: 'Reason (kept in the audit log)', rejectConfirm: 'Reject declaration', confirmed: 'Payment confirmed.', rejected: 'Declaration rejected.', methods: { TRANSFER: 'bank transfer', CHEQUE: 'cheque', OTHER: 'another way' }, vias: { portal: 'client dashboard', link: 'pay link', admin: 'admin' } },
       link: { title: 'Pay link', create: 'Copy a pay link', created: 'Link copied. It expires on {{date}}.', revoke: 'Revoke all links', revoked: 'Links revoked.', hint: 'Anyone with the link can pay this invoice. It shows only the amount and reference.' },
       subtitle: 'Manage client invoices and payments',

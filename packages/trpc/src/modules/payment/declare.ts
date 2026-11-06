@@ -8,7 +8,9 @@ import { requireRowScope } from '../space/service';
 import { requirePlatformStudio } from '../space/studio';
 import { syncMissionPaid } from '../mission/sync';
 import { isOverdue } from './overdue';
-import { PAYABLE_STATUSES, paymentReference } from './amounts';
+import { isPayableStatus, paymentReference } from './amounts';
+import { revokePaymentLinks } from './link';
+import type { AttentionReason } from './events';
 
 export const DeclarePaymentSchema = z.object({
   method: z.enum(['TRANSFER', 'CHEQUE', 'OTHER']),
@@ -66,10 +68,15 @@ export async function declarePayment(
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only one-time payments can be declared' });
   }
 
+  const current = await db.payment.findUnique({ where: { id: payment.id }, select: { status: true } });
+  if (!current || !isPayableStatus(current.status)) {
+    throw new TRPCError({ code: 'CONFLICT', message: 'This payment can no longer be declared' });
+  }
   const claimed = await db.payment.updateMany({
-    where: { id: payment.id, status: { in: [...PAYABLE_STATUSES] } },
+    where: { id: payment.id, status: current.status },
     data: {
       status: 'AWAITING_CONFIRMATION',
+      declaredPriorStatus: current.status,
       declaredMethod: input.method,
       declaredReference: input.reference || null,
       declaredPaidOn: input.paidOn ?? null,
@@ -128,6 +135,7 @@ export async function confirmDeclared(
   }
 
   await syncMissionPaid(db, payment.missionId);
+  await revokePaymentLinks(db, id);
   await audit(db, actor, id, { event: 'payment.declaration.confirmed' });
   return db.payment.findUniqueOrThrow({ where: { id } });
 }
@@ -149,7 +157,8 @@ export async function rejectDeclared(
   const claimed = await db.payment.updateMany({
     where: { id, status: 'AWAITING_CONFIRMATION' },
     data: {
-      status: isOverdue(payment.dueDate) ? 'PAST_DUE' : 'PENDING',
+      status: payment.declaredPriorStatus ?? (isOverdue(payment.dueDate) ? 'PAST_DUE' : 'PENDING'),
+      declaredPriorStatus: null,
       declaredMethod: null,
       declaredReference: null,
       declaredPaidOn: null,
@@ -208,4 +217,43 @@ export async function notifyDeclared(
   } catch (err) {
     logger.error({ err, paymentId }, 'Failed to notify admins of a declared payment');
   }
+}
+
+const ATTENTION_LABELS: Record<AttentionReason, string> = {
+  DUPLICATE_PAYMENT: 'Un second paiement a été reçu pour une facture déjà réglée ou annulée : un remboursement est probablement à faire.',
+  DUPLICATE_SUBSCRIPTION: 'Un second abonnement de maintenance a été créé pour ce paiement. Il a été annulé automatiquement : vérifiez les prélèvements éventuels.',
+  AMOUNT_MISMATCH: 'Stripe a encaissé un montant ou une devise différents de ceux attendus. Le paiement n’a pas été marqué payé.',
+  REFUNDED: 'Ce paiement a été remboursé dans Stripe.',
+  DISPUTED: 'Ce paiement fait l’objet d’un litige (chargeback) dans Stripe.',
+};
+
+/** Emails the space members that a payment needs a human look. */
+export async function notifyAttention(
+  db: PrismaClient,
+  getSmtp: () => Promise<SMTPClient>,
+  paymentId: string,
+  reason: AttentionReason,
+  frontendUrl: string
+): Promise<void> {
+  const payment = await db.payment.findUnique({
+    where: { id: paymentId },
+    include: { client: true, document: { select: { invoiceNumber: true } } },
+  });
+  if (!payment) return;
+
+  const members = await db.spaceMember.findMany({
+    where: { spaceId: payment.spaceId },
+    select: { user: { select: { email: true } } },
+  });
+  const recipients = members.map((member) => member.user.email).filter(Boolean);
+  if (recipients.length === 0) return;
+
+  await new EmailTemplates(await getSmtp()).sendPaymentAlert({
+    to: recipients,
+    clientName: payment.client.companyName,
+    amount: Number(payment.amount),
+    paymentReference: paymentReference(payment),
+    message: ATTENTION_LABELS[reason],
+    adminLink: `${frontendUrl.replace(/\/$/, '')}/admin/payments/${payment.id}`,
+  });
 }

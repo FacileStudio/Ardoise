@@ -60,6 +60,10 @@ model Payment {
   declaredPaidOn    DateTime?
   declaredAt        DateTime?
   declaredVia       String?
+  declaredPriorStatus PaymentStatus?
+
+  needsAttention String?
+  attentionAt    DateTime?
 
   dueDate DateTime
   paidAt  DateTime?

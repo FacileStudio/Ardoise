@@ -80,6 +80,7 @@ const ROWS: Record<string, () => any> = {
   spaceSettings: () => ({ spaceId: 's1', webhookUrl: null, webhookSecret: null, webhookEvents: [] }),
   session: () => ({ id: 's1', userId: 'u1', token: 'old', expiresAt: new Date(Date.now() + 1e6) }),
   auditLog: () => ({ id: 'l1' }),
+  paymentLink: () => ({ id: 'pl1' }),
   media: () => ({ id: 'm1', url: 'u', key: 'k' }),
   paymentDocument: () => ({ id: 'pd1', paymentId: 'p1', document: { id: 'd1', spaceId: 'space-a' } }),
   adminPermission: () => ({ id: 'ap1' }),
