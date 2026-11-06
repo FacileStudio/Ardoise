@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import type { PrismaClient } from '@repo/database';
+import { Hono } from 'hono';
 import { createBillingRoutes, type BillingLimits } from './billing';
+import corsHandler from './cors';
 
 const TOKEN = 't'.repeat(40);
 const silent = { info() {}, warn() {}, error() {} };
@@ -163,5 +165,56 @@ describe('billing routes', () => {
     const res = await broken.request('/api/catalog');
     expect(res.status).toBe(500);
     expect(await res.text()).not.toContain(TOKEN);
+  });
+
+  describe('CORS', () => {
+    const site = 'https://facile.studio';
+    const composed = () => {
+      const root = new Hono();
+      root.use('*', corsHandler(['https://ardoise.facile.studio']));
+      root.route('/', app(TOKEN));
+      root.options('*', (c) => c.body(null, 204));
+      return root;
+    };
+
+    it('lets any origin read the catalog without credentials', async () => {
+      const res = await composed().request('/api/catalog', { headers: { origin: site } });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('access-control-allow-origin')).toBe('*');
+      expect(res.headers.get('access-control-allow-credentials')).toBeNull();
+      expect(res.headers.get('cache-control')).toBe('public, max-age=60');
+    });
+
+    it('answers the catalog preflight for GET only', async () => {
+      const res = await composed().request('/api/catalog', {
+        method: 'OPTIONS',
+        headers: { origin: site, 'access-control-request-method': 'GET' },
+      });
+      expect(res.status).toBe(204);
+      expect(res.headers.get('access-control-allow-origin')).toBe('*');
+      expect(res.headers.get('access-control-allow-methods')).toBe('GET');
+      expect(res.headers.get('access-control-allow-credentials')).toBeNull();
+      expect((await composed().request('/api/catalog', { method: 'POST', headers: { origin: site } })).status).toBe(404);
+    });
+
+    it('gives the rest of the billing API no CORS, even to the app origin', async () => {
+      for (const origin of [site, 'https://ardoise.facile.studio']) {
+        const res = await composed().request('/billing/spaces/spc_a', {
+          headers: { origin, authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.9.9.9' },
+        });
+        expect(res.headers.get('access-control-allow-origin')).toBeNull();
+        const preflight = await composed().request('/billing/checkout', {
+          method: 'OPTIONS',
+          headers: { origin, 'access-control-request-method': 'POST' },
+        });
+        expect(preflight.headers.get('access-control-allow-origin')).toBeNull();
+      }
+    });
+
+    it('keeps credentialed CORS for the app on other routes', async () => {
+      const res = await composed().request('/trpc/x', { headers: { origin: 'https://ardoise.facile.studio' } });
+      expect(res.headers.get('access-control-allow-origin')).toBe('https://ardoise.facile.studio');
+      expect(res.headers.get('access-control-allow-credentials')).toBe('true');
+    });
   });
 });
