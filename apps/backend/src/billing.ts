@@ -18,6 +18,7 @@ export const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
 interface BootLogger {
   info(object: unknown, message?: string): void;
   warn(object: unknown, message?: string): void;
+  error(object: unknown, message?: string): void;
 }
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
