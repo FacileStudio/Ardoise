@@ -34,8 +34,12 @@ function getCrypto(): CryptoService {
   return cryptoService;
 }
 
-function encryptSecret(value: string): string {
+export function encryptSecret(value: string): string {
   return getCrypto().encrypt(value);
+}
+
+export function decryptSecretStrict(value: string): string {
+  return getCrypto().decrypt(value);
 }
 
 function decryptSecret(value: string): string {

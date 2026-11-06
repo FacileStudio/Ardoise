@@ -11,6 +11,7 @@ import {
   RemoveMemberSchema,
   UpdateMemberRoleSchema,
   LeaveSpaceSchema,
+  UpdateSpaceSettingsSchema,
 } from './types';
 
 export const spaceRouter = router({
@@ -35,6 +36,18 @@ export const spaceRouter = router({
     await spaceService.get(ctx.db, input.id, ctx.user.id);
     if (input.name !== undefined) await refuseWhenLinked(ctx.db, ctx.env, input.id, input.name);
     return spaceService.update(ctx.db, ctx.user.id, input);
+  }),
+
+  getSettings: memberProcedure.input(GetSpaceSchema).query(({ ctx, input }) => {
+    return spaceService.getSettings(ctx.db, ctx.user.id, input.id);
+  }),
+
+  updateSettings: memberProcedure.input(UpdateSpaceSettingsSchema).mutation(({ ctx, input }) => {
+    return spaceService.updateSettings(
+      ctx.db,
+      { userId: ctx.user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent },
+      input
+    );
   }),
 
   delete: memberProcedure.input(GetSpaceSchema).mutation(async ({ ctx, input }) => {

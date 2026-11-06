@@ -2,7 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { Prisma } from '@repo/database';
 import type { PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
-import { generateNextDocumentNumber } from '../document/numbering';
+import { withDocumentNumber } from '../document/numbering';
+import { scopeSpaceId } from '../space/service';
 import { generateDocumentWithLogo } from '../document/render';
 import {
   loadDocumentContext,
@@ -109,58 +110,59 @@ export async function generateQuote(
     mission.id
   );
 
-  const quoteNumber = await generateNextDocumentNumber(db, 'quote');
-  const today = new Date();
-  const documentData = {
-    type: 'devis' as const,
-    quote_number: quoteNumber,
-    quote_date: isoDay(today),
-    validity_date: isoDay(new Date(today.getTime() + input.validityDays * DAY_MS)),
-    project_name: mission.name,
-    deposit_percent: depositPercent ?? '',
-    clientId: client.id,
-    providerId,
-    ...buildPartyAndLegalData(client, provider, settings),
-    items: lines,
-    tva_rate: tvaRate,
-  };
-
-  const pdf = await generateDocumentWithLogo(documentData, provider.logoUrl, storage);
-  const stored = await storeDocumentPdf(storage, pdf);
-  const { subtotal, tva, total } = totalsOf(lines, tvaRate);
-
   try {
-    const document = await db.document.create({
-      data: {
-        type: 'devis',
-        name: `devis_${quoteNumber}.pdf`,
-        quoteNumber,
-        version: (currentQuote?.version ?? 0) + 1,
-        ...buildDocumentPersistenceBase(
-          documentData as DocumentData,
-          providerId,
-          pdf.length,
-          userId,
-          buildDocumentLegalPersistence(client, provider, settings),
-          scope,
-          missionId,
-          stored
-        ),
-        items: lines as unknown as Prisma.InputJsonValue,
-        subtotal,
-        tva,
-        total,
-        tvaRate,
-        serviceData: { depositPercent } as Prisma.InputJsonValue,
-      },
-    });
+    return await withDocumentNumber(db, scopeSpaceId(scope), 'quote', async (quoteNumber, tx) => {
+      const today = new Date();
+      const documentData = {
+        type: 'devis' as const,
+        quote_number: quoteNumber,
+        quote_date: isoDay(today),
+        validity_date: isoDay(new Date(today.getTime() + input.validityDays * DAY_MS)),
+        project_name: mission.name,
+        deposit_percent: depositPercent ?? '',
+        clientId: client.id,
+        providerId,
+        ...buildPartyAndLegalData(client, provider, settings),
+        items: lines,
+        tva_rate: tvaRate,
+      };
 
-    await db.mission.updateMany({
-      where: { id: mission.id, status: { in: ['DRAFT', 'QUOTED', 'ACCEPTED'] } },
-      data: { status: 'QUOTED' },
-    });
+      const pdf = await generateDocumentWithLogo(documentData, provider.logoUrl, storage);
+      const stored = await storeDocumentPdf(storage, pdf);
+      const { subtotal, tva, total } = totalsOf(lines, tvaRate);
 
-    return document;
+      const document = await tx.document.create({
+        data: {
+          type: 'devis',
+          name: `devis_${quoteNumber}.pdf`,
+          quoteNumber,
+          version: (currentQuote?.version ?? 0) + 1,
+          ...buildDocumentPersistenceBase(
+            documentData as DocumentData,
+            providerId,
+            pdf.length,
+            userId,
+            buildDocumentLegalPersistence(client, provider, settings),
+            scope,
+            missionId,
+            stored
+          ),
+          items: lines as unknown as Prisma.InputJsonValue,
+          subtotal,
+          tva,
+          total,
+          tvaRate,
+          serviceData: { depositPercent } as Prisma.InputJsonValue,
+        },
+      });
+
+      await tx.mission.updateMany({
+        where: { id: mission.id, status: { in: ['DRAFT', 'QUOTED', 'ACCEPTED'] } },
+        data: { status: 'QUOTED' },
+      });
+
+      return document;
+    });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       throw new TRPCError({
@@ -240,64 +242,65 @@ export async function generateInvoice(
     mission.id
   );
 
-  const invoiceNumber = await generateNextDocumentNumber(db, 'invoice');
-  const today = new Date();
-  const party = buildPartyAndLegalData(client, provider, settings);
-  const dueDate =
-    input.dueDate ?? new Date(today.getTime() + (party.payment_terms_days ?? 30) * DAY_MS);
-  const documentData = {
-    type: 'facture_prestation' as const,
-    invoice_title: INVOICE_TITLES[plan.kind],
-    invoice_number: invoiceNumber,
-    invoice_date: isoDay(today),
-    due_date: isoDay(dueDate),
-    quote_number: currentQuote.quoteNumber ?? '',
-    clientId: client.id,
-    providerId,
-    ...party,
-    items: plan.lines,
-    tva_rate: tvaRate,
-    railway_estimate: 0,
-    providers: [],
-    features: [],
-    payment_providers: [],
-  };
+  return withDocumentNumber(db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx) => {
+    const today = new Date();
+    const party = buildPartyAndLegalData(client, provider, settings);
+    const dueDate =
+      input.dueDate ?? new Date(today.getTime() + (party.payment_terms_days ?? 30) * DAY_MS);
+    const documentData = {
+      type: 'facture_prestation' as const,
+      invoice_title: INVOICE_TITLES[plan.kind],
+      invoice_number: invoiceNumber,
+      invoice_date: isoDay(today),
+      due_date: isoDay(dueDate),
+      quote_number: currentQuote.quoteNumber ?? '',
+      clientId: client.id,
+      providerId,
+      ...party,
+      items: plan.lines,
+      tva_rate: tvaRate,
+      railway_estimate: 0,
+      providers: [],
+      features: [],
+      payment_providers: [],
+    };
 
-  const pdf = await generateDocumentWithLogo(documentData, provider.logoUrl, storage);
-  const stored = await storeDocumentPdf(storage, pdf);
-  const { subtotal, tva, total } = totalsOf(plan.lines, tvaRate);
+    const pdf = await generateDocumentWithLogo(documentData, provider.logoUrl, storage);
+    const stored = await storeDocumentPdf(storage, pdf);
+    const { subtotal, tva, total } = totalsOf(plan.lines, tvaRate);
 
-  const document = await db.document.create({
-    data: {
-      type: 'facture_prestation',
-      name: `facture_prestation_${invoiceNumber}.pdf`,
-      invoiceNumber,
-      invoiceKind: plan.kind,
-      sourceQuoteId: currentQuote.id,
-      dueDate,
-      ...buildDocumentPersistenceBase(
-        documentData as DocumentData,
-        providerId,
-        pdf.length,
-        userId,
-        buildDocumentLegalPersistence(client, provider, settings),
-        scope,
-        missionId,
-        stored
-      ),
-      items: plan.lines as unknown as Prisma.InputJsonValue,
-      subtotal,
-      tva,
-      total,
-      tvaRate,
-      railwayEstimate: 0,
-    },
+    const document = await tx.document.create({
+      data: {
+        type: 'facture_prestation',
+        name: `facture_prestation_${invoiceNumber}.pdf`,
+        invoiceNumber,
+        invoiceKind: plan.kind,
+        sourceQuoteId: currentQuote.id,
+        dueDate,
+        ...buildDocumentPersistenceBase(
+          documentData as DocumentData,
+          providerId,
+          pdf.length,
+          userId,
+          buildDocumentLegalPersistence(client, provider, settings),
+          scope,
+          missionId,
+          stored
+        ),
+        items: plan.lines as unknown as Prisma.InputJsonValue,
+        subtotal,
+        tva,
+        total,
+        tvaRate,
+        railwayEstimate: 0,
+      },
+    });
+
+    await tx.mission.updateMany({
+      where: { id: mission.id, status: 'ACCEPTED' },
+      data: { status: 'INVOICED' },
+    });
+
+    return document;
   });
-
-  await db.mission.updateMany({
-    where: { id: mission.id, status: 'ACCEPTED' },
-    data: { status: 'INVOICED' },
-  });
-
-  return document;
 }

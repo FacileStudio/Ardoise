@@ -3,18 +3,12 @@ import type { PrismaClient } from '@repo/database';
 import { documentRouter } from './router';
 
 function dbCapturingPartyLookups(seen: { client: any[]; provider: any[] }) {
-  const settings = {
-    id: 'global',
-    nextInvoiceNumber: 1,
-    invoiceNumberFormat: 'FA-{{year}}-{{number}}',
-  };
+  const spaceSettings = { spaceId: 'space-a', invoiceNumberFormat: 'FA-{{year}}-{{number}}', quoteNumberFormat: 'DE-{{number}}', paymentTermsDays: 30, lateFeeRate: 'x', recoveryFeeAmount: 40, vatExemptionMention: null, legalMentions: null, webhookUrl: null, webhookSecret: null, webhookEvents: [] };
 
   const db: any = {
     $transaction: async (run: (tx: any) => Promise<unknown>) => run(db),
-    settings: {
-      findUnique: async () => settings,
-      update: async () => settings,
-    },
+    spaceSettings: { findUnique: async () => spaceSettings },
+    documentCounter: { upsert: async () => ({ next: 2 }) },
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
     client: {
       findFirst: async ({ where }: any) => {

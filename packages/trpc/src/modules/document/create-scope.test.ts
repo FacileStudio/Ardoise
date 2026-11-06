@@ -123,19 +123,12 @@ const endpoints: Array<{ name: string; input: Record<string, unknown> }> = [
 ];
 
 function dbFor(member: { role: 'MEMBER' } | null, seen: any[]) {
-  const settings = {
-    id: 'global',
-    nextInvoiceNumber: 1,
-    nextQuoteNumber: 1,
-    nextContractNumber: 1,
-    invoiceNumberFormat: 'FA-{{year}}-{{number}}',
-    quoteNumberFormat: 'DE-{{year}}-{{number}}',
-    contractNumberFormat: 'CO-{{year}}-{{number}}',
-  };
+  const spaceSettings = { spaceId: 'space-a', invoiceNumberFormat: 'FA-{{year}}-{{number}}', quoteNumberFormat: 'DE-{{year}}-{{number}}', paymentTermsDays: 30, lateFeeRate: 'x', recoveryFeeAmount: 40, vatExemptionMention: null, legalMentions: null, webhookUrl: null, webhookSecret: null, webhookEvents: [] };
 
   const db: any = {
     $transaction: async (run: (tx: any) => Promise<unknown>) => run(db),
-    settings: { findUnique: async () => settings, update: async () => settings },
+    spaceSettings: { findUnique: async () => spaceSettings },
+    documentCounter: { upsert: async () => ({ next: 2 }) },
     spaceMember: {
       findUnique: async () => member,
       findMany: async () => (member ? [{ spaceId: 'space-a' }] : []),

@@ -15,6 +15,7 @@ function dbWith(mission: unknown, seen: any[] = []) {
       },
     },
     settings: { findUnique: async () => ({ id: 'global' }) },
+    spaceSettings: { findUnique: async () => null },
   } as unknown as PrismaClient;
 }
 

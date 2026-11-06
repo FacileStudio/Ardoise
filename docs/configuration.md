@@ -113,10 +113,17 @@ edited from `/admin/settings`. Putting them in the environment has no effect.
 - **SMTP** — `smtpHost`, `smtpPort`, `smtpUser`, `smtpPass`, `smtpFrom`
 - **Outbound webhooks** — `webhookUrl`, `webhookSecret`, `webhookEvents`
 - **Banking** — `bankName`, `iban`, `bic`
-- **Billing defaults** — `tvaRate` (default 20), `defaultPaymentTermsDays` (30),
-  `defaultLateFeeRate`, `defaultRecoveryFeeAmount` (40), `defaultVatExemptionMention`
-- **Numbering** — `nextInvoiceNumber`, `nextQuoteNumber`, `nextContractNumber` and the matching
-  `*NumberFormat` templates, defaulting to `FAC-{{year}}-{{number}}`,
-  `DEVIS-{{year}}-{{number}}` and `CONT-{{year}}-{{number}}`
+- **Billing** — `tvaRate` (default 20). The payment and legal defaults, the document numbering and the
+  per-space webhook live in `SpaceSettings`, one row per space (see below).
+
+Each space sets its own defaults in its settings page (space admins only):
+
+- **Numbering** — `invoiceNumberFormat` and `quoteNumberFormat` (default `FAC-{{year}}-{{number}}` and
+  `DEVIS-{{year}}-{{number}}`; `{{number}}` is required once). The sequence lives in `DocumentCounter`, one row
+  per space and type, and is allocated inside the transaction that inserts the document.
+- **Payment and legal** — `paymentTermsDays` (30), `lateFeeRate` ("3 fois le taux d'intérêt légal en
+  vigueur"), `recoveryFeeAmount` (40), `vatExemptionMention`, `legalMentions` (printed in the footer).
+- **Outbound webhook** — `webhookUrl` (https only), `webhookSecret` (encrypted at rest, never returned),
+  `webhookEvents`. The URL must resolve to public addresses only.
 
 Ardoise does not use `tronc` or `troncenv`; the Go chassis conventions do not apply here.

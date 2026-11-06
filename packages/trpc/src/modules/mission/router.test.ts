@@ -18,6 +18,7 @@ function callerFor(db: Record<string, unknown>) {
   return missionRouter.createCaller({
     db: {
       settings: { findUnique: async () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }) },
+      spaceSettings: { findUnique: async () => null },
       space: { findUnique: async () => ({ platformStudio: true }) },
       spaceMember: {
         findUnique: async () => ({ role: 'MEMBER' }),

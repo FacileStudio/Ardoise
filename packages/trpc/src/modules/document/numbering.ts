@@ -1,77 +1,62 @@
-import { Prisma, type PrismaClient } from '@repo/database';
+import type { Prisma, PrismaClient } from '@repo/database';
+import { getSpaceSettings } from '../space/settings';
 
-type DocumentType = 'invoice' | 'quote' | 'contract';
+export type NumberKind = 'invoice' | 'quote';
 
-interface NumberingConfig {
-  counterField: 'nextInvoiceNumber' | 'nextQuoteNumber' | 'nextContractNumber';
-  formatField: 'invoiceNumberFormat' | 'quoteNumberFormat' | 'contractNumberFormat';
-}
+const FORMAT_FIELD = {
+  invoice: 'invoiceNumberFormat',
+  quote: 'quoteNumberFormat',
+} as const;
 
-const typeConfig: Record<DocumentType, NumberingConfig> = {
-  invoice: {
-    counterField: 'nextInvoiceNumber',
-    formatField: 'invoiceNumberFormat',
-  },
-  quote: {
-    counterField: 'nextQuoteNumber',
-    formatField: 'quoteNumberFormat',
-  },
-  contract: {
-    counterField: 'nextContractNumber',
-    formatField: 'contractNumberFormat',
-  },
-};
+const TRANSACTION = { maxWait: 10_000, timeout: 60_000 } as const;
 
-function formatNumber(template: string | null | undefined, number: number): string {
-  const safeTemplate = template || 'DOC-{{year}}-{{number}}';
+export function formatNumber(template: string, number: number, now = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, '0');
 
-  const year = new Date().getFullYear();
-  const month = String(new Date().getMonth() + 1).padStart(2, '0');
-  const paddedNumber = String(number).padStart(3, '0');
-
-  return safeTemplate
-    .replace('{{year}}', String(year))
+  return template
+    .replace('{{year}}', String(now.getFullYear()))
     .replace('{{month}}', month)
-    .replace('{{number}}', paddedNumber);
+    .replace('{{number}}', String(number).padStart(3, '0'));
 }
 
-export async function generateNextDocumentNumber(
+async function allocate(tx: Prisma.TransactionClient, spaceId: string, kind: NumberKind) {
+  const counter = await tx.documentCounter.upsert({
+    where: { spaceId_kind: { spaceId, kind } },
+    create: { spaceId, kind, next: 2 },
+    update: { next: { increment: 1 } },
+  });
+  const settings = await getSpaceSettings(tx, spaceId);
+
+  return formatNumber(settings[FORMAT_FIELD[kind]], counter.next - 1);
+}
+
+/**
+ * Runs `issue` with the next number of a space's sequence, inside the
+ * transaction that must also insert the document. The counter row stays
+ * locked until that transaction ends, so two requests of one space never get
+ * the same number, and a failed insert rolls the counter back: the sequence
+ * has no gap and no reuse. Use only the `tx` given to `issue` for database
+ * work.
+ */
+export function withDocumentNumber<T>(
   db: PrismaClient,
-  type: DocumentType
-): Promise<string> {
-  const config = typeConfig[type];
-
-  try {
-    const settings = await db.settings.update({
-      where: { id: 'global' },
-      data: { [config.counterField]: { increment: 1 } },
-    });
-
-    return formatNumber(settings[config.formatField], settings[config.counterField] - 1);
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      throw new Error('Settings not found. Please initialize settings first.');
-    }
-    throw error;
-  }
+  spaceId: string,
+  kind: NumberKind,
+  issue: (number: string, tx: Prisma.TransactionClient) => Promise<T>
+): Promise<T> {
+  return db.$transaction(async (tx) => issue(await allocate(tx, spaceId, kind), tx), TRANSACTION);
 }
 
 export async function previewDocumentNumber(
   db: PrismaClient,
-  type: DocumentType
+  spaceId: string,
+  kind: NumberKind
 ): Promise<string> {
-  const config = typeConfig[type];
-
-  const settings = await db.settings.findUnique({
-    where: { id: 'global' },
+  const counter = await db.documentCounter.findUnique({
+    where: { spaceId_kind: { spaceId, kind } },
+    select: { next: true },
   });
+  const settings = await getSpaceSettings(db, spaceId);
 
-  if (!settings) {
-    throw new Error('Settings not found. Please initialize settings first.');
-  }
-
-  const currentNumber = settings[config.counterField];
-  const format = settings[config.formatField];
-
-  return formatNumber(format, currentNumber);
+  return formatNumber(settings[FORMAT_FIELD[kind]], counter?.next ?? 1);
 }

@@ -1,8 +1,10 @@
 import type { PrismaClient } from '@repo/database';
 import type { Logger } from '@repo/logger';
 import { createHmac, randomUUID } from 'node:crypto';
-import { getSettingsRecord } from '../settings/service';
+import { decryptSecretStrict, getSettingsRecord } from '../settings/service';
+import { getSpaceSettings } from '../space/settings';
 import { isPlatformStudio } from '../space/studio';
+import { postToSpaceWebhook, type Transport, type Resolver } from './outbound';
 
 type WebhookActor = {
   id: string;
@@ -21,9 +23,10 @@ type DispatchWebhookInput = {
   event: string;
   actor?: WebhookActor;
   data: Record<string, unknown>;
+  deps?: { resolver?: Resolver; transport?: Transport };
 };
 
-function shouldDispatch(subscriptions: string[], event: string) {
+export function shouldDispatch(subscriptions: string[], event: string) {
   if (subscriptions.length === 0) return true;
 
   return subscriptions.some((subscription) => {
@@ -37,11 +40,60 @@ function shouldDispatch(subscriptions: string[], event: string) {
   });
 }
 
-function createSignature(secret: string, body: string) {
+export function createSignature(secret: string, body: string) {
   return `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
 }
 
-export async function dispatchConfiguredWebhook({
+function buildDelivery(event: string, actor: WebhookActor | undefined, data: Record<string, unknown>) {
+  const deliveryId = randomUUID();
+  const body = JSON.stringify({
+    id: deliveryId,
+    event,
+    createdAt: new Date().toISOString(),
+    source: 'ardoise',
+    actor,
+    data,
+  });
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    'user-agent': 'Ardoise-Webhooks/1.0',
+    'x-ardoise-delivery': deliveryId,
+    'x-ardoise-event': event,
+  };
+  return { deliveryId, body, headers };
+}
+
+async function dispatchSpaceWebhook({ db, log, spaceId, event, actor, data, deps }: DispatchWebhookInput) {
+  if (spaceId === null) return;
+  const settings = await getSpaceSettings(db, spaceId);
+  const webhookUrl = settings.webhookUrl?.trim();
+  if (!webhookUrl || !shouldDispatch(settings.webhookEvents.filter(Boolean), event)) return;
+
+  const { deliveryId, body, headers } = buildDelivery(event, actor, data);
+  try {
+    if (settings.webhookSecret) {
+      headers['x-ardoise-signature-256'] = createSignature(decryptSecretStrict(settings.webhookSecret), body);
+    }
+    const status = await postToSpaceWebhook(webhookUrl, headers, body, deps);
+    if (status >= 200 && status < 300) {
+      log.info({ type: 'space-webhook-delivery', spaceId, deliveryId, event, status }, 'Space webhook delivered');
+      return;
+    }
+    log.warn({ type: 'space-webhook-delivery', spaceId, deliveryId, event, status }, 'Space webhook delivery failed');
+  } catch (error) {
+    log.error(
+      { type: 'space-webhook-delivery', spaceId, deliveryId, event, error: error instanceof Error ? error.message : 'error' },
+      'Space webhook delivery errored'
+    );
+  }
+}
+
+export async function dispatchConfiguredWebhook(input: DispatchWebhookInput) {
+  await dispatchSpaceWebhook(input);
+  await dispatchPlatformWebhook(input);
+}
+
+async function dispatchPlatformWebhook({
   db,
   log,
   spaceId,
@@ -62,22 +114,8 @@ export async function dispatchConfiguredWebhook({
     return;
   }
 
-  const deliveryId = randomUUID();
-  const payload = {
-    id: deliveryId,
-    event,
-    createdAt: new Date().toISOString(),
-    source: 'ardoise',
-    actor,
-    data,
-  };
-  const body = JSON.stringify(payload);
-  const headers = new Headers({
-    'content-type': 'application/json',
-    'user-agent': 'Ardoise-Webhooks/1.0',
-    'x-ardoise-delivery': deliveryId,
-    'x-ardoise-event': event,
-  });
+  const { deliveryId, body, headers: plain } = buildDelivery(event, actor, data);
+  const headers = new Headers(plain);
 
   if (settings.webhookSecret) {
     headers.set('x-ardoise-signature-256', createSignature(settings.webhookSecret, body));

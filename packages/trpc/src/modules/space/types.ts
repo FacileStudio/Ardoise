@@ -44,3 +44,31 @@ export type UpdateSpaceInput = z.infer<typeof UpdateSpaceSchema>;
 export type AddMemberInput = z.infer<typeof AddMemberSchema>;
 export type RemoveMemberInput = z.infer<typeof RemoveMemberSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof UpdateMemberRoleSchema>;
+
+const NumberFormat = z
+  .string()
+  .trim()
+  .min(1)
+  .max(60)
+  .refine((value) => value.split('{{number}}').length === 2, 'The format must contain {{number}} exactly once')
+  .refine((value) => /^[\p{L}\p{N} _./{}-]+$/u.test(value), 'The format holds unsupported characters');
+
+const Mention = z.string().trim().max(1000).nullable();
+
+export const UpdateSpaceSettingsSchema = z
+  .object({
+    id: z.string().min(1),
+    invoiceNumberFormat: NumberFormat.optional(),
+    quoteNumberFormat: NumberFormat.optional(),
+    paymentTermsDays: z.number().int().min(0).max(365).optional(),
+    lateFeeRate: z.string().trim().min(1).max(500).optional(),
+    recoveryFeeAmount: z.number().min(0).max(100000).optional(),
+    vatExemptionMention: Mention.optional(),
+    legalMentions: Mention.optional(),
+    webhookUrl: z.string().trim().url().max(2000).nullable().optional(),
+    webhookSecret: z.string().min(16).max(256).nullable().optional(),
+    webhookEvents: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+  })
+  .strict();
+
+export type UpdateSpaceSettingsInput = z.infer<typeof UpdateSpaceSettingsSchema>;

@@ -54,18 +54,8 @@ function setup(options: Setup = {}) {
     prestations: options.prestations ?? prestations,
     ...options.mission,
   };
-  const settings = {
-    id: 'global',
-    nextInvoiceNumber: 1,
-    nextQuoteNumber: 1,
-    nextContractNumber: 1,
-    invoiceNumberFormat: 'FA-{{number}}',
-    quoteNumberFormat: 'DE-{{number}}',
-    contractNumberFormat: 'CO-{{number}}',
-    defaultPaymentTermsDays: 30,
-    webhookUrl: null,
-    webhookEvents: [],
-  };
+  const counters: Record<string, number> = {};
+  const spaceSettings = { spaceId: 'space-a', invoiceNumberFormat: 'FA-{{number}}', quoteNumberFormat: 'DE-{{number}}', paymentTermsDays: 30, lateFeeRate: 'x', recoveryFeeAmount: 40, vatExemptionMention: null, legalMentions: null, webhookUrl: null, webhookSecret: null, webhookEvents: [] };
 
   const db: any = {
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
@@ -73,13 +63,13 @@ function setup(options: Setup = {}) {
       typeof run === 'function'
         ? (run as (tx: unknown) => unknown)(db)
         : Promise.all(run as unknown[]),
-    settings: {
-      findUnique: async () => settings,
-      update: async ({ data }: any) => {
-        for (const [field, change] of Object.entries<any>(data)) {
-          (settings as any)[field] += change.increment;
-        }
-        return { ...settings };
+    settings: { findUnique: async () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }) },
+    spaceSettings: { findUnique: async () => spaceSettings },
+    documentCounter: {
+      upsert: async ({ where }: any) => {
+        const kind = where.spaceId_kind.kind;
+        counters[kind] = (counters[kind] ?? 1) + 1;
+        return { next: counters[kind] };
       },
     },
     mission: {

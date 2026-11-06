@@ -21,7 +21,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
-import { getSettingsRecord } from '../settings/service';
+import { documentDefaults, getSpaceSettings } from '../space/settings';
 import { providersOfSpace } from '../space/studio';
 import spaceService, { scopeSpaceId, scopeWhere, type Scope } from '../space/service';
 
@@ -131,6 +131,7 @@ export type DocumentData = {
   late_fee_rate?: string;
   recovery_fee_amount?: number;
   vat_exemption_mention?: string;
+  legal_mentions?: string;
   railway_estimate?: number;
   project_name?: string;
   deposit_percent?: number | string;
@@ -646,6 +647,7 @@ export async function generateDocument(
     late_fee_rate: v.late_fee_rate || "3 fois le taux d'intérêt légal en vigueur",
     recovery_fee_amount: v.recovery_fee_amount ?? 40,
     vat_exemption_mention: v.vat_exemption_mention || '',
+    legal_mentions: v.legal_mentions || '',
     railway_estimate: validated.railway_estimate,
 
     invoice_title: v.invoice_title || 'FACTURE',
@@ -712,7 +714,7 @@ export async function loadDocumentContext(
     }
   }
 
-  const settings = await getSettingsRecord(db);
+  const settings = documentDefaults(await getSpaceSettings(db, client.spaceId));
   const tvaRate = provider.tvaRate == null ? 20 : Number(provider.tvaRate);
 
   return { client, provider, settings, tvaRate, scope, missionId: missionId ?? null };
@@ -819,6 +821,7 @@ type SettingsLike = {
   defaultLateFeeRate?: string | null;
   defaultRecoveryFeeAmount?: unknown;
   defaultVatExemptionMention?: string | null;
+  defaultLegalMentions?: string | null;
 };
 
 export function buildPartyAndLegalData(
@@ -854,6 +857,7 @@ export function buildPartyAndLegalData(
     late_fee_rate: settings?.defaultLateFeeRate || "3 fois le taux d'intérêt légal en vigueur",
     recovery_fee_amount: settings?.defaultRecoveryFeeAmount != null ? Number(settings.defaultRecoveryFeeAmount) : 40,
     vat_exemption_mention: settings?.defaultVatExemptionMention || '',
+    legal_mentions: settings?.defaultLegalMentions || '',
   };
 }
 
@@ -935,6 +939,7 @@ export function generateTypstContent(data: DocumentData): string {
     late_fee_rate: data.late_fee_rate || "3 fois le taux d'intérêt légal en vigueur",
     recovery_fee_amount: data.recovery_fee_amount ?? 40,
     vat_exemption_mention: data.vat_exemption_mention || '',
+    legal_mentions: data.legal_mentions || '',
     railway_estimate: data.railway_estimate,
 
     // For back_contractuel

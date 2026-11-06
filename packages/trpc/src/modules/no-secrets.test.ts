@@ -77,6 +77,7 @@ const ROWS: Record<string, () => any> = {
   spaceMember: member,
   space: () => ({ id: 's1', name: 'Team', description: null, registreSpaceId: null, createdAt: new Date(0), updatedAt: new Date(0) }),
   settings: () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }),
+  spaceSettings: () => ({ spaceId: 's1', webhookUrl: null, webhookSecret: null, webhookEvents: [] }),
   session: () => ({ id: 's1', userId: 'u1', token: 'old', expiresAt: new Date(Date.now() + 1e6) }),
   auditLog: () => ({ id: 'l1' }),
   media: () => ({ id: 'm1', url: 'u', key: 'k' }),

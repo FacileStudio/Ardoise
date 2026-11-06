@@ -14,6 +14,25 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+> **Migration:** `20261106150000_space_settings` creates `SpaceSettings` and `DocumentCounter`. Every existing space gets a `SpaceSettings` row copied from the global `Settings` (number formats and payment defaults), and the invoice and quote counters of each space start after the highest trailing number among its generated documents. Imported documents keep their numbers and are not counted.
+
+### Added
+
+- Document numbering per space and per type (invoice, quote). The next number is allocated in the same transaction as the document insert, with a counter row locked until commit, so concurrent requests never share a number and a failed insert leaves no gap.
+- Outbound webhook per space. A space owner or admin sets a URL, a secret and an event filter in the space settings. The secret is encrypted at rest and never returned (`webhookSecretSet` only). Deliveries use the platform signer (`x-ardoise-signature-256`).
+- Payment and legal defaults per space (payment terms, late-penalty text, recovery fee, VAT mention, extra legal mentions printed in the footer), with the French defaults. `space.getSettings` and `space.updateSettings`, space admins only for writes and for the webhook.
+- Space settings page: numbering, payment and legal, webhook, and for platform staff only the platform studio switch (`space.setPlatformStudio`).
+
+### Security
+
+- The space webhook refuses http, credentials in the URL and any host that resolves to a private, loopback, link-local, reserved or mapped address, checked when saved and again before each delivery. The connection goes to the address that was checked, TLS is verified against the host name, the timeout is 5 s and a redirect counts as a failure.
+- A sign-in sets `emailVerified` only when the `email_verified` claim is literally true. A member provisioned from a Registre snapshot without that flag stays unverified and is never linked to a local account by email.
+- Documents take the payment and legal defaults of the space of their client, not the global settings. The new procedures are in the access map and are called as a member of another space by `access.db.test.ts`.
+
+### Changed
+
+- The global `Settings.next*Number` counters and number formats are no longer read.
+
 ## [0.14.3] - 2026-11-06
 
 ### Changed

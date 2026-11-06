@@ -1,7 +1,11 @@
 import { TRPCError } from '@trpc/server';
 import { type PrismaClient, type SpaceRole } from '@repo/database';
+import { encryptSecret } from '../settings/service';
+import { resolveSafeTarget, UnsafeWebhookUrlError } from '../webhook/outbound';
+import { getSpaceSettings, type SpaceSettingsValues } from './settings';
 import type {
   CreateSpaceInput,
+  UpdateSpaceSettingsInput,
   UpdateSpaceInput,
   AddMemberInput,
   RemoveMemberInput,
@@ -107,6 +111,17 @@ export async function requireRowsScope<T extends { spaceId: string }>(
     await requireRowScope(db, userId, row, message);
   }
   return rows;
+}
+
+/**
+ * What a client may see of a space's settings. The webhook secret is never
+ * sent back, only whether one is set, and only space admins see the webhook.
+ */
+function settingsView(settings: SpaceSettingsValues, canManage: boolean) {
+  const { webhookSecret, webhookUrl, webhookEvents, ...shared } = settings;
+  return canManage
+    ? { ...shared, webhookUrl, webhookEvents, webhookSecretSet: webhookSecret !== null }
+    : { ...shared, webhookUrl: null, webhookEvents: [] as string[], webhookSecretSet: false };
 }
 
 export const spaceService = {
@@ -218,6 +233,76 @@ export const spaceService = {
       where: { id: data.id },
       data: updateData,
     });
+  },
+
+  async getSettings(db: PrismaClient, userId: string, spaceId: string) {
+    const member = await db.spaceMember.findUnique({
+      where: { spaceId_userId: { spaceId, userId } },
+    });
+    requireRole(member, 'MEMBER');
+
+    return settingsView(await getSpaceSettings(db, spaceId), ROLE_WEIGHT[member!.role] >= ROLE_WEIGHT.ADMIN);
+  },
+
+  async updateSettings(
+    db: PrismaClient,
+    actor: { userId: string; ipAddress?: string; userAgent?: string },
+    input: UpdateSpaceSettingsInput
+  ) {
+    const member = await db.spaceMember.findUnique({
+      where: { spaceId_userId: { spaceId: input.id, userId: actor.userId } },
+    });
+    requireRole(member, 'ADMIN');
+
+    const current = await getSpaceSettings(db, input.id);
+    const { id: spaceId, webhookUrl, webhookSecret, ...rest } = input;
+    const data: Record<string, unknown> = { ...rest };
+
+    if (webhookUrl === null) {
+      Object.assign(data, { webhookUrl: null, webhookSecret: null, webhookEvents: [] });
+    } else if (webhookUrl !== undefined) {
+      try {
+        await resolveSafeTarget(webhookUrl);
+      } catch (error) {
+        if (error instanceof UnsafeWebhookUrlError) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+        }
+        throw error;
+      }
+      data.webhookUrl = webhookUrl;
+    }
+
+    if (webhookSecret !== undefined && webhookUrl !== null) {
+      if (webhookSecret !== null && !(webhookUrl ?? current.webhookUrl)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Set a webhook URL before its secret' });
+      }
+      data.webhookSecret = webhookSecret === null ? null : encryptSecret(webhookSecret);
+    }
+
+    const changes = Object.fromEntries(
+      Object.keys(data).map((key) => [key, key === 'webhookSecret' ? 'changed' : data[key]])
+    );
+
+    const [row] = await db.$transaction([
+      db.spaceSettings.upsert({
+        where: { spaceId },
+        create: { spaceId, ...data },
+        update: data,
+      }),
+      db.auditLog.create({
+        data: {
+          userId: actor.userId,
+          entity: 'spaceSettings',
+          entityId: spaceId,
+          action: 'UPDATE',
+          changes: changes as never,
+          ipAddress: actor.ipAddress,
+          userAgent: actor.userAgent,
+        },
+      }),
+    ]);
+
+    return settingsView(await getSpaceSettings(db, row.spaceId), true);
   },
 
   async delete(db: PrismaClient, userId: string, spaceId: string) {

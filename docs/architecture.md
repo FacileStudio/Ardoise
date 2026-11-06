@@ -78,9 +78,12 @@ Postgres 16 through Prisma. The schema is split by concern across `prisma/schema
 | `AuditLog` | `CREATE` / `UPDATE` / `DELETE` history written by the admin engine |
 | `Media`, `Session`, `Account`, `Verification`, `WebhookEvent` | Avatars and covers, sessions, linked OIDC accounts, verification tokens, and processed Stripe event ids for idempotency |
 
-Document numbering is driven from `Settings`: `nextInvoiceNumber`, `nextQuoteNumber` and
-`nextContractNumber` counters formatted through `invoiceNumberFormat`, `quoteNumberFormat` and
-`contractNumberFormat`, all defaulting to a `{{year}}` / `{{number}}` template.
+Document numbering is per space. `DocumentCounter` holds one row per space and type (`invoice`,
+`quote`); `withDocumentNumber` upserts it inside the same transaction as the document insert, so the
+row lock serialises a space's requests and a failed insert gives the number back (continuous, no gap,
+no reuse). The format comes from `SpaceSettings` (`invoiceNumberFormat`, `quoteNumberFormat`). The
+global `Settings.next*Number` columns are no longer read. `SpaceSettings` also holds the payment and
+legal defaults printed on documents and the space's own outbound webhook.
 
 ## Authentication
 
@@ -198,6 +201,7 @@ ones `modules/auth` issues (`issueSession` and `authCookies` in `packages/trpc`)
   `payment.getClientSecret` procedure.
 - **SMTP.** Nodemailer, configured from `Settings`. Sends the payment request, reminders, and the
   receipt.
+- **Space webhook.** `SpaceSettings.webhookUrl` / `webhookSecret` (encrypted) / `webhookEvents`, set by a space admin, hear that space's events through the same signer (`x-ardoise-signature-256`). `webhook/outbound.ts` refuses non-https URLs, credentials in the URL and any name that resolves to a private, loopback, link-local or reserved address, connects to the address it checked, times out at 5 s and never follows a redirect.
 - **Outbound webhooks.** `Settings.webhookUrl` / `webhookSecret` / `webhookEvents` feed the
   `webhook` service. Events sent today: `client.created`, `client.updated`, `client.deleted`,
   `mission.created`, `mission.updated`, `mission.prestations_updated`,
