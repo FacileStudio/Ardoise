@@ -89,12 +89,12 @@ packages/
 
 The web app (`apps/web`) serves both client and admin interfaces from a single SvelteKit app. Route-based separation:
 - `/app/*` routes require authentication (any role)
-- `/admin/*` routes require ADMIN role (enforced in root layout + tRPC `adminProcedure`)
+- `/admin/*` routes require a space member (`isMember`, role MEMBER); what they show comes from the caller's space memberships
 - Login page redirects users to `/app` or `/admin/clients` based on their role
 
 ### tRPC modules
 
-Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe, billing. Three procedure levels: `publicProcedure`, `protectedProcedure`, `adminProcedure`.
+Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe, billing. Procedure levels: `publicProcedure`, `protectedProcedure` (own account), `clientProcedure` (portal), `memberProcedure` (space work, always scoped with `resolveScope`/`requireRowScope`), `platformStaffProcedure` (`PLATFORM_STAFF_SUBS`). Every procedure is classified in `packages/trpc/src/access.db.test.ts`; add new ones there.
 
 ### Authentication
 
@@ -112,7 +112,7 @@ Documents made outside Ardoise come in through `document.import` (`source = impo
 
 ### OIDC
 
-Facile SSO (Registre) is the only staff login, in `apps/backend/src/oidc/` (see `docs/architecture.md`). Production refuses to boot without `OIDC_ISSUER`. Anyone who signs in is staff: `resolveUser` (`apps/backend/src/oidc/identity.ts`) finds them by `(issuer, sub)`, then by verified email, else creates them, and every sign-in sets `role = ADMIN` plus `firstName`, `lastName` (split from the `name` claim, since Registre sends no given/family names) and `ssoPictureUrl`. Ardoise keeps no separate admin list, and `user.updateProfile` refuses staff. `GET /auth/config` returns `oidc_enabled` and `client_magic_link`.
+Facile SSO (Registre) is the only staff login, in `apps/backend/src/oidc/` (see `docs/architecture.md`). Production refuses to boot without `OIDC_ISSUER`. `resolveUser` (`apps/backend/src/oidc/identity.ts`) finds the user by `(issuer, sub)`, then by verified email, else creates them, and every sign-in sets `role = MEMBER` (never ADMIN) plus `firstName`, `lastName` (split from the `name` claim, since Registre sends no given/family names) and `ssoPictureUrl`. MEMBER grants nothing alone: spaces come from Registre membership, platform powers from `PLATFORM_STAFF_SUBS`. `user.updateProfile` and `user.deleteOwnAccount` refuse SSO accounts. See "Access model" in `docs/architecture.md`, including `Space.platformStudio` (only those spaces use the platform Stripe, SMTP, Plume, Nuage and shared providers). `GET /auth/config` returns `oidc_enabled` and `client_magic_link`.
 
 ### Prisma
 
@@ -172,7 +172,7 @@ All optional and all-or-nothing (`NUAGE_*`, `PLUME_*`, `GLOUTON_*`, see `docs/co
 `packages/trpc/src/modules/billing/` makes Ardoise the suite's billing backoffice. Billing customers are Registre spaces (`SpaceSubscription`), not Ardoise `Client` rows. Schema in `prisma/schema/billing.prisma`.
 
 - `resolve.ts` is the one pure resolution: override > comp > subscription plan version (past_due keeps it 7 days) > feature default. A person comp grants only that person's personal scope; a space is comped only by an explicit `CompedSpace` row, never because an owner is comped. A person gets the most generous of their comp and the paid plans of the spaces they own. Never recompute it elsewhere.
-- Staff gate: every `billing.*` procedure uses `billingStaffProcedure` (`staff.ts`): an active ADMIN whose SSO `Account` (`providerId` = `OIDC_ISSUER`) subject is in `BILLING_STAFF_SUBS`, or whose snapshot email is verified and in `BILLING_STAFF_EMAILS`. Never trust `User.email` or the role: every SSO sign-in is ADMIN. The generic admin engine (`modules/admin/service.ts`) may write only `firstName`/`lastName` on users and never creates them; every engine schema is hand-written, strict and scalar-only (`admin/schemas.test.ts` fails on any relation key), never a generated Prisma `*InputSchema`. The directory sync (`registre/spaces.ts`) links a snapshot member to a local user by email only when the snapshot says `email_verified: true`, and never to a CLIENT. Comps and person overrides match by Registre subject, never by an unverified email.
+- Staff gate: every `billing.*` procedure uses `platformStaffProcedure` (`packages/trpc/src/platform-staff.ts`): an active non-client account whose SSO `Account` (`providerId` = `OIDC_ISSUER`) subject is in `PLATFORM_STAFF_SUBS` (alias `BILLING_STAFF_SUBS`), or whose snapshot email is verified and in `PLATFORM_STAFF_EMAILS`. Never trust `User.email` or the role. The generic admin engine (`modules/admin/service.ts`) may write only `firstName`/`lastName` on users and never creates them; every engine schema is hand-written, strict and scalar-only (`admin/schemas.test.ts` fails on any relation key), never a generated Prisma `*InputSchema`. The directory sync (`registre/spaces.ts`) links a snapshot member to a local user by email only when the snapshot says `email_verified: true`, and never to a CLIENT. Comps and person overrides match by Registre subject, never by an unverified email.
 - Published plan versions are immutable; `publish` (`stripe-sync.ts`) creates Stripe prices with lookup keys `plan_<key>_<interval>`. Comps use the latest version of the plan, even a draft.
 - `/billing/*` (`apps/backend/src/handlers/billing.ts`) is server-to-server for Registre: Bearer `BILLING_API_TOKEN` only, never an Ardoise session. Checkout prices come only from a published lookup key.
 - `/webhook` sends events whose subscription metadata has `registre_space_id` to `webhook.ts` (dedupe in `BillingEvent`, customer cross-check, a failure answers 500 and stays marked for the retry and the hourly reconcile); everything else stays on `paymentService.handleWebhook`.

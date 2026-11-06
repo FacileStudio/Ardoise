@@ -53,11 +53,21 @@ describe('portal scoping', () => {
   it('refuses a caller with no client record', async () => {
     const orphan = portalRouter.createCaller({
       db: { client: { findUnique: async () => null } },
-      user: { id: 'x', role: 'ADMIN', email: 'x@x.test' },
+      user: { id: 'x', role: 'CLIENT', email: 'x@x.test' },
       env: {},
       log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     } as any);
     await expect(orphan.overview()).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('refuses a space member: the portal is for client accounts only', async () => {
+    const member = portalRouter.createCaller({
+      db: { client: { findUnique: async () => ({ id: 'c', spaceId: 's' }) } },
+      user: { id: 'x', role: 'MEMBER', email: 'x@x.test' },
+      env: {},
+      log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
+    } as any);
+    await expect(member.overview()).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 });
 

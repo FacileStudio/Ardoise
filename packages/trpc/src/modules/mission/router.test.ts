@@ -25,7 +25,7 @@ function callerFor(db: Record<string, unknown>) {
       ...db,
     } as unknown as PrismaClient,
     auth: {},
-    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     storage: {},
     env: {},
@@ -87,6 +87,7 @@ describe('missionRouter.create', () => {
         },
       },
       provider: { count: async () => 1 },
+      space: { findUnique: async () => ({ platformStudio: true }) },
       mission: {
         create: async (args: any) => {
           created.push(args);

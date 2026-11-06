@@ -252,7 +252,7 @@ Extend `PermissionService` for custom permission logic beyond CRUD operations.
 
 ## Security
 
-- All operations require authentication (via `adminProcedure`)
+- All operations require platform staff (via `platformStaffProcedure`, `PLATFORM_STAFF_SUBS`)
 - ADMIN role bypasses permission checks
 - All mutations are logged for auditing
 - IP address and user agent captured for security tracking

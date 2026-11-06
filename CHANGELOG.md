@@ -14,6 +14,37 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Upgrade note
+
+- **Set `PLATFORM_STAFF_SUBS` before deploying.** It lists the Registre subjects of the platform staff (today the four Facile owners; `BILLING_STAFF_SUBS` is read as a deprecated alias, so an existing value keeps working). With it unset, nobody can open the platform settings (Stripe, SMTP), the admin engine, audit logs or `/admin/offres`. Add it to the Dokploy compose env; `docker-compose.yml` forwards it.
+- Migrations `20261105120000_add_member_role` and `20261105120100_space_access` relabel every `ADMIN` user as `MEMBER` (no row is deleted), add `Space.platformStudio` (set to true on every space that already holds clients, documents, payments or missions) and add a nullable `Provider.spaceId` (existing providers stay shared).
+- Existing sessions keep working until they expire; the next sign-in issues a `MEMBER` token.
+- Rolling back to v0.13.0: its Prisma client does not know `MEMBER`, so first run `UPDATE "User" SET role = 'ADMIN' WHERE role = 'MEMBER';` (the extra columns and the enum value are harmless to v0.13.0).
+- Registre's Ardoise clients can move back to `access_policy=everyone` once this is live.
+
+### Security
+
+- Facile SSO sign-in no longer makes anyone a global `ADMIN`. Every SSO user is `MEMBER`, which grants nothing by itself: their spaces and space roles come only from Registre's directory, and directory-provisioned users are `MEMBER` too.
+- Platform powers are restricted to `PLATFORM_STAFF_SUBS`, checked server side by one middleware (`platformStaffProcedure`) that reads the user back from the database: `settings.getAdmin`, `settings.update` (Stripe secret and webhook keys, SMTP), the logo upload, the whole `admin.*` engine and audit logs, `billing.*` and the new `space.setPlatformStudio`. Empty means nobody.
+- Tenant isolation: every procedure is classified (public, self, client portal, member, space-scoped, platform staff) in `packages/trpc/src/access.db.test.ts`, which fails on an unclassified procedure and calls every space-scoped one as a member of another space against Postgres, asserting `NOT_FOUND` or `FORBIDDEN`, no leaked ids and no change to that space.
+- Providers belong to a space. A member sees and uses only their spaces' providers; legacy space-less providers are shared by platform studio spaces and only staff edit them. Documents, missions and sub-providers refuse a provider from another space. Provider logos must be files the caller uploaded, and a provider can no longer point at another space's document to download it.
+- Only spaces marked `platformStudio` may use platform resources on their clients: Stripe payments on the platform account, payment requests, reminders, welcome and magic-link emails through the platform SMTP, Plume signatures and Nuage archiving. Other spaces keep manual payments and documents.
+- A Registre space named like an unlinked local space adopts it only when every local owner owns the Registre space; otherwise it gets a fresh space, so it cannot inherit someone else's clients.
+- Client portal procedures (`portal.*`, `client.me`, `payment.myPayments`, `payment.billingPortal`) answer `FORBIDDEN` to anyone but a CLIENT; space procedures answer `FORBIDDEN` to a CLIENT. `user.deleteOwnAccount` refuses SSO accounts, whose deletion would cascade to documents in shared spaces.
+
+### Changed
+
+- The web app opens `/admin` to members and shows the Entreprise, Facturation, Paiements, Email and Intégrations settings tabs only to platform staff. Creating a provider asks for its space.
+- `adminProcedure` is gone; `UserRole` gains `MEMBER` (`ADMIN` stays as a legacy value equal to `MEMBER`). `@repo/auth-shared` exports `isMember` in place of `isAdmin`.
+
+### Follow-ups (still platform-wide)
+
+- Document numbering (`Settings.next*Number` and formats) is one counter for every space; tenants need their own sequence.
+- Default payment terms, late fee, recovery fee and VAT exemption mention, and the company block on Stripe receipts, come from the platform `Settings`.
+- The outbound webhook (`Settings.webhookUrl`) receives every space's events.
+- Provider pickers list every provider the user can see; the server refuses one from another space, but the pickers should filter by the client's space.
+- There is no UI for `space.setPlatformStudio` yet.
+
 ## [0.13.0] - 2026-11-04
 
 ### Security

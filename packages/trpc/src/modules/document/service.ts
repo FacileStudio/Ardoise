@@ -22,6 +22,7 @@ import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
 import { getSettingsRecord } from '../settings/service';
+import { providersOfSpace } from '../space/studio';
 import spaceService, { scopeSpaceId, scopeWhere, type Scope } from '../space/service';
 
 export const DocTypeSchema = z.enum([
@@ -688,8 +689,8 @@ export async function loadDocumentContext(
 
   const scope = await spaceService.resolveScope(db, userId, client.spaceId);
 
-  const provider = await db.provider.findUnique({
-    where: { id: providerId },
+  const provider = await db.provider.findFirst({
+    where: { AND: [{ id: providerId }, await providersOfSpace(db, client.spaceId)] },
   });
 
   if (!provider) {

@@ -1,15 +1,15 @@
-import { router, protectedProcedure } from '../../trpc';
+import { router, clientProcedure } from '../../trpc';
 import portalService from './service';
 import { PortalDocumentIdSchema, PortalDocumentsInputSchema } from './types';
 
 export const portalRouter = router({
-  overview: protectedProcedure.query(({ ctx }) => portalService.overview(ctx.db, ctx.user.id)),
+  overview: clientProcedure.query(({ ctx }) => portalService.overview(ctx.db, ctx.user.id)),
 
-  documents: protectedProcedure
+  documents: clientProcedure
     .input(PortalDocumentsInputSchema)
     .query(({ ctx, input }) => portalService.listDocuments(ctx.db, ctx.user.id, input)),
 
-  documentDownload: protectedProcedure
+  documentDownload: clientProcedure
     .input(PortalDocumentIdSchema)
     .query(({ ctx, input }) =>
       portalService.documentDownload(
@@ -21,7 +21,7 @@ export const portalRouter = router({
       )
     ),
 
-  signLink: protectedProcedure
+  signLink: clientProcedure
     .input(PortalDocumentIdSchema)
     .mutation(({ ctx, input }) =>
       portalService.signLink(ctx.db, ctx.user.id, ctx.user.email, input.id, ctx.env)

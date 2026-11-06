@@ -42,25 +42,32 @@ export function parseStorageKey(value: string | null): string | null {
   return segments.length > 0 ? segments.join('/') : null;
 }
 
+/**
+ * Who may read a stored file. A document PDF is checked first and always
+ * needs its space, so no other reference to the same key can unlock it. A
+ * provider logo needs the provider's space; a shared provider's logo needs a
+ * platform studio membership.
+ */
 async function findKeyReference(
   db: PrismaClient,
   key: string
-): Promise<{ spaceId: string } | 'public' | 'staff' | null> {
-  const settings = await db.settings.findFirst({ select: { logoUrl: true } });
-  if (settings && parseStorageKey(settings.logoUrl) === key) return 'public';
-
-  const providers = await db.provider.findMany({
-    where: { logoUrl: { endsWith: key } },
-    select: { logoUrl: true },
-  });
-  if (providers.some((row) => parseStorageKey(row.logoUrl) === key)) return 'staff';
-
+): Promise<{ spaceId: string } | 'public' | 'shared' | null> {
   const documents = await db.document.findMany({
     where: { pdfUrl: { endsWith: key } },
     select: { spaceId: true, pdfUrl: true },
   });
   const document = documents.find((row) => parseStorageKey(row.pdfUrl) === key);
   if (document) return { spaceId: document.spaceId };
+
+  const settings = await db.settings.findFirst({ select: { logoUrl: true } });
+  if (settings && parseStorageKey(settings.logoUrl) === key) return 'public';
+
+  const providers = await db.provider.findMany({
+    where: { logoUrl: { endsWith: key } },
+    select: { logoUrl: true, spaceId: true },
+  });
+  const provider = providers.find((row) => parseStorageKey(row.logoUrl) === key);
+  if (provider) return provider.spaceId ? { spaceId: provider.spaceId } : 'shared';
 
   return null;
 }
@@ -101,9 +108,12 @@ export const mediaService = {
       throw new TRPCError({ code: 'NOT_FOUND', message: NOT_ENTITLED });
     }
 
-    if (reference === 'staff') {
-      const user = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
-      if (user?.role !== 'ADMIN') throw new TRPCError({ code: 'NOT_FOUND', message: NOT_ENTITLED });
+    if (reference === 'shared') {
+      const studio = await db.spaceMember.findFirst({
+        where: { userId, space: { platformStudio: true } },
+        select: { id: true },
+      });
+      if (!studio) throw new TRPCError({ code: 'NOT_FOUND', message: NOT_ENTITLED });
     } else if (reference !== 'public') {
       await requireRowScope(db, userId, reference, NOT_ENTITLED);
     }

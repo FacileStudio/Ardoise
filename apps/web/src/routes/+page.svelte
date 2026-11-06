@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import authStore from '$lib/auth-store';
+  import { isMember } from '@repo/auth-shared';
   import 'iconify-icon';
 </script>
 
@@ -21,10 +22,10 @@
           </a>
         {:else}
           <a
-            href={resolve($authStore.user?.role === 'ADMIN' ? '/admin' : '/app')}
+            href={resolve(isMember($authStore.user) ? '/admin' : '/app')}
             class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            {$authStore.user?.role === 'ADMIN' ? 'Administration' : 'Mes factures'}
+            {isMember($authStore.user) ? 'Administration' : 'Mes factures'}
           </a>
         {/if}
       </div>
@@ -51,7 +52,7 @@
           </a>
         {:else}
           <a
-            href={resolve($authStore.user?.role === 'ADMIN' ? '/admin' : '/app')}
+            href={resolve(isMember($authStore.user) ? '/admin' : '/app')}
             class="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Accéder au portail

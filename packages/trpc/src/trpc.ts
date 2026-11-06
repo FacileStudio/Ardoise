@@ -3,6 +3,7 @@ import { type Context } from './context';
 import { hasAccess } from '@repo/auth-shared';
 import { UserRole } from '@repo/types';
 import { type OpenApiMeta } from 'trpc-to-openapi';
+import { isPlatformStaff } from './platform-staff';
 
 const t = initTRPC.context<Context>().meta<OpenApiMeta>().create({
   errorFormatter({ shape, error, ctx, path }) {
@@ -72,15 +73,44 @@ const isAuthed = t.middleware(({ next, ctx }) => {
   });
 });
 
-const isAdmin = t.middleware(({ next, ctx }) => {
-  if (!hasAccess(ctx.user, UserRole.ADMIN)) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Access restricted to administrators.',
-    });
+const isMember = t.middleware(({ next, ctx }) => {
+  if (!hasAccess(ctx.user, UserRole.MEMBER)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Access restricted to space members.' });
   }
   return next();
 });
 
+const isClient = t.middleware(({ next, ctx }) => {
+  if (ctx.user?.role !== UserRole.CLIENT) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Access restricted to client accounts.' });
+  }
+  return next();
+});
+
+const isStaff = t.middleware(async ({ next, ctx }) => {
+  if (!ctx.user || !(await isPlatformStaff(ctx.db, ctx.user.id, ctx.env))) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Réservé à l’équipe Facile Studio.' });
+  }
+  return next();
+});
+
+/** Anyone signed in, for their own account only. */
 export const protectedProcedure = t.procedure.use(loggingMiddleware).use(isAuthed);
-export const adminProcedure = protectedProcedure.use(isAdmin);
+
+/** A client portal account; every query keys on the caller's own Client row. */
+export const clientProcedure = protectedProcedure.use(isClient);
+
+/**
+ * A Facile SSO user working in spaces. The role only says "not a client":
+ * every query must still take its space from the caller's memberships
+ * (spaceService.resolveScope, requireRowScope).
+ */
+export const memberProcedure = protectedProcedure.use(isMember);
+
+/**
+ * Platform operators only (PLATFORM_STAFF_SUBS, read back from the database
+ * on every call). The one gate for platform settings, the admin engine,
+ * audit logs and the billing backoffice. Default deny: an unset list means
+ * nobody.
+ */
+export const platformStaffProcedure = memberProcedure.use(isStaff);

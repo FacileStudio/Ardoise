@@ -63,8 +63,10 @@ describe('admin media writes', () => {
       db: new Proxy(
         {},
         {
-          get: () =>
-            new Proxy(
+          get: (_target, model) =>
+            model === 'user'
+              ? { findUnique: async () => ({ role: 'MEMBER', status: 'ACTIVE', isBanned: false, accounts: [{ accountId: 'sub-staff' }] }) }
+              : new Proxy(
               {},
               {
                 get: () => async () => {
@@ -74,7 +76,8 @@ describe('admin media writes', () => {
             ),
         }
       ),
-      user: { id: 'u1', role: 'ADMIN', email: 'a@b.c' },
+      user: { id: 'u1', role: 'MEMBER', email: 'a@b.c' },
+      env: { OIDC_ISSUER: 'https://sso.test', PLATFORM_STAFF_SUBS: 'sub-staff' },
       log: { debug() {}, error() {}, info() {}, warn() {} },
     } as never);
 

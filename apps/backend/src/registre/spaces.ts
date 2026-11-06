@@ -86,9 +86,9 @@ export async function buildImport(db: PrismaClient, issuer: string): Promise<Imp
  * Makes Ardoise's spaces match the snapshot, in one transaction, idempotently.
  * Spaces link by `registreSpaceId`, then by an unlinked space of the same name
  * (case-insensitive), else a space is created. Members resolve by Registre
- * identity, then by email, else an SSO-only ADMIN user is pre-provisioned,
- * since spaces live in the admin panel and only Facile staff hold a Registre
- * account. An existing user's role is never changed. Memberships of users with
+ * identity, then by verified email, else an SSO-only MEMBER user is
+ * pre-provisioned; MEMBER grants nothing beyond the memberships written here.
+ * An existing user's role is never changed. Memberships of users with
  * a Registre identity who are absent from the space are removed; local-only
  * users and unlinked spaces are never touched. A linked space missing from the
  * snapshot is left alone and logged; a deleted one arrives with no members.
@@ -98,7 +98,7 @@ export async function applySnapshot(deps: DirectoryDeps, snapshot: Snapshot): Pr
     async (tx) => {
       const seen: string[] = [];
       for (const space of snapshot.spaces) {
-        const spaceId = await linkSpace(tx, space);
+        const spaceId = await linkSpace(tx, deps.issuer, space);
         seen.push(spaceId);
         await syncMembers(tx, deps, spaceId, space.members);
       }
@@ -114,16 +114,29 @@ export async function applySnapshot(deps: DirectoryDeps, snapshot: Snapshot): Pr
   }
 }
 
-/** Finds or creates the space mirroring `space` and sets its link and name. */
-async function linkSpace(tx: Tx, space: DirectorySpace): Promise<string> {
+/**
+ * Finds or creates the space mirroring `space` and sets its link and name. An
+ * unlinked local space is adopted by name only when it is the one Ardoise
+ * itself imported: see `adoptable`. Anything else gets a fresh space, so a
+ * Registre space named like someone else's never inherits their clients.
+ */
+async function linkSpace(tx: Tx, issuer: string, space: DirectorySpace): Promise<string> {
   const select = { id: true, name: true, registreSpaceId: true } as const;
+  const candidates = await tx.space.findMany({
+    where: { registreSpaceId: null, name: { equals: space.name, mode: 'insensitive' } },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      ...select,
+      members: {
+        where: { role: 'OWNER' },
+        select: { user: { select: { accounts: { where: { providerId: issuer }, select: { accountId: true } } } } },
+      },
+    },
+  });
   const local =
     (await tx.space.findUnique({ where: { registreSpaceId: space.id }, select })) ??
-    (await tx.space.findFirst({
-      where: { registreSpaceId: null, name: { equals: space.name, mode: 'insensitive' } },
-      orderBy: { createdAt: 'asc' },
-      select,
-    }));
+    candidates.find((candidate) => adoptable(candidate.members, space)) ??
+    null;
   if (!local) {
     const created = await tx.space.create({ data: { name: space.name, registreSpaceId: space.id }, select });
     return created.id;
@@ -132,6 +145,21 @@ async function linkSpace(tx: Tx, space: DirectorySpace): Promise<string> {
     await tx.space.update({ where: { id: local.id }, data: { name: space.name, registreSpaceId: space.id } });
   }
   return local.id;
+}
+
+/**
+ * Whether an unlinked local space is the one Ardoise imported as `space`: its
+ * local owners hold Registre identities, and every one of them owns the
+ * Registre space. The import sends every space that has members, so after it
+ * the only unlinked spaces left are empty ones, which are never adopted.
+ */
+export function adoptable(
+  owners: Array<{ user: { accounts: Array<{ accountId: string }> } }>,
+  space: DirectorySpace
+): boolean {
+  const subs = owners.flatMap((owner) => owner.user.accounts.map((account) => account.accountId));
+  const remote = new Set(space.members.filter((member) => member.role === RoleOwner).map((member) => member.sub));
+  return subs.length > 0 && subs.every((sub) => remote.has(sub));
 }
 
 /** Makes one space's memberships match Registre's, sparing local-only users. */
@@ -170,7 +198,7 @@ async function syncMembers(tx: Tx, deps: DirectoryDeps, spaceId: string, members
 
 /**
  * Returns the local user for a snapshot member: by Registre identity, then by
- * email (recording the identity), else a pre-provisioned SSO-only admin whose
+ * email (recording the identity), else a pre-provisioned SSO-only member whose
  * first sign-in lands on the row through the recorded identity. The email
  * match happens only when the snapshot marks the email verified, and never
  * binds a CLIENT row or a user already bound to another subject; those
@@ -220,10 +248,10 @@ async function linkable(
   return true;
 }
 
-/** Creates the SSO-only admin a Registre member signs in to for the first time. */
+/** Creates the SSO-only member a Registre member signs in to for the first time. */
 async function provisionUser(tx: Tx, member: DirectoryMember, email: string): Promise<string> {
   const user = await tx.user.create({
-    data: { email, ...splitName(member.name, email), role: 'ADMIN', emailVerified: member.email_verified === true },
+    data: { email, ...splitName(member.name, email), role: 'MEMBER', emailVerified: member.email_verified === true },
     select: { id: true },
   });
   return user.id;

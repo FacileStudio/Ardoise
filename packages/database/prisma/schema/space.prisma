@@ -9,6 +9,7 @@ model Space {
   name            String        @db.Text
   registreSpaceId String?       @unique @db.Text
   description String?       @db.Text
+  platformStudio  Boolean       @default(false)
   createdAt   DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime      @default(now()) @updatedAt @db.Timestamptz(3)
   members     SpaceMember[]
@@ -17,6 +18,7 @@ model Space {
   documents   Document[]
   payments    Payment[]
   missions Mission[]
+  providers   Provider[]
 }
 
 model SpaceMember {

@@ -115,7 +115,7 @@ recurring payments against Stripe test clocks manually.
 
 1. Create `packages/trpc/src/modules/<name>/` with `router.ts` and `service.ts`, plus `types.ts`
    for the zod input schemas if there are more than a couple.
-2. Build the router from `publicProcedure`, `protectedProcedure` or `adminProcedure` imported
+2. Build the router from `publicProcedure`, `protectedProcedure`, `clientProcedure`, `memberProcedure` or `platformStaffProcedure` imported
    from `../../trpc`.
 3. Register it on `appRouter` in `packages/trpc/src/index.ts`. The client picks up the new
    procedures through the exported `AppRouter` type with no further wiring.

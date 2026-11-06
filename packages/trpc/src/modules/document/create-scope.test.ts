@@ -147,6 +147,7 @@ function dbFor(member: { role: 'MEMBER' } | null, seen: any[]) {
       },
     },
     provider: { findFirst: async () => null, findMany: async () => [] },
+    space: { findUnique: async () => ({ platformStudio: true }) },
   };
 
   return db as PrismaClient;
@@ -155,7 +156,7 @@ function dbFor(member: { role: 'MEMBER' } | null, seen: any[]) {
 function callerFor(member: { role: 'MEMBER' } | null, seen: any[]) {
   return documentRouter.createCaller({
     db: dbFor(member, seen),
-    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     storage: {},
     env: {},

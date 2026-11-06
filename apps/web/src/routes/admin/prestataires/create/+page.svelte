@@ -2,7 +2,8 @@
 	import { trpc } from '$lib/trpc';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Button, Field, Input, Page, PageHeader, Section, toast } from '@facile/muse';
+	import { Alert, Button, Field, Input, Page, PageHeader, Section, Select, toast } from '@facile/muse';
+	import { spaceFilter } from '$lib/space-filter.svelte';
 	import { ImageUpload } from '$lib/ui';
 	import { logger } from '@repo/logger';
 
@@ -19,6 +20,7 @@
 	}
 
 	let formData = $state({
+		spaceId: spaceFilter.spaceId ?? '',
 		name: '',
 		legalName: '',
 		siret: '',
@@ -34,6 +36,12 @@
 		tvaRate: 20,
 	});
 
+	$effect(() => {
+		if (!formData.spaceId && spaceFilter.spaces.length === 1) {
+			formData.spaceId = spaceFilter.spaces[0].id;
+		}
+	});
+
 	function getFieldError(field: string): string {
 		return fieldErrors[field] || '';
 	}
@@ -46,6 +54,7 @@
 	function normalizePayload() {
 		const optional = (value: string) => value.trim() || undefined;
 		return {
+			spaceId: formData.spaceId,
 			name: formData.name.trim(),
 			legalName: optional(formData.legalName),
 			siret: optional(formData.siret),
@@ -65,6 +74,7 @@
 	function validateForm(): boolean {
 		const nextErrors: Record<string, string> = {};
 
+		if (!formData.spaceId) nextErrors.spaceId = "Choisissez l'espace du prestataire";
 		if (!formData.name.trim()) nextErrors.name = 'Le nom du prestataire est requis';
 		if (Number(formData.tvaRate) < 0 || Number(formData.tvaRate) > 100) {
 			nextErrors.tvaRate = 'Le taux de TVA doit être entre 0 et 100';
@@ -148,6 +158,14 @@
 	{/if}
 
 	<Section title="Informations générales" card>
+		<Field label="Espace *" error={getFieldError('spaceId')}>
+			<Select bind:value={formData.spaceId}>
+				<option value="" disabled>Choisir un espace</option>
+				{#each spaceFilter.spaces as space (space.id)}
+					<option value={space.id}>{space.name}</option>
+				{/each}
+			</Select>
+		</Field>
 		<Field label="Nom du prestataire *" error={getFieldError('name')}>
 			<Input bind:value={formData.name} placeholder="Nom du prestataire" />
 		</Field>

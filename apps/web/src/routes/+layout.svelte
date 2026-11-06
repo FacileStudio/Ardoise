@@ -7,7 +7,7 @@
   import { page } from '$app/state';
   import { Spinner, Toaster } from '@facile/muse';
   import { setLocale } from '@repo/i18n/svelte';
-  import { isAdmin, type SessionUser } from '@repo/auth-shared';
+  import { isMember, type SessionUser } from '@repo/auth-shared';
   import SmtpRequiredModal from '$lib/components/SmtpRequiredModal.svelte';
   import mdi from '$lib/icons/mdi.json';
   import solar from '$lib/icons/solar.json';
@@ -42,10 +42,10 @@
     if (path === '/login' && user && verified) {
       const next = page.url.searchParams.get('next');
       if (next?.startsWith('/') && !next.startsWith('//')) goto(resolve(next as '/'));
-      else goto(resolve(isAdmin(user) ? '/admin/missions' : '/app'));
+      else goto(resolve(isMember(user) ? '/admin/missions' : '/app'));
     }
 
-    if (path.startsWith('/admin') && user && !isAdmin(user)) goto(resolve('/app'));
+    if (path.startsWith('/admin') && user && !isMember(user)) goto(resolve('/app'));
   });
 </script>
 

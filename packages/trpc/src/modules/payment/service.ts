@@ -12,6 +12,7 @@ import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
+import { requirePlatformStudio } from '../space/studio';
 import { syncMissionPaid } from '../mission/sync';
 import { isOverdue, startOfDueDay } from './overdue';
 import type {
@@ -300,6 +301,7 @@ export const paymentService = {
       }),
       'Client not found'
     );
+    if (data.collectionMethod === 'STRIPE') await requirePlatformStudio(db, client.spaceId);
 
     if (data.attachedDocumentIds && data.attachedDocumentIds.length > 0) {
       const documents = await db.document.findMany({
@@ -819,6 +821,7 @@ export const paymentService = {
       }),
       'Payment not found'
     );
+    await requirePlatformStudio(db, payment.spaceId);
 
     if (payment.status !== 'PENDING') {
       throw new TRPCError({

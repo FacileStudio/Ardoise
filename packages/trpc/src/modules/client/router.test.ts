@@ -29,7 +29,7 @@ function callerFor(member: { role: 'MEMBER' } | null, created: any[]) {
   return clientRouter.createCaller({
     db: dbFor(member, created),
     auth: {},
-    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     storage: {},
     env: {},

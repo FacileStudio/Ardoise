@@ -5,7 +5,7 @@ import { PrismaClient as Client } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
-import { applySnapshot, buildImport, splitName } from './spaces';
+import { adoptable, applySnapshot, buildImport, splitName } from './spaces';
 import { startDirectorySync } from './boot';
 
 /**
@@ -62,7 +62,7 @@ describe.skipIf(!url)('applySnapshot', () => {
 
   beforeAll(async () => {
     await db.$executeRawUnsafe('TRUNCATE "User", "Space" CASCADE');
-    const user = async (key: string, sub?: string, role: 'ADMIN' | 'CLIENT' = 'ADMIN') => {
+    const user = async (key: string, sub?: string, role: 'MEMBER' | 'CLIENT' = 'MEMBER') => {
       const row = await db.user.create({
         data: { email: `${key}@example.test`, firstName: key, lastName: '', role },
       });
@@ -100,7 +100,7 @@ describe.skipIf(!url)('applySnapshot', () => {
     ids.solo = solo.id;
   }, 60_000);
 
-  test('links by name, provisions admins, maps roles, links emails only when verified, and is idempotent', async () => {
+  test('links by name, provisions members (never ADMIN), maps roles, links emails only when verified, and is idempotent', async () => {
     const payload = await buildImport(db, issuer);
     const acmeImport = payload.find((space) => space.name === 'acme');
     expect(acmeImport?.members).toContainEqual({ sub: 'sub-alice', role: 'owner' });
@@ -149,7 +149,7 @@ describe.skipIf(!url)('applySnapshot', () => {
     });
     const erin = acme.members.find((m) => m.user.email === 'erin@example.test')!.user;
     expect(erin.firstName).toBe('Erin');
-    expect(erin.role).toBe('ADMIN');
+    expect(erin.role).toBe('MEMBER');
     expect(erin.password).toBeNull();
     expect(erin.emailVerified).toBe(false);
     expect(await db.account.count({ where: { accountId: 'sub-gina' } })).toBe(0);
@@ -177,4 +177,44 @@ describe.skipIf(!url)('applySnapshot', () => {
     const emptied = await db.spaceMember.findMany({ where: { spaceId: ids.acme }, include: { user: true } });
     expect(emptied.map((m) => m.user.email)).toEqual(['dave@example.test']);
   }, 60_000);
+
+  test('a Registre space named like an unlinked local space never inherits its clients', async () => {
+    const local = await db.space.create({
+      data: { name: 'Kaktuse', clients: { create: { contactFirstName: 'K', contactLastName: 'K', companyName: 'Kaktuse' } } },
+    });
+    const stranger = { sub: 'sub-stranger', email: 'x@evil.test', name: 'X', picture: '', role: 'owner' };
+    await applySnapshot(
+      { db, issuer, logger: silent },
+      { version: 3, spaces: [{ id: 'space-evil', name: 'kaktuse', members: [stranger] }] }
+    );
+
+    const mirrored = await db.space.findUniqueOrThrow({ where: { registreSpaceId: 'space-evil' }, include: { clients: true } });
+    expect(mirrored.id).not.toBe(local.id);
+    expect(mirrored.clients).toEqual([]);
+    const untouched = await db.space.findUniqueOrThrow({ where: { id: local.id }, include: { clients: true } });
+    expect(untouched.registreSpaceId).toBeNull();
+    expect(untouched.clients).toHaveLength(1);
+    const provisioned = await db.user.findFirstOrThrow({ where: { email: 'x@evil.test' } });
+    expect(provisioned.role).toBe('MEMBER');
+  }, 60_000);
+});
+
+describe('adoptable', () => {
+  const owner = (sub: string) => ({ user: { accounts: [{ accountId: sub }] } });
+  const remote = (members: Array<[string, string]>) => ({
+    id: 'r',
+    name: 'n',
+    members: members.map(([sub, role]) => ({ sub, role, email: '', name: '', picture: '' })),
+  });
+
+  test('adopts only when every identified local owner owns the Registre space', () => {
+    expect(adoptable([owner('a')], remote([['a', 'owner']]))).toBe(true);
+    expect(adoptable([owner('a')], remote([['a', 'member']]))).toBe(false);
+    expect(adoptable([owner('a'), owner('b')], remote([['a', 'owner']]))).toBe(false);
+  });
+
+  test('never adopts a space with no identified owner', () => {
+    expect(adoptable([], remote([['a', 'owner']]))).toBe(false);
+    expect(adoptable([{ user: { accounts: [] } }], remote([['a', 'owner']]))).toBe(false);
+  });
 });

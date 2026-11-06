@@ -30,6 +30,7 @@ export interface AuthState {
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.CLIENT]: 1,
+  [UserRole.MEMBER]: 2,
   [UserRole.ADMIN]: 2,
 };
 
@@ -41,7 +42,12 @@ export const hasAccess = (
   return ROLE_HIERARCHY[user.role] >= ROLE_HIERARCHY[requiredRole];
 };
 
-export const isAdmin = (user: { role: UserRole } | null | undefined) =>
-  user?.role === UserRole.ADMIN;
+/**
+ * Whether the user works in spaces (/admin) rather than in the client portal.
+ * Says nothing about platform powers: those come only from the server's
+ * PLATFORM_STAFF_SUBS check.
+ */
+export const isMember = (user: { role: UserRole } | null | undefined) =>
+  hasAccess(user, UserRole.MEMBER);
 
 export * from './store';

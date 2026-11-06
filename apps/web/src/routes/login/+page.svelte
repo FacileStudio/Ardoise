@@ -5,7 +5,7 @@
   import { trpc } from '$lib/trpc';
   import authStore from '$lib/auth-store';
   import env from '$lib/env';
-  import { isAdmin, type SessionUser } from '@repo/auth-shared';
+  import { isMember, type SessionUser } from '@repo/auth-shared';
   import { Alert, Button, Field, Input } from '@facile/muse';
   import { i18n } from '@repo/i18n/svelte';
   import 'iconify-icon';
@@ -34,7 +34,7 @@
   };
 
   function redirectForRole(user: SessionUser) {
-    return isAdmin(user) ? '/admin/clients' : '/app';
+    return isMember(user) ? '/admin/clients' : '/app';
   }
 
   onMount(async () => {

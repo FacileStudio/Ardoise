@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { Button, Modal } from '@facile/muse';
-	import { isAdmin } from '@repo/auth-shared';
-	import authStore from '$lib/auth-store';
+	import { platformStaff } from '$lib/platform-staff.svelte';
 	import { smtpNotice } from '$lib/smtp-notice.svelte';
 
-	const admin = $derived(isAdmin($authStore.user));
+	const admin = $derived(platformStaff.staff);
 
 	function openSettings() {
 		smtpNotice.open = false;

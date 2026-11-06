@@ -7,14 +7,20 @@ it for things tRPC cannot carry. Generated from `packages/trpc/src/` and
 
 ## Access levels
 
-| Level | Middleware | Requirement |
+| Level | Procedure | Requirement |
 |---|---|---|
-| public | logging | none |
-| protected | logging, `isAuthed` | a valid `auth_token` cookie or `Authorization: Bearer` token |
-| admin | logging, `isAuthed`, `isAdmin` | the above plus `role = ADMIN` |
+| public | `publicProcedure` | none |
+| self | `protectedProcedure` | a valid `auth_token` cookie or `Authorization: Bearer` token; touches only the caller's own account |
+| client portal | `clientProcedure` | the above plus `role = CLIENT`; every query keys on the caller's own `Client` row |
+| member | `memberProcedure` | the above plus `role = MEMBER` (legacy `ADMIN` counts the same). Grants no data by itself |
+| space-scoped | `memberProcedure` + `spaceService.resolveScope` / `requireRowScope` | the caller is a `SpaceMember` of the row's space. Another space's row answers `NOT_FOUND` or `FORBIDDEN` |
+| platform staff | `platformStaffProcedure` | a member whose Facile SSO subject is in `PLATFORM_STAFF_SUBS`, read back from the database on every call |
 
-Failures come back as tRPC errors: `UNAUTHORIZED` ("Please log in."), `FORBIDDEN` ("Access
-restricted to administrators."), `NOT_FOUND`. In production, `INTERNAL_SERVER_ERROR` messages are
+Every procedure is listed with its level in `packages/trpc/src/access.db.test.ts`. A new procedure
+fails that test until it is classified, and the test then calls each one as a client, as a
+non-staff member and as a member of another space.
+
+Failures come back as tRPC errors: `UNAUTHORIZED` ("Please log in."), `FORBIDDEN`, `NOT_FOUND`. In production, `INTERNAL_SERVER_ERROR` messages are
 replaced with a generic string and stacks are stripped.
 
 A Scalar API reference is served at `GET /docs`, over an OpenAPI document at
@@ -275,16 +281,17 @@ Every procedure is admin-level.
 
 ## `billing`
 
-The suite billing backoffice. Every procedure except `access` runs `billingStaffProcedure`: the
-caller is read back from the database and must be an active ADMIN whose Facile SSO subject is in
-`BILLING_STAFF_SUBS` (or whose snapshot email, when Registre marks it verified, is in
-`BILLING_STAFF_EMAILS`). A plain ADMIN gets `FORBIDDEN`. The generic `admin.*` engine can no
+The suite billing backoffice. Every procedure except `access` runs `platformStaffProcedure`: the
+caller is read back from the database and must be an active, non-client account whose Facile SSO
+subject is in `PLATFORM_STAFF_SUBS` (or whose snapshot email, when Registre marks it verified, is in
+`PLATFORM_STAFF_EMAILS`; the `BILLING_STAFF_*` names are deprecated aliases). Anyone else gets
+`FORBIDDEN`. The generic `admin.*` engine can no
 longer write a user's email, verification, role or status, and never creates users. Every mutation writes an `AuditLog` row
 (`entity` `billing.*`, `changes: {before, after}`).
 
 | Procedure | Type | What it does |
 |---|---|---|
-| `access` | query | `{ staff }`, for the sidebar and the `/admin/offres` server guard |
+| `access` | query | `{ staff }`: whether the caller is platform staff, for the sidebar, the settings tabs and the `/admin/offres` server guard |
 | `features`, `saveFeature` | query, mutation | List, create or update features. Key `app.feature`, kind fixed after creation |
 | `plans`, `savePlan` | query, mutation | Plans with their versions and live subscriber counts |
 | `version`, `createDraft`, `saveDraft`, `deleteDraft` | query, mutations | A version's values and prices. Only drafts change; `createDraft` copies the latest version |

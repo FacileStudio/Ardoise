@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import type { Prisma, PrismaClient } from '@repo/database';
-import { adminProcedure, router } from '../../trpc';
+import { memberProcedure, platformStaffProcedure, router } from '../../trpc';
 import { invalidateCatalog } from './api';
 import { pushEntitlementsNow, requestEntitlementPush } from './push';
-import { billingStaffProcedure, isBillingStaff } from './staff';
+import { isPlatformStaff } from '../../platform-staff';
 import {
   LIVE_STATUSES,
   assertDraft,
@@ -147,16 +147,16 @@ const versionSummary = {
 
 /** The billing backoffice: features, versioned plans, overrides, comps and subscriptions. Staff only. */
 export const billingRouter = router({
-  access: adminProcedure.query(async ({ ctx }) => ({
-    staff: await isBillingStaff(ctx.db, ctx.user.id, ctx.env),
+  access: memberProcedure.query(async ({ ctx }) => ({
+    staff: await isPlatformStaff(ctx.db, ctx.user.id, ctx.env),
   })),
 
-  features: billingStaffProcedure.query(async ({ ctx }) => {
+  features: platformStaffProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db.feature.findMany({ orderBy: [{ app: 'asc' }, { key: 'asc' }] });
     return rows.map((row) => ({ ...row, defaultValue: row.defaultValue as EntitlementValue }));
   }),
 
-  saveFeature: billingStaffProcedure.input(featureInput).mutation(async ({ ctx, input }) => {
+  saveFeature: platformStaffProcedure.input(featureInput).mutation(async ({ ctx, input }) => {
     if (!isValueOfKind(input.kind, input.defaultValue)) badRequest('Valeur par défaut invalide');
     const before = await ctx.db.feature.findUnique({ where: { key: input.key } });
     if (before && before.kind !== input.kind) badRequest('Le type d’une fonctionnalité ne change pas');
@@ -171,14 +171,14 @@ export const billingRouter = router({
     return after;
   }),
 
-  plans: billingStaffProcedure.query(({ ctx }) =>
+  plans: platformStaffProcedure.query(({ ctx }) =>
     ctx.db.plan.findMany({
       orderBy: [{ sortOrder: 'asc' }, { key: 'asc' }],
       include: { versions: { orderBy: { version: 'desc' }, select: versionSummary } },
     })
   ),
 
-  savePlan: billingStaffProcedure.input(planInput).mutation(async ({ ctx, input }) => {
+  savePlan: platformStaffProcedure.input(planInput).mutation(async ({ ctx, input }) => {
     const before = await ctx.db.plan.findUnique({ where: { key: input.key } });
     const after = await ctx.db.plan.upsert({
       where: { key: input.key },
@@ -190,7 +190,7 @@ export const billingRouter = router({
     return after;
   }),
 
-  version: billingStaffProcedure.input(z.object({ id }).strict()).query(async ({ ctx, input }) => {
+  version: platformStaffProcedure.input(z.object({ id }).strict()).query(async ({ ctx, input }) => {
     const version = await requireVersion(ctx.db, input.id);
     return {
       ...version,
@@ -201,7 +201,7 @@ export const billingRouter = router({
     };
   }),
 
-  createDraft: billingStaffProcedure.input(z.object({ planId: id }).strict()).mutation(async ({ ctx, input }) => {
+  createDraft: platformStaffProcedure.input(z.object({ planId: id }).strict()).mutation(async ({ ctx, input }) => {
     const plan = await ctx.db.plan.findUnique({
       where: { id: input.planId },
       include: { versions: { orderBy: { version: 'desc' }, take: 1, include: { features: true, prices: true } } },
@@ -233,7 +233,7 @@ export const billingRouter = router({
     return draft;
   }),
 
-  saveDraft: billingStaffProcedure.input(draftInput).mutation(async ({ ctx, input }) => {
+  saveDraft: platformStaffProcedure.input(draftInput).mutation(async ({ ctx, input }) => {
     const before = await requireVersion(ctx.db, input.id);
     assertDraft(before);
     const features = await checkValues(ctx.db, input.values);
@@ -264,7 +264,7 @@ export const billingRouter = router({
     return after;
   }),
 
-  deleteDraft: billingStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
+  deleteDraft: platformStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
     const before = await requireVersion(ctx.db, input.id);
     assertDraft(before);
     if ((await ctx.db.planVersion.count({ where: { planId: before.planId } })) === 1) {
@@ -276,11 +276,11 @@ export const billingRouter = router({
     return { ok: true };
   }),
 
-  previewPublish: billingStaffProcedure
+  previewPublish: platformStaffProcedure
     .input(z.object({ id }).strict())
     .query(({ ctx, input }) => previewPublish(ctx.db, input.id)),
 
-  publish: billingStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
+  publish: platformStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
     const before = await requireVersion(ctx.db, input.id);
     const result = await publishVersion(ctx.db, await stripeOrNull(ctx), input.id);
     const after = await requireVersion(ctx.db, input.id);
@@ -290,7 +290,7 @@ export const billingRouter = router({
     return after;
   }),
 
-  migrateSubscribers: billingStaffProcedure
+  migrateSubscribers: platformStaffProcedure
     .input(z.object({ planId: id, mode: z.enum(['period_end', 'immediate']) }).strict())
     .mutation(async ({ ctx, input }) => {
       const stripe = await stripeOrNull(ctx);
@@ -301,7 +301,7 @@ export const billingRouter = router({
       return result;
     }),
 
-  overrides: billingStaffProcedure.query(async ({ ctx }) => {
+  overrides: platformStaffProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db.entitlementOverride.findMany({
       orderBy: { createdAt: 'desc' },
       include: { feature: { select: { key: true, kind: true } } },
@@ -309,7 +309,7 @@ export const billingRouter = router({
     return rows.map((row) => ({ ...row, value: row.value as EntitlementValue }));
   }),
 
-  createOverride: billingStaffProcedure.input(overrideInput).mutation(async ({ ctx, input }) => {
+  createOverride: platformStaffProcedure.input(overrideInput).mutation(async ({ ctx, input }) => {
     const features = await checkValues(ctx.db, { [input.feature]: input.value });
     const after = await ctx.db.entitlementOverride.create({
       data: {
@@ -329,7 +329,7 @@ export const billingRouter = router({
     return after;
   }),
 
-  deleteOverride: billingStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
+  deleteOverride: platformStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
     const before = await ctx.db.entitlementOverride.findUnique({ where: { id: input.id } });
     if (!before) throw new TRPCError({ code: 'NOT_FOUND', message: 'Dérogation introuvable' });
     await ctx.db.entitlementOverride.delete({ where: { id: input.id } });
@@ -338,9 +338,9 @@ export const billingRouter = router({
     return { ok: true };
   }),
 
-  comps: billingStaffProcedure.query(({ ctx }) => ctx.db.compedPerson.findMany({ orderBy: { email: 'asc' } })),
+  comps: platformStaffProcedure.query(({ ctx }) => ctx.db.compedPerson.findMany({ orderBy: { email: 'asc' } })),
 
-  saveComp: billingStaffProcedure.input(compInput).mutation(async ({ ctx, input }) => {
+  saveComp: platformStaffProcedure.input(compInput).mutation(async ({ ctx, input }) => {
     const email = input.email.toLowerCase();
     if (!(await ctx.db.plan.findUnique({ where: { key: input.planKey } }))) badRequest('Offre inconnue');
     const before = await ctx.db.compedPerson.findUnique({ where: { email } });
@@ -355,7 +355,7 @@ export const billingRouter = router({
     return after;
   }),
 
-  deleteComp: billingStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
+  deleteComp: platformStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
     const before = await ctx.db.compedPerson.findUnique({ where: { id: input.id } });
     if (!before) throw new TRPCError({ code: 'NOT_FOUND', message: 'Personne introuvable' });
     await ctx.db.compedPerson.delete({ where: { id: input.id } });
@@ -364,11 +364,11 @@ export const billingRouter = router({
     return { ok: true };
   }),
 
-  spaceComps: billingStaffProcedure.query(({ ctx }) =>
+  spaceComps: platformStaffProcedure.query(({ ctx }) =>
     ctx.db.compedSpace.findMany({ orderBy: { createdAt: 'desc' } })
   ),
 
-  saveSpaceComp: billingStaffProcedure.input(spaceCompInput).mutation(async ({ ctx, input }) => {
+  saveSpaceComp: platformStaffProcedure.input(spaceCompInput).mutation(async ({ ctx, input }) => {
     if (!(await ctx.db.plan.findUnique({ where: { key: input.planKey } }))) badRequest('Offre inconnue');
     const before = await ctx.db.compedSpace.findUnique({ where: { registreSpaceId: input.registreSpaceId } });
     const fields = { reason: input.reason, planKey: input.planKey };
@@ -382,7 +382,7 @@ export const billingRouter = router({
     return after;
   }),
 
-  deleteSpaceComp: billingStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
+  deleteSpaceComp: platformStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
     const before = await ctx.db.compedSpace.findUnique({ where: { id: input.id } });
     if (!before) throw new TRPCError({ code: 'NOT_FOUND', message: 'Espace introuvable' });
     await ctx.db.compedSpace.delete({ where: { id: input.id } });
@@ -391,18 +391,18 @@ export const billingRouter = router({
     return { ok: true };
   }),
 
-  subscriptions: billingStaffProcedure.query(({ ctx }) =>
+  subscriptions: platformStaffProcedure.query(({ ctx }) =>
     ctx.db.spaceSubscription.findMany({
       orderBy: { updatedAt: 'desc' },
       include: { planVersion: { select: { version: true, plan: { select: { key: true, name: true } } } } },
     })
   ),
 
-  pushState: billingStaffProcedure.query(({ ctx }) =>
+  pushState: platformStaffProcedure.query(({ ctx }) =>
     ctx.db.entitlementPushState.findUnique({ where: { id: 'singleton' } })
   ),
 
-  pushNow: billingStaffProcedure.mutation(async ({ ctx }) => {
+  pushNow: platformStaffProcedure.mutation(async ({ ctx }) => {
     const outcome = await pushEntitlementsNow();
     await audit(ctx, 'push', 'singleton', 'UPDATE', null, { status: outcome.status });
     return outcome;

@@ -285,17 +285,21 @@ describe('clientService.getClientById', () => {
 describe('mediaService.resolveDownloadKey', () => {
   function dbWithReferences(options: {
     settingsLogoUrl?: string | null;
-    providers?: Array<{ logoUrl: string | null }>;
+    providers?: Array<{ logoUrl: string | null; spaceId?: string | null }>;
     documents?: Array<{ spaceId: string; pdfUrl: string | null }>;
     member?: { role: 'MEMBER' } | null;
-    role?: 'ADMIN' | 'CLIENT';
+    studio?: boolean;
   }) {
     return {
       settings: { findFirst: async () => ({ logoUrl: options.settingsLogoUrl ?? null }) },
-      provider: { findMany: async () => options.providers ?? [] },
+      provider: {
+        findMany: async () => (options.providers ?? []).map((row) => ({ spaceId: null, ...row })),
+      },
       document: { findMany: async () => options.documents ?? [] },
-      spaceMember: { findUnique: async () => options.member ?? null },
-      user: { findUnique: async () => ({ role: options.role ?? 'CLIENT' }) },
+      spaceMember: {
+        findUnique: async () => options.member ?? null,
+        findFirst: async () => (options.studio ? { id: 'm1' } : null),
+      },
     } as unknown as PrismaClient;
   }
 
@@ -333,36 +337,54 @@ describe('mediaService.resolveDownloadKey', () => {
     ).toEqual({ code: 'NOT_FOUND', message: 'File not found' });
   });
 
-  it('refuses a provider logo to a caller who is not staff', async () => {
+  it('refuses a shared provider logo outside a platform studio space', async () => {
     const db = dbWithReferences({
       providers: [{ logoUrl: 'https://api.test/storage/uploads/user-2/logo.png' }],
-      role: 'CLIENT',
+      studio: false,
     });
 
     expect(
       await trpcErrorOf(() =>
-        mediaService.resolveDownloadKey(
-          db,
-          'user-1',
-          'https://api.test/storage/uploads/user-2/logo.png'
-        )
+        mediaService.resolveDownloadKey(db, 'user-1', 'https://api.test/storage/uploads/user-2/logo.png')
       )
     ).toEqual({ code: 'NOT_FOUND', message: 'File not found' });
   });
 
-  it('mints a provider logo for staff', async () => {
+  it('mints a shared provider logo for a platform studio member', async () => {
     const db = dbWithReferences({
       providers: [{ logoUrl: 'https://api.test/storage/uploads/user-2/logo.png' }],
-      role: 'ADMIN',
+      studio: true,
     });
 
     expect(
-      await mediaService.resolveDownloadKey(
-        db,
-        'user-1',
-        'https://api.test/storage/uploads/user-2/logo.png'
-      )
+      await mediaService.resolveDownloadKey(db, 'user-1', 'https://api.test/storage/uploads/user-2/logo.png')
     ).toBe('uploads/user-2/logo.png');
+  });
+
+  it('needs the provider space for a per-space provider logo', async () => {
+    const logo = 'https://api.test/storage/uploads/user-2/logo.png';
+    const outsider = dbWithReferences({ providers: [{ logoUrl: logo, spaceId: 'space-b' }], member: null, studio: true });
+    expect(await trpcErrorOf(() => mediaService.resolveDownloadKey(outsider, 'user-1', logo))).toEqual({
+      code: 'NOT_FOUND',
+      message: 'File not found',
+    });
+    const member = dbWithReferences({ providers: [{ logoUrl: logo, spaceId: 'space-b' }], member: { role: 'MEMBER' } });
+    expect(await mediaService.resolveDownloadKey(member, 'user-1', logo)).toBe('uploads/user-2/logo.png');
+  });
+
+  it('never unlocks another space document through a provider pointing at it', async () => {
+    const pdf = 'https://api.test/storage/documents/space-b/invoice.pdf';
+    const db = dbWithReferences({
+      documents: [{ spaceId: 'space-b', pdfUrl: pdf }],
+      providers: [{ logoUrl: pdf, spaceId: 'space-a' }],
+      member: null,
+      studio: true,
+    });
+
+    expect(await trpcErrorOf(() => mediaService.resolveDownloadKey(db, 'user-1', pdf))).toEqual({
+      code: 'NOT_FOUND',
+      message: 'File not found',
+    });
   });
 
   it('mints the instance logo for any authenticated caller', async () => {
@@ -633,7 +655,8 @@ describe('loadDocumentContext', () => {
         findFirst: async ({ where }: any) => (matches(options.client, where) ? options.client : null),
         findUnique: async () => options.client ?? null,
       },
-      provider: { findUnique: async () => options.provider ?? null },
+      provider: { findFirst: async () => options.provider ?? null },
+      space: { findUnique: async () => ({ platformStudio: true }) },
     } as unknown as PrismaClient;
   }
 
