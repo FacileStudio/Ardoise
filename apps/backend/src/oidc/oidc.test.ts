@@ -97,6 +97,7 @@ describe('resolveUser', () => {
     role?: string;
   }) => {
     const calls: string[] = [];
+    const verified: unknown[] = [];
     const row = { ...user, role: opts.role ?? 'ADMIN', isBanned: opts.banned ?? false };
     const db = {
       account: {
@@ -109,16 +110,18 @@ describe('resolveUser', () => {
         findFirst: async () => (opts.byEmail ? row : null),
         update: async (args: { data: Record<string, unknown> }) => {
           calls.push(`update:${args.data.role}:${args.data.firstName}:${args.data.lastName}`);
+          verified.push(args.data.emailVerified);
           return { ...row, ...args.data };
         },
         create: async (args: { data: Record<string, unknown> }) => {
           calls.push(`create:${args.data.role}:${args.data.firstName}`);
+          verified.push(args.data.emailVerified);
           return { ...row, id: 'new-user', ...args.data };
         },
       },
       $transaction: async (ops: unknown[]) => ops,
     };
-    return { db: db as unknown as PrismaClient, calls };
+    return { db: db as unknown as PrismaClient, calls, verified };
   };
 
   const claims = { sub: 'sub-1', email: 'a@b.c', emailVerified: true };
@@ -153,6 +156,21 @@ describe('resolveUser', () => {
     expect(await code(resolveUser(db, ISSUER, { ...claims, emailVerified: false }))).toBe(
       'email_unverified'
     );
+  });
+
+  test('a sign-in without a verified email claim never marks the email verified', async () => {
+    const unverified = { ...claims, emailVerified: false };
+    const linked = fakeDb({ linked: true, role: 'MEMBER' });
+    await resolveUser(linked.db, ISSUER, unverified);
+    expect(linked.verified).toEqual([undefined]);
+
+    const verifiedSignIn = fakeDb({ linked: true, role: 'MEMBER' });
+    await resolveUser(verifiedSignIn.db, ISSUER, claims);
+    expect(verifiedSignIn.verified).toEqual([true]);
+
+    const created = fakeDb({});
+    expect(await code(resolveUser(created.db, ISSUER, unverified))).toBe('email_unverified');
+    expect(created.verified).toEqual([]);
   });
 
   test('invited user links by verified email', async () => {
