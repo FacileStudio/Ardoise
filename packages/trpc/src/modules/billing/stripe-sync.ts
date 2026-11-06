@@ -149,15 +149,22 @@ export async function previewPublish(db: PrismaClient, versionId: string): Promi
 /**
  * Publishes a draft version. The Stripe product `plan_<key>` is upserted, one
  * recurring price per interval is created with lookup key
- * `plan_<key>_<interval>` and transfer_lookup_key, the previous published
- * version's prices are archived and that version is marked archived. Every
+ * `plan_<key>_<interval>` and transfer_lookup_key, the version is marked
+ * published and the previous one archived in one transaction, and only once
+ * that has committed are the previous version's Stripe prices archived. Every
  * Stripe write carries an idempotency key, so a retry after a failure
  * reuses what Stripe already created.
  */
-export async function publishVersion(db: PrismaClient, stripe: Stripe | null, versionId: string) {
+export async function publishVersion(
+  db: PrismaClient,
+  stripe: Stripe | null,
+  versionId: string,
+  logger: { warn(object: unknown, message?: string): void } = { warn() {} }
+) {
   const version = await requireVersion(db, versionId);
   assertDraft(version);
   const previous = await publishedVersion(db, version.planId);
+  const kept = new Set<string>();
 
   if (version.prices.length > 0) {
     if (!stripe) {
@@ -166,31 +173,47 @@ export async function publishVersion(db: PrismaClient, stripe: Stripe | null, ve
     const product = await upsertProduct(stripe, version.plan);
     for (const price of version.prices) {
       const stripePriceId = await ensurePrice(stripe, product, version, price);
+      kept.add(stripePriceId);
       if (stripePriceId !== price.stripePriceId) {
         await db.planPrice.update({ where: { id: price.id }, data: { stripePriceId } });
       }
     }
-    for (const price of previous?.prices ?? []) {
-      if (!price.stripePriceId) continue;
-      await stripe.prices.update(
-        price.stripePriceId,
-        { active: false },
-        { idempotencyKey: `ardoise_archive_${price.stripePriceId}` }
-      );
-    }
   }
 
-  await db.$transaction([
-    db.planVersion.updateMany({
+  await db.$transaction(async (tx) => {
+    const claimed = await tx.planVersion.updateMany({
+      where: { id: version.id, status: 'draft' },
+      data: { status: 'published', publishedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'Cette version vient d’être publiée ailleurs' });
+    }
+    await tx.planVersion.updateMany({
       where: { planId: version.planId, status: 'published', id: { not: version.id } },
       data: { status: 'archived' },
-    }),
-    db.planVersion.update({
-      where: { id: version.id },
-      data: { status: 'published', publishedAt: new Date() },
-    }),
-  ]);
-  return { previousVersionId: previous?.id ?? null };
+    });
+  });
+
+  const archiveFailures: string[] = [];
+  if (stripe) {
+    for (const price of previous?.prices ?? []) {
+      if (!price.stripePriceId || kept.has(price.stripePriceId)) continue;
+      try {
+        await stripe.prices.update(
+          price.stripePriceId,
+          { active: false },
+          { idempotencyKey: `ardoise_archive_${price.stripePriceId}` }
+        );
+      } catch (error) {
+        archiveFailures.push(price.stripePriceId);
+        logger.warn(
+          { price: price.stripePriceId, error: error instanceof Error ? error.message : String(error) },
+          '[BILLING] Archiving a previous Stripe price failed; archive it in Stripe by hand'
+        );
+      }
+    }
+  }
+  return { previousVersionId: previous?.id ?? null, archiveFailures };
 }
 
 /** What migrating subscribers did. */
@@ -242,7 +265,7 @@ export async function migrateSubscribers(
           items: [{ id: item.id, price }],
           proration_behavior: mode === 'immediate' ? 'always_invoice' : 'none',
         },
-        { idempotencyKey: `ardoise_migrate_${subscription.id}_${target.id}` }
+        { idempotencyKey: `ardoise_migrate_${subscription.id}_${target.id}_${mode}_${price}_${item.id}` }
       );
       await db.spaceSubscription.update({ where: { id: row.id }, data: { planVersionId: target.id } });
       result.migrated += 1;
@@ -255,4 +278,33 @@ export async function migrateSubscribers(
     }
   }
   return result;
+}
+
+/**
+ * Before a draft is deleted, gives its Stripe prices' lookup keys back: a
+ * publish that failed after creating prices has already moved the lookup
+ * keys onto them. The published version's price of the same interval takes
+ * its key back (transfer_lookup_key), and the draft's price is archived.
+ */
+export async function releaseDraftPrices(
+  db: PrismaClient,
+  stripe: Stripe | null,
+  draft: { planId: string; plan: { key: string }; prices: PriceRow[] }
+): Promise<void> {
+  const created = draft.prices.filter((price) => price.stripePriceId);
+  if (created.length === 0) return;
+  if (!stripe) {
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Stripe n’est pas configuré' });
+  }
+  const published = await publishedVersion(db, draft.planId);
+  for (const price of created) {
+    const back = published?.prices.find((row) => row.interval === price.interval)?.stripePriceId;
+    if (back && back !== price.stripePriceId) {
+      await stripe.prices.update(back, {
+        lookup_key: lookupKeyFor(draft.plan.key, price.interval),
+        transfer_lookup_key: true,
+      });
+    }
+    if (back !== price.stripePriceId) await stripe.prices.update(price.stripePriceId!, { active: false });
+  }
 }

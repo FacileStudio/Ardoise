@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@repo/database';
+import type { Prisma, PrismaClient } from '@repo/database';
 import type Stripe from 'stripe';
 import { requestEntitlementPush } from './push';
 
@@ -18,6 +18,7 @@ export const BILLING_EVENT_TYPES = new Set([
 export interface BillingLogger {
   info(object: unknown, message?: string): void;
   warn(object: unknown, message?: string): void;
+  error(object: unknown, message?: string): void;
 }
 
 const SPACE_ID = /^[A-Za-z0-9_-]{1,200}$/;
@@ -70,10 +71,57 @@ async function trustedCustomer(
   return !other || other.registreSpaceId === spaceId;
 }
 
+/** Row statuses after which a space's subscription no longer counts, so another may replace it. */
+const ENDED = new Set(['canceled', 'incomplete_expired']);
+
+type Tx = Prisma.TransactionClient;
+
+/** The SpaceSubscription fields one Stripe subscription sets. */
+async function rowData(tx: Tx, subscription: Stripe.Subscription, customerId: string, pastDueSince: Date | null) {
+  const item = subscription.items.data[0];
+  const price = item?.price.id ? await tx.planPrice.findUnique({ where: { stripePriceId: item.price.id } }) : null;
+  return {
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscription.id,
+    planVersionId: price?.versionId ?? null,
+    status: subscription.status,
+    currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
+    pastDueSince,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+  };
+}
+
+/** Records a second subscription of a space so staff see both, and raises an alert. */
+async function flagDuplicate(
+  tx: Tx,
+  logger: BillingLogger,
+  spaceId: string,
+  customerId: string,
+  subscription: Stripe.Subscription,
+  kept: string
+) {
+  const fields = { registreSpaceId: spaceId, stripeCustomerId: customerId, status: subscription.status };
+  const existing = await tx.duplicateSubscription.findUnique({ where: { stripeSubscriptionId: subscription.id } });
+  await tx.duplicateSubscription.upsert({
+    where: { stripeSubscriptionId: subscription.id },
+    create: { stripeSubscriptionId: subscription.id, ...fields },
+    update: fields,
+  });
+  if (!existing) {
+    logger.error(
+      { space: spaceId, kept, duplicate: subscription.id },
+      '[BILLING][ALERT] A space has two live subscriptions; the second is kept aside for staff to refund or cancel'
+    );
+  }
+}
+
 /**
- * Mirrors one Stripe subscription onto its space's SpaceSubscription row.
- * Returns false, and changes nothing, when the subscription cannot be
- * trusted or is an older one the space has replaced.
+ * Mirrors one Stripe subscription onto its space's SpaceSubscription row,
+ * under a per-space advisory lock so concurrent deliveries never interleave.
+ * Returns false, and leaves the row alone, when the subscription cannot be
+ * trusted or the space already has another subscription that has not ended:
+ * that second one is recorded in DuplicateSubscription, logged as an alert
+ * and shown to staff, never written over the first.
  */
 export async function syncSubscription(
   db: PrismaClient,
@@ -85,37 +133,39 @@ export async function syncSubscription(
   const spaceId = spaceIdFromMetadata(subscription.metadata);
   const customerId = idOf(subscription.customer);
   if (!spaceId || !customerId) return false;
-  const row = await db.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
-  if (!(await trustedCustomer(db, stripe, spaceId, customerId, row?.stripeCustomerId))) {
-    logger.warn({ subscription: subscription.id }, '[BILLING] Subscription customer does not match its space, ignored');
-    return false;
-  }
-  if (row?.stripeSubscriptionId && row.stripeSubscriptionId !== subscription.id && TERMINAL.has(subscription.status)) {
-    return false;
-  }
-
-  const item = subscription.items.data[0];
-  const price = item?.price.id
-    ? await db.planPrice.findUnique({ where: { stripePriceId: item.price.id } })
-    : null;
-  const status = subscription.status;
-  const pastDueSince =
-    status === 'past_due' ? (row?.pastDueSince ?? failedAt ?? new Date()) : null;
-  const data = {
-    stripeCustomerId: customerId,
-    stripeSubscriptionId: subscription.id,
-    planVersionId: price?.versionId ?? null,
-    status,
-    currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
-    pastDueSince,
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
-  };
-  await db.spaceSubscription.upsert({
-    where: { registreSpaceId: spaceId },
-    create: { registreSpaceId: spaceId, ...data },
-    update: data,
-  });
-  return true;
+  return db.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ardoise.subscription:${spaceId}`}))`;
+      const row = await tx.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
+      if (!(await trustedCustomer(tx as PrismaClient, stripe, spaceId, customerId, row?.stripeCustomerId))) {
+        logger.warn({ subscription: subscription.id }, '[BILLING] Subscription customer does not match its space, ignored');
+        return false;
+      }
+      const other = row?.stripeSubscriptionId && row.stripeSubscriptionId !== subscription.id ? row : null;
+      if (other && TERMINAL.has(subscription.status)) {
+        await tx.duplicateSubscription.updateMany({
+          where: { stripeSubscriptionId: subscription.id },
+          data: { status: subscription.status },
+        });
+        return false;
+      }
+      if (other && !ENDED.has(other.status)) {
+        await flagDuplicate(tx, logger, spaceId, customerId, subscription, other.stripeSubscriptionId!);
+        return false;
+      }
+      const pastDueSince =
+        subscription.status === 'past_due' ? ((other ? null : row?.pastDueSince) ?? failedAt ?? new Date()) : null;
+      const data = await rowData(tx, subscription, customerId, pastDueSince);
+      await tx.spaceSubscription.upsert({
+        where: { registreSpaceId: spaceId },
+        create: { registreSpaceId: spaceId, ...data },
+        update: data,
+      });
+      await tx.duplicateSubscription.deleteMany({ where: { stripeSubscriptionId: subscription.id } });
+      return true;
+    },
+    { maxWait: 30_000, timeout: 60_000 }
+  );
 }
 
 function subscriptionIdOf(event: Stripe.Event): string | null {
