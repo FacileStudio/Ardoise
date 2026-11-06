@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-06
+
 > **Before deploying:** set `PLATFORM_STAFF_SUBS` in the Dokploy compose env (or keep `BILLING_STAFF_SUBS`). Without it nobody can reach the platform settings.
 >
 > **Before rolling back to v0.13.0:** run `UPDATE "User" SET role = 'ADMIN' WHERE role = 'MEMBER';` first. v0.13.0's Prisma client cannot read `MEMBER` rows, so sign-in fails without it.
