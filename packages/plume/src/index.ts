@@ -40,7 +40,6 @@ export interface SendForSignatureInput {
   signers: PlumeSigner[];
   externalRef: string;
   client?: PlumeClient;
-  nuageSpaceFacileId?: string;
   nuageLinkedTo?: string;
 }
 
@@ -212,7 +211,6 @@ export async function sendForSignature(
     })),
   };
   if (input.client) request.client = input.client;
-  if (input.nuageSpaceFacileId) request.nuage_space_facile_id = input.nuageSpaceFacileId;
   if (input.nuageLinkedTo) request.nuage_linked_to = input.nuageLinkedTo;
 
   const form = new FormData();

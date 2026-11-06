@@ -13,6 +13,12 @@ export interface OidcClaims {
   picture?: string;
 }
 
+export interface OidcTokens {
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+}
+
 export class OidcFlowError extends Error {}
 
 const str = (value: unknown) => (typeof value === 'string' && value !== '' ? value : undefined);
@@ -45,7 +51,7 @@ export async function startLogin(config: OidcConfig, requestedRedirect?: string)
     response_type: 'code',
     client_id: config.clientId,
     redirect_uri: config.redirectUrl,
-    scope: 'openid email profile',
+    scope: 'openid email profile offline_access',
     state,
     nonce,
     code_challenge: await pkceChallenge(verifier),
@@ -88,7 +94,13 @@ export async function finishLogin(
   });
   if (!res.ok) throw new OidcFlowError(`token exchange failed: ${res.status}`);
 
-  const { id_token: idToken } = (await res.json()) as { id_token?: string };
+  const grant = (await res.json()) as {
+    id_token?: string;
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+  const idToken = grant.id_token;
   if (!idToken) throw new OidcFlowError('provider returned no id_token');
 
   const { payload } = await jwtVerify(idToken, provider.jwks, {
@@ -97,5 +109,10 @@ export async function finishLogin(
   });
   if (payload.nonce !== saved.nonce) throw new OidcFlowError('nonce mismatch');
 
-  return { claims: claimsFromPayload(payload), redirect: saved.redirect };
+  const tokens: OidcTokens = {
+    accessToken: grant.access_token,
+    refreshToken: grant.refresh_token,
+    expiresIn: grant.expires_in,
+  };
+  return { claims: claimsFromPayload(payload), redirect: saved.redirect, tokens };
 }

@@ -34,6 +34,7 @@ import { parseStorageKey } from '../media/service';
 import { isPlatformStudio, providersOfSpace, requirePlatformStudio } from '../space/studio';
 import type { StorageService } from '@repo/storage';
 import { nuageConfigFromEnv, storeContractInNuage } from '@repo/nuage';
+import { accountTokenStore } from '../auth/sso-tokens';
 import {
   PlumeError,
   contractExternalRef,
@@ -75,17 +76,23 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
 
 const SIGNABLE_TYPES: string[] = ['contrat_prestation', 'contrat_maintenance', 'back_contractuel'];
 
-/** Archives a contract in the platform Nuage, fire and forget, only for a platform studio space. */
+/**
+ * Archives a contract in the creating user's private Ardoise folder in Nuage,
+ * fire and forget, only for a platform studio space. Ardoise acts for that user
+ * with a token Registre issues by exchange from the user's stored SSO session.
+ */
 function archiveContract(
   db: PrismaClient,
   env: ServerEnv,
   document: { id: string; name: string; spaceId: string },
-  pdf: Buffer
+  pdf: Buffer,
+  userId: string
 ) {
   void isPlatformStudio(db, document.spaceId)
     .then((studio) =>
-      studio
-        ? storeContractInNuage(nuageConfigFromEnv(env), {
+      studio && env.OIDC_ISSUER
+        ? storeContractInNuage(nuageConfigFromEnv(env), accountTokenStore(db, env.OIDC_ISSUER, env.ENCRYPTION_SECRET), {
+            userId,
             filename: document.name,
             pdf,
             linkedTo: `ardoise:contract:${document.id}`,
@@ -596,7 +603,6 @@ export const documentRouter = router({
             email: client.contactEmail,
             company: client.companyName,
           },
-          nuageSpaceFacileId: nuage?.spaceFacileId,
           nuageLinkedTo: nuage ? `${externalRef}:signed` : undefined,
         });
 
@@ -916,7 +922,7 @@ export const documentRouter = router({
           },
         });
 
-        archiveContract(ctx.db, ctx.env, document, pdfBuffer);
+        archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
         return {
           document,
@@ -1097,7 +1103,7 @@ export const documentRouter = router({
           },
         });
 
-        archiveContract(ctx.db, ctx.env, document, pdfBuffer);
+        archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
         return {
           document,
@@ -1184,7 +1190,7 @@ export const documentRouter = router({
           },
         });
 
-        archiveContract(ctx.db, ctx.env, document, pdfBuffer);
+        archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
         return {
           document,
