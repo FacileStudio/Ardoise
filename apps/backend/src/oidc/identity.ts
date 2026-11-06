@@ -38,7 +38,7 @@ export function ssoProfile(claims: OidcClaims) {
  * which grants nothing by itself: the spaces a member works in come only from
  * Registre's directory (registre/spaces.ts), and platform powers only from
  * PLATFORM_STAFF_SUBS. A sign-in never yields ADMIN, and a legacy ADMIN row is
- * relabelled MEMBER. Name and picture are refreshed from SSO. Clients never
+ * relabelled MEMBER. Name and picture are refreshed from SSO. A sign-in marks the email verified only when the `email_verified` claim is literally true, so a row provisioned from a Registre snapshot without that flag stays unverified. Clients never
  * hold an SSO account; they sign in with magic links, so a CLIENT row is never
  * linked by email nor promoted, even when already linked: `client_account`.
  */
@@ -71,7 +71,12 @@ export async function resolveUser(db: PrismaClient, issuer: string, claims: Oidc
   if (user && loginBlockReason(user)) throw new IdentityError('blocked');
 
   const profile = ssoProfile(claims);
-  const member = { ...profile, role: 'MEMBER' as const, emailVerified: true, lastLoginAt: new Date() };
+  const member = {
+    ...profile,
+    role: 'MEMBER' as const,
+    ...(claims.emailVerified ? { emailVerified: true } : {}),
+    lastLoginAt: new Date(),
+  };
 
   if (!user) {
     const created = await db.user.create({
