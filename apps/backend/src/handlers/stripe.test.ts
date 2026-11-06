@@ -7,11 +7,11 @@ import { createStripeWebhookHandler, type StripeWebhookDeps } from './stripe';
 const SECRET = 'whsec_test_secret';
 const service = new StripeService({ apiKey: 'sk_test_x', webhookSecret: SECRET });
 
-function setup(failBilling = false) {
+function setup(failBilling = false, getStripe: StripeWebhookDeps['getStripe'] = async () => service) {
   const routed: string[] = [];
   const deps = {
     db: {},
-    getStripe: async () => service,
+    getStripe,
     getSmtp: async () => ({}),
     handlePayment: async (_db: unknown, _s: unknown, _m: unknown, _e: unknown, event: { id: string }) =>
       void routed.push(`payment:${event.id}`),
@@ -60,14 +60,46 @@ describe('Stripe webhook routing', () => {
     expect(routed).toEqual(['billing:evt_1', 'billing:evt_2']);
   });
 
-  it('processes nothing on a forged signature or a missing one', async () => {
+  it('answers 400 and processes nothing on a forged signature', async () => {
     const { app, routed } = setup();
     const forged = await app.request(signed(event('evt_f', 'customer.subscription.created', { id: 'sub_1', metadata: { registre_space_id: 'spc_a' } }), 'whsec_attacker'));
-    expect(forged.status).toBe(200);
-    expect(await forged.json()).toMatchObject({ permanent: true });
-    const unsigned = await app.request(new Request('http://api.test/webhook', { method: 'POST', body: '{}' }));
-    expect(unsigned.status).toBe(400);
+    expect(forged.status).toBe(400);
+    expect(await forged.json()).toEqual({ error: 'Invalid signature' });
     expect(routed).toEqual([]);
+  });
+
+  it('answers 400 on a malformed signature header', async () => {
+    const { app, routed } = setup();
+    const res = await app.request(
+      new Request('http://api.test/webhook', { method: 'POST', headers: { 'stripe-signature': 't=1,v1=deadbeef' }, body: '{}' })
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Invalid signature' });
+    expect(routed).toEqual([]);
+  });
+
+  it('answers 400 when the signature is missing', async () => {
+    const { app, routed } = setup();
+    const res = await app.request(new Request('http://api.test/webhook', { method: 'POST', body: '{}' }));
+    expect(res.status).toBe(400);
+    expect(routed).toEqual([]);
+  });
+
+  it('answers 503 when Stripe is not configured', async () => {
+    const { app, routed } = setup(false, async () => {
+      throw Object.assign(new Error('Stripe is not configured'), { code: 'PRECONDITION_FAILED' });
+    });
+    const res = await app.request(signed(event('evt_n', 'payment_intent.succeeded', { id: 'pi_1' })));
+    expect(res.status).toBe(503);
+    expect(routed).toEqual([]);
+  });
+
+  it('answers 500 on a transient error loading Stripe', async () => {
+    const { app } = setup(false, async () => {
+      throw new Error('connect ECONNREFUSED');
+    });
+    const res = await app.request(signed(event('evt_t', 'payment_intent.succeeded', { id: 'pi_1' })));
+    expect(res.status).toBe(500);
   });
 
   it('answers 500 on any billing failure so Stripe retries', async () => {

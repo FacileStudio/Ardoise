@@ -14,6 +14,10 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Fixed
+
+- The Stripe webhook answers 400 `Invalid signature` when signature verification fails, instead of 200. A wrong or rotated webhook secret no longer makes Ardoise acknowledge and drop real events, so Stripe retries and flags the endpoint. It answers 503 when Stripe is not configured.
+
 ## [0.14.1] - 2026-11-06
 
 ### Changed
