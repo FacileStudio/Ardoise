@@ -29,6 +29,7 @@ export const settingsRouter = router({
       await dispatchConfiguredWebhook({
         db: ctx.db,
         log: ctx.log,
+        spaceId: null,
         event: 'settings.updated',
         actor: {
           id: ctx.user!.id,
@@ -59,6 +60,7 @@ export const settingsRouter = router({
       await dispatchConfiguredWebhook({
         db: ctx.db,
         log: ctx.log,
+        spaceId: null,
         event: 'settings.logo.updated',
         actor: {
           id: ctx.user!.id,

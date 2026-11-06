@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import { isPlatformStudio } from '../space/studio';
 import { type Prisma, type PrismaClient } from '@repo/database';
 import { scopeWhere, scopeConnect, scopeSpaceId, requireRowScope, type Scope } from '../space/service';
 import type {
@@ -270,6 +271,12 @@ export const clientService = {
     if (source.spaceId === targetSpaceId) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Client is already in this space' });
     }
+    if (source.userId && !(await isPlatformStudio(db, targetSpaceId))) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'A client with a portal account can only move to a space with online payments and emails',
+      });
+    }
 
     // history stays in the source space, so a client that has any can only be copied
     const hasHistory = source._count.missions > 0 || source._count.payments > 0;
@@ -330,7 +337,7 @@ export const clientService = {
       where: { id },
     });
 
-    return { success: true, gloutonCompanyId: existingClient.gloutonCompanyId };
+    return { success: true, gloutonCompanyId: existingClient.gloutonCompanyId, spaceId: existingClient.spaceId };
   },
 
   getClientByUserId: async (db: PrismaClient, userId: string) => {

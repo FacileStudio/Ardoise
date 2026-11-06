@@ -1,6 +1,7 @@
 import { router, publicProcedure, clientProcedure, memberProcedure } from '../../trpc';
 import { paymentService } from './service';
 import spaceService from '../space/service';
+import { requirePlatformStudio } from '../space/studio';
 import {
   CreatePaymentSchema,
   UpdatePaymentSchema,
@@ -126,6 +127,7 @@ export const paymentRouter = router({
         message: 'This payment is not payable online',
       });
     }
+    await requirePlatformStudio(ctx.db, payment.spaceId);
 
     let clientSecret: string | null = null;
     const stripe = await ctx.getStripe();

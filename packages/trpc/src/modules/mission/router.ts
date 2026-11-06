@@ -22,14 +22,21 @@ type EventContext = Pick<Parameters<typeof dispatchConfiguredWebhook>[0], 'db' |
   user: { id: string; email: string; role: string };
 };
 
-const emit = (ctx: EventContext, event: string, data: Record<string, unknown>) =>
+const emit = (ctx: EventContext, spaceId: string, event: string, data: Record<string, unknown>) =>
   dispatchConfiguredWebhook({
     db: ctx.db,
     log: ctx.log,
+    spaceId,
     event,
     actor: { id: ctx.user.id, email: ctx.user.email, role: ctx.user.role },
     data,
   });
+
+/** The space of a mission for its webhook event; an unknown mission maps to no space, so nothing is sent. */
+async function missionSpace(ctx: EventContext, id: string): Promise<string> {
+  const mission = await ctx.db.mission.findUnique({ where: { id }, select: { spaceId: true } });
+  return mission?.spaceId ?? '';
+}
 
 export const missionRouter = router({
   list: memberProcedure.input(ListMissionsSchema).query(async ({ ctx, input }) => {
@@ -46,7 +53,7 @@ export const missionRouter = router({
     const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
     const mission = await missionService.createMission(ctx.db, input, scope);
 
-    await emit(ctx, 'mission.created', { mission });
+    await emit(ctx, mission.spaceId, 'mission.created', { mission });
 
     return mission;
   }),
@@ -55,7 +62,7 @@ export const missionRouter = router({
     const { id, ...data } = input;
     const mission = await missionService.updateMission(ctx.db, ctx.user.id, id, data);
 
-    await emit(ctx, 'mission.updated', { missionId: id, mission });
+    await emit(ctx, mission.spaceId, 'mission.updated', { missionId: id, mission });
 
     return mission;
   }),
@@ -68,7 +75,7 @@ export const missionRouter = router({
       input.prestations
     );
 
-    await emit(ctx, 'mission.prestations_updated', { missionId: input.id });
+    await emit(ctx, await missionSpace(ctx, input.id), 'mission.prestations_updated', { missionId: input.id });
 
     return prestations;
   }),
@@ -76,7 +83,7 @@ export const missionRouter = router({
   generateQuote: memberProcedure.input(GenerateQuoteSchema).mutation(async ({ ctx, input }) => {
     const document = await generateQuote(ctx.db, ctx.storage, ctx.user.id, input);
 
-    await emit(ctx, 'mission.quote_generated', { missionId: input.id, document });
+    await emit(ctx, document.spaceId, 'mission.quote_generated', { missionId: input.id, document });
     emitMissionToGlouton(ctx, 'mission.quote_generated', input.id, {
       amount: document.total,
       documentNumber: document.quoteNumber,
@@ -88,7 +95,7 @@ export const missionRouter = router({
   acceptQuote: memberProcedure.input(AcceptQuoteSchema).mutation(async ({ ctx, input }) => {
     const document = await acceptQuote(ctx.db, ctx.user.id, input);
 
-    await emit(ctx, 'mission.quote_accepted', { missionId: input.id, document });
+    await emit(ctx, document.spaceId, 'mission.quote_accepted', { missionId: input.id, document });
     emitMissionToGlouton(ctx, 'mission.quote_accepted', input.id, {
       amount: document.total,
       documentNumber: document.quoteNumber,
@@ -100,7 +107,7 @@ export const missionRouter = router({
   generateInvoice: memberProcedure.input(GenerateInvoiceSchema).mutation(async ({ ctx, input }) => {
     const document = await generateInvoice(ctx.db, ctx.storage, ctx.user.id, input);
 
-    await emit(ctx, 'mission.invoice_generated', { missionId: input.id, document });
+    await emit(ctx, document.spaceId, 'mission.invoice_generated', { missionId: input.id, document });
     emitMissionToGlouton(ctx, 'mission.invoice_generated', input.id, {
       amount: document.total,
       documentNumber: document.invoiceNumber,
@@ -112,7 +119,7 @@ export const missionRouter = router({
   setStatus: memberProcedure.input(SetMissionStatusSchema).mutation(async ({ ctx, input }) => {
     const mission = await missionService.setStatus(ctx.db, ctx.user.id, input.id, input.status);
 
-    await emit(ctx, 'mission.status_changed', {
+    await emit(ctx, mission.spaceId, 'mission.status_changed', {
       missionId: input.id,
       status: mission.status,
     });
@@ -145,7 +152,7 @@ export const missionRouter = router({
         input
       );
 
-      await emit(ctx, 'mission.payment_created', { missionId: input.id, payment });
+      await emit(ctx, payment.spaceId, 'mission.payment_created', { missionId: input.id, payment });
       emitMissionToGlouton(ctx, 'mission.payment_created', input.id, {
         amount: payment.amount,
         documentNumber: payment.reference,
@@ -155,9 +162,10 @@ export const missionRouter = router({
     }),
 
   delete: memberProcedure.input(GetMissionByIdSchema).mutation(async ({ ctx, input }) => {
+    const spaceId = await missionSpace(ctx, input.id);
     const result = await missionService.deleteMission(ctx.db, ctx.user.id, input.id);
 
-    await emit(ctx, 'mission.deleted', { missionId: input.id });
+    await emit(ctx, spaceId, 'mission.deleted', { missionId: input.id });
 
     return result;
   }),

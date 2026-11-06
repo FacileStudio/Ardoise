@@ -733,6 +733,10 @@ export const paymentService = {
       });
     }
 
+    if (payment.stripePaymentIntentId || payment.stripeSubscriptionId) {
+      await requirePlatformStudio(db, payment.spaceId);
+    }
+
     try {
       if (payment.stripePaymentIntentId) {
         await stripe.client.paymentIntents.cancel(payment.stripePaymentIntentId);
@@ -775,6 +779,7 @@ export const paymentService = {
     if (payment.client.userId !== userId) {
       throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this payment' });
     }
+    await requirePlatformStudio(db, payment.spaceId);
 
     if (!payment.stripeSubscriptionId || !payment.client.stripeCustomerId) {
       throw new TRPCError({
@@ -910,6 +915,7 @@ export const paymentService = {
     const pending = await db.payment.findMany({
       where: {
         ...scopeWhere(scope),
+        space: { platformStudio: true },
         status: 'PAID',
         receiptUrl: null,
         receiptAttempts: { lt: maxAttempts },
@@ -961,6 +967,7 @@ export const paymentService = {
         message: 'Cannot generate receipt for unpaid payment',
       });
     }
+    await requirePlatformStudio(db, payment.spaceId);
 
     const settings = await db.settings.findUnique({
       where: { id: 'global' },
