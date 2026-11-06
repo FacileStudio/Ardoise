@@ -2,6 +2,7 @@ import type { PrismaClient } from '@repo/database';
 import type { Logger } from '@repo/logger';
 import { createHmac, randomUUID } from 'node:crypto';
 import { getSettingsRecord } from '../settings/service';
+import { isPlatformStudio } from '../space/studio';
 
 type WebhookActor = {
   id: string;
@@ -12,6 +13,11 @@ type WebhookActor = {
 type DispatchWebhookInput = {
   db: PrismaClient;
   log: Logger;
+  /**
+   * The space the event belongs to, or null for a platform event (settings,
+   * admin engine). The platform webhook only hears platform studio spaces.
+   */
+  spaceId: string | null;
   event: string;
   actor?: WebhookActor;
   data: Record<string, unknown>;
@@ -38,10 +44,12 @@ function createSignature(secret: string, body: string) {
 export async function dispatchConfiguredWebhook({
   db,
   log,
+  spaceId,
   event,
   actor,
   data,
 }: DispatchWebhookInput) {
+  if (spaceId !== null && !(await isPlatformStudio(db, spaceId))) return;
   const settings = await getSettingsRecord(db);
   const webhookUrl = settings.webhookUrl?.trim();
 

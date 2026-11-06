@@ -159,8 +159,10 @@ Ardoise is multi-tenant by Registre space.
 - `Space.platformStudio` marks the platform operator's own spaces. Only those may collect Stripe
   payments on the platform account, mail their clients through the platform SMTP (payment
   requests, reminders, welcome and magic links), send contracts to Plume, archive them in Nuage
-  and use the shared providers. Other spaces keep manual payments, documents and their own
-  providers. Staff flip the flag with `space.setPlatformStudio`, which writes an audit row.
+  and use the shared providers. The platform webhook only hears their events. Other spaces keep
+  manual payments, documents and their own providers. The check lives in the function that spends
+  the resource (`generateAndSendReceipt`, `createPayment`, `sendReminder`, `cancelPayment`,
+  `ensureClientSignUrl`, `dispatchConfiguredWebhook`, ...), so every caller inherits it. Staff flip the flag with `space.setPlatformStudio`, which writes an audit row.
 - CLIENT portal accounts are unchanged: magic links, scoped to their own `Client` row.
 
 Code lives in `apps/backend/src/oidc/`, one job per file:

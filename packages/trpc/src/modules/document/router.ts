@@ -26,7 +26,7 @@ import {
 } from './services/schemas';
 import { generateNextDocumentNumber, previewDocumentNumber } from './numbering';
 import { generateDocumentWithLogo } from './render';
-import spaceService, { scopeWhere, requireRowScope } from '../space/service';
+import spaceService, { scopeSpaceId, scopeWhere, requireRowScope } from '../space/service';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { Prisma, PrismaClient } from '@repo/database';
@@ -496,9 +496,24 @@ export const documentRouter = router({
     ];
   }),
 
-  signatureEnabled: memberProcedure.query(({ ctx }) => ({
-    enabled: plumeConfigFromEnv(ctx.env) !== null,
-  })),
+  /**
+   * Whether contracts can go to Plume: Plume is configured and the space (or,
+   * without one, any space of the caller) is a platform studio space.
+   */
+  signatureEnabled: memberProcedure
+    .input(z.object({ spaceId: z.string().min(1).optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      if (plumeConfigFromEnv(ctx.env) === null) return { enabled: false };
+      if (input?.spaceId) {
+        const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
+        return { enabled: await isPlatformStudio(ctx.db, scopeSpaceId(scope)) };
+      }
+      const studio = await ctx.db.spaceMember.findFirst({
+        where: { userId: ctx.user.id, space: { platformStudio: true } },
+        select: { id: true },
+      });
+      return { enabled: studio !== null };
+    }),
 
   sendForSignature: memberProcedure
     .input(z.object({ id: z.string() }))

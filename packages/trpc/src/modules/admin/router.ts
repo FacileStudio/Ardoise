@@ -92,6 +92,7 @@ export const adminRouter = router({
     await dispatchConfiguredWebhook({
       db: ctx.db,
       log: ctx.log,
+      spaceId: null,
       event: `admin.${input.entity}.created`,
       actor: {
         id: ctx.user!.id,
@@ -123,6 +124,7 @@ export const adminRouter = router({
     await dispatchConfiguredWebhook({
       db: ctx.db,
       log: ctx.log,
+      spaceId: null,
       event: `admin.${input.entity}.updated`,
       actor: {
         id: ctx.user!.id,
@@ -155,6 +157,7 @@ export const adminRouter = router({
     await dispatchConfiguredWebhook({
       db: ctx.db,
       log: ctx.log,
+      spaceId: null,
       event: `admin.${input.entity}.deleted`,
       actor: {
         id: ctx.user!.id,

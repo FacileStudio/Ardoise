@@ -43,6 +43,7 @@ export const clientRouter = router({
     await dispatchConfiguredWebhook({
       db: ctx.db,
       log: ctx.log,
+      spaceId: client.spaceId,
       event: 'client.created',
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { client },
@@ -59,6 +60,7 @@ export const clientRouter = router({
     await dispatchConfiguredWebhook({
       db: ctx.db,
       log: ctx.log,
+      spaceId: client.spaceId,
       event: 'client.updated',
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { clientId: id, client },
@@ -75,6 +77,7 @@ export const clientRouter = router({
     await dispatchConfiguredWebhook({
       db: ctx.db,
       log: ctx.log,
+      spaceId: result.client.spaceId,
       event: result.relocated ? 'client.updated' : 'client.created',
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { clientId: result.client.id, client: result.client },
@@ -89,7 +92,7 @@ export const clientRouter = router({
   }),
 
   delete: memberProcedure.input(GetByIdSchema).mutation(async ({ ctx, input }) => {
-    const { gloutonCompanyId, ...result } = await clientService.deleteClient(
+    const { gloutonCompanyId, spaceId, ...result } = await clientService.deleteClient(
       ctx.db,
       ctx.user.id,
       input.id
@@ -98,6 +101,7 @@ export const clientRouter = router({
     await dispatchConfiguredWebhook({
       db: ctx.db,
       log: ctx.log,
+      spaceId,
       event: 'client.deleted',
       actor: { id: ctx.user!.id, email: ctx.user!.email, role: ctx.user!.role },
       data: { clientId: input.id },

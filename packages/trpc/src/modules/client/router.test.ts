@@ -16,6 +16,7 @@ function dbFor(member: { role: 'MEMBER' } | null, created: any[]) {
       findMany: async () => (member ? [{ spaceId: 'space-a' }] : []),
     },
     settings: { findUnique: async () => ({ id: 'global', webhookUrl: null, webhookEvents: [] }) },
+      space: { findUnique: async () => ({ platformStudio: true }) },
     client: {
       create: async (args: any) => {
         created.push(args);

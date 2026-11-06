@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { prisma } from '@repo/database';
 import { appRouter } from './index';
 import { getStripeService } from './modules/settings/service';
+import { paymentService } from './modules/payment/service';
 
 /**
  * The access map of every tRPC procedure. A new procedure fails the first
@@ -87,6 +88,25 @@ const unreachable = () => {
 };
 const untouchable = new Proxy({}, { get: (_target, key) => (key === 'then' ? undefined : unreachable) });
 
+/** Every platform resource call a procedure makes: emails, Stripe calls and outbound HTTP (Plume, Nuage, webhook). */
+const sends = { mail: [] as string[], stripe: [] as string[], http: [] as string[] };
+const resetSends = () => Object.values(sends).forEach((list) => list.splice(0));
+const recordingSmtp = { sendEmail: async (options: { to: string }) => void sends.mail.push(String(options.to)) };
+function recordingStripe(path: string[] = []): unknown {
+  return new Proxy(() => {}, {
+    get: (_target, key) => (key === 'then' ? undefined : recordingStripe([...path, String(key)])),
+    apply: async () => {
+      sends.stripe.push(path.join('.'));
+      return { id: 'stripe_fake', url: 'https://billing.stripe.test', client_secret: 'secret' };
+    },
+  });
+}
+const realFetch = globalThis.fetch;
+const recordingFetch = (async (url: string | URL | Request) => {
+  sends.http.push(String(url instanceof Request ? url.url : url));
+  return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+
 function callerFor(user: { id: string; role: string; email: string } | null) {
   const caller = appRouter.createCaller({
     req: new Request('http://api.test'),
@@ -95,8 +115,8 @@ function callerFor(user: { id: string; role: string; email: string } | null) {
     db: prisma,
     auth: untouchable,
     storage: untouchable,
-    getStripe: async () => ({ client: untouchable }),
-    getSmtp: async () => untouchable,
+    getStripe: async () => recordingStripe(),
+    getSmtp: async () => recordingSmtp,
     env: {
       OIDC_ISSUER: ISSUER,
       PLATFORM_STAFF_SUBS: 'sub-staff',
@@ -165,7 +185,8 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE "User", "Space", "Provider", "Client", "Mission", "Document", "Payment", "AuditLog", "Settings" CASCADE'
     );
-    await prisma.settings.create({ data: { id: 'global' } });
+    await prisma.settings.create({ data: { id: 'global', webhookUrl: 'https://hook.test/ardoise' } });
+    globalThis.fetch = recordingFetch;
     const user = (key: string, role: 'MEMBER' | 'CLIENT', sub?: string) =>
       prisma.user.create({
         data: {
@@ -258,9 +279,94 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
     member = callerFor({ id: alice.id, role: 'MEMBER', email: alice.email });
     client = callerFor({ id: portal.id, role: 'CLIENT', email: portal.email });
     staff = callerFor({ id: yann.id, role: 'MEMBER', email: yann.email });
+
+    const portalA = await user('portal-a', 'CLIENT');
+    await prisma.client.update({ where: { id: ids.clientA }, data: { userId: portalA.id } });
+    const portalC = await user('portal-c', 'CLIENT');
+    const spaceC = await prisma.space.create({
+      data: { name: 'Tenant C', platformStudio: false, members: { create: { userId: alice.id, role: 'OWNER' } } },
+    });
+    const clientC = await prisma.client.create({
+      data: {
+        contactFirstName: 'V',
+        contactLastName: 'C',
+        companyName: 'Victim C',
+        contactEmail: 'victim@outside.test',
+        stripeCustomerId: 'cus_c',
+        spaceId: spaceC.id,
+        userId: portalC.id,
+      },
+    });
+    const missionC = await prisma.mission.create({ data: { name: 'Mission C', clientId: clientC.id, spaceId: spaceC.id } });
+    const contractC = await prisma.document.create({
+      data: {
+        type: 'contrat_prestation',
+        name: 'contract-c.pdf',
+        clientName: clientC.companyName,
+        providerName: 'P',
+        providerEmail: 'p@outside.test',
+        items: [],
+        subtotal: 100,
+        tva: 20,
+        total: 120,
+        pdfUrl: 'http://api.test/storage/documents/c.pdf',
+        plumeDocumentId: 'plume-c',
+        createdBy: alice.id,
+        spaceId: spaceC.id,
+        missionId: missionC.id,
+      },
+    });
+    const invoiceC = await prisma.document.create({
+      data: {
+        type: 'facture_prestation',
+        name: 'invoice-c.pdf',
+        invoiceNumber: 'F-C',
+        clientName: clientC.companyName,
+        providerName: 'P',
+        items: [],
+        subtotal: 100,
+        tva: 20,
+        total: 120,
+        createdBy: alice.id,
+        spaceId: spaceC.id,
+        missionId: missionC.id,
+      },
+    });
+    const payment = (data: Record<string, unknown>) =>
+      prisma.payment.create({
+        data: {
+          clientId: clientC.id,
+          spaceId: spaceC.id,
+          amount: 120,
+          totalWithFees: 120,
+          dueDate: new Date('2026-12-01'),
+          description: 'C',
+          ...data,
+        } as never,
+      });
+    const paidC = await payment({ status: 'PAID', collectionMethod: 'MANUAL', reference: 'PAID-C' });
+    const stripeC = await payment({
+      status: 'PENDING',
+      collectionMethod: 'STRIPE',
+      reference: 'STRIPE-C',
+      stripePaymentIntentId: 'pi_c',
+      stripeSubscriptionId: 'sub_c',
+    });
+    Object.assign(ids, {
+      spaceC: spaceC.id,
+      clientC: clientC.id,
+      missionC: missionC.id,
+      contractC: contractC.id,
+      invoiceC: invoiceC.id,
+      paidC: paidC.id,
+      stripeC: stripeC.id,
+      portalA: portalA.id,
+      portalC: portalC.id,
+    });
   }, 60_000);
 
   afterAll(async () => {
+    globalThis.fetch = realFetch;
     await prisma.$executeRawUnsafe(
       'TRUNCATE "User", "Space", "Provider", "Client", "Mission", "Document", "Payment", "AuditLog", "Settings" CASCADE'
     );
@@ -411,6 +517,7 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
   });
 
   it('never lets a member of space A read or change space B', async () => {
+    resetSends();
     let before = await spaceB();
     const secrets = [ids.clientB, ids.paymentB, ids.documentB, ids.missionB, ids.providerB, 'FR76-B', 'Client B'];
     const leaks: string[] = [];
@@ -433,6 +540,9 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
       const after = await spaceB();
       if (after !== before) leaks.push(`${path}: changed space B`);
       before = after;
+      const spent = [...sends.mail, ...sends.stripe, ...sends.http];
+      if (spent.length > 0) leaks.push(`${path}: spent ${spent.join(', ')}`);
+      resetSends();
     }
     expect(leaks).toEqual([]);
   }, 120_000);
@@ -470,6 +580,96 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
     const stripe = await getStripeService(prisma);
     expect((stripe as unknown as { webhookSecret: string }).webhookSecret).toBe('whsec_staff');
     await prisma.user.delete({ where: { id: legacy.id } });
+  });
+
+  it('spends no platform mail, Stripe, Plume or webhook on a space outside the platform studio', async () => {
+    const portalC = callerFor({ id: ids.portalC!, role: 'CLIENT', email: 'portal-c@access.test' });
+    const anonymous = callerFor(null);
+    const calls: Array<[string, () => Promise<unknown>, string[]]> = [
+      ['payment.sendReminder', () => member('payment.sendReminder', { id: ids.stripeC }), ['FORBIDDEN']],
+      [
+        'payment.create',
+        () =>
+          member('payment.create', {
+            clientId: ids.clientC,
+            amount: 10,
+            description: 'x',
+            collectionMethod: 'STRIPE',
+            dueDate: new Date('2026-12-01'),
+          }),
+        ['FORBIDDEN'],
+      ],
+      [
+        'mission.createPayment',
+        () => member('mission.createPayment', { id: ids.missionC, documentId: ids.invoiceC, collectionMethod: 'STRIPE' }),
+        ['FORBIDDEN', 'BAD_REQUEST', 'PRECONDITION_FAILED', 'CONFLICT'],
+      ],
+      ['payment.cancel', () => member('payment.cancel', { id: ids.stripeC }), ['FORBIDDEN']],
+      ['payment.billingPortal', () => portalC('payment.billingPortal', { id: ids.stripeC }), ['FORBIDDEN']],
+      ['payment.getClientSecret', () => anonymous('payment.getClientSecret', { id: ids.stripeC }), ['FORBIDDEN']],
+      [
+        'client.create',
+        () =>
+          member('client.create', {
+            spaceId: ids.spaceC,
+            contactFirstName: 'N',
+            contactLastName: 'N',
+            companyName: 'N',
+            contactEmail: 'spam@outside.test',
+            createCredentials: true,
+            credentialEmail: 'spam@outside.test',
+          }),
+        ['FORBIDDEN'],
+      ],
+      ['magicLink.request', () => anonymous('magicLink.request', { email: 'portal-c@access.test' }), ['OK']],
+      ['document.sendForSignature', () => member('document.sendForSignature', { id: ids.contractC }), ['FORBIDDEN']],
+      ['document.refreshSignLink', () => member('document.refreshSignLink', { id: ids.contractC }), ['OK']],
+      ['portal.signLink', () => portalC('portal.signLink', { id: ids.contractC }), ['OK', 'NOT_FOUND', 'PRECONDITION_FAILED']],
+      ['client.update', () => member('client.update', { id: ids.clientC, companyName: 'Victim C2' }), ['OK']],
+      [
+        'client.transfer',
+        () => member('client.transfer', { id: ids.clientA, mode: 'copy', targetSpaceId: ids.spaceC }),
+        ['FORBIDDEN'],
+      ],
+    ];
+    const problems: string[] = [];
+    for (const [name, call, allowed] of calls) {
+      resetSends();
+      const code = await codeOf(call());
+      if (!allowed.includes(code)) problems.push(`${name}: ${code}`);
+      const spent = [...sends.mail, ...sends.stripe, ...sends.http];
+      if (spent.length > 0) problems.push(`${name}: spent ${spent.join(', ')}`);
+    }
+    expect(problems).toEqual([]);
+    expect(await member('document.signatureEnabled', { spaceId: ids.spaceC })).toEqual({ enabled: false });
+    expect(await member('document.signatureEnabled', { spaceId: ids.spaceA })).toEqual({ enabled: true });
+  });
+
+  it('never renders or mails a receipt for a space outside the platform studio', async () => {
+    const settings = await prisma.settings.findUniqueOrThrow({ where: { id: 'global' } });
+    await prisma.settings.delete({ where: { id: 'global' } });
+    try {
+      resetSends();
+      expect(await member('payment.retryReceipts', { spaceId: ids.spaceC })).toEqual({ attempted: 0, succeeded: 0 });
+      await expect(
+        paymentService.generateAndSendReceipt(prisma, untouchable as never, recordingSmtp as never, {} as never, ids.paidC!)
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      const paid = await prisma.payment.findUniqueOrThrow({ where: { id: ids.paidC } });
+      expect(paid.receiptAttempts).toBe(0);
+      expect(paid.receiptUrl).toBeNull();
+      expect(sends.mail).toEqual([]);
+    } finally {
+      await prisma.settings.create({ data: settings as never });
+    }
+  });
+
+  it('still spends them for a platform studio space, so the recorders see real sends', async () => {
+    resetSends();
+    await member('client.update', { id: ids.clientA, companyName: 'Client A2' });
+    await callerFor(null)('magicLink.request', { email: 'portal-a@access.test' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(sends.http).toEqual(['https://hook.test/ardoise']);
+    expect(sends.mail).toEqual(['portal-a@access.test']);
   });
 
   it('never moves a space A client into a space the member does not belong to', async () => {
