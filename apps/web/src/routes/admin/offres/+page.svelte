@@ -12,6 +12,9 @@
   import SubscriptionsTab from '$lib/components/offres/SubscriptionsTab.svelte';
 
   type PushState = Awaited<ReturnType<typeof trpc.billing.pushState.query>>;
+  type Duplicate = Awaited<ReturnType<typeof trpc.billing.duplicateSubscriptions.query>>[number];
+
+  let duplicates = $state<Duplicate[]>([]);
 
   const tabs = [
     { id: 'plans', label: 'Offres' },
@@ -26,7 +29,13 @@
   let push = $state<PushState>(null);
   let pushing = $state(false);
 
-  onMount(loadPush);
+  onMount(() => {
+    void loadPush();
+    trpc.billing.duplicateSubscriptions
+      .query()
+      .then((rows) => (duplicates = rows.filter((row) => !['canceled', 'incomplete_expired'].includes(row.status))))
+      .catch(() => (duplicates = []));
+  });
 
   async function loadPush() {
     try {
@@ -68,6 +77,17 @@
       </Button>
     {/snippet}
   </PageHeader>
+
+  {#if duplicates.length > 0}
+    <Alert tone="danger" title="{duplicates.length} abonnement(s) en double">
+      <div class="flex flex-col gap-1">
+        <span>Un espace paie deux abonnements. Seul le premier compte; remboursez ou résiliez le second dans Stripe.</span>
+        {#each duplicates as row (row.id)}
+          <span class="font-mono text-fc-xs">{row.registreSpaceId}: {row.stripeSubscriptionId} ({row.status})</span>
+        {/each}
+      </div>
+    </Alert>
+  {/if}
 
   {#if push?.lastError}
     <Alert tone="danger" title="Dernier envoi vers Registre en échec">{push.lastError}</Alert>
