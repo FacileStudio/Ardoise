@@ -16,6 +16,7 @@
     Section,
     Select,
     Spinner,
+    Switch,
     Table,
     toast,
   } from '@facile/muse';
@@ -46,7 +47,7 @@
   let selectedId = $state('');
   let values: Record<string, string | boolean> = $state({});
   let prices = $state({ month: '', year: '' });
-  let meta = $state({ name: '', sortOrder: '0' });
+  let meta = $state({ name: '', sortOrder: '0', isFree: false });
   let busy = $state(false);
 
   let publishOpen = $state(false);
@@ -70,7 +71,7 @@
       plan = plans.find((p) => p.id === planId) ?? null;
       features = rows;
       if (!plan) return;
-      meta = { name: plan.name, sortOrder: String(plan.sortOrder) };
+      meta = { name: plan.name, sortOrder: String(plan.sortOrder), isFree: plan.isFree };
       const pick = select ?? plan.versions.find((v) => v.status === 'draft')?.id ?? plan.versions[0]?.id;
       if (pick) await selectVersion(pick);
     } catch (err) {
@@ -161,7 +162,7 @@
     event.preventDefault();
     if (!plan) return;
     const saved = await run(
-      () => trpc.billing.savePlan.mutate({ key: plan!.key, name: meta.name.trim(), sortOrder: Number(meta.sortOrder) || 0 }),
+      () => trpc.billing.savePlan.mutate({ key: plan!.key, name: meta.name.trim(), sortOrder: Number(meta.sortOrder) || 0, isFree: meta.isFree }),
       'Offre enregistrée',
       'Enregistrement impossible'
     );
@@ -293,6 +294,9 @@
           </Field>
           <Field label="Ordre d’affichage">
             <Input bind:value={meta.sortOrder} inputmode="numeric" class="sm:w-24" />
+          </Field>
+          <Field label="Offre gratuite" helper="Celle des espaces sans abonnement">
+            <Switch bind:checked={meta.isFree} label={meta.isFree ? 'Oui' : 'Non'} />
           </Field>
           <Button type="submit" variant="outline" disabled={busy}>Enregistrer</Button>
         </form>

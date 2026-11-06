@@ -83,7 +83,7 @@
 
 <div class="flex flex-col gap-4">
   <p class="text-fc-sm text-fc-fg-muted">
-    Un espace offert reçoit la dernière version de l’offre choisie, quels que soient ses
+    Un espace offert reçoit la version publiée de l’offre choisie, quels que soient ses
     propriétaires. C’est le seul moyen d’offrir un espace.
   </p>
   <div class="flex justify-end">

@@ -89,7 +89,7 @@
 
 <div class="flex flex-col gap-4">
   <p class="text-fc-sm text-fc-fg-muted">
-    Une personne offerte reçoit la dernière version de l’offre choisie, même en brouillon, sur ses
+    Une personne offerte reçoit la version publiée de l’offre choisie (la dernière tant qu’elle n’a jamais été publiée) sur ses
     ressources personnelles seulement, sans objet Stripe. Ses espaces ne sont pas offerts: utilisez
     « Espaces offerts ». Elle est reconnue par son identifiant Registre; sans identifiant, l’offre
     reste inactive.
