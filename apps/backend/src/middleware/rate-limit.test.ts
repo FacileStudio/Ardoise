@@ -104,3 +104,15 @@ describe('pay link procedures', () => {
     expect((await call(server, '/trpc/payLink.get', '198.51.100.9')).status).toBe(200);
   });
 });
+
+describe('visitors behind the Cloudflare edge', () => {
+  it('get their own bucket instead of sharing the edge address', async () => {
+    const server = app();
+    const behindEdge = (visitor: string) =>
+      call(server, '/trpc/payLink.get', `${visitor}, 172.69.10.4`);
+
+    for (let i = 0; i < 15; i += 1) await behindEdge('203.0.113.9');
+    expect((await behindEdge('203.0.113.9')).status).toBe(429);
+    expect((await behindEdge('198.51.100.9')).status).toBe(200);
+  });
+});

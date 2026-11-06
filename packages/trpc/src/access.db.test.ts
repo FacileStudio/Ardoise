@@ -45,7 +45,7 @@ const ACCESS: Record<string, Access> = {
     `client.list client.getById client.create client.update client.transfer client.delete
      payment.list payment.stats payment.getById payment.create payment.createManual payment.setStatus
      payment.delete payment.update payment.cancel payment.sendReminder payment.markExpired payment.retryReceipts
-     payment.confirmDeclared payment.rejectDeclared payment.createLink payment.revokeLinks
+     payment.confirmDeclared payment.rejectDeclared payment.dismissAttention payment.createLink payment.revokeLinks
      document.list document.get document.delete document.import document.update document.setSignature
      document.refreshSignLink document.sendForSignature document.download
      document.previewFacturePrestation document.createFacturePrestation document.previewMaintenance

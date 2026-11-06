@@ -87,6 +87,7 @@ Only active CLIENT users receive a link. Both procedures share the strict rate-l
 | `myPayments` | query | protected | — the caller's own payments |
 | `confirmDeclared` | mutation | admin | `{ id }` — a payment the client declared paid another way becomes `PAID`, `MANUAL`. Audit-logged |
 | `rejectDeclared` | mutation | admin | `{ id, reason? }` — back to `PENDING` or `PAST_DUE`. Audit-logged |
+| `dismissAttention` | mutation | admin | `{ id }` — clears the `needsAttention` flag (duplicate payment, refund, dispute, mismatch). Audit-logged |
 | `createLink` | mutation | admin | `{ id }` — a new pay link `{ url, expiresAt }` (90 days). The token is shown once and stored hashed |
 | `revokeLinks` | mutation | admin | `{ id }` — revokes every live pay link of the payment |
 | `handleWebhook` | mutation | public | `{ signature, body }` |

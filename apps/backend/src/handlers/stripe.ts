@@ -97,7 +97,7 @@ export const createStripeWebhookHandler = (
           return c.json({ error: 'Webhook processing failed' }, 500);
         }
       } else {
-        await deps.handlePayment(deps.db, storage, await deps.getSmtp(deps.db), env, event);
+        await deps.handlePayment(deps.db, storage, await deps.getSmtp(deps.db), env, event, async () => stripe);
       }
 
       return c.json({ received: true });

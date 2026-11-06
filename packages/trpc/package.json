@@ -9,6 +9,7 @@
     "./billing": "./src/modules/billing/index.ts",
     "./context": "./src/context.ts",
     "./client-ip": "./src/client-ip.ts",
+    "./open-payment-links": "./src/modules/payment/open-links.ts",
     "./auth/session": "./src/modules/auth/session.ts",
     "./auth/service": "./src/modules/auth/service.ts"
   },

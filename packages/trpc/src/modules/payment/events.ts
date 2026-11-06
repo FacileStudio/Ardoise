@@ -5,9 +5,18 @@ import { syncMissionPaid } from '../mission/sync';
 import { isOverdue } from './overdue';
 import { CLAIMABLE_STATUSES, PAYABLE_STATUSES, legacyCents } from './amounts';
 
+export type AttentionReason =
+  | 'DUPLICATE_PAYMENT'
+  | 'DUPLICATE_SUBSCRIPTION'
+  | 'AMOUNT_MISMATCH'
+  | 'REFUNDED'
+  | 'DISPUTED';
+
 export interface EventDeps {
   db: PrismaClient;
   sendReceipt: (paymentId: string) => Promise<void>;
+  cancelSubscription: (subscriptionId: string) => Promise<void>;
+  notify: (paymentId: string, reason: AttentionReason) => Promise<void>;
 }
 
 type Extra = Prisma.PaymentUpdateManyMutationInput;
@@ -18,8 +27,46 @@ const idOf = (value: string | { id: string } | null | undefined): string | null 
 const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null =>
   idOf(invoice.parent?.subscription_details?.subscription);
 
-const alert = (type: string, details: Record<string, unknown>) =>
-  logger.error({ type, ...details }, 'Stripe event needs a human look');
+/**
+ * Money or a dispute that no automatic rule can settle. The reason is stored on the
+ * payment, where the admin page shows it, and the space members are emailed.
+ */
+async function flag(
+  deps: EventDeps,
+  paymentId: string | null,
+  reason: AttentionReason | 'UNKNOWN_PAYMENT',
+  details: Record<string, unknown>
+): Promise<void> {
+  logger.error({ type: reason, paymentId, ...details }, 'Stripe event needs a human look');
+  if (!paymentId || reason === 'UNKNOWN_PAYMENT') return;
+
+  await deps.db.payment.update({
+    where: { id: paymentId },
+    data: { needsAttention: reason, attentionAt: new Date() },
+  });
+  try {
+    await deps.notify(paymentId, reason);
+  } catch (err) {
+    logger.error({ err, paymentId }, 'Failed to email the payment alert');
+  }
+}
+
+async function cancelDuplicate(
+  deps: EventDeps,
+  payment: Payment,
+  subscriptionId: string,
+  details: Record<string, unknown>
+): Promise<void> {
+  try {
+    await deps.cancelSubscription(subscriptionId);
+  } catch (err) {
+    logger.error({ err, subscriptionId }, 'Failed to cancel a duplicate subscription');
+  }
+  await flag(deps, payment.id, 'DUPLICATE_SUBSCRIPTION', { subscriptionId, ...details });
+}
+
+const isDuplicateSubscription = (payment: Payment, subscriptionId: string | null): boolean =>
+  !!subscriptionId && !!payment.stripeSubscriptionId && payment.stripeSubscriptionId !== subscriptionId;
 
 /**
  * Marks a payment PAID exactly once. The conditional update is the claim: only the
@@ -33,6 +80,10 @@ export async function settlePayment(deps: EventDeps, payment: Payment, extra: Ex
   });
   if (claimed.count === 0) return false;
 
+  await deps.db.paymentLink.updateMany({
+    where: { paymentId: payment.id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
   await syncMissionPaid(deps.db, payment.missionId);
   if (!payment.receiptUrl) await deps.sendReceipt(payment.id);
   return true;
@@ -72,33 +123,51 @@ function sessionExtra(session: Stripe.Checkout.Session): Extra {
 
 async function flagClosedPayment(deps: EventDeps, payment: Payment, session: Stripe.Checkout.Session) {
   const current = await deps.db.payment.findUnique({ where: { id: payment.id } });
+  if (!current) return;
+
   const intent = idOf(session.payment_intent);
-  if (session.mode === 'payment' && current && intent !== current.stripePaymentIntentId) {
-    alert('payment-received-twice', { paymentId: payment.id, status: current.status, intent });
+  const subscription = idOf(session.subscription);
+  if (session.mode === 'payment' && intent !== current.stripePaymentIntentId) {
+    await flag(deps, payment.id, 'DUPLICATE_PAYMENT', { status: current.status, intent });
+  }
+  if (session.mode === 'subscription' && subscription && subscription !== current.stripeSubscriptionId) {
+    await cancelDuplicate(deps, payment, subscription, { status: current.status });
   }
 }
 
-async function onSessionPaid(deps: EventDeps, session: Stripe.Checkout.Session): Promise<void> {
-  if (!session.metadata?.payment_id) return;
+async function checkedSessionPayment(deps: EventDeps, session: Stripe.Checkout.Session) {
+  if (!session.metadata?.payment_id) return null;
   const payment = await paymentOfSession(deps, session);
-  if (!payment) return alert('payment-unknown', { session: session.id });
-
+  if (!payment) {
+    await flag(deps, null, 'UNKNOWN_PAYMENT', { session: session.id });
+    return null;
+  }
   const problem = sessionProblem(payment, session);
-  if (problem) return alert('payment-mismatch', { paymentId: payment.id, session: session.id, problem });
+  if (problem) {
+    await flag(deps, payment.id, 'AMOUNT_MISMATCH', { session: session.id, problem });
+    return null;
+  }
+  const subscription = idOf(session.subscription);
+  if (isDuplicateSubscription(payment, subscription)) {
+    await cancelDuplicate(deps, payment, subscription!, { session: session.id });
+    return null;
+  }
+  return payment;
+}
 
+async function onSessionPaid(deps: EventDeps, session: Stripe.Checkout.Session): Promise<void> {
+  const payment = await checkedSessionPayment(deps, session);
+  if (!payment) return;
   if (!(await settlePayment(deps, payment, sessionExtra(session)))) {
     await flagClosedPayment(deps, payment, session);
   }
 }
 
 async function onSessionCompleted(deps: EventDeps, session: Stripe.Checkout.Session): Promise<void> {
-  if (!session.metadata?.payment_id) return;
   if (session.payment_status !== 'unpaid') return onSessionPaid(deps, session);
 
-  const payment = await paymentOfSession(deps, session);
-  if (!payment) return alert('payment-unknown', { session: session.id });
-  const problem = sessionProblem(payment, session);
-  if (problem) return alert('payment-mismatch', { paymentId: payment.id, session: session.id, problem });
+  const payment = await checkedSessionPayment(deps, session);
+  if (!payment) return;
   await markProcessing(deps, payment, sessionExtra(session));
 }
 
@@ -151,12 +220,15 @@ async function onInvoicePaid(deps: EventDeps, invoice: Stripe.Invoice): Promise<
   const payment = await paymentOfInvoice(deps, invoice);
   if (!payment) return;
 
+  const subscription = subscriptionIdFromInvoice(invoice);
+  if (isDuplicateSubscription(payment, subscription)) {
+    return cancelDuplicate(deps, payment, subscription!, { invoice: invoice.id });
+  }
   if (invoice.currency !== 'eur' || !legacyCents(payment).includes(invoice.amount_paid)) {
-    return alert('payment-mismatch', { paymentId: payment.id, invoice: invoice.id, problem: 'invoice amount' });
+    return flag(deps, payment.id, 'AMOUNT_MISMATCH', { invoice: invoice.id, problem: 'invoice amount' });
   }
 
   await recordInvoice(deps, payment.id, invoice, 'PAID');
-  const subscription = subscriptionIdFromInvoice(invoice);
   await settlePayment(deps, payment, {
     stripeInvoiceId: invoice.id ?? null,
     ...(subscription && !payment.stripeSubscriptionId ? { stripeSubscriptionId: subscription } : {}),
@@ -180,9 +252,34 @@ async function onIntentSucceeded(deps: EventDeps, intent: Stripe.PaymentIntent):
 
   const accepted = legacyCents(payment).includes(intent.amount_received) && intent.currency === 'eur';
   if (!accepted) {
-    return alert('payment-mismatch', { paymentId: payment.id, intent: intent.id, problem: 'intent amount' });
+    return flag(deps, payment.id, 'AMOUNT_MISMATCH', { intent: intent.id, problem: 'intent amount' });
   }
   await settlePayment(deps, payment);
+}
+
+async function onChargeProblem(
+  deps: EventDeps,
+  intent: string | null,
+  reason: 'REFUNDED' | 'DISPUTED',
+  details: Record<string, unknown>
+): Promise<void> {
+  if (!intent) return;
+  const payment = await deps.db.payment.findUnique({ where: { stripePaymentIntentId: intent } });
+  if (payment) await flag(deps, payment.id, reason, { intent, ...details });
+}
+
+async function onSubscriptionDeleted(deps: EventDeps, subscription: Stripe.Subscription): Promise<void> {
+  const payments = await deps.db.payment.findMany({
+    where: { stripeSubscriptionId: subscription.id, status: { not: 'CANCELLED' } },
+    select: { id: true },
+  });
+  if (payments.length === 0) return;
+  const ids = payments.map((payment) => payment.id);
+  await deps.db.payment.updateMany({ where: { id: { in: ids } }, data: { status: 'CANCELLED' } });
+  await deps.db.paymentLink.updateMany({
+    where: { paymentId: { in: ids }, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
 }
 
 async function onSubscriptionUpdated(deps: EventDeps, subscription: Stripe.Subscription): Promise<void> {
@@ -203,6 +300,8 @@ export const PAYMENT_EVENT_TYPES = [
   'invoice.payment_failed',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'charge.refunded',
+  'charge.dispute.created',
 ] as const;
 
 export async function processPaymentEvent(deps: EventDeps, event: Stripe.Event): Promise<void> {
@@ -229,11 +328,15 @@ export async function processPaymentEvent(deps: EventDeps, event: Stripe.Event):
     case 'customer.subscription.updated':
       return onSubscriptionUpdated(deps, object as Stripe.Subscription);
     case 'customer.subscription.deleted':
-      await deps.db.payment.updateMany({
-        where: { stripeSubscriptionId: (object as Stripe.Subscription).id, status: { not: 'CANCELLED' } },
-        data: { status: 'CANCELLED' },
+      return onSubscriptionDeleted(deps, object as Stripe.Subscription);
+    case 'charge.refunded':
+      return onChargeProblem(deps, idOf((object as Stripe.Charge).payment_intent), 'REFUNDED', {
+        charge: (object as Stripe.Charge).id,
       });
-      return;
+    case 'charge.dispute.created':
+      return onChargeProblem(deps, idOf((object as Stripe.Dispute).payment_intent), 'DISPUTED', {
+        dispute: (object as Stripe.Dispute).id,
+      });
     default:
   }
 }

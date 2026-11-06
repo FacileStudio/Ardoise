@@ -15,9 +15,9 @@ import { DEFAULT_VAT_EXEMPTION_MENTION, getSpaceSettings } from '../space/settin
 import { syncMissionPaid } from '../mission/sync';
 import { isOverdue, startOfDueDay } from './overdue';
 import { processPaymentEvent } from './events';
-import { issuePaymentLink } from './link';
+import { issuePaymentLink, revokePaymentLinks } from './link';
 import { toCents } from './amounts';
-import { expireCheckoutSession } from './declare';
+import { expireCheckoutSession, notifyAttention } from './declare';
 import type {
   CreatePaymentInput,
   CreateManualPaymentInput,
@@ -343,7 +343,8 @@ export const paymentService = {
     db: PrismaClient,
     userId: string,
     id: string,
-    data: Omit<UpdatePaymentInput, 'id'>
+    data: Omit<UpdatePaymentInput, 'id'>,
+    getStripe?: () => Promise<StripeService>
   ): Promise<Payment> => {
     const existing = await requireRowScope(
       db,
@@ -411,6 +412,11 @@ export const paymentService = {
     if (data.reference !== undefined) updateData.reference = data.reference;
     if (data.attachedFiles !== undefined) updateData.attachedFiles = data.attachedFiles;
 
+    const amountChanged = data.amount !== undefined && data.amount !== Number(existing.amount);
+    if (amountChanged && !manual && getStripe) {
+      await expireCheckoutSession(getStripe, existing.stripeCheckoutSessionId);
+    }
+
     const updated = await db.payment.update({
       where: { id },
       data: updateData,
@@ -423,6 +429,9 @@ export const paymentService = {
 
     if (updated.status === 'PAID') {
       await syncMissionPaid(db, updated.missionId);
+    }
+    if (updated.status === 'PAID' || updated.status === 'CANCELLED') {
+      await revokePaymentLinks(db, id);
     }
 
     return updated;
@@ -492,6 +501,7 @@ export const paymentService = {
 
     if (paid) {
       await syncMissionPaid(db, updated.missionId);
+      await revokePaymentLinks(db, updated.id);
     } else if (updated.missionId) {
       await db.mission.updateMany({
         where: { id: updated.missionId, status: 'PAID' },
@@ -574,6 +584,7 @@ export const paymentService = {
       logger.error({ err: error }, 'Failed to cancel Stripe resource');
     }
 
+    await revokePaymentLinks(db, id);
     return db.payment.update({
       where: { id },
       data: { status: 'CANCELLED' },
@@ -847,7 +858,8 @@ export const paymentService = {
     storage: StorageService,
     smtpClient: SMTPClient,
     env: ServerEnv,
-    event: Stripe.Event
+    event: Stripe.Event,
+    getStripe?: () => Promise<StripeService>
   ) => {
     try {
       await db.webhookEvent.create({
@@ -861,7 +873,7 @@ export const paymentService = {
     }
 
     try {
-      await paymentService.processWebhookEvent(db, storage, smtpClient, env, event);
+      await paymentService.processWebhookEvent(db, storage, smtpClient, env, event, getStripe);
     } catch (error) {
       await db.webhookEvent.delete({ where: { id: event.id } }).catch(() => {});
       throw error;
@@ -882,11 +894,18 @@ export const paymentService = {
     storage: StorageService,
     smtpClient: SMTPClient,
     env: ServerEnv,
-    event: Stripe.Event
+    event: Stripe.Event,
+    getStripe?: () => Promise<StripeService>
   ) => {
     await processPaymentEvent(
       {
         db,
+        cancelSubscription: async (subscriptionId) => {
+          if (!getStripe) throw new Error('Stripe is not available to cancel the subscription');
+          await (await getStripe()).client.subscriptions.cancel(subscriptionId);
+        },
+        notify: (paymentId, reason) =>
+          notifyAttention(db, async () => smtpClient, paymentId, reason, env.FRONTEND_URL),
         sendReceipt: async (paymentId) => {
           try {
             await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, paymentId);

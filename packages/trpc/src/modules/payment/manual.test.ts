@@ -19,6 +19,7 @@ function setup(payment: Record<string, unknown> = {}) {
     ...payment,
   };
   const db: any = {
+    paymentLink: { updateMany: async () => ({ count: 0 }) },
     payment: {
       findUnique: async () => row,
       create: async (args: any) => {

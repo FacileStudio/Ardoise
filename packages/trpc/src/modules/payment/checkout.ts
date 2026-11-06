@@ -2,7 +2,6 @@ import { TRPCError } from '@trpc/server';
 import type { PrismaClient } from '@repo/database';
 import type { StripeService } from '@repo/stripe';
 import { logger } from '@repo/logger';
-import { createHash } from 'node:crypto';
 import { requirePlatformStudio } from '../space/studio';
 import { isPayableStatus, expectedCents } from './amounts';
 
@@ -22,6 +21,7 @@ export interface CheckoutPayment {
   description: string;
   stripePaymentIntentId: string | null;
   stripeSubscriptionId: string | null;
+  stripeCheckoutSessionId?: string | null;
   client: {
     id: string;
     companyName: string;
@@ -47,15 +47,8 @@ const hostedUrl = (url: string | null | undefined, host: string): string => {
   throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Stripe returned no usable URL' });
 };
 
-const idempotencyKey = (
-  payment: CheckoutPayment,
-  urls: CheckoutUrls,
-  customer: string | null
-): string => {
-  const hour = Math.floor(Date.now() / 3_600_000);
-  const urlHash = createHash('sha256').update(`${urls.success}|${urls.cancel}|${customer ?? ''}|${payment.description}`).digest('hex').slice(0, 16);
-  return `checkout:${payment.id}:${expectedCents(payment)}:${urlHash}:${hour}`;
-};
+const idempotencyKey = (payment: CheckoutPayment, previousSession: string | null): string =>
+  `checkout:${payment.id}:${expectedCents(payment)}:${previousSession ?? 'first'}`;
 
 function assertPayable(payment: CheckoutPayment): void {
   if (payment.collectionMethod !== 'STRIPE') {
@@ -71,6 +64,8 @@ function assertPayable(payment: CheckoutPayment): void {
     });
   }
 }
+
+const isGone = (err: unknown) => (err as { code?: string }).code === 'resource_missing';
 
 async function retireLegacyObjects(
   db: PrismaClient,
@@ -88,7 +83,13 @@ async function retireLegacyObjects(
       await stripe.client.subscriptions.cancel(payment.stripeSubscriptionId);
     }
   } catch (err) {
-    logger.warn({ err, paymentId: payment.id }, 'Could not cancel legacy Stripe object');
+    if (!isGone(err)) {
+      logger.warn({ err, paymentId: payment.id }, 'Could not cancel legacy Stripe object');
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This payment is already being processed. Please wait for its confirmation.',
+      });
+    }
   }
 
   await db.payment.updateMany({
@@ -143,10 +144,61 @@ function lineItem(payment: CheckoutPayment) {
   };
 }
 
+async function expireQuietly(stripe: StripeService, sessionId: string): Promise<void> {
+  try {
+    await stripe.client.checkout.sessions.expire(sessionId);
+  } catch (err) {
+    logger.debug({ err, sessionId }, 'Checkout session was not expired');
+  }
+}
+
+/**
+ * The stored session if it can be reused, after retiring everything else. A session
+ * is reused when it is still open and asks for the same amount, currency, mode and
+ * return URL. Any other open session is expired so that two live sessions of one
+ * payment never exist. A completed session means a payment is already on its way.
+ */
+async function reuseOrRetire(
+  stripe: StripeService,
+  payment: CheckoutPayment,
+  urls: CheckoutUrls
+): Promise<string | null> {
+  const id = payment.stripeCheckoutSessionId;
+  if (!id) return null;
+
+  let session;
+  try {
+    session = await stripe.client.checkout.sessions.retrieve(id);
+  } catch (err) {
+    if (isGone(err)) return null;
+    throw err;
+  }
+
+  if (session.status === 'complete') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'A payment for this invoice is already being processed. Please wait for its confirmation.',
+    });
+  }
+  if (session.status !== 'open') return null;
+
+  const recurring = payment.frequency !== 'ONE_TIME';
+  const matches =
+    session.amount_total === expectedCents(payment) &&
+    session.currency === 'eur' &&
+    session.mode === (recurring ? 'subscription' : 'payment') &&
+    session.success_url === urls.success;
+  if (matches && session.url) return session.url;
+
+  await expireQuietly(stripe, id);
+  return null;
+}
+
 /**
  * Starts a Stripe-hosted Checkout for one payment. Amount, currency, customer and
  * the payment id come from the database row; the caller supplies nothing but the
- * return URLs, which the server builds from FRONTEND_URL.
+ * return URLs, which the server builds from FRONTEND_URL. At most one session per
+ * payment is live: the stored one is reused or expired before a new one is created.
  */
 export async function createPaymentCheckout(
   db: PrismaClient,
@@ -157,6 +209,9 @@ export async function createPaymentCheckout(
   await requirePlatformStudio(db, payment.spaceId);
   assertPayable(payment);
   await retireLegacyObjects(db, stripe, payment);
+
+  const reused = await reuseOrRetire(stripe, payment, urls);
+  if (reused) return { url: hostedUrl(reused, STRIPE_HOST) };
 
   const recurring = payment.frequency !== 'ONE_TIME';
   const metadata = { payment_id: payment.id, space_id: payment.spaceId };
@@ -181,13 +236,27 @@ export async function createPaymentCheckout(
         ? { subscription_data: { metadata } }
         : { payment_intent_data: { metadata, description: payment.description.slice(0, 250) } }),
     },
-    { idempotencyKey: idempotencyKey(payment, urls, customer) }
+    { idempotencyKey: idempotencyKey(payment, payment.stripeCheckoutSessionId ?? null) }
   );
 
-  await db.payment.updateMany({
-    where: { id: payment.id },
+  const stored = await db.payment.updateMany({
+    where: { id: payment.id, stripeCheckoutSessionId: payment.stripeCheckoutSessionId ?? null },
     data: { stripeCheckoutSessionId: session.id },
   });
+  if (stored.count === 0) {
+    const current = await db.payment.findUnique({
+      where: { id: payment.id },
+      select: { stripeCheckoutSessionId: true },
+    });
+    if (current?.stripeCheckoutSessionId === session.id) {
+      return { url: hostedUrl(session.url, STRIPE_HOST) };
+    }
+    await expireQuietly(stripe, session.id);
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'Another payment attempt just started. Please try again.',
+    });
+  }
   return { url: hostedUrl(session.url, STRIPE_HOST) };
 }
 

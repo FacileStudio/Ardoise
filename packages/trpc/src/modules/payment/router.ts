@@ -74,7 +74,7 @@ export const paymentRouter = router({
 
   update: memberProcedure.input(UpdatePaymentSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
-    return paymentService.updatePayment(ctx.db, ctx.user.id, id, data);
+    return paymentService.updatePayment(ctx.db, ctx.user.id, id, data, ctx.getStripe);
   }),
 
   cancel: memberProcedure.input(CancelPaymentSchema).mutation(async ({ ctx, input }) => {
@@ -108,6 +108,30 @@ export const paymentRouter = router({
 
   rejectDeclared: memberProcedure.input(RejectDeclaredSchema).mutation(async ({ ctx, input }) => {
     return rejectDeclared(ctx.db, ctx.user.id, input.id, input.reason, adminActor(ctx));
+  }),
+
+  dismissAttention: memberProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
+    const payment = await requireRowScope(
+      ctx.db,
+      ctx.user.id,
+      await ctx.db.payment.findUnique({ where: { id: input.id } }),
+      'Payment not found'
+    );
+    await ctx.db.auditLog.create({
+      data: {
+        userId: ctx.user.id,
+        entity: 'payment',
+        entityId: payment.id,
+        action: 'UPDATE',
+        changes: { event: 'payment.attention.dismissed', was: payment.needsAttention },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      },
+    });
+    return ctx.db.payment.update({
+      where: { id: payment.id },
+      data: { needsAttention: null, attentionAt: null },
+    });
   }),
 
   createLink: memberProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
