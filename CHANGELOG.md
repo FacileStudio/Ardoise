@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.14.3] - 2026-11-06
+
 ### Changed
 
 - Subscription checkout asks for a billing address (`billing_address_collection: required`). Stripe customers Ardoise creates carry the invoice footer "Yann THEVENIN EI · SIRET 924 415 714 00022 · TVA non applicable, art. 293 B du CGI", which Stripe prints on every subscription invoice and renewal. Customers created before this change keep the account default footer, so set it in the Stripe dashboard (Settings, Billing, Invoice template).
