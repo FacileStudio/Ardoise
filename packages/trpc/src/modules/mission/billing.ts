@@ -200,17 +200,9 @@ export async function acceptQuote(db: PrismaClient, userId: string, input: Accep
   return document;
 }
 
-export async function generateInvoice(
-  db: PrismaClient,
-  storage: StorageService,
-  userId: string,
-  input: GenerateInvoiceInput
-) {
-  const { mission, depositPercent, currentQuote, invoices, state } = await loadBilling(
-    db,
-    userId,
-    input.id
-  );
+async function checkedInvoicePlan(db: PrismaClient, userId: string, input: GenerateInvoiceInput) {
+  const loaded = await loadBilling(db, userId, input.id);
+  const { mission, depositPercent, currentQuote, invoices, state } = loaded;
 
   if (mission.status === 'CANCELLED') reject('Mission is cancelled');
   if (state.locked) reject('The mission is already fully invoiced');
@@ -232,6 +224,17 @@ export async function generateInvoice(
       })),
   });
 
+  return { mission, currentQuote, plan };
+}
+
+export async function generateInvoice(
+  db: PrismaClient,
+  storage: StorageService,
+  userId: string,
+  input: GenerateInvoiceInput
+) {
+  const { mission } = await checkedInvoicePlan(db, userId, input);
+
   const providerId = issuerOf(mission);
   const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(
     db,
@@ -243,6 +246,8 @@ export async function generateInvoice(
   );
 
   return withDocumentNumber(db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Mission" WHERE "id" = ${mission.id} FOR UPDATE`;
+    const { currentQuote, plan } = await checkedInvoicePlan(tx as unknown as PrismaClient, userId, input);
     const today = new Date();
     const party = buildPartyAndLegalData(client, provider, settings);
     const dueDate =

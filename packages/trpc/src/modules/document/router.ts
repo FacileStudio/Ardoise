@@ -421,6 +421,14 @@ export const documentRouter = router({
         'Document not found'
       );
 
+      const issuedNumber = document.invoiceNumber ?? document.quoteNumber;
+      if (issuedNumber) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: `Document ${issuedNumber} is issued and cannot be deleted: invoice and quote numbers must stay continuous. Issue a credit note (avoir) instead.`,
+        });
+      }
+
       const [payments, invoices] = await Promise.all([
         ctx.db.payment.count({
           where: { documentId: document.id, status: { in: ['PENDING', 'PAID', 'PAST_DUE'] } },

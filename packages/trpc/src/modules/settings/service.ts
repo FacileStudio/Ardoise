@@ -42,7 +42,7 @@ export function decryptSecretStrict(value: string): string {
   return getCrypto().decrypt(value);
 }
 
-function decryptSecret(value: string): string {
+export function decryptSecret(value: string): string {
   try {
     return getCrypto().decrypt(value);
   } catch {
