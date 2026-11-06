@@ -27,6 +27,9 @@ const isTransientError = (error: unknown): boolean => {
   return false;
 };
 
+const isNotConfigured = (error: unknown): boolean =>
+  error instanceof Error && (error as { code?: unknown }).code === 'PRECONDITION_FAILED';
+
 /** What the webhook handler talks to, replaced in tests. */
 export interface StripeWebhookDeps {
   db: typeof prisma;
@@ -64,8 +67,24 @@ export const createStripeWebhookHandler = (
 
       const rawBody = await c.req.text();
 
-      const stripe = await deps.getStripe(deps.db);
-      const event = await stripe.constructEvent(rawBody, signature);
+      let stripe: Awaited<ReturnType<StripeWebhookDeps['getStripe']>>;
+      try {
+        stripe = await deps.getStripe(deps.db);
+      } catch (error) {
+        if (isNotConfigured(error)) {
+          logger.warn({ type: 'stripe-webhook' }, 'Stripe is not configured, webhook refused');
+          return c.json({ error: 'Stripe is not configured' }, 503);
+        }
+        throw error;
+      }
+
+      let event: Awaited<ReturnType<typeof stripe.constructEvent>>;
+      try {
+        event = await stripe.constructEvent(rawBody, signature);
+      } catch {
+        logger.warn({ type: 'stripe-webhook' }, 'Stripe webhook signature verification failed');
+        return c.json({ error: 'Invalid signature' }, 400);
+      }
 
       if (isBillingEvent(event)) {
         try {
