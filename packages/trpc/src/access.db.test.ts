@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import { prisma } from '@repo/database';
 import { appRouter } from './index';
+import { getStripeService } from './modules/settings/service';
 
 /**
  * The access map of every tRPC procedure. A new procedure fails the first
@@ -137,6 +138,7 @@ describe('procedure access map', () => {
 });
 
 const enabled = !!process.env.TEST_DATABASE_URL;
+process.env.ENCRYPTION_SECRET ??= 'access-test-encryption-secret-0123456789';
 
 describe.skipIf(!enabled)('procedure access against Postgres', () => {
   const ids: Record<string, string> = {};
@@ -434,6 +436,41 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
     }
     expect(leaks).toEqual([]);
   }, 120_000);
+
+  it('lets nobody but staff change the Stripe and SMTP settings billing reads', async () => {
+    const legacy = await prisma.user.create({
+      data: {
+        email: 'legacy-admin@access.test',
+        firstName: 'L',
+        lastName: 'A',
+        role: 'ADMIN',
+        accounts: { create: { id: crypto.randomUUID(), providerId: ISSUER, accountId: 'sub-legacy' } },
+      },
+    });
+    const admin = callerFor({ id: legacy.id, role: 'ADMIN', email: legacy.email });
+    const attack = {
+      stripeSecretKey: 'sk_live_attacker',
+      stripeWebhookSecret: 'whsec_attacker',
+      stripePublishableKey: 'pk_live_attacker',
+      smtpHost: 'smtp.attacker.test',
+      smtpPass: 'attacker',
+    };
+    const row = async () => JSON.stringify(await prisma.settings.findUnique({ where: { id: 'global' } }));
+    const before = await row();
+
+    for (const caller of [member, admin]) {
+      for (const path of ['settings.update', 'admin.settings.update']) {
+        expect(await codeOf(caller(path, attack))).toBe('FORBIDDEN');
+      }
+      expect(await codeOf(caller('settings.getAdmin'))).toBe('FORBIDDEN');
+    }
+    expect(await row()).toBe(before);
+
+    await staff('settings.update', { stripeSecretKey: 'sk_test_staff', stripeWebhookSecret: 'whsec_staff' });
+    const stripe = await getStripeService(prisma);
+    expect((stripe as unknown as { webhookSecret: string }).webhookSecret).toBe('whsec_staff');
+    await prisma.user.delete({ where: { id: legacy.id } });
+  });
 
   it('never moves a space A client into a space the member does not belong to', async () => {
     expect(
