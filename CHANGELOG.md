@@ -16,6 +16,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Changed
 
+> **Deploy order:** `/billing/portal` now requires `owner_email`, so Registre must already run v0.5.1 or later (it does in production).
+
 - **Breaking for Registre:** `POST /billing/portal` requires `owner_email`, checked against the space's owners in the Registre snapshot like checkout.
 - Comps grant the published version of their plan, and only fall back to the latest version when the plan was never published. A draft no longer leaks to comped people.
 - Spaces without a subscription get the published version of the plan flagged free (`Plan.isFree`, set on Solo by migration `20261106120000_billing_review`), not the first plan by sort order. Staff toggle it in the plan settings.
@@ -26,6 +28,9 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Fixed
 
+- Checkout no longer opens a second database connection when it syncs a completed session, so concurrent checkouts cannot exhaust the pool and hang.
+- At most one free plan, enforced by a partial unique index (migration `20261106130000_free_plan_unique`); a concurrent save answers CONFLICT, and unflagging the only free plan is refused. The free plan grants its published version only (feature defaults when none is published), and the choice is ordered by sort order then key.
+- `GET /api/catalog` errors are `no-store` instead of publicly cacheable, its preflight no longer echoes `Access-Control-Request-Headers`, and a bare `/billing` gets no credentialed CORS.
 - Checkout refused a second session only while the first was open. It now also syncs a completed session and refuses while its subscription has not ended, so a slow webhook cannot let a space pay twice.
 - A second live subscription of one space no longer overwrites the first. Subscription syncs run under a per-space advisory lock; the second is kept in `DuplicateSubscription`, logged as an alert and shown to staff in `/admin/offres`, and promoted once the first ends.
 - Publishing archives the previous version's Stripe prices only after the database commit; an archive failure is logged and reported instead of failing the publish. A concurrent publish of the same draft answers CONFLICT.

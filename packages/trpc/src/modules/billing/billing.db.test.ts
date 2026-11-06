@@ -542,6 +542,78 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     expect(sessions.size).toBe(1);
   });
 
+  it('syncs completed sessions inside the checkout transaction: more concurrent checkouts than pool connections finish', async () => {
+    await seedBilling(prisma);
+    const live = subscription({ id: 'sub_live' });
+    const { stripe, sessions } = fakeStripe(
+      { sub_live: live },
+      { cus_new: { id: 'cus_new', metadata: { registre_space_id: 'spc_client' } } }
+    );
+    await publishVersion(prisma, stripe, (await versionOf('pro')).id);
+    const deps = { db: prisma, stripe, directory, redirectOrigins: new Set(['https://sso.facile.studio']), logger: silent };
+    const body = {
+      space_id: 'spc_client',
+      space_name: 'Client',
+      owner_email: 'boss@client.fr',
+      lookup_key: 'plan_pro_month',
+      success_url: 'https://sso.facile.studio/ok',
+      cancel_url: 'https://sso.facile.studio/ko',
+    };
+    await createCheckout(deps, body);
+    Object.assign(sessions.get('cs_1')!, { status: 'complete', subscription: 'sub_live' });
+    const outcome = await Promise.race([
+      Promise.allSettled(Array.from({ length: 24 }, () => createCheckout(deps, body))),
+      new Promise<'hung'>((resolve) => setTimeout(() => resolve('hung'), 20_000)),
+    ]);
+    expect(outcome).not.toBe('hung');
+    for (const result of outcome as PromiseSettledResult<unknown>[]) {
+      expect(result).toMatchObject({ status: 'rejected', reason: { code: 'already_subscribed' } });
+    }
+  }, 30_000);
+
+  it('keeps at most one free plan under concurrent saves and refuses to unflag the only one', async () => {
+    await seedBilling(prisma);
+    const staff = await staffUser('staff@facile.studio', 'sub_staff');
+    const caller = billingRouter.createCaller({
+      db: prisma,
+      user: { id: staff.id, role: 'ADMIN', email: staff.email },
+      env: { OIDC_ISSUER: ISSUER, BILLING_STAFF_SUBS: 'sub_staff' },
+      getStripe: async () => ({ client: fakeStripe().stripe }),
+      log: silent,
+    } as never);
+    for (let run = 0; run < 5; run++) {
+      const results = await Promise.allSettled([
+        caller.savePlan({ key: 'pro', name: 'Pro', sortOrder: 0, isFree: true }),
+        caller.savePlan({ key: 'studio', name: 'Studio', sortOrder: 1, isFree: true }),
+      ]);
+      expect(await prisma.plan.count({ where: { isFree: true } })).toBe(1);
+      for (const result of results) {
+        if (result.status === 'rejected') expect(result.reason).toMatchObject({ code: 'CONFLICT' });
+      }
+    }
+    const free = await prisma.plan.findFirstOrThrow({ where: { isFree: true } });
+    await expect(caller.savePlan({ key: free.key, name: free.name, sortOrder: free.sortOrder, isFree: false })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    expect(await prisma.plan.count({ where: { isFree: true } })).toBe(1);
+    await prisma.auditLog.deleteMany({ where: { userId: staff.id } });
+  });
+
+  it('gives the free plan its published version only, the feature defaults when none is published', async () => {
+    await seedBilling(prisma);
+    await prisma.planVersion.updateMany({ data: { status: 'draft', publishedAt: null } });
+    const free = await prisma.plan.findFirstOrThrow({ where: { isFree: true } });
+    const features = await prisma.feature.findMany();
+    const { input } = await loadResolveInput(prisma, directory);
+    const out = resolveEntitlements(input).spaces.find((space) => space.id === 'spc_client')!;
+    expect(out.plan).toBe(free.key);
+    const storage = features.find((feature) => feature.key === 'nuage.storage_gb')!;
+    expect(out.entitlements['nuage.storage_gb']).toBe(storage.defaultValue as number);
+    await prisma.planVersion.updateMany({ where: { plan: { key: free.key } }, data: { status: 'published', publishedAt: new Date() } });
+    const again = resolveEntitlements((await loadResolveInput(prisma, directory)).input).spaces.find((space) => space.id === 'spc_client')!;
+    expect(again.entitlements['nuage.storage_gb']).toBe(5);
+  });
+
   it('never overwrites a live subscription with a second one, flags it and promotes it once the first ends', async () => {
     await seedBilling(prisma);
     await prisma.spaceSubscription.create({ data: { registreSpaceId: 'spc_client', stripeCustomerId: 'cus_new' } });

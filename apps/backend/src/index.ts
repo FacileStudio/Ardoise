@@ -101,7 +101,6 @@ app.post('/webhook', createStripeWebhookHandler(storage, env));
 app.post('/webhooks/plume', createPlumeWebhookHandler(env));
 app.route(GLOUTON_ROUTES_PREFIX, createGloutonRoutes(env, prisma));
 
-
 if (directory) {
   app.post(SyncPath, (c) => {
     directory.nudge();

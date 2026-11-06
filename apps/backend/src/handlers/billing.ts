@@ -45,8 +45,10 @@ export interface BillingRouteOptions {
   limits?: Partial<BillingLimits>;
 }
 
-const fail = (c: Context, status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500 | 503, code: string, message: string) =>
-  c.json({ error: { code, message } }, status);
+const fail = (c: Context, status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500 | 503, code: string, message: string) => {
+  c.header('Cache-Control', 'no-store');
+  return c.json({ error: { code, message } }, status);
+};
 
 /**
  * GET /api/catalog (public, cached 60 s) and the server-to-server billing API
@@ -74,12 +76,13 @@ export function createBillingRoutes(options: BillingRouteOptions) {
 
   app.use(
     '/api/catalog',
-    cors({ origin: '*', allowMethods: ['GET'], maxAge: 600, credentials: false })
+    cors({ origin: '*', allowMethods: ['GET'], allowHeaders: ['Content-Type'], maxAge: 600, credentials: false })
   );
   app.use('/api/catalog', createRouteRateLimit('catalog', minute(limits.catalog), limiter));
   app.get('/api/catalog', async (c) => {
+    const catalog = await cachedCatalog(db);
     c.header('Cache-Control', 'public, max-age=60');
-    return c.json(await cachedCatalog(db));
+    return c.json(catalog);
   });
 
   app.use('/billing/*', async (c, next) => {
