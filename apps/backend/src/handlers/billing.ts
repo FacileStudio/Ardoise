@@ -1,5 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import { cors } from 'hono/cors';
 import type { PrismaClient } from '@repo/database';
 import {
   BillingApiError,
@@ -71,6 +72,10 @@ export function createBillingRoutes(options: BillingRouteOptions) {
     return fail(c, 500, 'internal', 'Internal server error');
   });
 
+  app.use(
+    '/api/catalog',
+    cors({ origin: '*', allowMethods: ['GET'], maxAge: 600, credentials: false })
+  );
   app.use('/api/catalog', createRouteRateLimit('catalog', minute(limits.catalog), limiter));
   app.get('/api/catalog', async (c) => {
     c.header('Cache-Control', 'public, max-age=60');

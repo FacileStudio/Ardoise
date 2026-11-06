@@ -81,14 +81,6 @@ app.use('*', loggerMiddleware);
 
 app.use('/trpc/*', trpcRateLimit);
 
-app.options('/trpc/*', (c) => c.body(null, 204));
-app.options('/storage/*', (c) => c.body(null, 204));
-app.options('/webhook', (c) => c.body(null, 204));
-app.options('*', (c) => c.body(null, 204));
-
-app.post('/webhook', createStripeWebhookHandler(storage, env));
-app.post('/webhooks/plume', createPlumeWebhookHandler(env));
-app.route(GLOUTON_ROUTES_PREFIX, createGloutonRoutes(env, prisma));
 app.route(
   '/',
   createBillingRoutes({
@@ -99,6 +91,16 @@ app.route(
     logger,
   })
 );
+
+app.options('/trpc/*', (c) => c.body(null, 204));
+app.options('/storage/*', (c) => c.body(null, 204));
+app.options('/webhook', (c) => c.body(null, 204));
+app.options('*', (c) => c.body(null, 204));
+
+app.post('/webhook', createStripeWebhookHandler(storage, env));
+app.post('/webhooks/plume', createPlumeWebhookHandler(env));
+app.route(GLOUTON_ROUTES_PREFIX, createGloutonRoutes(env, prisma));
+
 
 if (directory) {
   app.post(SyncPath, (c) => {
