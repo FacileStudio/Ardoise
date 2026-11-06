@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-06
+
 ### Changed
 
 > **Deploy order:** `/billing/portal` now requires `owner_email`, so Registre must already run v0.5.1 or later (it does in production).
