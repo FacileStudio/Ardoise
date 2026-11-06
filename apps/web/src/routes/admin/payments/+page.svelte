@@ -24,7 +24,15 @@
 	import { spaceFilter } from '$lib/space-filter.svelte';
 	import { PAYMENT_STATUS_LABELS } from '$lib/mission';
 
-	type PaymentStatus = 'PENDING' | 'PAID' | 'PAST_DUE' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
+	type PaymentStatus =
+		| 'PENDING'
+		| 'PAID'
+		| 'PAST_DUE'
+		| 'FAILED'
+		| 'EXPIRED'
+		| 'CANCELLED'
+		| 'PROCESSING'
+		| 'AWAITING_CONFIRMATION';
 	const STATUSES: PaymentStatus[] = [
 		'PENDING',
 		'PAID',
@@ -32,6 +40,8 @@
 		'FAILED',
 		'EXPIRED',
 		'CANCELLED',
+		'PROCESSING',
+		'AWAITING_CONFIRMATION',
 	];
 	const PAGE_SIZE = 20;
 	type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
@@ -180,6 +190,8 @@
 			case 'PAID':
 				return 'success';
 			case 'PENDING':
+			case 'PROCESSING':
+			case 'AWAITING_CONFIRMATION':
 				return 'warning';
 			case 'EXPIRED':
 				return 'danger';

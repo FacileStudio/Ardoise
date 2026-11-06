@@ -13,4 +13,11 @@ describe('redactUrl', () => {
   it('drops the query of a value it cannot parse', () => {
     expect(redactUrl('/login/verify?token=secret')).toBe('/login/verify');
   });
+
+  it('hides the token of a pay link path', () => {
+    const token = 'b'.repeat(43);
+
+    expect(redactUrl(`https://app.test/pay/${token}?paid=1`)).not.toContain(token);
+    expect(redactUrl(`/pay/${token}`)).toBe('/pay/[redacted]');
+  });
 });

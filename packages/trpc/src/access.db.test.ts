@@ -26,7 +26,7 @@ const each = (access: Access, paths: string): Record<string, Access> =>
 const ACCESS: Record<string, Access> = {
   ...each(
     'public',
-    `auth.refresh settings.get admin.settings.get payment.getByIdPublic payment.getClientSecret
+    `auth.refresh settings.get admin.settings.get payLink.get payLink.checkout payLink.declare
      magicLink.request magicLink.consume`
   ),
   ...each(
@@ -36,8 +36,8 @@ const ACCESS: Record<string, Access> = {
   ),
   ...each(
     'client-portal',
-    `client.me payment.myPayments payment.billingPortal portal.overview portal.documents
-     portal.documentDownload portal.signLink`
+    `client.me payment.myPayments portal.overview portal.documents portal.documentDownload
+     portal.signLink portal.payments portal.checkout portal.manageMaintenance portal.declarePayment`
   ),
   ...each('member', `document.types document.signatureEnabled billing.access space.list space.directory space.create`),
   ...each(
@@ -45,6 +45,7 @@ const ACCESS: Record<string, Access> = {
     `client.list client.getById client.create client.update client.transfer client.delete
      payment.list payment.stats payment.getById payment.create payment.createManual payment.setStatus
      payment.delete payment.update payment.cancel payment.sendReminder payment.markExpired payment.retryReceipts
+     payment.confirmDeclared payment.rejectDeclared payment.createLink payment.revokeLinks
      document.list document.get document.delete document.import document.update document.setSignature
      document.refreshSignLink document.sendForSignature document.download
      document.previewFacturePrestation document.createFacturePrestation document.previewMaintenance
@@ -615,8 +616,14 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
         ['FORBIDDEN', 'BAD_REQUEST', 'PRECONDITION_FAILED', 'CONFLICT'],
       ],
       ['payment.cancel', () => member('payment.cancel', { id: ids.stripeC }), ['FORBIDDEN']],
-      ['payment.billingPortal', () => portalC('payment.billingPortal', { id: ids.stripeC }), ['FORBIDDEN']],
-      ['payment.getClientSecret', () => anonymous('payment.getClientSecret', { id: ids.stripeC }), ['FORBIDDEN']],
+      ['portal.manageMaintenance', () => portalC('portal.manageMaintenance', { paymentId: ids.stripeC }), ['FORBIDDEN']],
+      ['portal.checkout', () => portalC('portal.checkout', { paymentId: ids.stripeC }), ['FORBIDDEN']],
+      [
+        'portal.declarePayment',
+        () => portalC('portal.declarePayment', { paymentId: ids.stripeC, declaration: { method: 'TRANSFER' } }),
+        ['FORBIDDEN'],
+      ],
+      ['payment.createLink', () => member('payment.createLink', { id: ids.stripeC }), ['FORBIDDEN']],
       [
         'client.create',
         () =>

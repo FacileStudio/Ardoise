@@ -74,12 +74,19 @@ export function getClientIp(c: Context): string {
 const BUCKETS = {
   auth: { windowMs: 60_000, maxRequests: 5 },
   payment: { windowMs: 60_000, maxRequests: 20 },
+  payLink: { windowMs: 60_000, maxRequests: 15 },
   general: { windowMs: 60_000, maxRequests: 300 },
 } satisfies Record<string, RateLimitConfig>;
 
 type Bucket = keyof typeof BUCKETS;
 
 const AUTH_PROCEDURES = new Set(['magicLink.request', 'magicLink.consume']);
+
+const PORTAL_PAYMENT_PROCEDURES = new Set([
+  'portal.checkout',
+  'portal.declarePayment',
+  'portal.manageMaintenance',
+]);
 
 /**
  * A tRPC batch call puts several procedures in one path (`/trpc/a.x,b.y`), so a
@@ -100,9 +107,11 @@ export function bucketCosts(path: string): Map<Bucket, number> {
     const bucket: Bucket =
       AUTH_PROCEDURES.has(procedure)
         ? 'auth'
-        : procedure.startsWith('payment.')
-          ? 'payment'
-          : 'general';
+        : procedure.startsWith('payLink.')
+          ? 'payLink'
+          : procedure.startsWith('payment.') || PORTAL_PAYMENT_PROCEDURES.has(procedure)
+            ? 'payment'
+            : 'general';
     costs.set(bucket, (costs.get(bucket) ?? 0) + 1);
   }
   return costs;

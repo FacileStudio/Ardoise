@@ -5,6 +5,14 @@ enum PaymentStatus {
   CANCELLED
   PAST_DUE
   FAILED
+  PROCESSING
+  AWAITING_CONFIRMATION
+}
+
+enum PaymentDeclaredMethod {
+  TRANSFER
+  CHEQUE
+  OTHER
 }
 
 enum PaymentFrequency {
@@ -33,7 +41,7 @@ model Payment {
   space   Space  @relation(fields: [spaceId], references: [id], onDelete: Restrict)
 
   missionId String?
-  mission      Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
+  mission   Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
 
   documentId String?
   document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
@@ -47,17 +55,25 @@ model Payment {
   collectionMethod PaymentCollectionMethod @default(STRIPE)
   reference        String?
 
+  declaredMethod    PaymentDeclaredMethod?
+  declaredReference String?
+  declaredPaidOn    DateTime?
+  declaredAt        DateTime?
+  declaredVia       String?
+
   dueDate DateTime
   paidAt  DateTime?
 
-  stripePaymentIntentId String? @unique
-  stripeSubscriptionId  String? @unique
-  stripeInvoiceId       String?
+  stripePaymentIntentId   String? @unique
+  stripeSubscriptionId    String? @unique
+  stripeInvoiceId         String?
+  stripeCheckoutSessionId String?
 
   attachedFiles String[]
 
   attachedDocuments PaymentDocument[]
   invoices          PaymentInvoice[]
+  links             PaymentLink[]
 
   receiptUrl      String?
   receiptAttempts Int     @default(0)
@@ -112,4 +128,21 @@ model PaymentDocument {
   @@unique([paymentId, documentId])
   @@index([paymentId])
   @@index([documentId])
+}
+
+model PaymentLink {
+  id String @id @default(cuid())
+
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([paymentId])
+  @@index([expiresAt])
 }

@@ -3,11 +3,9 @@ import type { StripeService } from '@repo/stripe';
 import type { StorageService } from '@repo/storage';
 import { SMTPClient, EmailTemplates } from '@repo/smtp';
 import { generateReceipt, type ReceiptData } from '@repo/typst';
-import { calculateStripeFees } from '@repo/utils/stripe-fees';
 import { TRPCError } from '@trpc/server';
 import type { ServerEnv } from '@repo/env';
 import type Stripe from 'stripe';
-import { randomUUID } from 'node:crypto';
 import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
@@ -16,6 +14,10 @@ import { requirePlatformStudio } from '../space/studio';
 import { DEFAULT_VAT_EXEMPTION_MENTION, getSpaceSettings } from '../space/settings';
 import { syncMissionPaid } from '../mission/sync';
 import { isOverdue, startOfDueDay } from './overdue';
+import { processPaymentEvent } from './events';
+import { issuePaymentLink } from './link';
+import { toCents } from './amounts';
+import { expireCheckoutSession } from './declare';
 import type {
   CreatePaymentInput,
   CreateManualPaymentInput,
@@ -23,36 +25,6 @@ import type {
   UpdatePaymentInput,
   ListPaymentsParams,
 } from './types';
-
-const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
-  const sub = invoice.parent?.subscription_details?.subscription;
-  const id = typeof sub === 'string' ? sub : sub?.id;
-  return typeof id === 'string' ? id : null;
-};
-
-const recordPaymentInvoice = async (
-  db: PrismaClient,
-  paymentId: string,
-  invoice: Stripe.Invoice,
-  status: 'PAID' | 'FAILED'
-): Promise<void> => {
-  if (!invoice.id) return;
-
-  const amountCents = status === 'PAID' ? invoice.amount_paid : invoice.amount_due;
-  const data = {
-    amount: (amountCents ?? 0) / 100,
-    status,
-    periodStart: invoice.period_start ? new Date(invoice.period_start * 1000) : null,
-    periodEnd: invoice.period_end ? new Date(invoice.period_end * 1000) : null,
-    paidAt: status === 'PAID' ? new Date() : null,
-  };
-
-  await db.paymentInvoice.upsert({
-    where: { stripeInvoiceId: invoice.id },
-    create: { paymentId, stripeInvoiceId: invoice.id, ...data },
-    update: data,
-  });
-};
 
 const recordReceiptFailure = async (
   db: PrismaClient,
@@ -220,61 +192,6 @@ export const paymentService = {
     };
   },
 
-  getPaymentByIdPublic: async (db: PrismaClient, id: string) => {
-    const payment = await db.payment.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        amount: true,
-        stripeFee: true,
-        totalWithFees: true,
-        description: true,
-        status: true,
-        frequency: true,
-        collectionMethod: true,
-        reference: true,
-        dueDate: true,
-        paidAt: true,
-        receiptUrl: true,
-        stripeSubscriptionId: true,
-        client: {
-          select: {
-            companyName: true,
-            billingAddress: true,
-            billingCity: true,
-            billingCountry: true,
-          },
-        },
-        attachedDocuments: {
-          select: {
-            id: true,
-            document: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                invoiceNumber: true,
-                quoteNumber: true,
-                contractRef: true,
-                pdfUrl: true,
-                total: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!payment) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Payment not found',
-      });
-    }
-
-    return payment;
-  },
-
   createPayment: async (
     db: PrismaClient,
     userId: string,
@@ -348,116 +265,22 @@ export const paymentService = {
       }
     }
 
-    const feeCalculation = calculateStripeFees(data.amount);
+    const amount = toCents(data.amount) / 100;
     const clientEmail = client.contactEmail || client.user?.email || null;
     const clientName = `${client.contactFirstName} ${client.contactLastName}`.trim();
     const useStripe = data.collectionMethod === 'STRIPE';
 
-    let stripePaymentIntentId: string | undefined;
-    let stripeSubscriptionId: string | undefined;
-
     if (useStripe) {
       if (!stripe) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Stripe is not configured',
-        });
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Stripe is not configured' });
       }
-
       if (!smtpClient) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'SMTP is not configured',
-        });
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'SMTP is not configured' });
       }
-
       if (!clientEmail) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Client contact email is required for Stripe payments',
-        });
-      }
-
-      const idemBase = randomUUID();
-
-      try {
-        if (data.frequency === 'ONE_TIME') {
-          const paymentIntent = await stripe.client.paymentIntents.create(
-            {
-              amount: Math.round(feeCalculation.totalWithFees * 100),
-              currency: 'eur',
-              metadata: {
-                clientId: client.id,
-                description: data.description,
-              },
-              automatic_payment_methods: { enabled: true },
-            },
-            { idempotencyKey: `${idemBase}-pi` }
-          );
-          stripePaymentIntentId = paymentIntent.id;
-        } else {
-          let customerId = client.stripeCustomerId;
-
-          if (!customerId) {
-            const customer = await stripe.client.customers.create(
-              {
-                email: clientEmail,
-                name: client.companyName,
-                metadata: { clientId: client.id },
-              },
-              { idempotencyKey: `${idemBase}-customer` }
-            );
-            customerId = customer.id;
-
-            await db.client.update({
-              where: { id: client.id },
-              data: {
-                stripeCustomerId: customerId,
-              },
-            });
-          }
-
-          const intervalMap = {
-            MONTHLY: 'month' as const,
-            YEARLY: 'year' as const,
-            ONE_TIME: 'month' as const,
-          };
-
-          const price = await stripe.client.prices.create(
-            {
-              currency: 'eur',
-              unit_amount: Math.round(feeCalculation.totalWithFees * 100),
-              recurring: {
-                interval: intervalMap[data.frequency],
-              },
-              product_data: {
-                name: data.description,
-              },
-            },
-            { idempotencyKey: `${idemBase}-price` }
-          );
-
-          const subscription = await stripe.client.subscriptions.create(
-            {
-              customer: customerId,
-              items: [{ price: price.id }],
-              payment_behavior: 'default_incomplete',
-              payment_settings: { save_default_payment_method: 'on_subscription' },
-              expand: ['latest_invoice.payment_intent'],
-              metadata: {
-                clientId: client.id,
-                description: data.description,
-              },
-            },
-            { idempotencyKey: `${idemBase}-sub` }
-          );
-
-          stripeSubscriptionId = subscription.id;
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Stripe error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         });
       }
     }
@@ -468,17 +291,15 @@ export const paymentService = {
         spaceId: client.spaceId,
         missionId: data.missionId,
         documentId: data.documentId,
-        amount: feeCalculation.amount,
-        stripeFee: useStripe ? feeCalculation.stripeFee : 0,
-        totalWithFees: useStripe ? feeCalculation.totalWithFees : feeCalculation.amount,
+        amount,
+        stripeFee: 0,
+        totalWithFees: amount,
         description: data.description,
         status: 'PENDING',
         frequency: data.frequency,
         collectionMethod: data.collectionMethod,
         reference: data.reference?.trim() || null,
         dueDate: data.dueDate,
-        stripePaymentIntentId,
-        stripeSubscriptionId,
         attachedFiles: data.attachedFiles || [],
         attachedDocuments: {
           create: (data.attachedDocumentIds || []).map((documentId) => ({
@@ -500,11 +321,12 @@ export const paymentService = {
 
     if (useStripe && smtpClient && clientEmail) {
       try {
+        const link = await issuePaymentLink(db, payment.id, env.FRONTEND_URL || appOrigin);
         const emailTemplates = new EmailTemplates(smtpClient);
         await emailTemplates.sendPaymentNotification({
           clientEmail,
-          paymentLink: `${appOrigin}/app/payment/${payment.id}`,
-          amount: Number(payment.totalWithFees),
+          paymentLink: link.url,
+          amount: Number(payment.amount),
           dueDate: payment.dueDate,
           clientName,
           invoiceNumber: payment.id,
@@ -738,6 +560,8 @@ export const paymentService = {
       await requirePlatformStudio(db, payment.spaceId);
     }
 
+    await expireCheckoutSession(async () => stripe, payment.stripeCheckoutSessionId);
+
     try {
       if (payment.stripePaymentIntentId) {
         await stripe.client.paymentIntents.cancel(payment.stripePaymentIntentId);
@@ -759,42 +583,6 @@ export const paymentService = {
         },
       },
     });
-  },
-
-  createBillingPortalSession: async (
-    db: PrismaClient,
-    stripe: StripeService,
-    paymentId: string,
-    userId: string,
-    returnUrl: string
-  ): Promise<{ url: string }> => {
-    const payment = await db.payment.findUnique({
-      where: { id: paymentId },
-      include: { client: true },
-    });
-
-    if (!payment) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found' });
-    }
-
-    if (payment.client.userId !== userId) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this payment' });
-    }
-    await requirePlatformStudio(db, payment.spaceId);
-
-    if (!payment.stripeSubscriptionId || !payment.client.stripeCustomerId) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'This payment has no subscription to manage',
-      });
-    }
-
-    const session = await stripe.createBillingPortalSession(
-      payment.client.stripeCustomerId,
-      returnUrl
-    );
-
-    return { url: session.url };
   },
 
   sendReminder: async (
@@ -862,11 +650,12 @@ export const paymentService = {
     );
 
     try {
+      const link = await issuePaymentLink(db, payment.id, env.FRONTEND_URL || appOrigin);
       const emailTemplates = new EmailTemplates(smtpClient);
       await emailTemplates.sendPaymentReminder({
         clientEmail,
-        paymentLink: `${appOrigin}/app/payment/${payment.id}`,
-        amount: Number(payment.totalWithFees || payment.amount),
+        paymentLink: link.url,
+        amount: Number(payment.amount),
         dueDate: payment.dueDate,
         clientName,
         invoiceNumber: payment.id,
@@ -988,7 +777,7 @@ export const paymentService = {
       receiptDate: payment.paidAt
         ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(payment.paidAt)
         : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date()),
-      paymentMethod: 'Carte bancaire',
+      paymentMethod: 'Paiement en ligne (Stripe)',
       clientName: payment.client.companyName,
       clientAddress: payment.client.billingAddress || '',
       clientCity: payment.client.billingCity || '',
@@ -1095,140 +884,20 @@ export const paymentService = {
     env: ServerEnv,
     event: Stripe.Event
   ) => {
-    switch (event.type) {
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-
-        const payment = await db.payment.findUnique({
-          where: { stripePaymentIntentId: paymentIntent.id },
-        });
-
-        if (!payment) break;
-
-        const updated = await db.payment.updateMany({
-          where: { id: payment.id, status: 'PENDING' },
-          data: { status: 'PAID', paidAt: new Date() },
-        });
-
-        if (updated.count === 0) break;
-
-        await syncMissionPaid(db, payment.missionId);
-
-        try {
-          await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);
-        } catch (error) {
-          logger.error({ err: error }, 'Failed to generate receipt for payment_intent.succeeded');
-          await recordReceiptFailure(db, payment.id, error);
-        }
-        break;
-      }
-
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-
-        await db.payment.updateMany({
-          where: { stripePaymentIntentId: paymentIntent.id, status: 'PENDING' },
-          data: { status: 'FAILED' },
-        });
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = subscriptionIdFromInvoice(invoice);
-
-        if (!subscriptionId) break;
-
-        const payment = await db.payment.findFirst({
-          where: { stripeSubscriptionId: subscriptionId },
-        });
-
-        if (!payment) break;
-
-        try {
-          await recordPaymentInvoice(db, payment.id, invoice, 'PAID');
-        } catch (error) {
-          logger.error({ err: error }, 'Failed to record paid subscription invoice');
-        }
-
-        const updated = await db.payment.updateMany({
-          where: { id: payment.id, status: { in: ['PENDING', 'PAST_DUE'] } },
-          data: { status: 'PAID', paidAt: new Date(), stripeInvoiceId: invoice.id ?? null },
-        });
-
-        if (updated.count === 0) break;
-
-        await syncMissionPaid(db, payment.missionId);
-
-        try {
-          await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, payment.id);
-        } catch (error) {
-          logger.error({ err: error }, 'Failed to generate receipt for invoice.payment_succeeded');
-          await recordReceiptFailure(db, payment.id, error);
-        }
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = subscriptionIdFromInvoice(invoice);
-
-        if (!subscriptionId) break;
-
-        const payment = await db.payment.findFirst({
-          where: { stripeSubscriptionId: subscriptionId },
-        });
-
-        if (payment) {
+    await processPaymentEvent(
+      {
+        db,
+        sendReceipt: async (paymentId) => {
           try {
-            await recordPaymentInvoice(db, payment.id, invoice, 'FAILED');
+            await paymentService.generateAndSendReceipt(db, storage, smtpClient, env, paymentId);
           } catch (error) {
-            logger.error({ err: error }, 'Failed to record failed subscription invoice');
+            logger.error({ err: error, event: event.type }, 'Failed to send the payment receipt');
+            await recordReceiptFailure(db, paymentId, error);
           }
-        }
-
-        await db.payment.updateMany({
-          where: {
-            stripeSubscriptionId: subscriptionId,
-            status: { in: ['PENDING', 'PAID', 'PAST_DUE'] },
-          },
-          data: { status: 'PAST_DUE', stripeInvoiceId: invoice.id ?? null },
-        });
-        break;
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-
-        if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
-          await db.payment.updateMany({
-            where: {
-              stripeSubscriptionId: subscription.id,
-              status: { not: 'CANCELLED' },
-            },
-            data: { status: 'PAST_DUE' },
-          });
-        }
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-
-        await db.payment.updateMany({
-          where: {
-            stripeSubscriptionId: subscription.id,
-            status: { not: 'CANCELLED' },
-          },
-          data: {
-            status: 'CANCELLED',
-          },
-        });
-        break;
-      }
-
-      default:
-    }
+        },
+      },
+      event
+    );
   },
 };
 

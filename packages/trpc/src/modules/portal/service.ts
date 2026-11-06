@@ -26,14 +26,14 @@ export const CLIENT_VISIBLE_TYPES = [
 
 const DEFAULT_TVA_RATE = 20;
 const OPEN_STATUSES = ['PENDING', 'PAST_DUE'] as const;
-const BILLED_STATUSES = ['PENDING', 'PAST_DUE', 'PAID'] as const;
+const BILLED_STATUSES = ['PENDING', 'PAST_DUE', 'PAID', 'PROCESSING', 'AWAITING_CONFIRMATION'] as const;
 
 type Db = PrismaClient;
 type ClientRow = NonNullable<Awaited<ReturnType<Db['client']['findUnique']>>>;
 
 const notFound = (what: string) => new TRPCError({ code: 'NOT_FOUND', message: `${what} not found` });
 
-async function requireClient(db: Db, userId: string): Promise<ClientRow> {
+export async function requireClient(db: Db, userId: string): Promise<ClientRow> {
   const client = await db.client.findUnique({ where: { userId } });
   if (!client) throw notFound('Client');
   return client;

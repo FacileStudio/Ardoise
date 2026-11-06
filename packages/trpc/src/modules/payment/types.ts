@@ -7,6 +7,8 @@ export const PaymentStatusSchema = z.enum([
   'FAILED',
   'EXPIRED',
   'CANCELLED',
+  'PROCESSING',
+  'AWAITING_CONFIRMATION',
 ]);
 export const PaymentFrequencySchema = z.enum(['ONE_TIME', 'MONTHLY', 'YEARLY']);
 export const PaymentCollectionMethodSchema = z.enum(['STRIPE', 'MANUAL']);
