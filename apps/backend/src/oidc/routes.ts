@@ -12,6 +12,9 @@ import { finishLogin, startLogin } from './flow';
 import { IdentityError, resolveUser } from './identity';
 import { STATE_COOKIE, STATE_COOKIE_PATH, STATE_TTL_SECONDS } from './state';
 
+const errorCode = (error: unknown) =>
+  typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'unknown';
+
 const withParam = (url: string, key: string, value: string) => {
   const target = new URL(url);
   target.searchParams.set(key, value);
@@ -66,7 +69,7 @@ export function createOIDCRoutes(
       try {
         const user = await resolveUser(prisma, config.issuer, claims);
         await saveSsoTokens(prisma, config.issuer, claims.sub, tokens, env.ENCRYPTION_SECRET).catch(
-          (error) => logger.warn({ error }, '[OIDC] Could not keep the Registre tokens')
+          (error) => logger.warn({ code: errorCode(error) }, '[OIDC] Could not keep the Registre tokens')
         );
 
         const session = await issueSession(prisma, authManager, user, {
