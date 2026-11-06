@@ -25,7 +25,7 @@ function input(overrides: Partial<ResolveInput> = {}): ResolveInput {
   return {
     now,
     features,
-    freePlanKey: 'solo',
+    free: { key: 'solo', values: {} },
     comps: [],
     spaces: [],
     people: [],

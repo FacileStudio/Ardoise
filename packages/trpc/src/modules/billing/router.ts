@@ -11,6 +11,7 @@ import {
   migrateSubscribers,
   previewPublish,
   publishVersion,
+  releaseDraftPrices,
   requireVersion,
 } from './stripe-sync';
 import {
@@ -71,7 +72,12 @@ const featureInput = z
   .strict();
 
 const planInput = z
-  .object({ key: planKeySchema, name: text(80).min(1), sortOrder: z.number().int().min(0).max(1000) })
+  .object({
+    key: planKeySchema,
+    name: text(80).min(1),
+    sortOrder: z.number().int().min(0).max(1000),
+    isFree: z.boolean().optional(),
+  })
   .strict();
 
 const draftInput = z
@@ -180,10 +186,10 @@ export const billingRouter = router({
 
   savePlan: platformStaffProcedure.input(planInput).mutation(async ({ ctx, input }) => {
     const before = await ctx.db.plan.findUnique({ where: { key: input.key } });
-    const after = await ctx.db.plan.upsert({
-      where: { key: input.key },
-      create: input,
-      update: { name: input.name, sortOrder: input.sortOrder },
+    const fields = { name: input.name, sortOrder: input.sortOrder, ...(input.isFree === undefined ? {} : { isFree: input.isFree }) };
+    const after = await ctx.db.$transaction(async (tx) => {
+      if (input.isFree) await tx.plan.updateMany({ where: { isFree: true, key: { not: input.key } }, data: { isFree: false } });
+      return tx.plan.upsert({ where: { key: input.key }, create: { key: input.key, ...fields }, update: fields });
     });
     await audit(ctx, 'plan', after.id, before ? 'UPDATE' : 'CREATE', before, after);
     invalidateCatalog();
@@ -228,6 +234,11 @@ export const billingRouter = router({
             })) ?? [],
         },
       },
+    }).catch((error: unknown) => {
+      if ((error as { code?: string }).code === 'P2002') {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Un brouillon vient d’être créé pour cette offre', cause: error });
+      }
+      throw error;
     });
     await audit(ctx, 'planVersion', draft.id, 'CREATE', null, draft);
     return draft;
@@ -270,6 +281,7 @@ export const billingRouter = router({
     if ((await ctx.db.planVersion.count({ where: { planId: before.planId } })) === 1) {
       badRequest('La seule version d’une offre ne se supprime pas');
     }
+    await releaseDraftPrices(ctx.db, await stripeOrNull(ctx), before);
     await ctx.db.planVersion.delete({ where: { id: before.id } });
     await audit(ctx, 'planVersion', before.id, 'DELETE', before, null);
     requestEntitlementPush();
@@ -282,12 +294,12 @@ export const billingRouter = router({
 
   publish: platformStaffProcedure.input(z.object({ id }).strict()).mutation(async ({ ctx, input }) => {
     const before = await requireVersion(ctx.db, input.id);
-    const result = await publishVersion(ctx.db, await stripeOrNull(ctx), input.id);
+    const result = await publishVersion(ctx.db, await stripeOrNull(ctx), input.id, ctx.log);
     const after = await requireVersion(ctx.db, input.id);
-    await audit(ctx, 'planVersion', input.id, 'UPDATE', before, { ...after, previousVersionId: result.previousVersionId });
+    await audit(ctx, 'planVersion', input.id, 'UPDATE', before, { ...after, ...result });
     invalidateCatalog();
     requestEntitlementPush();
-    return after;
+    return { ...after, archiveFailures: result.archiveFailures };
   }),
 
   migrateSubscribers: platformStaffProcedure
@@ -396,6 +408,10 @@ export const billingRouter = router({
       orderBy: { updatedAt: 'desc' },
       include: { planVersion: { select: { version: true, plan: { select: { key: true, name: true } } } } },
     })
+  ),
+
+  duplicateSubscriptions: platformStaffProcedure.query(({ ctx }) =>
+    ctx.db.duplicateSubscription.findMany({ orderBy: { detectedAt: 'desc' } })
   ),
 
   pushState: platformStaffProcedure.query(({ ctx }) =>

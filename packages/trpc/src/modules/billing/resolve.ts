@@ -62,7 +62,7 @@ export interface PersonInput {
 export interface ResolveInput {
   now: Date;
   features: FeatureDef[];
-  freePlanKey: string;
+  free: PlanValues;
   comps: CompDef[];
   spaces: SpaceInput[];
   people: PersonInput[];
@@ -154,7 +154,7 @@ function applyOverrides(
  */
 export function resolveEntitlements(input: ResolveInput): Resolution {
   const { features, now } = input;
-  const free: PlanValues = { key: input.freePlanKey, values: {} };
+  const free = input.free;
   const active = input.overrides.filter((o) => !o.expiresAt || o.expiresAt.getTime() > now.getTime());
   const compsBySub = new Map<string, PlanValues[]>();
   for (const comp of input.comps) {

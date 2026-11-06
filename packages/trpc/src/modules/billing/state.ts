@@ -71,22 +71,33 @@ export async function loadFeatures(db: PrismaClient): Promise<FeatureDef[]> {
   return rows.map((row) => ({ key: row.key, kind: row.kind, defaultValue: row.defaultValue }));
 }
 
-/** The key of the plan sorted first, which free spaces report; `solo` when no plan exists. */
-async function freePlanKey(db: PrismaClient): Promise<string> {
-  const plan = await db.plan.findFirst({ orderBy: [{ sortOrder: 'asc' }, { key: 'asc' }] });
-  return plan?.key ?? 'solo';
+/** The plan spaces get without a subscription or comp: the plan flagged free, key `free` when none is. */
+async function freePlan(db: PrismaClient): Promise<PlanValues> {
+  const plan = await db.plan.findFirst({ where: { isFree: true }, select: { key: true } });
+  if (!plan) return { key: 'free', values: {} };
+  const version = await grantedVersion(db, plan.key);
+  return version ? toPlanValues(version) : { key: plan.key, values: {} };
 }
 
 /**
- * The latest version of a plan, whatever its status. Comps use it so the
- * owners get the top plan before anything is published.
+ * The version of a plan that comps and the free plan grant: the published
+ * one, else the latest when none is published, so the owners get the top
+ * plan before anything is published but never an unpublished draft after.
  */
-async function latestVersion(db: PrismaClient, planKey: string) {
-  return db.planVersion.findFirst({
-    where: { plan: { key: planKey } },
+export async function grantedVersion(db: PrismaClient, planKey: string) {
+  const published = await db.planVersion.findFirst({
+    where: { plan: { key: planKey }, status: 'published' },
     orderBy: { version: 'desc' },
     include: versionInclude,
   });
+  return (
+    published ??
+    db.planVersion.findFirst({
+      where: { plan: { key: planKey } },
+      orderBy: { version: 'desc' },
+      include: versionInclude,
+    })
+  );
 }
 
 /**
@@ -145,7 +156,7 @@ function planLoader(db: PrismaClient) {
   const plans = new Map<string, Promise<PlanValues | null>>();
   return (key: string) => {
     if (!plans.has(key)) {
-      plans.set(key, latestVersion(db, key).then((version) => (version ? toPlanValues(version) : null)));
+      plans.set(key, grantedVersion(db, key).then((version) => (version ? toPlanValues(version) : null)));
     }
     return plans.get(key)!;
   };
@@ -230,13 +241,13 @@ export async function loadResolveInput(
   const plan = planLoader(db);
   const [features, free, { comps, unresolved }, spaces, overrides] = await Promise.all([
     loadFeatures(db),
-    freePlanKey(db),
+    freePlan(db),
     loadComps(db, directory, plan),
     loadSpaces(db, directory, plan),
     loadOverrides(db),
   ]);
   return {
-    input: { now, features, freePlanKey: free, comps, spaces, people: peopleOf(directory), overrides },
+    input: { now, features, free, comps, spaces, people: peopleOf(directory), overrides },
     unresolvedComps: unresolved,
   };
 }

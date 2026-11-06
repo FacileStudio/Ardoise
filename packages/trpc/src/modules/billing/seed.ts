@@ -22,9 +22,9 @@ export const SEED_FEATURES: SeedFeature[] = [
 
 /** The three tiers, with their prices in cents (none for Solo). */
 export const SEED_PLANS = [
-  { key: 'solo' as const, name: 'Solo', sortOrder: 0, prices: [] },
-  { key: 'pro' as const, name: 'Pro', sortOrder: 1, prices: [{ interval: 'month' as const, amount: 1200 }, { interval: 'year' as const, amount: 12000 }] },
-  { key: 'studio' as const, name: 'Studio', sortOrder: 2, prices: [{ interval: 'month' as const, amount: 3900 }, { interval: 'year' as const, amount: 39000 }] },
+  { key: 'solo' as const, name: 'Solo', sortOrder: 0, isFree: true, prices: [] },
+  { key: 'pro' as const, name: 'Pro', sortOrder: 1, isFree: false, prices: [{ interval: 'month' as const, amount: 1200 }, { interval: 'year' as const, amount: 12000 }] },
+  { key: 'studio' as const, name: 'Studio', sortOrder: 2, isFree: false, prices: [{ interval: 'month' as const, amount: 3900 }, { interval: 'year' as const, amount: 39000 }] },
 ];
 
 /** The Facile Studio owners, comped on Studio forever. */
@@ -66,6 +66,17 @@ export interface SeedResult {
  * never edits values an admin may have changed.
  */
 export async function seedBilling(db: PrismaClient, compSubs?: string): Promise<SeedResult> {
+  return db.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('ardoise.billing.seed'))`;
+      return seedLocked(tx as PrismaClient, compSubs);
+    },
+    { maxWait: 60_000, timeout: 60_000 }
+  );
+}
+
+/** The seed itself, run while holding the seed lock so concurrent boots never race. */
+async function seedLocked(db: PrismaClient, compSubs?: string): Promise<SeedResult> {
   const result: SeedResult = { features: 0, plans: 0, versions: 0, comps: 0, subjects: 0 };
   const subjects = parseCompSubs(compSubs);
   const featureIds = new Map<string, string>();
@@ -89,7 +100,14 @@ export async function seedBilling(db: PrismaClient, compSubs?: string): Promise<
 
   for (const plan of SEED_PLANS) {
     const existing = await db.plan.findUnique({ where: { key: plan.key }, include: { _count: { select: { versions: true } } } });
-    const row = existing ?? (await db.plan.create({ data: { key: plan.key, name: plan.name, sortOrder: plan.sortOrder } }));
+    const row = existing ?? (await db.plan.create({
+        data: {
+          key: plan.key,
+          name: plan.name,
+          sortOrder: plan.sortOrder,
+          isFree: plan.isFree && !(await db.plan.findFirst({ where: { isFree: true } })),
+        },
+      }));
     if (!existing) result.plans += 1;
     if (existing && existing._count.versions > 0) continue;
     await db.planVersion.create({

@@ -3,8 +3,8 @@ import type { Prisma, PrismaClient } from '@repo/database';
 import type Stripe from 'stripe';
 import { z } from 'zod';
 import { resolveEntitlements } from './resolve';
-import { OWNER_ROLE, loadResolveInput, type DirectoryView } from './state';
-import { SPACE_METADATA_KEY } from './webhook';
+import { OWNER_ROLE, loadResolveInput, type DirectorySpaceView, type DirectoryView } from './state';
+import { SPACE_METADATA_KEY, syncSubscription, type BillingLogger } from './webhook';
 
 /** The shortest BILLING_API_TOKEN accepted; anything shorter disables the billing routes. */
 export const MIN_TOKEN_LENGTH = 32;
@@ -22,6 +22,11 @@ export class BillingApiError extends Error {
 }
 
 const sha256 = (value: string) => createHash('sha256').update(value).digest();
+
+/** A short, stable digest of request parameters, so an idempotency key changes when they do. */
+export function digest(...parts: (string | number)[]): string {
+  return createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, 16);
+}
 
 /**
  * Builds the bearer check for BILLING_API_TOKEN, or null when the token is
@@ -77,7 +82,9 @@ export const checkoutSchema = z
   .strict();
 
 /** POST /billing/portal body; unknown fields are rejected. */
-export const portalSchema = z.object({ space_id: spaceIdSchema, return_url: urlSchema }).strict();
+export const portalSchema = z
+  .object({ space_id: spaceIdSchema, owner_email: z.email().max(320), return_url: urlSchema })
+  .strict();
 
 /** Validates a space id path parameter. */
 export function parseSpaceId(value: string): string {
@@ -163,6 +170,7 @@ export interface BillingDeps {
   stripe: Stripe;
   directory: DirectoryView;
   redirectOrigins: Set<string>;
+  logger?: BillingLogger;
 }
 
 function requireRedirect(origins: Set<string>, value: string) {
@@ -188,22 +196,40 @@ const CHECKOUT_TTL_S = 30 * 60;
 
 type Tx = Prisma.TransactionClient;
 
+const alreadySubscribed = () =>
+  new BillingApiError(409, 'already_subscribed', 'This space already has a subscription');
+
 /**
  * Refuses a second checkout while the space has a subscription that has not
- * ended (incomplete and unpaid included) or a checkout session still open.
+ * ended (incomplete and unpaid included) or its last checkout session is
+ * still open. A session that completed is synced first, so a subscription
+ * whose webhook has not arrived yet still blocks the next checkout.
  */
-async function assertCanCheckOut(tx: Tx, stripe: Stripe, spaceId: string) {
+async function assertCanCheckOut(deps: BillingDeps, tx: Tx, spaceId: string) {
   const row = await tx.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
-  if (row?.stripeSubscriptionId && !ENDED.has(row.status)) {
-    throw new BillingApiError(409, 'already_subscribed', 'This space already has a subscription');
+  if (row?.stripeSubscriptionId && !ENDED.has(row.status)) throw alreadySubscribed();
+  if (!row?.checkoutSessionId) return row;
+  const session = await deps.stripe.checkout.sessions.retrieve(row.checkoutSessionId);
+  if (session.status === 'open') {
+    throw new BillingApiError(409, 'checkout_open', 'A checkout is already open for this space');
   }
-  if (row?.checkoutSessionId && row.checkoutExpiresAt && row.checkoutExpiresAt.getTime() > Date.now()) {
-    const session = await stripe.checkout.sessions.retrieve(row.checkoutSessionId);
-    if (session.status === 'open') {
-      throw new BillingApiError(409, 'checkout_open', 'A checkout is already open for this space');
-    }
+  const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+  if (session.status === 'complete' && subscriptionId) {
+    const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId);
+    await syncSubscription(deps.db, deps.stripe, subscription, deps.logger ?? quiet);
+    if (!ENDED.has(subscription.status)) throw alreadySubscribed();
   }
   return row;
+}
+
+const quiet = { info() {}, warn() {}, error() {} };
+
+/** Fails unless `email` is an owner of the snapshot space. */
+function requireOwner(space: DirectorySpaceView, email: string) {
+  const wanted = email.toLowerCase();
+  if (!space.members.some((m) => m.role === OWNER_ROLE && m.email.toLowerCase() === wanted)) {
+    throw new BillingApiError(403, 'not_owner', 'Only an owner of the space can do this');
+  }
 }
 
 /** The space's Stripe customer, created once with registre_space_id metadata. */
@@ -211,7 +237,7 @@ async function customerFor(tx: Tx, stripe: Stripe, spaceId: string, name: string
   if (stored) return stored;
   const customer = await stripe.customers.create(
     { name, email, metadata: { [SPACE_METADATA_KEY]: spaceId } },
-    { idempotencyKey: `ardoise_customer_${spaceId}` }
+    { idempotencyKey: `ardoise_customer_${spaceId}_${digest(name, email)}` }
   );
   await tx.spaceSubscription.upsert({
     where: { registreSpaceId: spaceId },
@@ -236,13 +262,12 @@ export async function createCheckout(deps: BillingDeps, body: unknown) {
   requireRedirect(deps.redirectOrigins, input.cancel_url);
   const space = findSpace(deps.directory, input.space_id);
   const email = input.owner_email.toLowerCase();
-  const owner = space.members.some((m) => m.role === OWNER_ROLE && m.email.toLowerCase() === email);
-  if (!owner) throw new BillingApiError(403, 'not_owner', 'Only an owner of the space can subscribe');
+  requireOwner(space, email);
   const price = await publishedPrice(deps.db, input.lookup_key);
   return deps.db.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ardoise.checkout:${space.id}`}))`;
-      const row = await assertCanCheckOut(tx, deps.stripe, space.id);
+      const row = await assertCanCheckOut(deps, tx, space.id);
       const customer = await customerFor(tx, deps.stripe, space.id, input.space_name, email, row?.stripeCustomerId ?? null);
       const metadata = { [SPACE_METADATA_KEY]: space.id };
       const expiresAt = Math.floor(Date.now() / 1000) + CHECKOUT_TTL_S;
@@ -268,12 +293,13 @@ export async function createCheckout(deps: BillingDeps, body: unknown) {
   );
 }
 
-/** POST /billing/portal: a Stripe billing portal session for a space that has a customer. */
+/** POST /billing/portal: a Stripe billing portal session for a space that has a customer, opened by one of its owners. */
 export async function createPortal(deps: BillingDeps, body: unknown) {
   const parsed = portalSchema.safeParse(body);
   if (!parsed.success) throw new BillingApiError(400, 'invalid_body', 'Invalid request body');
   requireRedirect(deps.redirectOrigins, parsed.data.return_url);
   const space = findSpace(deps.directory, parsed.data.space_id);
+  requireOwner(space, parsed.data.owner_email);
   const row = await deps.db.spaceSubscription.findUnique({ where: { registreSpaceId: space.id } });
   if (!row?.stripeCustomerId) throw new BillingApiError(404, 'no_customer', 'This space has no billing account');
   const session = await deps.stripe.billingPortal.sessions.create({
