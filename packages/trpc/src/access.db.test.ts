@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import { prisma } from '@repo/database';
+import { lockTestDatabase } from '@repo/database/test-lock';
 import { appRouter } from './index';
 import { getStripeService } from './modules/settings/service';
 import { paymentService } from './modules/payment/service';
@@ -73,7 +74,7 @@ const ACCESS: Record<string, Access> = {
      billing.saveDraft billing.deleteDraft billing.previewPublish billing.publish billing.migrateSubscribers
      billing.overrides billing.createOverride billing.deleteOverride billing.comps billing.saveComp
      billing.deleteComp billing.spaceComps billing.saveSpaceComp billing.deleteSpaceComp billing.subscriptions
-     billing.pushState billing.pushNow`
+     billing.duplicateSubscriptions billing.pushState billing.pushNow`
   ),
 };
 
@@ -181,7 +182,11 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
       })
     );
 
+
+  let release: () => Promise<void> = async () => {};
+
   beforeAll(async () => {
+    release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
     await prisma.$executeRawUnsafe(
       'TRUNCATE "User", "Space", "Provider", "Client", "Mission", "Document", "Payment", "AuditLog", "Settings" CASCADE'
     );
@@ -363,15 +368,15 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
       portalA: portalA.id,
       portalC: portalC.id,
     });
-  }, 60_000);
+  }, 600_000);
 
   afterAll(async () => {
     globalThis.fetch = realFetch;
     await prisma.$executeRawUnsafe(
       'TRUNCATE "User", "Space", "Provider", "Client", "Mission", "Document", "Payment", "AuditLog", "Settings" CASCADE'
     );
-    await prisma.$disconnect();
-  });
+    await release();
+  }, 120_000);
 
   it('refuses a CLIENT on every member, space-scoped and platform-staff procedure', async () => {
     const leaks: string[] = [];
