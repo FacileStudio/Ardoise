@@ -17,6 +17,7 @@ import { RateLimiter, createRouteRateLimit, getClientIp } from '../middleware/ra
 
 /** Minimal logger shape, satisfied by pino. */
 interface BillingRouteLogger {
+  info(object: unknown, message?: string): void;
   warn(object: unknown, message?: string): void;
   error(object: unknown, message?: string): void;
 }
@@ -78,11 +79,11 @@ export function createBillingRoutes(options: BillingRouteOptions) {
 
   app.use('/billing/*', async (c, next) => {
     if (!verify) return fail(c, 404, 'not_configured', 'Billing is not configured');
-    const failures = `${getClientIp(c)}:billing-auth-failures`;
-    if (limiter.check(failures, minute(limits.failures), 0).remaining === 0) {
-      return fail(c, 429, 'rate_limited', 'Too many requests');
-    }
     if (!verify(c.req.header('authorization'))) {
+      const failures = `${getClientIp(c)}:billing-auth-failures`;
+      if (limiter.check(failures, minute(limits.failures), 0).remaining === 0) {
+        return fail(c, 429, 'rate_limited', 'Too many requests');
+      }
       limiter.check(failures, minute(limits.failures));
       return fail(c, 401, 'unauthorized', 'Invalid token');
     }
@@ -135,13 +136,13 @@ export function createBillingRoutes(options: BillingRouteOptions) {
   app.post('/billing/checkout', async (c) => {
     const body = await json(c);
     const [directory, client] = await Promise.all([snapshot(), stripe()]);
-    return c.json(await createCheckout({ db, stripe: client, directory, redirectOrigins: origins }, body));
+    return c.json(await createCheckout({ db, stripe: client, directory, redirectOrigins: origins, logger }, body));
   });
 
   app.post('/billing/portal', async (c) => {
     const body = await json(c);
     const [directory, client] = await Promise.all([snapshot(), stripe()]);
-    return c.json(await createPortal({ db, stripe: client, directory, redirectOrigins: origins }, body));
+    return c.json(await createPortal({ db, stripe: client, directory, redirectOrigins: origins, logger }, body));
   });
 
   return app;

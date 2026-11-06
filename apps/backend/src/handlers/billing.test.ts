@@ -3,7 +3,7 @@ import type { PrismaClient } from '@repo/database';
 import { createBillingRoutes, type BillingLimits } from './billing';
 
 const TOKEN = 't'.repeat(40);
-const silent = { warn() {}, error() {} };
+const silent = { info() {}, warn() {}, error() {} };
 
 const directory = {
   snapshot: async () => ({
@@ -93,7 +93,7 @@ describe('billing routes', () => {
       expect(res.status).toBe(400);
       expect((await res.json()).error.code).toBe('invalid_redirect');
     }
-    const portal = await app(TOKEN).request(post('/billing/portal', { space_id: 'spc_a', return_url: 'https://evil.example' }));
+    const portal = await app(TOKEN).request(post('/billing/portal', { space_id: 'spc_a', owner_email: 'boss@a.fr', return_url: 'https://evil.example' }));
     expect(portal.status).toBe(400);
   });
 
@@ -133,13 +133,23 @@ describe('billing routes', () => {
     expect(other.status).toBe(404);
   });
 
-  it('locks an IP out after repeated wrong tokens, even with the right one', async () => {
+  it('locks an IP out after repeated wrong tokens, but never blocks the valid token', async () => {
     const limited = app(TOKEN, { failures: 2 });
     const wrong = `Bearer ${'x'.repeat(40)}`;
     expect((await limited.request(post('/billing/portal', {}, wrong))).status).toBe(401);
     expect((await limited.request(post('/billing/portal', {}, wrong))).status).toBe(401);
     expect((await limited.request(post('/billing/portal', {}, wrong))).status).toBe(429);
-    expect((await limited.request('/billing/spaces/spc_a', { headers: { authorization: `Bearer ${TOKEN}` } })).status).toBe(429);
+    const valid = await limited.request(post('/billing/portal', { space_id: 'spc_a', owner_email: 'm@a.fr', return_url: 'https://sso.facile.studio/x' }));
+    expect(valid.status).toBe(403);
+  });
+
+  it('requires an owner for the portal', async () => {
+    const base = { space_id: 'spc_a', return_url: 'https://sso.facile.studio/x' };
+    expect((await app(TOKEN).request(post('/billing/portal', base))).status).toBe(400);
+    const member = await app(TOKEN).request(post('/billing/portal', { ...base, owner_email: 'm@a.fr' }));
+    expect(member.status).toBe(403);
+    expect((await member.json()).error.code).toBe('not_owner');
+    expect(stripeCalls).toEqual([]);
   });
 
   it('never echoes the token or internal errors', async () => {
