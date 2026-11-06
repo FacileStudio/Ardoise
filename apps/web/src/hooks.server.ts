@@ -45,8 +45,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const response = await resolve(event);
   for (const value of refreshedCookies) response.headers.append('set-cookie', value);
-  if (event.url.pathname.startsWith('/login/verify')) {
+  if (event.url.pathname.startsWith('/login/verify') || event.url.pathname.startsWith('/pay/')) {
     response.headers.set('Referrer-Policy', 'no-referrer');
+  }
+  if (event.url.pathname.startsWith('/pay/')) {
+    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
   }
   return response;
 };

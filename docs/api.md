@@ -85,15 +85,39 @@ Only active CLIENT users receive a link. Both procedures share the strict rate-l
 | `markExpired` | mutation | admin | — sweeps past-due pending payments |
 | `retryReceipts` | mutation | admin | — retries failed receipt generation |
 | `myPayments` | query | protected | — the caller's own payments |
-| `billingPortal` | mutation | protected | `{ id }` — returns a Stripe billing portal session |
-| `getByIdPublic` | query | public | `{ id }` — the payment page a client opens from their email |
-| `getClientSecret` | query | public | `{ id }` — Stripe Payment Intent client secret for Elements |
+| `confirmDeclared` | mutation | admin | `{ id }` — a payment the client declared paid another way becomes `PAID`, `MANUAL`. Audit-logged |
+| `rejectDeclared` | mutation | admin | `{ id, reason? }` — back to `PENDING` or `PAST_DUE`. Audit-logged |
+| `createLink` | mutation | admin | `{ id }` — a new pay link `{ url, expiresAt }` (90 days). The token is shown once and stored hashed |
+| `revokeLinks` | mutation | admin | `{ id }` — revokes every live pay link of the payment |
 | `handleWebhook` | mutation | public | `{ signature, body }` |
 
-`status` is `PENDING`, `PAID`, `PAST_DUE`, `FAILED`, `EXPIRED` or `CANCELLED`. `frequency` is
+`status` is `PENDING`, `PAID`, `PAST_DUE`, `FAILED`, `EXPIRED`, `CANCELLED`, `PROCESSING` (a bank debit that has not cleared) or `AWAITING_CONFIRMATION` (the client declared a transfer, cheque or other payment). `frequency` is
 `ONE_TIME`, `MONTHLY` or `YEARLY`. `collectionMethod` is `STRIPE` or `MANUAL`. This router has its
 own rate-limit bucket. Stripe normally reaches the plain `POST /webhook` route rather than
 `handleWebhook`.
+
+## `payLink`
+
+The public pay page. Every procedure is a mutation (the token stays out of URLs and query logs), takes
+`{ token }` and answers the same `NOT_FOUND` for an unknown, malformed, expired or revoked token. Own
+rate-limit bucket: 15 calls a minute per IP.
+
+| Procedure | Type | Level | Input |
+|---|---|---|---|
+| `get` | mutation | public | `{ token }` — amount, reference, issuer, status and the ways to settle it. No client data |
+| `checkout` | mutation | public | `{ token }` — `{ url }` of a Stripe-hosted Checkout |
+| `declare` | mutation | public | `{ token, declaration: { method: 'TRANSFER' \| 'CHEQUE' \| 'OTHER', reference?, paidOn? } }` |
+
+## `portal` payments
+
+All scoped to the caller's own `Client` and space; another client's payment answers `NOT_FOUND`.
+
+| Procedure | Type | Level | Input |
+|---|---|---|---|
+| `payments` | query | client | — open invoice payments and live maintenance subscriptions |
+| `checkout` | mutation | client | `{ paymentId }` — `{ url }` of a Stripe-hosted Checkout |
+| `manageMaintenance` | mutation | client | `{ paymentId }` — `{ url }` of the Stripe Customer Portal (payment method, SEPA mandate, cancel) |
+| `declarePayment` | mutation | client | `{ paymentId, declaration }` as above |
 
 ## `mission`
 

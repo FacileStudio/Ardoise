@@ -14,6 +14,28 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+> **Before deploying:** apply migration `20261107120000_client_payments`. In the Stripe Dashboard, add `checkout.session.completed`, `checkout.session.async_payment_succeeded` and `checkout.session.async_payment_failed` to the existing webhook endpoint, and enable card and SEPA Direct Debit under Settings, Payment methods.
+
+### Added
+
+- Clients pay from the dashboard: open invoice payments and maintenance subscriptions are listed at `/app`, paid on Stripe-hosted Checkout by card or SEPA Direct Debit, and the maintenance payment method can be changed or cancelled in the Stripe Customer Portal (`portal.payments`, `portal.checkout`, `portal.manageMaintenance`).
+- Pay link: the payment email and reminders carry `/pay/<token>`, a public page that shows only the amount, reference and issuer and starts Checkout. The token has 256 bits, is stored as a sha256 hash, expires after 90 days and can be revoked from the admin payment page. Own rate-limit bucket.
+- "I paid another way": the client declares a transfer, cheque or other payment (optional reference and date) from the dashboard or the pay page. The payment becomes `AWAITING_CONFIRMATION`, the space members get an email, and an admin confirms (`PAID`, `MANUAL`) or rejects it. Declare, confirm and reject are audit-logged. The bank details come from the existing `Settings` IBAN and BIC.
+- Payment statuses `PROCESSING` (SEPA debit not cleared) and `AWAITING_CONFIRMATION`.
+- Migration `20261107120000_client_payments`: the two statuses, the declaration columns, `Payment.stripeCheckoutSessionId`, the `PaymentLink` table, and a nullable `AuditLog.userId` so a pay-link action can be logged without a user.
+
+### Changed
+
+- **Ardoise no longer adds Stripe fees to the client total.** Card and SEPA surcharges are banned for consumers by PSD2 (directive 2015/2366 art. 62) and French Code monétaire et financier L112-12. New payments charge exactly the invoice amount (`stripeFee = 0`, `totalWithFees = amount`).
+- The webhook sets `PAID` only after checking the event's amount, currency, mode and space against the payment row, and follows asynchronous SEPA results. A mismatch is logged and never marks the payment paid.
+- Stripe objects are created when the client pays (Checkout Session with an idempotency key), not when the admin creates the payment. A still-unpaid legacy PaymentIntent or subscription is cancelled when the client pays again.
+- Return URLs and links are built from `FRONTEND_URL`, not from the request `Origin`.
+- The web app no longer loads Stripe.js (`@stripe/stripe-js` removed); `/pay/*` is served `no-store`, `noindex` and with `Referrer-Policy: no-referrer`, and its token is redacted from logs.
+
+### Removed
+
+- `payment.getByIdPublic`, `payment.getClientSecret` and `payment.billingPortal`: the first two let anyone holding a payment id read it or get its client secret. `/app/payment/:id` redirects to the dashboard.
+
 ## [0.15.0] - 2026-11-07
 
 > **Migration:** `20261106150000_space_settings` creates `SpaceSettings` and `DocumentCounter`. Every existing space gets a `SpaceSettings` row copied from the global `Settings` (number formats and payment defaults). Each space that already holds numbered documents gets its invoice and quote counters seeded from the global `Settings.nextInvoiceNumber` and `nextQuoteNumber`, which were above every number ever issued, so no number is reused whatever the old format looked like. Spaces without documents start at 1. The migration also adds partial unique indexes on `(spaceId, invoiceNumber)` and `(spaceId, quoteNumber)`; if a space already holds duplicates it prints a notice and skips that index instead of failing.

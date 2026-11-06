@@ -18,6 +18,7 @@
     PageHeader,
     Section,
     Spinner,
+    Textarea,
     toast,
   } from '@facile/muse';
   import { icons, ardoise } from '$lib/icons';
@@ -25,7 +26,15 @@
   import { isSmtpNotConfigured } from '@repo/trpc-client';
   import { i18n } from '@repo/i18n/svelte';
 
-  type PaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED' | 'FAILED' | 'PAST_DUE';
+  type PaymentStatus =
+    | 'PENDING'
+    | 'PAID'
+    | 'EXPIRED'
+    | 'CANCELLED'
+    | 'FAILED'
+    | 'PAST_DUE'
+    | 'PROCESSING'
+    | 'AWAITING_CONFIRMATION';
   type PaymentFrequency = 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
 
   interface Client {
@@ -56,6 +65,10 @@
     frequency: PaymentFrequency;
     collectionMethod?: 'STRIPE' | 'MANUAL';
     reference?: string | null;
+    declaredMethod?: 'TRANSFER' | 'CHEQUE' | 'OTHER' | null;
+    declaredReference?: string | null;
+    declaredPaidOn?: Date | null;
+    declaredVia?: string | null;
     dueDate: Date;
     paidAt: Date | null;
     createdAt: Date;
@@ -208,6 +221,68 @@
     }
   }
 
+  let declaredBusy = $state(false);
+  let rejectReason = $state('');
+  let showReject = $state(false);
+
+  async function handleConfirmDeclared() {
+    if (!payment || declaredBusy) return;
+    declaredBusy = true;
+    try {
+      await trpc.payment.confirmDeclared.mutate({ id: payment.id });
+      toast.success($i18n.t('admin.payments.declared.confirmed'));
+      await fetchPayment();
+    } catch (err: any) {
+      toast.danger(err?.message || 'Erreur');
+    } finally {
+      declaredBusy = false;
+    }
+  }
+
+  async function handleRejectDeclared() {
+    if (!payment || declaredBusy) return;
+    declaredBusy = true;
+    try {
+      await trpc.payment.rejectDeclared.mutate({
+        id: payment.id,
+        ...(rejectReason.trim() ? { reason: rejectReason.trim() } : {}),
+      });
+      toast.success($i18n.t('admin.payments.declared.rejected'));
+      showReject = false;
+      rejectReason = '';
+      await fetchPayment();
+    } catch (err: any) {
+      toast.danger(err?.message || 'Erreur');
+    } finally {
+      declaredBusy = false;
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!payment) return;
+    try {
+      const link = await trpc.payment.createLink.mutate({ id: payment.id });
+      await navigator.clipboard.writeText(link.url);
+      toast.success(
+        $i18n.t('admin.payments.link.created', {
+          date: new Date(link.expiresAt).toLocaleDateString('fr-FR'),
+        })
+      );
+    } catch (err: any) {
+      toast.danger(err?.message || 'Erreur');
+    }
+  }
+
+  async function handleRevokeLinks() {
+    if (!payment) return;
+    try {
+      await trpc.payment.revokeLinks.mutate({ id: payment.id });
+      toast.success($i18n.t('admin.payments.link.revoked'));
+    } catch (err: any) {
+      toast.danger(err?.message || 'Erreur');
+    }
+  }
+
   async function handleSendReminder() {
     if (!payment) return;
     reminderLoading = true;
@@ -255,6 +330,8 @@
       case 'PAID':
         return 'success';
       case 'PENDING':
+      case 'PROCESSING':
+      case 'AWAITING_CONFIRMATION':
         return 'warning';
       case 'PAST_DUE':
         return 'warning';
@@ -283,6 +360,10 @@
         return 'Échec';
       case 'PAST_DUE':
         return 'En retard';
+      case 'PROCESSING':
+        return 'En cours de traitement';
+      case 'AWAITING_CONFIRMATION':
+        return 'À confirmer';
       default:
         return status;
     }
@@ -551,6 +632,59 @@
           </Section>
         {:else}
           <Alert tone="neutral">{$i18n.t('import.payment.manualOnly')}</Alert>
+        {/if}
+
+        {#if payment.status === 'AWAITING_CONFIRMATION' && payment.declaredMethod}
+          <Section title={$i18n.t('admin.payments.declared.title')} card>
+            <p class="text-fc-sm text-fc-fg">
+              {$i18n.t('admin.payments.declared.body', {
+                method: $i18n.t(`admin.payments.declared.methods.${payment.declaredMethod}`),
+              })}
+            </p>
+            {#if payment.declaredReference}
+              <p class="text-fc-sm text-fc-fg-muted">
+                {$i18n.t('admin.payments.declared.reference', { reference: payment.declaredReference })}
+              </p>
+            {/if}
+            {#if payment.declaredPaidOn}
+              <p class="text-fc-sm text-fc-fg-muted">
+                {$i18n.t('admin.payments.declared.paidOn', {
+                  date: formatDateShort(payment.declaredPaidOn),
+                })}
+              </p>
+            {/if}
+            {#if payment.declaredVia}
+              <p class="text-fc-xs text-fc-fg-muted">
+                {$i18n.t('admin.payments.declared.via', {
+                  via: $i18n.t(`admin.payments.declared.vias.${payment.declaredVia}`),
+                })}
+              </p>
+            {/if}
+            <Button class="w-full" icon={icons.check} disabled={declaredBusy} onclick={handleConfirmDeclared}>
+              {$i18n.t('admin.payments.declared.confirm')}
+            </Button>
+            {#if showReject}
+              <Textarea bind:value={rejectReason} placeholder={$i18n.t('admin.payments.declared.rejectReason')} />
+              <Button variant="danger" class="w-full" disabled={declaredBusy} onclick={handleRejectDeclared}>
+                {$i18n.t('admin.payments.declared.rejectConfirm')}
+              </Button>
+            {:else}
+              <Button variant="ghost-danger" class="w-full" onclick={() => (showReject = true)}>
+                {$i18n.t('admin.payments.declared.reject')}
+              </Button>
+            {/if}
+          </Section>
+        {/if}
+
+        {#if payment.collectionMethod === 'STRIPE' && !['PAID', 'CANCELLED'].includes(payment.status)}
+          <Section title={$i18n.t('admin.payments.link.title')} description={$i18n.t('admin.payments.link.hint')} card>
+            <Button variant="ghost" class="w-full" icon={icons.copy} onclick={handleCopyLink}>
+              {$i18n.t('admin.payments.link.create')}
+            </Button>
+            <Button variant="ghost-danger" class="w-full" onclick={handleRevokeLinks}>
+              {$i18n.t('admin.payments.link.revoke')}
+            </Button>
+          </Section>
         {/if}
 
         {#if payment.status === 'PENDING'}

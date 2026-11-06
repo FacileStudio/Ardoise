@@ -86,3 +86,21 @@ describe('trpc rate limit', () => {
     expect((await call(server, '/trpc/magicLink.request', '10.9.9.9, 203.0.113.7')).status).toBe(429);
   });
 });
+
+describe('pay link procedures', () => {
+  it('have their own bucket, and a batch cannot dodge it', () => {
+    const costs = bucketCosts('/trpc/payLink.get,payLink.checkout,portal.checkout,payment.list');
+
+    expect(costs.get('payLink')).toBe(2);
+    expect(costs.get('payment')).toBe(2);
+  });
+
+  it('answers 429 after 15 calls from one address', async () => {
+    const server = app();
+    for (let i = 0; i < 15; i += 1) {
+      expect((await call(server, '/trpc/payLink.get')).status).toBe(200);
+    }
+    expect((await call(server, '/trpc/payLink.get')).status).toBe(429);
+    expect((await call(server, '/trpc/payLink.get', '198.51.100.9')).status).toBe(200);
+  });
+});

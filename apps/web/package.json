@@ -22,7 +22,6 @@
     "@repo/trpc-client": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/utils": "workspace:*",
-    "@stripe/stripe-js": "^8.7.0",
     "@sveltejs/adapter-node": "^5.5.2",
     "@trpc/client": "^11.9.0",
     "iconify-icon": "^3.0.2",

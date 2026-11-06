@@ -19,6 +19,9 @@
   import { i18n, locale } from '@repo/i18n/svelte';
   import { ardoise, icons } from '$lib/icons';
   import { safeHttpUrl } from '$lib/safe-url';
+  import { redirectToHosted, type Declaration, type PayerView } from '$lib/payments';
+  import PaymentCard from '$lib/components/PaymentCard.svelte';
+  import { page } from '$app/state';
 
   type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
   type Signature = 'none' | 'sent' | 'signed' | 'declined';
@@ -96,6 +99,27 @@
   let paymentsError = $state('');
   let paymentsLoading = $state(true);
 
+  let openPayments = $state<Array<PayerView & { id: string }>>([]);
+  const returnedFromCheckout = $derived(page.url.searchParams.get('payment'));
+
+  async function loadOpenPayments() {
+    try {
+      openPayments = (await trpc.portal.payments.query()) as Array<PayerView & { id: string }>;
+    } catch (err) {
+      toast.danger(message(err));
+    }
+  }
+
+  const checkout = (paymentId: string) =>
+    redirectToHosted(() => trpc.portal.checkout.mutate({ paymentId }));
+  const manageMaintenance = (paymentId: string) =>
+    redirectToHosted(() => trpc.portal.manageMaintenance.mutate({ paymentId }));
+  async function declare(paymentId: string, declaration: Declaration) {
+    await trpc.portal.declarePayment.mutate({ paymentId, declaration });
+    toast.success($i18n.t('pay.declare.sent'));
+    await Promise.all([loadOpenPayments(), loadOverview(), loadPayments()]);
+  }
+
   let busy = $state<Record<string, boolean>>({});
 
   const message = (err: unknown) => (err instanceof Error ? err.message : $i18n.t('portal.loadError'));
@@ -145,6 +169,7 @@
     void loadOverview();
     void loadDocuments();
     void loadPayments();
+    void loadOpenPayments();
   });
 
   let filtersReady = false;
@@ -300,7 +325,7 @@
                 </div>
                 <div class="flex items-center justify-between gap-4 sm:justify-end">
                   <span class="text-fc-xl font-semibold text-fc-fg">{formatAmount(item.amount)}</span>
-                  <Button href={resolve(`/app/payment/${item.paymentId}`)}>
+                  <Button href="#open-payments">
                     {$i18n.t('portal.actions.pay')}
                   </Button>
                 </div>
@@ -323,6 +348,27 @@
           {/each}
         </div>
       </Section>
+    {/if}
+
+    {#if returnedFromCheckout === 'success'}
+      <Alert tone="info" title={$i18n.t('pay.returnedTitle')}>{$i18n.t('pay.returned')}</Alert>
+    {/if}
+
+    {#if openPayments.length > 0}
+      <div id="open-payments">
+        <Section title={$i18n.t('pay.openTitle')} description={$i18n.t('pay.openDescription')}>
+          <div class="flex flex-col gap-3">
+            {#each openPayments as view (view.id)}
+              <PaymentCard
+                {view}
+                onpay={() => checkout(view.id)}
+                ondeclare={(declaration) => declare(view.id, declaration)}
+                onmanage={() => manageMaintenance(view.id)}
+              />
+            {/each}
+          </div>
+        </Section>
+      </div>
     {/if}
 
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -526,7 +572,7 @@
             <div class="flex items-center justify-between gap-3 md:justify-end">
               <span class="text-fc-md font-semibold text-fc-fg">{formatAmount(payment.amount)}</span>
               {#if payment.status === 'PENDING'}
-                <Button size="sm" href={resolve(`/app/payment/${payment.id}`)}>
+                <Button size="sm" href="#open-payments">
                   {$i18n.t('portal.actions.pay')}
                 </Button>
               {:else if payment.receiptUrl}

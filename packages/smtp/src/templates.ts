@@ -37,6 +37,23 @@ export interface PaymentReminderData {
   daysUntilDue?: number;
 }
 
+export interface PaymentDeclaredData {
+  to: string[];
+  clientName: string;
+  amount: number;
+  method: 'TRANSFER' | 'CHEQUE' | 'OTHER';
+  reference?: string;
+  paidOn?: Date;
+  paymentReference: string;
+  adminLink: string;
+}
+
+const DECLARED_METHOD_LABELS = {
+  TRANSFER: 'Virement',
+  CHEQUE: 'Chèque',
+  OTHER: 'Autre moyen',
+} as const;
+
 export interface MagicLinkData {
   to: string;
   link: string;
@@ -305,6 +322,42 @@ export class EmailTemplates {
         urgencyLevel === 'urgent'
           ? `URGENT : Paiement à régler - ${formattedAmount}`
           : `Rappel : Paiement à régler - ${formattedAmount}`,
+      html,
+    });
+  }
+
+  async sendPaymentDeclared(data: PaymentDeclaredData): Promise<void> {
+    const amount = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(
+      data.amount
+    );
+    const paidOn = data.paidOn
+      ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(data.paidOn)
+      : 'Non précisée';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h1>Paiement déclaré à confirmer</h1>
+    <p>${escapeHtml(data.clientName)} indique avoir réglé la facture ${escapeHtml(data.paymentReference)} par un autre moyen que la carte.</p>
+    <ul>
+      <li><strong>Montant :</strong> ${escapeHtml(amount)}</li>
+      <li><strong>Moyen :</strong> ${escapeHtml(DECLARED_METHOD_LABELS[data.method])}</li>
+      <li><strong>Référence indiquée :</strong> ${escapeHtml(data.reference || 'Aucune')}</li>
+      <li><strong>Date du paiement :</strong> ${escapeHtml(paidOn)}</li>
+    </ul>
+    <p>Vérifiez la réception des fonds, puis confirmez ou refusez la déclaration.</p>
+    <p><a href="${escapeHtml(data.adminLink)}">Ouvrir le paiement</a></p>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    await this.smtpClient.sendEmail({
+      to: data.to,
+      subject: `Paiement déclaré à confirmer - ${amount}`,
       html,
     });
   }

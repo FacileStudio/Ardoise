@@ -47,6 +47,8 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
 	FAILED: 'Échoué',
 	EXPIRED: 'Expiré',
 	CANCELLED: 'Annulé',
+	PROCESSING: 'En cours de traitement',
+	AWAITING_CONFIRMATION: 'À confirmer',
 };
 
 export const PAYMENT_STATUS_VARIANTS: Record<string, 'neutral' | 'warning' | 'success' | 'danger'> = {
@@ -56,6 +58,8 @@ export const PAYMENT_STATUS_VARIANTS: Record<string, 'neutral' | 'warning' | 'su
 	FAILED: 'danger',
 	EXPIRED: 'neutral',
 	CANCELLED: 'neutral',
+	PROCESSING: 'warning',
+	AWAITING_CONFIRMATION: 'warning',
 };
 
 export function formatEuro(amount: number | string | null | undefined) {

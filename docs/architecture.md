@@ -195,10 +195,26 @@ ones `modules/auth` issues (`issueSession` and `authCookies` in `packages/trpc`)
 
 ## Integrations
 
-- **Stripe.** Keys come from the `Settings` row, not the environment. `POST /webhook` verifies the
-  signature and records handled event ids in `WebhookEvent` for idempotency. Recurring payments use
-  subscriptions; one-off payments use Payment Intents plus a client secret fetched by the public
-  `payment.getClientSecret` procedure.
+- **Stripe.** Keys come from the `Settings` row, not the environment. Clients pay on Stripe-hosted
+  Checkout (card data never reaches Ardoise, PCI SAQ A). The server builds every Checkout Session from
+  the `Payment` row: amount, currency (EUR), customer and the `payment_id` metadata come from the
+  database, never from the caller. One-off invoices use `mode=payment`; maintenance uses
+  `mode=subscription` with an inline price, and the Customer Portal (a configuration tagged
+  `ardoise: ardoise-maintenance`, created on first use) manages the payment method and cancellation.
+  Payment methods come from the Stripe Dashboard (card, SEPA Direct Debit). Ardoise adds no fee on top
+  of the invoice amount.
+  `POST /webhook` verifies the signature, records handled event ids in `WebhookEvent`, and is the only
+  thing that sets `PAID` on a Stripe payment, after checking amount, currency, mode and space against
+  the row (`payment/events.ts`). A SEPA debit goes `PROCESSING`, then `PAID` on
+  `checkout.session.async_payment_succeeded`, or back to `PENDING` on `async_payment_failed`. The
+  receipt is sent by the delivery that wins the conditional `PAID` update, so once.
+- **Pay link.** `PaymentLink` holds the sha256 of a 256-bit token, an expiry (90 days) and `revokedAt`.
+  The invoice email and reminders carry `FRONTEND_URL/pay/<token>`; the page shows only the amount,
+  reference, issuer and status, and starts Checkout or records a declaration.
+- **Paid another way.** `declarePayment` moves a payable one-time payment to `AWAITING_CONFIRMATION`
+  (method, reference, date on the row), mails the space members, and writes an `AuditLog` row. An admin
+  confirms (`PAID`, `MANUAL`) or rejects it, each audit-logged. A link declaration has `userId = null`
+  in the audit row, with the caller's IP and user agent.
 - **SMTP.** Nodemailer, configured from `Settings`. Sends the payment request, reminders, and the
   receipt.
 - **Space webhook.** `SpaceSettings.webhookUrl` / `webhookSecret` (encrypted) / `webhookEvents`, set by a space admin, hear that space's events through the same signer (`x-ardoise-signature-256`). `webhook/outbound.ts` refuses non-https URLs, credentials in the URL and any name that resolves to a private, loopback, link-local or reserved address, connects to the address it checked, times out at 5 s and never follows a redirect.

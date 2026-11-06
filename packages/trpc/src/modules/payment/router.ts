@@ -1,6 +1,6 @@
-import { router, publicProcedure, clientProcedure, memberProcedure } from '../../trpc';
+import { router, clientProcedure, memberProcedure } from '../../trpc';
 import { paymentService } from './service';
-import spaceService from '../space/service';
+import spaceService, { requireRowScope } from '../space/service';
 import { requirePlatformStudio } from '../space/studio';
 import {
   CreatePaymentSchema,
@@ -12,8 +12,22 @@ import {
   CancelPaymentSchema,
   SpaceScopeSchema,
 } from './types';
-import { TRPCError } from '@trpc/server';
-import type Stripe from 'stripe';
+import { z } from 'zod';
+import { confirmDeclared, rejectDeclared, type Actor } from './declare';
+import { issuePaymentLink, revokePaymentLinks } from './link';
+
+const RejectDeclaredSchema = GetPaymentByIdSchema.extend({ reason: z.string().trim().max(500).optional() });
+
+const adminActor = (ctx: {
+  user: { id: string };
+  ipAddress?: string;
+  userAgent?: string;
+}): Actor => ({
+  userId: ctx.user.id,
+  via: 'admin',
+  ipAddress: ctx.ipAddress,
+  userAgent: ctx.userAgent,
+});
 
 export const paymentRouter = router({
   list: memberProcedure.input(ListPaymentsSchema).query(async ({ ctx, input }) => {
@@ -88,72 +102,33 @@ export const paymentRouter = router({
     return paymentService.listClientPayments(ctx.db, ctx.user.id);
   }),
 
-  billingPortal: clientProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
-    return paymentService.createBillingPortalSession(
+  confirmDeclared: memberProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
+    return confirmDeclared(ctx.db, ctx.user.id, input.id, adminActor(ctx));
+  }),
+
+  rejectDeclared: memberProcedure.input(RejectDeclaredSchema).mutation(async ({ ctx, input }) => {
+    return rejectDeclared(ctx.db, ctx.user.id, input.id, input.reason, adminActor(ctx));
+  }),
+
+  createLink: memberProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
+    const payment = await requireRowScope(
       ctx.db,
-      await ctx.getStripe(),
-      input.id,
       ctx.user.id,
-      `${ctx.appOrigin}/app/payment/${input.id}`
+      await ctx.db.payment.findUnique({ where: { id: input.id } }),
+      'Payment not found'
     );
-  }),
-
-  getByIdPublic: publicProcedure.input(GetPaymentByIdSchema).query(async ({ ctx, input }) => {
-    return paymentService.getPaymentByIdPublic(ctx.db, input.id);
-  }),
-
-  getClientSecret: publicProcedure.input(GetPaymentByIdSchema).query(async ({ ctx, input }) => {
-    const payment = await ctx.db.payment.findUnique({
-      where: { id: input.id },
-    });
-
-    if (!payment) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Payment not found',
-      });
-    }
-
-    if (payment.status !== 'PENDING') {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Payment is not pending',
-      });
-    }
-
-    if (payment.collectionMethod !== 'STRIPE') {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'This payment is not payable online',
-      });
-    }
     await requirePlatformStudio(ctx.db, payment.spaceId);
+    return issuePaymentLink(ctx.db, payment.id, ctx.env.FRONTEND_URL);
+  }),
 
-    let clientSecret: string | null = null;
-    const stripe = await ctx.getStripe();
-
-    if (payment.stripePaymentIntentId) {
-      const paymentIntent = await stripe.client.paymentIntents.retrieve(
-        payment.stripePaymentIntentId
-      );
-      clientSecret = paymentIntent.client_secret;
-    } else if (payment.stripeSubscriptionId) {
-      const subscription = await stripe.client.subscriptions.retrieve(
-        payment.stripeSubscriptionId,
-        { expand: ['latest_invoice'] }
-      );
-      const invoice = subscription.latest_invoice as Stripe.Invoice | null;
-      clientSecret = invoice?.confirmation_secret?.client_secret ?? null;
-    }
-
-    if (!clientSecret) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Unable to retrieve payment client secret',
-      });
-    }
-
-    return { clientSecret };
+  revokeLinks: memberProcedure.input(GetPaymentByIdSchema).mutation(async ({ ctx, input }) => {
+    const payment = await requireRowScope(
+      ctx.db,
+      ctx.user.id,
+      await ctx.db.payment.findUnique({ where: { id: input.id } }),
+      'Payment not found'
+    );
+    return revokePaymentLinks(ctx.db, payment.id);
   }),
 });
 
