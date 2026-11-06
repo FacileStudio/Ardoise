@@ -1,4 +1,4 @@
-import { router, publicProcedure, adminProcedure } from '../../trpc';
+import { router, publicProcedure, platformStaffProcedure } from '../../trpc';
 import {
   UpdateSettingsSchema,
   UploadLogoSchema,
@@ -12,11 +12,11 @@ export const settingsRouter = router({
     return SettingsService.getSettings(ctx.db);
   }),
 
-  getAdmin: adminProcedure.query(async ({ ctx }) => {
+  getAdmin: platformStaffProcedure.query(async ({ ctx }) => {
     return SettingsService.getAdminSettings(ctx.db);
   }),
 
-  update: adminProcedure
+  update: platformStaffProcedure
     .input(UpdateSettingsSchema)
     .mutation(async ({ ctx, input }) => {
       const before = await SettingsService.getSettingsRecord(ctx.db);
@@ -45,13 +45,13 @@ export const settingsRouter = router({
       return result;
     }),
 
-  requestLogoUpload: adminProcedure
+  requestLogoUpload: platformStaffProcedure
     .input(UploadLogoSchema)
     .mutation(async ({ ctx }) => {
       return SettingsService.requestLogoUpload(ctx.storage, ctx.apiOrigin, ctx.env.ENCRYPTION_SECRET);
     }),
 
-  confirmLogoUpload: adminProcedure
+  confirmLogoUpload: platformStaffProcedure
     .input(ConfirmLogoUploadSchema)
     .mutation(async ({ ctx, input }) => {
       const result = await SettingsService.confirmLogoUpload(ctx.db, input.logoUrl);

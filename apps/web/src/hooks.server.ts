@@ -1,6 +1,6 @@
 import { error, redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
 import { logger } from '@repo/logger';
-import { isAdmin, type SessionUser } from '@repo/auth-shared';
+import { isMember, type SessionUser } from '@repo/auth-shared';
 import { fetchSessionUser, refreshSessionUser } from '$lib/server/auth';
 import env from '$lib/env';
 import { redactUrl } from '$lib/server/redact';
@@ -38,7 +38,7 @@ export const handle: Handle = async ({ event, resolve }) => {
       const next = encodeURIComponent(event.url.pathname + event.url.search);
       throw redirect(303, `/login?next=${next}`);
     }
-    if (!isAdmin(user)) {
+    if (!isMember(user)) {
       throw redirect(303, '/app');
     }
   }

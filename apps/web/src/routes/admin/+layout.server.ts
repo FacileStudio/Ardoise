@@ -1,5 +1,5 @@
 import { redirect, type ServerLoad } from '@sveltejs/kit';
-import { isAdmin } from '@repo/auth-shared';
+import { isMember } from '@repo/auth-shared';
 
 export const load: ServerLoad = async ({ locals }) => {
   const user = locals.user;
@@ -7,7 +7,7 @@ export const load: ServerLoad = async ({ locals }) => {
   if (!user) {
     throw redirect(303, '/login');
   }
-  if (!isAdmin(user)) {
+  if (!isMember(user)) {
     throw redirect(303, '/app');
   }
 

@@ -1,4 +1,4 @@
-import { router, adminProcedure } from '../../trpc';
+import { router, memberProcedure } from '../../trpc';
 import missionService from './service';
 import { generateQuote, acceptQuote, generateInvoice } from './billing';
 import spaceService from '../space/service';
@@ -32,17 +32,17 @@ const emit = (ctx: EventContext, event: string, data: Record<string, unknown>) =
   });
 
 export const missionRouter = router({
-  list: adminProcedure.input(ListMissionsSchema).query(async ({ ctx, input }) => {
+  list: memberProcedure.input(ListMissionsSchema).query(async ({ ctx, input }) => {
     const { spaceId, ...params } = input;
     const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
     return missionService.listMissions(ctx.db, params, scope);
   }),
 
-  getById: adminProcedure.input(GetMissionByIdSchema).query(async ({ ctx, input }) => {
+  getById: memberProcedure.input(GetMissionByIdSchema).query(async ({ ctx, input }) => {
     return missionService.getMissionById(ctx.db, ctx.user.id, input.id);
   }),
 
-  create: adminProcedure.input(CreateMissionSchema).mutation(async ({ ctx, input }) => {
+  create: memberProcedure.input(CreateMissionSchema).mutation(async ({ ctx, input }) => {
     const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
     const mission = await missionService.createMission(ctx.db, input, scope);
 
@@ -51,7 +51,7 @@ export const missionRouter = router({
     return mission;
   }),
 
-  update: adminProcedure.input(UpdateMissionSchema).mutation(async ({ ctx, input }) => {
+  update: memberProcedure.input(UpdateMissionSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
     const mission = await missionService.updateMission(ctx.db, ctx.user.id, id, data);
 
@@ -60,7 +60,7 @@ export const missionRouter = router({
     return mission;
   }),
 
-  setPrestations: adminProcedure.input(SetPrestationsSchema).mutation(async ({ ctx, input }) => {
+  setPrestations: memberProcedure.input(SetPrestationsSchema).mutation(async ({ ctx, input }) => {
     const prestations = await missionService.setPrestations(
       ctx.db,
       ctx.user.id,
@@ -73,7 +73,7 @@ export const missionRouter = router({
     return prestations;
   }),
 
-  generateQuote: adminProcedure.input(GenerateQuoteSchema).mutation(async ({ ctx, input }) => {
+  generateQuote: memberProcedure.input(GenerateQuoteSchema).mutation(async ({ ctx, input }) => {
     const document = await generateQuote(ctx.db, ctx.storage, ctx.user.id, input);
 
     await emit(ctx, 'mission.quote_generated', { missionId: input.id, document });
@@ -85,7 +85,7 @@ export const missionRouter = router({
     return document;
   }),
 
-  acceptQuote: adminProcedure.input(AcceptQuoteSchema).mutation(async ({ ctx, input }) => {
+  acceptQuote: memberProcedure.input(AcceptQuoteSchema).mutation(async ({ ctx, input }) => {
     const document = await acceptQuote(ctx.db, ctx.user.id, input);
 
     await emit(ctx, 'mission.quote_accepted', { missionId: input.id, document });
@@ -97,7 +97,7 @@ export const missionRouter = router({
     return document;
   }),
 
-  generateInvoice: adminProcedure.input(GenerateInvoiceSchema).mutation(async ({ ctx, input }) => {
+  generateInvoice: memberProcedure.input(GenerateInvoiceSchema).mutation(async ({ ctx, input }) => {
     const document = await generateInvoice(ctx.db, ctx.storage, ctx.user.id, input);
 
     await emit(ctx, 'mission.invoice_generated', { missionId: input.id, document });
@@ -109,7 +109,7 @@ export const missionRouter = router({
     return document;
   }),
 
-  setStatus: adminProcedure.input(SetMissionStatusSchema).mutation(async ({ ctx, input }) => {
+  setStatus: memberProcedure.input(SetMissionStatusSchema).mutation(async ({ ctx, input }) => {
     const mission = await missionService.setStatus(ctx.db, ctx.user.id, input.id, input.status);
 
     await emit(ctx, 'mission.status_changed', {
@@ -120,15 +120,15 @@ export const missionRouter = router({
     return mission;
   }),
 
-  attachDocument: adminProcedure.input(MissionDocumentSchema).mutation(async ({ ctx, input }) => {
+  attachDocument: memberProcedure.input(MissionDocumentSchema).mutation(async ({ ctx, input }) => {
     return missionService.attachDocument(ctx.db, ctx.user.id, input.id, input.documentId);
   }),
 
-  detachDocument: adminProcedure.input(MissionDocumentSchema).mutation(async ({ ctx, input }) => {
+  detachDocument: memberProcedure.input(MissionDocumentSchema).mutation(async ({ ctx, input }) => {
     return missionService.detachDocument(ctx.db, ctx.user.id, input.id, input.documentId);
   }),
 
-  createPayment: adminProcedure
+  createPayment: memberProcedure
     .input(CreateMissionPaymentSchema)
     .mutation(async ({ ctx, input }) => {
       const useStripe = input.collectionMethod === 'STRIPE';
@@ -154,7 +154,7 @@ export const missionRouter = router({
       return payment;
     }),
 
-  delete: adminProcedure.input(GetMissionByIdSchema).mutation(async ({ ctx, input }) => {
+  delete: memberProcedure.input(GetMissionByIdSchema).mutation(async ({ ctx, input }) => {
     const result = await missionService.deleteMission(ctx.db, ctx.user.id, input.id);
 
     await emit(ctx, 'mission.deleted', { missionId: input.id });

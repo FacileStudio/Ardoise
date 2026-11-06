@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import { providersOfSpace } from '../space/studio';
 import type { PrismaClient, Prisma, MissionStatus, MissionProviderRole } from '@repo/database';
 import type { StripeService } from '@repo/stripe';
 import type { SMTPClient } from '@repo/smtp';
@@ -54,7 +55,7 @@ async function requireClient(db: PrismaClient, clientId: string, scope: Scope) {
   return client;
 }
 
-async function requireProviders(db: PrismaClient, links: ProviderLink[]) {
+async function requireProviders(db: PrismaClient, spaceId: string, links: ProviderLink[]) {
   const ids = links.map((link) => link.providerId);
 
   if (new Set(ids).size !== ids.length) {
@@ -63,7 +64,7 @@ async function requireProviders(db: PrismaClient, links: ProviderLink[]) {
 
   if (ids.length === 0) return;
 
-  const found = await db.provider.count({ where: { id: { in: ids } } });
+  const found = await db.provider.count({ where: { AND: [{ id: { in: ids } }, await providersOfSpace(db, spaceId)] } });
 
   if (found !== ids.length) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more providers not found' });
@@ -180,7 +181,7 @@ export const missionService = {
 
   createMission: async (db: PrismaClient, data: CreateMissionInput, scope: Scope) => {
     const client = await requireClient(db, data.clientId, scope);
-    await requireProviders(db, data.providers);
+    await requireProviders(db, client.spaceId, data.providers);
 
     return db.mission.create({
       data: {
@@ -204,7 +205,7 @@ export const missionService = {
     const existing = await requireMission(db, userId, id);
 
     if (data.providers) {
-      await requireProviders(db, data.providers);
+      await requireProviders(db, existing.spaceId, data.providers);
     }
 
     return db.mission.update({

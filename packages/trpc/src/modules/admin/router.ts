@@ -1,4 +1,4 @@
-import { router, adminProcedure } from '../../trpc';
+import { router, platformStaffProcedure } from '../../trpc';
 import { AdminService } from './service';
 import {
   adminListSchema,
@@ -28,26 +28,33 @@ async function validated<T>(write: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Every admin procedure is platform staff only (platformStaffProcedure), so the
+ * engine runs with full rights for them; the caller's own role is never
+ * consulted, since every SSO user is MEMBER.
+ */
+const ENGINE_ROLE = 'ADMIN';
+
 export const adminRouter = router({
   settings: settingsRouter,
 
-  getEntities: adminProcedure.query(async ({ ctx }) => {
+  getEntities: platformStaffProcedure.query(async ({ ctx }) => {
     const service = new AdminService(ctx.db);
     return service.getAvailableEntities();
   }),
 
-  getEntityConfig: adminProcedure.input(adminGetPermissionsSchema).query(async ({ ctx, input }) => {
+  getEntityConfig: platformStaffProcedure.input(adminGetPermissionsSchema).query(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     return service.getEntityConfig(input.entity);
   }),
 
-  list: adminProcedure.input(adminListSchema).query(async ({ ctx, input }) => {
+  list: platformStaffProcedure.input(adminListSchema).query(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 
     const context = {
       userId: ctx.user!.id,
-      role: ctx.user!.role,
+      role: ENGINE_ROLE,
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     };
@@ -55,13 +62,13 @@ export const adminRouter = router({
     return engine.list(context, input.options);
   }),
 
-  get: adminProcedure.input(adminGetSchema).query(async ({ ctx, input }) => {
+  get: platformStaffProcedure.input(adminGetSchema).query(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 
     const context = {
       userId: ctx.user!.id,
-      role: ctx.user!.role,
+      role: ENGINE_ROLE,
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     };
@@ -69,13 +76,13 @@ export const adminRouter = router({
     return engine.get(context, input.id);
   }),
 
-  create: adminProcedure.input(adminCreateSchema).mutation(async ({ ctx, input }) => {
+  create: platformStaffProcedure.input(adminCreateSchema).mutation(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 
     const context = {
       userId: ctx.user!.id,
-      role: ctx.user!.role,
+      role: ENGINE_ROLE,
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     };
@@ -100,13 +107,13 @@ export const adminRouter = router({
     return record;
   }),
 
-  update: adminProcedure.input(adminUpdateSchema).mutation(async ({ ctx, input }) => {
+  update: platformStaffProcedure.input(adminUpdateSchema).mutation(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 
     const context = {
       userId: ctx.user!.id,
-      role: ctx.user!.role,
+      role: ENGINE_ROLE,
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     };
@@ -132,13 +139,13 @@ export const adminRouter = router({
     return record;
   }),
 
-  delete: adminProcedure.input(adminDeleteSchema).mutation(async ({ ctx, input }) => {
+  delete: platformStaffProcedure.input(adminDeleteSchema).mutation(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 
     const context = {
       userId: ctx.user!.id,
-      role: ctx.user!.role,
+      role: ENGINE_ROLE,
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     };
@@ -161,13 +168,13 @@ export const adminRouter = router({
     });
   }),
 
-  getPermissions: adminProcedure.input(adminGetPermissionsSchema).query(async ({ ctx, input }) => {
+  getPermissions: platformStaffProcedure.input(adminGetPermissionsSchema).query(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 
     const context = {
       userId: ctx.user!.id,
-      role: ctx.user!.role,
+      role: ENGINE_ROLE,
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     };
@@ -175,27 +182,27 @@ export const adminRouter = router({
     return engine.getPermissions(context);
   }),
 
-  setPermissions: adminProcedure
+  setPermissions: platformStaffProcedure
     .input(adminSetPermissionsSchema)
     .mutation(async ({ ctx, input }) => {
       const service = new AdminService(ctx.db);
       return service.setPermissions(input.userId, input.entity, input.permissions);
     }),
 
-  getUserPermissions: adminProcedure
+  getUserPermissions: platformStaffProcedure
     .input(adminGetPermissionsSchema)
     .query(async ({ ctx, input }) => {
       const service = new AdminService(ctx.db);
       return service.getUserPermissions(input.entity);
     }),
 
-  getAuditLogs: adminProcedure.input(adminGetAuditLogsSchema).query(async ({ ctx, input }) => {
+  getAuditLogs: platformStaffProcedure.input(adminGetAuditLogsSchema).query(async ({ ctx, input }) => {
     const service = new AdminService(ctx.db);
     const engine = service.getEngine(input.entity);
 
     const context = {
       userId: ctx.user!.id,
-      role: ctx.user!.role,
+      role: ENGINE_ROLE,
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     };
@@ -203,7 +210,7 @@ export const adminRouter = router({
     return engine.getAuditLogs(context, input.entityId);
   }),
 
-  getAllAuditLogs: adminProcedure
+  getAllAuditLogs: platformStaffProcedure
     .input(adminGetAllAuditLogsSchema)
     .query(async ({ ctx, input }) => {
       const service = new AdminService(ctx.db);

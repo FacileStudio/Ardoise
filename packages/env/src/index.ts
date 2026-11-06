@@ -68,6 +68,8 @@ export const serverEnvSchema = baseSchema.extend({
     emptyToUndefined,
     z.string().default('https://sso.facile.studio')
   ),
+  PLATFORM_STAFF_SUBS: z.string().default(''),
+  PLATFORM_STAFF_EMAILS: z.string().default(''),
   BILLING_STAFF_SUBS: z.string().default(''),
   BILLING_STAFF_EMAILS: z.string().default(''),
   BILLING_SEED_COMP_SUBS: z.string().default(''),

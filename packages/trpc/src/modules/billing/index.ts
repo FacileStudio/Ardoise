@@ -6,4 +6,4 @@ export * from './webhook';
 export * from './api';
 export * from './seed';
 export { migrateSubscribers, previewPublish, publishVersion } from './stripe-sync';
-export { isBillingStaff, parseStaffEmails } from './staff';
+export { isPlatformStaff, parseStaffEmails } from '../../platform-staff';

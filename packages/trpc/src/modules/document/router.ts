@@ -1,4 +1,4 @@
-import { router, adminProcedure } from '../../trpc';
+import { router, memberProcedure } from '../../trpc';
 import {
   generateTypstContent,
   buildPartyAndLegalData,
@@ -31,6 +31,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { Prisma, PrismaClient } from '@repo/database';
 import { parseStorageKey } from '../media/service';
+import { isPlatformStudio, providersOfSpace, requirePlatformStudio } from '../space/studio';
 import type { StorageService } from '@repo/storage';
 import { nuageConfigFromEnv, storeContractInNuage } from '@repo/nuage';
 import {
@@ -74,24 +75,36 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
 
 const SIGNABLE_TYPES: string[] = ['contrat_prestation', 'contrat_maintenance', 'back_contractuel'];
 
-function archiveContract(env: ServerEnv, document: { id: string; name: string }, pdf: Buffer) {
-  void storeContractInNuage(nuageConfigFromEnv(env), {
-    filename: document.name,
-    pdf,
-    linkedTo: `ardoise:contract:${document.id}`,
-  });
+/** Archives a contract in the platform Nuage, fire and forget, only for a platform studio space. */
+function archiveContract(
+  db: PrismaClient,
+  env: ServerEnv,
+  document: { id: string; name: string; spaceId: string },
+  pdf: Buffer
+) {
+  void isPlatformStudio(db, document.spaceId)
+    .then((studio) =>
+      studio
+        ? storeContractInNuage(nuageConfigFromEnv(env), {
+            filename: document.name,
+            pdf,
+            linkedTo: `ardoise:contract:${document.id}`,
+          })
+        : undefined
+    )
+    .catch(() => undefined);
 }
 
-async function fetchProvidersByIds(db: PrismaClient, ids: string[]) {
-  const providers = await db.provider.findMany({ where: { id: { in: ids } } });
+async function fetchProvidersByIds(db: PrismaClient, spaceId: string, ids: string[]) {
+  const providers = await db.provider.findMany({ where: { AND: [{ id: { in: ids } }, await providersOfSpace(db, spaceId)] } });
   if (providers.length !== ids.length) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more providers not found' });
   }
   return providers as Array<{ id: string; name: string; address: string | null; city: string | null; siret: string | null; email: string | null; iban: string | null; bic: string | null }>;
 }
 
-async function resolveSubProvidersForBack(db: PrismaClient, inputs: Array<{ id: string; role: string; amount: number }>) {
-  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
+async function resolveSubProvidersForBack(db: PrismaClient, spaceId: string, inputs: Array<{ id: string; role: string; amount: number }>) {
+  const providers = await fetchProvidersByIds(db, spaceId, inputs.map(p => p.id));
   return inputs.map(inputProvider => {
     const dbProvider = providers.find(p => p.id === inputProvider.id)!;
     return {
@@ -216,8 +229,8 @@ async function createSpecializedPrestation(
   };
 }
 
-async function resolveSubProvidersForAppel(db: PrismaClient, inputs: Array<{ id: string; amount_to_pay: number }>) {
-  const providers = await fetchProvidersByIds(db, inputs.map(p => p.id));
+async function resolveSubProvidersForAppel(db: PrismaClient, spaceId: string, inputs: Array<{ id: string; amount_to_pay: number }>) {
+  const providers = await fetchProvidersByIds(db, spaceId, inputs.map(p => p.id));
   return inputs.map(inputProvider => {
     const dbProvider = providers.find(p => p.id === inputProvider.id)!;
     return {
@@ -316,7 +329,7 @@ async function loadDocumentPdf(
 }
 
 export const documentRouter = router({
-  list: adminProcedure
+  list: memberProcedure
     .input(
       z.object({
         page: z.number().min(1).default(1),
@@ -374,7 +387,7 @@ export const documentRouter = router({
       };
     }),
 
-  get: adminProcedure
+  get: memberProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
       return requireRowScope(
@@ -396,7 +409,7 @@ export const documentRouter = router({
       );
     }),
 
-  delete: adminProcedure
+  delete: memberProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const document = await requireRowScope(
@@ -434,7 +447,7 @@ export const documentRouter = router({
       return { success: true };
     }),
 
-  import: adminProcedure.input(ImportDocumentSchema).mutation(async ({ input, ctx }) => {
+  import: memberProcedure.input(ImportDocumentSchema).mutation(async ({ input, ctx }) => {
     try {
       return await importDocument(ctx, input);
     } catch (error) {
@@ -442,7 +455,7 @@ export const documentRouter = router({
     }
   }),
 
-  update: adminProcedure.input(UpdateDocumentSchema).mutation(async ({ input, ctx }) => {
+  update: memberProcedure.input(UpdateDocumentSchema).mutation(async ({ input, ctx }) => {
     try {
       return await updateDocument(ctx, input);
     } catch (error) {
@@ -450,7 +463,7 @@ export const documentRouter = router({
     }
   }),
 
-  setSignature: adminProcedure.input(SetSignatureSchema).mutation(async ({ input, ctx }) => {
+  setSignature: memberProcedure.input(SetSignatureSchema).mutation(async ({ input, ctx }) => {
     try {
       return await setDocumentSignature(ctx, input);
     } catch (error) {
@@ -458,7 +471,7 @@ export const documentRouter = router({
     }
   }),
 
-  refreshSignLink: adminProcedure
+  refreshSignLink: memberProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const document = await requireRowScope(
@@ -471,7 +484,7 @@ export const documentRouter = router({
       return { url: await ensureClientSignUrl(ctx, document) };
     }),
 
-  types: adminProcedure.query(() => {
+  types: memberProcedure.query(() => {
     return [
       { value: 'devis', label: 'Devis' },
       { value: 'facture_prestation', label: 'Facture' },
@@ -483,11 +496,11 @@ export const documentRouter = router({
     ];
   }),
 
-  signatureEnabled: adminProcedure.query(({ ctx }) => ({
+  signatureEnabled: memberProcedure.query(({ ctx }) => ({
     enabled: plumeConfigFromEnv(ctx.env) !== null,
   })),
 
-  sendForSignature: adminProcedure
+  sendForSignature: memberProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const plume = plumeConfigFromEnv(ctx.env);
@@ -504,6 +517,7 @@ export const documentRouter = router({
         await ctx.db.document.findUnique({ where: { id: input.id } }),
         'Document not found'
       );
+      await requirePlatformStudio(ctx.db, document.spaceId);
 
       if (!SIGNABLE_TYPES.includes(document.type)) {
         throw new TRPCError({
@@ -592,7 +606,7 @@ export const documentRouter = router({
       }
     }),
 
-  download: adminProcedure
+  download: memberProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const document = await requireRowScope(
@@ -613,7 +627,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewFacturePrestation: adminProcedure
+  previewFacturePrestation: memberProcedure
     .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -649,7 +663,7 @@ export const documentRouter = router({
       }
     }),
 
-  createFacturePrestation: adminProcedure
+  createFacturePrestation: memberProcedure
     .input(spaceScoped(FacturePrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -704,7 +718,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewMaintenance: adminProcedure
+  previewMaintenance: memberProcedure
     .input(spaceScoped(MaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -741,7 +755,7 @@ export const documentRouter = router({
       }
     }),
 
-  createMaintenance: adminProcedure
+  createMaintenance: memberProcedure
     .input(spaceScoped(MaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -797,12 +811,12 @@ export const documentRouter = router({
       }
     }),
 
-  previewBackContractuel: adminProcedure
+  previewBackContractuel: memberProcedure
     .input(spaceScoped(BackContractuelInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
-        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, client.spaceId, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -831,12 +845,12 @@ export const documentRouter = router({
       }
     }),
 
-  createBackContractuel: adminProcedure
+  createBackContractuel: memberProcedure
     .input(spaceScoped(BackContractuelInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, input.providers);
+        const providersWithDetails = await resolveSubProvidersForBack(ctx.db, client.spaceId, input.providers);
 
         const documentData = {
           type: 'back_contractuel' as const,
@@ -876,7 +890,7 @@ export const documentRouter = router({
           },
         });
 
-        archiveContract(ctx.env, document, pdfBuffer);
+        archiveContract(ctx.db, ctx.env, document, pdfBuffer);
 
         return {
           document,
@@ -888,12 +902,12 @@ export const documentRouter = router({
       }
     }),
 
-  previewAppelDeFonds: adminProcedure
+  previewAppelDeFonds: memberProcedure
     .input(spaceScoped(AppelDeFondsInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId);
-        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, client.spaceId, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -923,12 +937,12 @@ export const documentRouter = router({
       }
     }),
 
-  createAppelDeFonds: adminProcedure
+  createAppelDeFonds: memberProcedure
     .input(spaceScoped(AppelDeFondsInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, input.payment_providers);
+        const paymentProvidersWithDetails = await resolveSubProvidersForAppel(ctx.db, client.spaceId, input.payment_providers);
 
         const documentData = {
           type: 'appel_de_fonds' as const,
@@ -982,7 +996,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewContratPrestation: adminProcedure
+  previewContratPrestation: memberProcedure
     .input(spaceScoped(ContratPrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1015,7 +1029,7 @@ export const documentRouter = router({
       }
     }),
 
-  createContratPrestation: adminProcedure
+  createContratPrestation: memberProcedure
     .input(spaceScoped(ContratPrestationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1057,7 +1071,7 @@ export const documentRouter = router({
           },
         });
 
-        archiveContract(ctx.env, document, pdfBuffer);
+        archiveContract(ctx.db, ctx.env, document, pdfBuffer);
 
         return {
           document,
@@ -1069,7 +1083,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewContratMaintenance: adminProcedure
+  previewContratMaintenance: memberProcedure
     .input(spaceScoped(ContratMaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1102,7 +1116,7 @@ export const documentRouter = router({
       }
     }),
 
-  createContratMaintenance: adminProcedure
+  createContratMaintenance: memberProcedure
     .input(spaceScoped(ContratMaintenanceInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1144,7 +1158,7 @@ export const documentRouter = router({
           },
         });
 
-        archiveContract(ctx.env, document, pdfBuffer);
+        archiveContract(ctx.db, ctx.env, document, pdfBuffer);
 
         return {
           document,
@@ -1156,7 +1170,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestationBarman: adminProcedure
+  previewPrestationBarman: memberProcedure
     .input(spaceScoped(PrestationBarmanInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1173,7 +1187,7 @@ export const documentRouter = router({
       }
     }),
 
-  createPrestationBarman: adminProcedure
+  createPrestationBarman: memberProcedure
     .input(spaceScoped(PrestationBarmanInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1190,7 +1204,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestationPhoto: adminProcedure
+  previewPrestationPhoto: memberProcedure
     .input(spaceScoped(PrestationPhotoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1207,7 +1221,7 @@ export const documentRouter = router({
       }
     }),
 
-  createPrestationPhoto: adminProcedure
+  createPrestationPhoto: memberProcedure
     .input(spaceScoped(PrestationPhotoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1224,7 +1238,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestationVideo: adminProcedure
+  previewPrestationVideo: memberProcedure
     .input(spaceScoped(PrestationVideoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1241,7 +1255,7 @@ export const documentRouter = router({
       }
     }),
 
-  createPrestationVideo: adminProcedure
+  createPrestationVideo: memberProcedure
     .input(spaceScoped(PrestationVideoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1258,7 +1272,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestationDesign: adminProcedure
+  previewPrestationDesign: memberProcedure
     .input(spaceScoped(PrestationDesignInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1275,7 +1289,7 @@ export const documentRouter = router({
       }
     }),
 
-  createPrestationDesign: adminProcedure
+  createPrestationDesign: memberProcedure
     .input(spaceScoped(PrestationDesignInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1292,7 +1306,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestationDev: adminProcedure
+  previewPrestationDev: memberProcedure
     .input(spaceScoped(PrestationDevInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1309,7 +1323,7 @@ export const documentRouter = router({
       }
     }),
 
-  createPrestationDev: adminProcedure
+  createPrestationDev: memberProcedure
     .input(spaceScoped(PrestationDevInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1326,7 +1340,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestationFormation: adminProcedure
+  previewPrestationFormation: memberProcedure
     .input(spaceScoped(PrestationFormationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1343,7 +1357,7 @@ export const documentRouter = router({
       }
     }),
 
-  createPrestationFormation: adminProcedure
+  createPrestationFormation: memberProcedure
     .input(spaceScoped(PrestationFormationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1360,7 +1374,7 @@ export const documentRouter = router({
       }
     }),
 
-  previewPrestationBtp: adminProcedure
+  previewPrestationBtp: memberProcedure
     .input(spaceScoped(PrestationBtpInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
@@ -1377,7 +1391,7 @@ export const documentRouter = router({
       }
     }),
 
-  createPrestationBtp: adminProcedure
+  createPrestationBtp: memberProcedure
     .input(spaceScoped(PrestationBtpInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {

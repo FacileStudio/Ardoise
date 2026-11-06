@@ -48,8 +48,9 @@ function setup(overrides: {
       findFirst: async () => ({ id: 'c-1', companyName: 'Acme', siret: '123', spaceId: 'space-a' }),
     },
     provider: {
-      findUnique: async () => ({ id: 'p-1', name: 'Studio', tvaRate: 20 }),
+      findFirst: async () => ({ id: 'p-1', name: 'Studio', tvaRate: 20 }),
     },
+    space: { findUnique: async () => ({ platformStudio: true }) },
     mission: { findFirst: async () => ({ id: 'm-1', status: 'ACCEPTED' }) },
     settings: { findFirst: async () => ({ id: 'global' }), findUnique: async () => ({ id: 'global' }) },
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
@@ -57,7 +58,7 @@ function setup(overrides: {
   };
   const ctx = {
     db: db as PrismaClient,
-    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     storage: {
       download: async () => pdf,

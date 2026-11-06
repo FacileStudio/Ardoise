@@ -45,8 +45,8 @@ export async function fetchSessionUser(
 }
 
 /**
- * Asks the backend whether the session belongs to billing staff
- * (BILLING_STAFF_EMAILS). Any failure answers false, so the billing pages
+ * Asks the backend whether the session belongs to platform staff
+ * (PLATFORM_STAFF_SUBS). Any failure answers false, so the staff pages
  * stay closed.
  */
 export async function fetchBillingStaff(

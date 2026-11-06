@@ -1,6 +1,7 @@
-import { router, protectedProcedure, adminProcedure } from '../../trpc';
+import { router, clientProcedure, memberProcedure } from '../../trpc';
 import clientService from './service';
-import spaceService from '../space/service';
+import spaceService, { scopeSpaceId } from '../space/service';
+import { requirePlatformStudio } from '../space/studio';
 import {
   CreateClientSchema,
   UpdateClientSchema,
@@ -17,19 +18,20 @@ import {
 } from '../webhook/glouton';
 
 export const clientRouter = router({
-  list: adminProcedure.input(ListClientsSchema).query(async ({ ctx, input }) => {
+  list: memberProcedure.input(ListClientsSchema).query(async ({ ctx, input }) => {
     const { spaceId, ...params } = input;
     const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, spaceId);
     return clientService.listClients(ctx.db, params, scope);
   }),
 
-  getById: adminProcedure.input(GetByIdSchema).query(async ({ ctx, input }) => {
+  getById: memberProcedure.input(GetByIdSchema).query(async ({ ctx, input }) => {
     const client = await clientService.getClientById(ctx.db, ctx.user.id, input.id);
     return { ...client, gloutonUrl: gloutonCompanyLink(ctx.env, client.gloutonCompanyId) };
   }),
 
-  create: adminProcedure.input(CreateClientSchema).mutation(async ({ ctx, input }) => {
+  create: memberProcedure.input(CreateClientSchema).mutation(async ({ ctx, input }) => {
     const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
+    if (input.createCredentials) await requirePlatformStudio(ctx.db, scopeSpaceId(scope));
     const client = await clientService.createClient(ctx.db, input, scope);
 
     if (client.user) {
@@ -50,7 +52,7 @@ export const clientRouter = router({
     return client;
   }),
 
-  update: adminProcedure.input(UpdateClientSchema).mutation(async ({ ctx, input }) => {
+  update: memberProcedure.input(UpdateClientSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
     const client = await clientService.updateClient(ctx.db, ctx.user.id, id, data);
 
@@ -66,7 +68,7 @@ export const clientRouter = router({
     return client;
   }),
 
-  transfer: adminProcedure.input(TransferClientSchema).mutation(async ({ ctx, input }) => {
+  transfer: memberProcedure.input(TransferClientSchema).mutation(async ({ ctx, input }) => {
     const target = await spaceService.resolveScope(ctx.db, ctx.user.id, input.targetSpaceId);
     const result = await clientService.transferClient(ctx.db, ctx.user.id, input, target);
 
@@ -86,7 +88,7 @@ export const clientRouter = router({
     return result;
   }),
 
-  delete: adminProcedure.input(GetByIdSchema).mutation(async ({ ctx, input }) => {
+  delete: memberProcedure.input(GetByIdSchema).mutation(async ({ ctx, input }) => {
     const { gloutonCompanyId, ...result } = await clientService.deleteClient(
       ctx.db,
       ctx.user.id,
@@ -105,7 +107,7 @@ export const clientRouter = router({
     return result;
   }),
 
-  me: protectedProcedure.query(async ({ ctx }) => {
+  me: clientProcedure.query(async ({ ctx }) => {
     return clientService.getClientByUserId(ctx.db, ctx.user.id);
   }),
 });

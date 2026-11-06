@@ -11,7 +11,7 @@ const user = () => ({
   email: 'a@b.fr',
   firstName: 'A',
   lastName: 'B',
-  role: 'ADMIN',
+  role: 'MEMBER',
   status: 'ACTIVE',
   isBanned: false,
   isSuspended: false,
@@ -28,6 +28,7 @@ const user = () => ({
     {
       id: 'a1',
       providerId: 'oidc',
+      accountId: 'sub-staff',
       accessToken: 'OIDC-ACCESS-MARKER',
       refreshToken: 'REFRESH-TOKEN-MARKER',
       idToken: 'OIDC-ID-MARKER',
@@ -146,17 +147,20 @@ const stripe = {
 };
 const smtp = { sendEmail: async () => undefined };
 
-function caller(targetMember: unknown = { ...member(), role: 'MEMBER', userId: 'u2' }) {
+function caller(
+  targetMember: unknown = { ...member(), role: 'MEMBER', userId: 'u2' },
+  role: 'MEMBER' | 'CLIENT' = 'MEMBER'
+) {
   return appRouter.createCaller({
     db: fakeDb(targetMember),
     auth: {
       hashPassword: async (p: string) => `hash:${p}`,
       verifyPassword: async () => true,
     },
-    user: { id: 'u1', role: 'ADMIN', email: 'a@b.fr' },
+    user: { id: 'u1', role, email: 'a@b.fr' },
     log: { debug() {}, error() {}, info() {}, warn() {} },
     storage: {},
-    env: {},
+    env: { OIDC_ISSUER: 'oidc', PLATFORM_STAFF_SUBS: 'sub-staff' },
     req: new Request('http://x'),
     resHeaders: new Headers(),
     appOrigin: 'http://app',
@@ -199,7 +203,8 @@ const surfaces: Record<string, (c: ReturnType<typeof caller>) => Promise<unknown
 describe('procedures never serialize secrets', () => {
   for (const [name, call] of Object.entries(surfaces)) {
     it(name, async () => {
-      assertClean(await call(caller(name === 'space.addMember' ? null : undefined)));
+      const role = ['user.deleteOwnAccount', 'payment.myPayments'].includes(name) ? 'CLIENT' : 'MEMBER';
+      assertClean(await call(caller(name === 'space.addMember' ? null : undefined, role)));
     });
   }
 });

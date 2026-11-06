@@ -6,7 +6,8 @@ function dbWith(mission: unknown, seen: any[] = []) {
   return {
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
     client: { findFirst: async () => ({ id: 'client-1', spaceId: 'space-a' }) },
-    provider: { findUnique: async () => ({ id: 'provider-1', tvaRate: 20 }) },
+    provider: { findFirst: async () => ({ id: 'provider-1', tvaRate: 20 }) },
+    space: { findUnique: async () => ({ platformStudio: true }) },
     mission: {
       findFirst: async (args: any) => {
         seen.push(args.where);

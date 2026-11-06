@@ -119,7 +119,7 @@ describe('document.download', () => {
         document: { findUnique: async () => row },
         spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
       } as unknown as PrismaClient,
-      user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+      user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
       log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
       storage,
       env: {},

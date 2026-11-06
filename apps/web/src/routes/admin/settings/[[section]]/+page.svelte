@@ -25,6 +25,7 @@
   import ProfileSection from '$lib/components/settings/ProfileSection.svelte';
   import AppearanceSection from '$lib/components/settings/AppearanceSection.svelte';
   import { ImageUpload } from '$lib/ui';
+  import { platformStaff } from '$lib/platform-staff.svelte';
 
   let loading = $state(true);
   let loadFailed = $state(false);
@@ -75,20 +76,21 @@
   };
 
   const SECTIONS = [
-    { id: 'profile', label: 'Profil' },
-    { id: 'appearance', label: 'Apparence' },
-    { id: 'company', label: 'Entreprise' },
-    { id: 'billing', label: 'Facturation' },
-    { id: 'payments', label: 'Paiements' },
-    { id: 'email', label: 'Email' },
-    { id: 'integrations', label: 'Intégrations' },
-    { id: 'advanced', label: 'Avancé' },
+    { id: 'profile', label: 'Profil', staff: false },
+    { id: 'appearance', label: 'Apparence', staff: false },
+    { id: 'company', label: 'Entreprise', staff: true },
+    { id: 'billing', label: 'Facturation', staff: true },
+    { id: 'payments', label: 'Paiements', staff: true },
+    { id: 'email', label: 'Email', staff: true },
+    { id: 'integrations', label: 'Intégrations', staff: true },
+    { id: 'advanced', label: 'Avancé', staff: false },
   ] as const;
 
+  const visible = $derived(SECTIONS.filter((s) => !s.staff || platformStaff.staff));
   const section = $derived(
-    SECTIONS.some((s) => s.id === page.params.section) ? page.params.section! : 'profile'
+    visible.some((s) => s.id === page.params.section) ? page.params.section! : 'profile'
   );
-  const tabs = SECTIONS.map((s) => ({ ...s, href: `/admin/settings/${s.id}` }));
+  const tabs = $derived(visible.map(({ id, label }) => ({ id, label, href: `/admin/settings/${id}` })));
   const webhookPlaceholder = ['admin.user.created', 'admin.user.updated', 'settings.updated', 'settings.*'].join('\n');
 
   let authConfig = $state<AuthConfig | null>(null);
@@ -111,7 +113,9 @@
 
   onMount(async () => {
     authConfig = await loadAuthConfig();
-    await loadSettings();
+    await platformStaff.load();
+    if (platformStaff.staff) await loadSettings();
+    else loading = false;
   });
 
   async function loadSettings() {

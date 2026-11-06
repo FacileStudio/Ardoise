@@ -46,10 +46,11 @@ function setup(document: Record<string, unknown>, env: Record<string, unknown> =
       }),
     },
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
+    space: { findUnique: async () => ({ platformStudio: env.STUDIO !== false }) },
   };
   const ctx = {
     db: db as PrismaClient,
-    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     storage: {
       download: async (key: string) => {
@@ -67,6 +68,13 @@ describe('document.sendForSignature', () => {
     const { caller } = setup(stored(), {});
 
     await expect(caller.sendForSignature({ id: 'doc-1' })).rejects.toThrow('not configured');
+  });
+
+  it('refuses a space that is not a platform studio space', async () => {
+    const { caller, updates } = setup(stored(), { ...PLUME_ENV, STUDIO: false });
+
+    await expect(caller.sendForSignature({ id: 'doc-1' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(updates).toEqual([]);
   });
 
   it('refuses a document that is not a contract', async () => {

@@ -110,7 +110,7 @@ async function staffUser(email: string, sub: string) {
       email,
       firstName: 'S',
       lastName: 'T',
-      role: 'ADMIN',
+      role: 'MEMBER',
       emailVerified: true,
       accounts: { create: { id: crypto.randomUUID(), providerId: ISSUER, accountId: sub } },
     },
@@ -199,7 +199,7 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     const staff = await staffUser('staff@facile.studio', 'sub_staff');
     const caller = billingRouter.createCaller({
       db: prisma,
-      user: { id: staff.id, role: 'ADMIN', email: staff.email },
+      user: { id: staff.id, role: 'MEMBER', email: staff.email },
       env: { OIDC_ISSUER: ISSUER, BILLING_STAFF_SUBS: 'sub_staff' },
       log: silent,
     } as never);
@@ -209,24 +209,25 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     await prisma.auditLog.deleteMany({ where: { userId: staff.id } });
   });
 
-  it('refuses identity rewrites through the admin engine, so a rename never grants billing staff', async () => {
+  it('refuses the admin engine to a non-staff member, so a rename never grants platform staff', async () => {
     const attacker = await staffUser('attacker@client.fr', 'sub_attacker');
     const ctx = {
       db: prisma,
-      user: { id: attacker.id, role: 'ADMIN', email: attacker.email },
+      user: { id: attacker.id, role: 'MEMBER', email: attacker.email },
       env: { OIDC_ISSUER: ISSUER, BILLING_STAFF_SUBS: 'sub_camille', BILLING_STAFF_EMAILS: 'camille@facile.studio' },
       log: silent,
     } as never;
     const admin = adminRouter.createCaller(ctx);
     await expect(
       admin.update({ entity: 'user', id: attacker.id, data: { email: 'camille@facile.studio', emailVerified: true } })
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(admin.update({ entity: 'user', id: attacker.id, data: { role: 'ADMIN' } })).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
+      code: 'FORBIDDEN',
     });
     await expect(
       admin.create({ entity: 'user', data: { email: 'camille@facile.studio', firstName: 'C', lastName: 'C', role: 'ADMIN' } })
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(admin.list({ entity: 'user' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect((await prisma.user.findUniqueOrThrow({ where: { id: attacker.id } })).email).toBe('attacker@client.fr');
 
     await prisma.user.update({ where: { id: attacker.id }, data: { email: 'camille@facile.studio' } });
@@ -310,7 +311,7 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     const staff = await staffUser('yann@facile.studio', 'sub_yann');
     const caller = billingRouter.createCaller({
       db: prisma,
-      user: { id: staff.id, role: 'ADMIN', email: staff.email },
+      user: { id: staff.id, role: 'MEMBER', email: staff.email },
       env: { OIDC_ISSUER: ISSUER, BILLING_STAFF_SUBS: 'sub_yann' },
       getStripe: async () => ({ client: stripe }),
       log: silent,
@@ -429,7 +430,7 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     const { stripe, calls } = fakeStripe();
     const caller = billingRouter.createCaller({
       db: prisma,
-      user: { id: staff.id, role: 'ADMIN', email: staff.email },
+      user: { id: staff.id, role: 'MEMBER', email: staff.email },
       env: { OIDC_ISSUER: ISSUER, BILLING_STAFF_SUBS: 'sub_yann' },
       getStripe: async () => ({ client: stripe }),
       log: silent,

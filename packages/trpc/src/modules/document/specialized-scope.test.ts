@@ -22,6 +22,7 @@ function dbCapturingPartyLookups(seen: { client: any[]; provider: any[] }) {
         return null;
       },
     },
+    space: { findUnique: async () => ({ platformStudio: true }) },
     provider: {
       findFirst: async ({ where }: any) => {
         seen.provider.push(where);
@@ -36,7 +37,7 @@ function dbCapturingPartyLookups(seen: { client: any[]; provider: any[] }) {
 function ctxFor(db: PrismaClient) {
   return {
     db,
-    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     storage: {},
     env: {},

@@ -33,10 +33,12 @@ export function ssoProfile(claims: OidcClaims) {
 }
 
 /**
- * Resolves a Facile SSO sign-in to its Ardoise user. Everyone who signs in
- * through SSO is staff: Ardoise keeps no separate admin list, so the user is
- * found by identity, then by verified email, else created, and every sign-in
- * makes them ADMIN and refreshes their name and picture from SSO. Clients never
+ * Resolves a Facile SSO sign-in to its Ardoise user: found by identity, then
+ * by verified email, else created. Every sign-in sets the role to MEMBER,
+ * which grants nothing by itself: the spaces a member works in come only from
+ * Registre's directory (registre/spaces.ts), and platform powers only from
+ * PLATFORM_STAFF_SUBS. A sign-in never yields ADMIN, and a legacy ADMIN row is
+ * relabelled MEMBER. Name and picture are refreshed from SSO. Clients never
  * hold an SSO account; they sign in with magic links, so a CLIENT row is never
  * linked by email nor promoted, even when already linked: `client_account`.
  */
@@ -69,13 +71,13 @@ export async function resolveUser(db: PrismaClient, issuer: string, claims: Oidc
   if (user && loginBlockReason(user)) throw new IdentityError('blocked');
 
   const profile = ssoProfile(claims);
-  const staff = { ...profile, role: 'ADMIN' as const, emailVerified: true, lastLoginAt: new Date() };
+  const member = { ...profile, role: 'MEMBER' as const, emailVerified: true, lastLoginAt: new Date() };
 
   if (!user) {
     const created = await db.user.create({
       data: {
         email: claims.email,
-        ...staff,
+        ...member,
         accounts: { create: { id: crypto.randomUUID(), providerId: issuer, accountId: claims.sub } },
       },
       select: sessionUserSelection,
@@ -95,7 +97,7 @@ export async function resolveUser(db: PrismaClient, issuer: string, claims: Oidc
 
   const updated = await db.user.update({
     where: { id: user.id },
-    data: staff,
+    data: member,
     select: sessionUserSelection,
   });
 

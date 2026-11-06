@@ -28,9 +28,29 @@ const ctx: MagicLinkContext = {
 const tokenFromMail = () => mails.at(-1)?.match(/login\/verify\?token=([0-9a-f]{64})/)?.[1] ?? '';
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
-const makeUser = (id: string, extra: Record<string, unknown> = {}) =>
+const makeUser = (id: string, extra: Record<string, unknown> = {}, studio = true) =>
   prisma.user.create({
-    data: { id, email: `${id}@example.test`, firstName: 'F', lastName: 'L', role: 'CLIENT', ...extra },
+    data: {
+      id,
+      email: `${id}@example.test`,
+      firstName: 'F',
+      lastName: 'L',
+      role: 'CLIENT',
+      client: {
+        create: {
+          contactFirstName: 'F',
+          contactLastName: 'L',
+          companyName: id,
+          space: {
+            connectOrCreate: {
+              where: { id: studio ? 'ml-studio' : 'ml-tenant' },
+              create: { id: studio ? 'ml-studio' : 'ml-tenant', name: id, platformStudio: studio },
+            },
+          },
+        },
+      },
+      ...extra,
+    },
   });
 
 describe.skipIf(!enabled)('magic links against Postgres', () => {
@@ -87,6 +107,14 @@ describe.skipIf(!enabled)('magic links against Postgres', () => {
     await settle();
 
     expect(tokenFromMail()).not.toBe('');
+  });
+
+  test('a client of a space outside the platform studio gets no mail', async () => {
+    await makeUser('t1', {}, false);
+    await magicLinkService.request(ctx, 't1@example.test', '203.0.113.9', 0);
+    await settle();
+    expect(mails).toEqual([]);
+    expect(await prisma.magicLink.count()).toBe(0);
   });
 
   test('admins and blocked clients get no link and no row', async () => {

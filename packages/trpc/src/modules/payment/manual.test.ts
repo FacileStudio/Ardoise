@@ -49,7 +49,7 @@ function setup(payment: Record<string, unknown> = {}) {
   };
   const ctx = {
     db: db as PrismaClient,
-    user: { id: 'user-1', role: 'ADMIN', email: 'a@b.c' },
+    user: { id: 'user-1', role: 'MEMBER', email: 'a@b.c' },
     log: { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} },
     env: {},
   } as any;

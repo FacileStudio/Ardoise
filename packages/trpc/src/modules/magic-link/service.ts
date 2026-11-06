@@ -34,9 +34,18 @@ const REQUEST_FLOOR_MS = 150;
 
 const INVALID_LINK = 'This link is invalid or has expired';
 
+/**
+ * An active, unblocked CLIENT of a platform studio space: the platform SMTP
+ * mails only the studio's own clients (see space/studio.ts).
+ */
 const findEligibleClient = async (db: PrismaClient, email: string) => {
   const user = await db.user.findFirst({
-    where: { email: { equals: email, mode: 'insensitive' }, role: 'CLIENT', status: 'ACTIVE' },
+    where: {
+      email: { equals: email, mode: 'insensitive' },
+      role: 'CLIENT',
+      status: 'ACTIVE',
+      client: { is: { space: { is: { platformStudio: true } } } },
+    },
     select: { id: true, email: true, ...loginGateSelection },
   });
   return user && !loginBlockReason(user) ? { id: user.id, email: user.email } : null;

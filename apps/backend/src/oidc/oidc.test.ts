@@ -124,18 +124,28 @@ describe('resolveUser', () => {
   const claims = { sub: 'sub-1', email: 'a@b.c', emailVerified: true };
   const code = (p: Promise<unknown>) => p.then(() => 'ok', (e) => (e as IdentityError).code);
 
-  test('a first SSO sign-in creates a staff account', async () => {
+  test('a first SSO sign-in creates a MEMBER account, never ADMIN', async () => {
     const { db, calls } = fakeDb({});
     const created = await resolveUser(db, ISSUER, { ...claims, name: 'Yann Thevenin' });
     expect(created.id).toBe('new-user');
-    expect(calls).toEqual(['create:ADMIN:Yann']);
+    expect(created.role).toBe('MEMBER' as typeof created.role);
+    expect(calls).toEqual(['create:MEMBER:Yann']);
   });
 
-  test('every SSO sign-in makes the user staff and refreshes their name', async () => {
-    const { db, calls } = fakeDb({ linked: true });
+  test('every SSO sign-in sets MEMBER and refreshes the name', async () => {
+    const { db, calls } = fakeDb({ linked: true, role: 'MEMBER' });
     const user = await resolveUser(db, ISSUER, { ...claims, name: 'Yann Van Thevenin' });
-    expect(user.role).toBe('ADMIN' as typeof user.role);
-    expect(calls).toEqual(['update:ADMIN:Yann:Van Thevenin']);
+    expect(user.role).toBe('MEMBER' as typeof user.role);
+    expect(calls).toEqual(['update:MEMBER:Yann:Van Thevenin']);
+  });
+
+  test('a legacy ADMIN row signing in is relabelled MEMBER, by identity or by email', async () => {
+    for (const opts of [{ linked: true }, { byEmail: true }]) {
+      const { db, calls } = fakeDb({ ...opts, role: 'ADMIN' });
+      const user = await resolveUser(db, ISSUER, { ...claims, name: 'Yann Thevenin' });
+      expect(user.role).toBe('MEMBER' as typeof user.role);
+      expect(calls.some((call) => call.includes('ADMIN'))).toBe(false);
+    }
   });
 
   test('unverified email never links by email', async () => {

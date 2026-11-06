@@ -30,7 +30,7 @@ a restart.
 - `apps/backend` — Hono app. Wires CORS, request logging, three rate-limit tiers, then mounts the
   handlers listed above.
 - `apps/web` — one SvelteKit app for both audiences. `/app/*` needs any authenticated user,
-  `/admin/*` needs `ADMIN`, `/login` redirects by role, `/legal/*` is public.
+  `/admin/*` needs a space member (`MEMBER`), `/login` redirects by role, `/legal/*` is public.
 - `packages/trpc` — the API itself. Eleven module directories, each with `router.ts` and
   `service.ts`. The router is exported as `appRouter`; `AppRouter` is the type the client imports.
 - `packages/database` — Prisma with a multi-file schema under `prisma/schema/`. A second
@@ -50,9 +50,9 @@ a restart.
    header, and verifies it with `AuthManager.verifyToken`. The resulting user is attached to the
    context along with `db`, `storage`, `env`, a child logger, the request IP and user agent, and
    lazy Stripe / SMTP accessors built from the `Settings` row.
-4. Three procedure levels apply middleware in order: `publicProcedure` (logging only),
-   `protectedProcedure` (adds `isAuthed`), `adminProcedure` (adds `isAdmin`, which calls
-   `hasAccess(ctx.user, UserRole.ADMIN)`).
+4. Procedure levels apply middleware in order: `publicProcedure` (logging only),
+   `protectedProcedure` (adds `isAuthed`), `clientProcedure` (role `CLIENT`), `memberProcedure`
+   (role `MEMBER`) and `platformStaffProcedure` (`PLATFORM_STAFF_SUBS`). See "Access model".
 5. The error formatter logs `INTERNAL_SERVER_ERROR` with the tRPC path, and in production
    replaces the message with a generic string and strips the stack.
 
@@ -62,7 +62,7 @@ Postgres 16 through Prisma. The schema is split by concern across `prisma/schema
 
 | Model | Purpose |
 |---|---|
-| `User` | Accounts. `role` is `ADMIN` or `CLIENT`; `status` is `ACTIVE`, `SUSPENDED`, `BANNED` or `PENDING`. Carries ban/suspension fields, `lastLoginAt`, `lastLoginIp` and `profileSyncedAt` (no longer written since the OIDC profile sync was removed) |
+| `User` | Accounts. `role` is `MEMBER` (every Facile SSO user), `CLIENT` (portal) or the legacy `ADMIN` (never assigned, equal to `MEMBER`); `status` is `ACTIVE`, `SUSPENDED`, `BANNED` or `PENDING`. Carries ban/suspension fields, `lastLoginAt`, `lastLoginIp` and `profileSyncedAt` (no longer written since the OIDC profile sync was removed) |
 | `Client` | Billing counterparty — contact name, company, address, SIRET, VAT number, `stripeCustomerId`. Optionally linked one-to-one to a `User` for portal access |
 | `Mission` | One job for one client. `status` is `DRAFT`, `QUOTED`, `ACCEPTED`, `INVOICED`, `PAID` or `CANCELLED` and follows the quote, invoice and payment events. An optional `depositPercent` allows a deposit invoice. Owns its `Prestation` lines and the `Document` and `Payment` rows linked to it through a nullable `missionId`, and links its providers through `MissionProvider` |
 | `MissionProvider` | Join table between a `Mission` and a `Provider`, with a `LEAD` or `SUBCONTRACTOR` role |
@@ -72,7 +72,7 @@ Postgres 16 through Prisma. The schema is split by concern across `prisma/schema
 | `PaymentDocument` | Join table attaching generated `Document` rows to a `Payment` |
 | `Document` | A rendered document. `type` is one of fourteen `DocumentType` values. Snapshots both client and provider legal identity at generation time, stores `items` as JSON, decimal `subtotal`/`tva`/`total`, French late-fee and recovery-fee mentions. The PDF is uploaded at creation to `documents/<id>.pdf`, and `pdfUrl` + `pdfHash` point to it: `document.download` serves that file. A `devis` carries a `version` and `acceptedAt`; an invoice built from one carries `invoiceKind` (`FULL`, `DEPOSIT`, `BALANCE`), `sourceQuoteId` and `dueDate` |
 | `Provider` | The issuing legal entity — legal form, share capital, RCS city, APE code, IBAN/BIC, logo, VAT rate |
-| `Space` / `SpaceMember` | Shared workspaces mirrored from Registre, one per customer. `SpaceRole` is `OWNER`, `ADMIN` or `MEMBER`. Clients, missions, documents and payments carry a required `spaceId`; a list without `spaceId` covers every space of the caller, and a mission, document or payment takes the space of its client. Providers have no space: every staff member can use them |
+| `Space` / `SpaceMember` | Shared workspaces mirrored from Registre, one per customer. `SpaceRole` is `OWNER`, `ADMIN` or `MEMBER`. Clients, missions, documents and payments carry a required `spaceId`; a list without `spaceId` covers every space of the caller, and a mission, document or payment takes the space of its client. A provider belongs to one space; legacy providers with no space are shared by the platform studio spaces. `Space.platformStudio` marks the platform operator's own spaces |
 | `Settings` | Singleton row keyed `global`: company identity, Stripe keys, SMTP credentials, outbound webhook config, bank details, VAT rate, document numbering counters and formats |
 | `AdminPermission` | Per-user, per-entity `canCreate` / `canRead` / `canUpdate` / `canDelete` flags for the generic admin engine |
 | `AuditLog` | `CREATE` / `UPDATE` / `DELETE` history written by the admin engine |
@@ -94,8 +94,7 @@ Local auth is a custom HS256 JWT scheme. `AuthManager` (`@repo/auth`) signs with
   `HttpOnly` `SameSite=Lax` cookies. The refresh cookie is scoped to `Path=/trpc/auth.refresh`,
   so it is never sent with ordinary calls. `Secure` is added when `NODE_ENV=production`.
 - Role checks come from `@repo/auth-shared`, which defines the `SessionUser` shape and a
-  `ROLE_HIERARCHY` of `CLIENT: 1`, `ADMIN: 2`. Note this is **not** the boilerplate's
-  `USER`/`ADMIN` pair — Ardoise renamed the lower role to `CLIENT`.
+  `ROLE_HIERARCHY` of `CLIENT: 1`, `MEMBER: 2`, `ADMIN: 2`. No role grants platform powers.
 
 `@repo/auth` and `@repo/auth-shared` are workspace packages private to this monorepo. They were
 copy-pasted from `MonorepoBoilerplate` and have drifted since; nothing imports them across repos.
@@ -140,8 +139,29 @@ exclude that route from access logs if the proxy keeps them.
 
 The only staff login, against Registre (`https://sso.facile.studio` in production). It activates
 when `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set, and production refuses to
-boot without them. Anyone who signs in is staff; their name and picture come from the SSO profile
-on every sign-in. There is no staff password.
+boot without them. Every sign-in sets `role = MEMBER`, which grants nothing by itself; their name
+and picture come from the SSO profile on every sign-in. There is no staff password.
+
+### Access model
+
+Ardoise is multi-tenant by Registre space.
+
+- A space's members and their `OWNER` / `ADMIN` / `MEMBER` roles come only from Registre's directory
+  (`apps/backend/src/registre/spaces.ts`). Every space-scoped query takes its space from the
+  caller's `SpaceMember` rows (`spaceService.resolveScope`, `requireRowScope`), never from a client
+  id alone. A row of another space answers `NOT_FOUND` or `FORBIDDEN`.
+- An unlinked local space is adopted by a Registre space of the same name only when its local
+  owners all own that Registre space. Otherwise the Registre space gets a fresh Ardoise space.
+- Platform staff are the Registre subjects in `PLATFORM_STAFF_SUBS`. Only they reach the platform
+  `Settings` (company, Stripe keys, SMTP, outbound webhook, numbering), the generic `admin.*`
+  engine and audit logs, `/admin/offres` and `billing.*`, `space.setPlatformStudio`, and writes to
+  shared providers. One middleware (`platformStaffProcedure`) decides it; an empty list means nobody.
+- `Space.platformStudio` marks the platform operator's own spaces. Only those may collect Stripe
+  payments on the platform account, mail their clients through the platform SMTP (payment
+  requests, reminders, welcome and magic links), send contracts to Plume, archive them in Nuage
+  and use the shared providers. Other spaces keep manual payments, documents and their own
+  providers. Staff flip the flag with `space.setPlatformStudio`, which writes an audit row.
+- CLIENT portal accounts are unchanged: magic links, scoped to their own `Client` row.
 
 Code lives in `apps/backend/src/oidc/`, one job per file:
 

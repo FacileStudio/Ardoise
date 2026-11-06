@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { providersOfSpace } from '../space/studio';
 import { TRPCError } from '@trpc/server';
 import type { Prisma, PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
@@ -389,7 +390,9 @@ export async function updateDocument(ctx: Ctx, input: z.infer<typeof UpdateDocum
   }
 
   if (input.providerId !== undefined) {
-    const provider = await ctx.db.provider.findUnique({ where: { id: input.providerId } });
+    const provider = await ctx.db.provider.findFirst({
+      where: { AND: [{ id: input.providerId }, await providersOfSpace(ctx.db, existing.spaceId)] },
+    });
     if (!provider) throw new TRPCError({ code: 'NOT_FOUND', message: 'Provider not found' });
     Object.assign(data, providerColumns(provider));
   }
