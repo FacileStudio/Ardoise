@@ -20,6 +20,10 @@ deploys from the tag. A tag publishes the backend image to
 - Comps grant the published version of their plan, and only fall back to the latest version when the plan was never published. A draft no longer leaks to comped people.
 - Spaces without a subscription get the published version of the plan flagged free (`Plan.isFree`, set on Solo by migration `20261106120000_billing_review`), not the first plan by sort order. Staff toggle it in the plan settings.
 
+### Added
+
+- `GET /api/catalog` is readable cross-origin by the suite's static pages: `Access-Control-Allow-Origin: *` without credentials, GET only, preflight answered, `Cache-Control: public, max-age=60`. The rest of the billing API (`/billing/*`) no longer gets the app's credentialed CORS.
+
 ### Fixed
 
 - Checkout refused a second session only while the first was open. It now also syncs a completed session and refuses while its subscription has not ended, so a slow webhook cannot let a space pay twice.
