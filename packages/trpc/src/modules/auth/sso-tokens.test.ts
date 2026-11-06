@@ -1,16 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import type { PrismaClient } from '@repo/types';
-import { accountTokenStore, saveSsoTokens } from './sso-tokens';
+import { accountTokenStore, clearSsoTokens, saveSsoTokens } from './sso-tokens';
 
 const SECRET = 'x'.repeat(32);
 const ISSUER = 'https://sso.example.test';
 
 function fakeDb() {
-  const row: { accessToken: string | null; refreshToken: string | null; accessTokenExpiresAt: Date | null } = {
-    accessToken: null,
-    refreshToken: null,
-    accessTokenExpiresAt: null,
-  };
+  const row: {
+    accessToken: string | null;
+    refreshToken: string | null;
+    accessTokenExpiresAt: Date | null;
+    refreshTokenExpiresAt: Date | null;
+  } = { accessToken: null, refreshToken: null, accessTokenExpiresAt: null, refreshTokenExpiresAt: null };
   const db = {
     account: {
       updateMany: async ({ data }: { data: Partial<typeof row> }) => {
@@ -46,5 +47,13 @@ describe('SSO token storage', () => {
     await saveSsoTokens(db, ISSUER, 'sub-1', { accessToken: 'at', refreshToken: 'rt', expiresIn: 900 }, SECRET);
     const loaded = await accountTokenStore(db, ISSUER, 'y'.repeat(32)).load('u1');
     expect(loaded?.refreshToken).toBeNull();
+  });
+
+  test('records the refresh expiry and a local logout clears every stored token', async () => {
+    const { db, row } = fakeDb();
+    await saveSsoTokens(db, ISSUER, 'sub-1', { accessToken: 'at', refreshToken: 'rt', expiresIn: 900 }, SECRET);
+    expect(row.refreshTokenExpiresAt?.getTime()).toBeGreaterThan(Date.now());
+    await clearSsoTokens(db, ISSUER, 'u1');
+    expect(row).toEqual({ accessToken: null, refreshToken: null, accessTokenExpiresAt: null, refreshTokenExpiresAt: null });
   });
 });

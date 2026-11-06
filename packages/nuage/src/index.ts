@@ -5,6 +5,8 @@ const TOKEN_MARGIN_MS = 30_000;
 const EXCHANGE_GRANT = 'urn:ietf:params:oauth:grant-type:token-exchange';
 const ACCESS_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:access_token';
 const WRITE_SCOPE = 'nuage.write';
+const REFRESH_LIFETIME_MS = 30 * 24 * 3600 * 1000;
+const MAX_NAME_BYTES = 255;
 
 export interface NuageConfig {
   url: string;
@@ -26,6 +28,7 @@ export interface SubjectTokens {
   accessToken: string | null;
   refreshToken: string | null;
   expiresAt: Date | null;
+  refreshExpiresAt?: Date | null;
 }
 
 export interface SubjectTokenStore {
@@ -128,21 +131,45 @@ async function subjectToken(
     stored.accessToken && stored.expiresAt && stored.expiresAt.getTime() - TOKEN_MARGIN_MS > Date.now();
   if (!force && fresh) return stored.accessToken as string;
   if (!stored.refreshToken) throw new NotConnectedError();
+  return refreshSubject(config, store, userId, stored.refreshToken);
+}
+
+async function refreshSubject(
+  config: NuageConfig,
+  store: SubjectTokenStore,
+  userId: string,
+  refreshToken: string
+): Promise<string> {
   try {
-    const refreshed = await postToken(config, {
-      grant_type: 'refresh_token',
-      refresh_token: stored.refreshToken,
-    });
+    const refreshed = await postToken(config, { grant_type: 'refresh_token', refresh_token: refreshToken });
     await store.save(userId, {
       accessToken: refreshed.access_token as string,
-      refreshToken: refreshed.refresh_token ?? stored.refreshToken,
+      refreshToken: refreshed.refresh_token ?? refreshToken,
       expiresAt: new Date(Date.now() + (refreshed.expires_in ?? 0) * 1000),
+      refreshExpiresAt: new Date(Date.now() + REFRESH_LIFETIME_MS),
     });
     return refreshed.access_token as string;
   } catch (error) {
-    if (isInvalidGrant(error)) throw new NotConnectedError();
-    throw error;
+    if (!isInvalidGrant(error)) throw error;
+    const current = await store.load(userId);
+    if (current?.refreshToken && current.refreshToken !== refreshToken) {
+      return refreshSubject(config, store, userId, current.refreshToken);
+    }
+    throw new NotConnectedError();
   }
+}
+
+const userChains = new Map<string, Promise<unknown>>();
+
+function serialisedPerUser<T>(userId: string, task: () => Promise<T>): Promise<T> {
+  const previous = userChains.get(userId) ?? Promise.resolve();
+  const run = previous.then(task, task);
+  const tail = run.catch(() => undefined);
+  userChains.set(userId, tail);
+  void tail.then(() => {
+    if (userChains.get(userId) === tail) userChains.delete(userId);
+  });
+  return run;
 }
 
 /**
@@ -150,7 +177,15 @@ async function subjectToken(
  * (RFC 8693, scope nuage.write). Registre puts this client's id in `act.sub`,
  * which is how Nuage knows the caller is Ardoise.
  */
-export async function delegatedNuageToken(
+export function delegatedNuageToken(
+  config: NuageConfig,
+  store: SubjectTokenStore,
+  userId: string
+): Promise<string> {
+  return serialisedPerUser(userId, () => exchangeForUser(config, store, userId));
+}
+
+async function exchangeForUser(
   config: NuageConfig,
   store: SubjectTokenStore,
   userId: string
@@ -173,6 +208,57 @@ export async function delegatedNuageToken(
   throw new NotConnectedError();
 }
 
+const unsafeName = new RegExp('[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}"]', 'gu');
+
+/**
+ * Makes a document name acceptable to Nuage's object-name rules: slashes,
+ * backslashes, quotes, control and invisible characters become dashes or
+ * vanish, ".pdf" is ensured, and the result is cut to 255 bytes on a character
+ * boundary.
+ */
+export function nuageObjectName(title: string): string {
+  const cleaned = title
+    .replace(/[/\\]/g, '-')
+    .replace(unsafeName, '')
+    .trim();
+  const base = cleaned || 'document';
+  const named = base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
+  return truncateUtf8(named, MAX_NAME_BYTES);
+}
+
+function truncateUtf8(value: string, maxBytes: number): string {
+  if (Buffer.byteLength(value) <= maxBytes) return value;
+  const suffix = '.pdf';
+  const head = Array.from(value.slice(0, -suffix.length));
+  while (head.length > 0 && Buffer.byteLength(head.join('')) + suffix.length > maxBytes) head.pop();
+  return `${head.join('').trim() || 'document'}${suffix}`;
+}
+
+/** Asks Registre to revoke a refresh token (RFC 7009). Best effort: failures are logged and swallowed. */
+export async function revokeRefreshToken(
+  config: Pick<NuageConfig, 'issuer' | 'clientId' | 'clientSecret'>,
+  refreshToken: string
+): Promise<void> {
+  try {
+    const response = await fetch(`${config.issuer}/.well-known/openid-configuration`, {
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const document = (await response.json().catch(() => ({}))) as { revocation_endpoint?: unknown };
+    if (typeof document.revocation_endpoint !== 'string') return;
+    const basic = Buffer.from(
+      `${encodeURIComponent(config.clientId)}:${encodeURIComponent(config.clientSecret)}`
+    ).toString('base64');
+    await fetch(document.revocation_endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: `Basic ${basic}` },
+      body: new URLSearchParams({ token: refreshToken, token_type_hint: 'refresh_token' }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    logger.warn({ err: error }, 'Could not revoke the Registre refresh token');
+  }
+}
+
 export async function storeContractInNuage(
   config: NuageConfig | null,
   store: SubjectTokenStore,
@@ -181,7 +267,7 @@ export async function storeContractInNuage(
   if (!config) return;
   try {
     const token = await delegatedNuageToken(config, store, userId);
-    const query = new URLSearchParams({ key: linkedTo, name: filename });
+    const query = new URLSearchParams({ key: linkedTo, name: nuageObjectName(filename) });
     const response = await fetch(`${config.url}/api/app/object?${query}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/pdf' },

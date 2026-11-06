@@ -8,6 +8,8 @@ export interface SsoTokenGrant {
   expiresIn?: number;
 }
 
+const REFRESH_LIFETIME_MS = 30 * 24 * 3600 * 1000;
+
 const encryptor = (secret: string) => new CryptoService({ ENCRYPTION_KEY: secret });
 
 function open(crypto: CryptoService, value: string | null): string | null {
@@ -40,7 +42,16 @@ export async function saveSsoTokens(
       accessToken: crypto.encrypt(grant.accessToken),
       refreshToken: crypto.encrypt(grant.refreshToken),
       accessTokenExpiresAt: new Date(Date.now() + (grant.expiresIn ?? 0) * 1000),
+      refreshTokenExpiresAt: new Date(Date.now() + REFRESH_LIFETIME_MS),
     },
+  });
+}
+
+/** Forgets the stored Registre session of a user, as a local logout must. */
+export async function clearSsoTokens(db: PrismaClient, issuer: string, userId: string): Promise<void> {
+  await db.account.updateMany({
+    where: { userId, providerId: issuer },
+    data: { accessToken: null, refreshToken: null, accessTokenExpiresAt: null, refreshTokenExpiresAt: null },
   });
 }
 
@@ -51,13 +62,14 @@ export function accountTokenStore(db: PrismaClient, issuer: string, secret: stri
     async load(userId: string): Promise<SubjectTokens | null> {
       const account = await db.account.findFirst({
         where: { userId, providerId: issuer },
-        select: { accessToken: true, refreshToken: true, accessTokenExpiresAt: true },
+        select: { accessToken: true, refreshToken: true, accessTokenExpiresAt: true, refreshTokenExpiresAt: true },
       });
       if (!account) return null;
       return {
         accessToken: open(crypto, account.accessToken),
         refreshToken: open(crypto, account.refreshToken),
         expiresAt: account.accessTokenExpiresAt,
+        refreshExpiresAt: account.refreshTokenExpiresAt,
       };
     },
     async save(userId: string, tokens: SubjectTokens): Promise<void> {
@@ -67,6 +79,7 @@ export function accountTokenStore(db: PrismaClient, issuer: string, secret: stri
           accessToken: tokens.accessToken ? crypto.encrypt(tokens.accessToken) : null,
           refreshToken: tokens.refreshToken ? crypto.encrypt(tokens.refreshToken) : null,
           accessTokenExpiresAt: tokens.expiresAt,
+          refreshTokenExpiresAt: tokens.refreshExpiresAt ?? null,
         },
       });
     },

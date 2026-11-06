@@ -3,10 +3,30 @@ import { REFRESH_COOKIE_NAME, extractCookies } from '../../context';
 import { TRPCError } from '@trpc/server';
 import authService from './service';
 import { authCookies, clearedAuthCookies, cookieOptions } from './session';
+import { revokeRefreshToken } from '@repo/nuage';
+import { accountTokenStore, clearSsoTokens } from './sso-tokens';
 import { z } from 'zod';
 
 function appendCookies(resHeaders: Headers, cookies: string[]) {
   for (const cookie of cookies) resHeaders.append('Set-Cookie', cookie);
+}
+
+async function forgetSsoSession(ctx: {
+  db: Parameters<typeof clearSsoTokens>[0];
+  env: { OIDC_ISSUER?: string; OIDC_CLIENT_ID?: string; OIDC_CLIENT_SECRET?: string; ENCRYPTION_SECRET: string };
+  user: { id: string };
+}) {
+  const { OIDC_ISSUER: issuer, OIDC_CLIENT_ID: clientId, OIDC_CLIENT_SECRET: clientSecret } = ctx.env;
+  if (!issuer || !clientId || !clientSecret) return;
+  try {
+    const stored = await accountTokenStore(ctx.db, issuer, ctx.env.ENCRYPTION_SECRET).load(ctx.user.id);
+    if (stored?.refreshToken) {
+      await revokeRefreshToken({ issuer: issuer.replace(/\/$/, ''), clientId, clientSecret }, stored.refreshToken);
+    }
+    await clearSsoTokens(ctx.db, issuer, ctx.user.id);
+  } catch {
+    return;
+  }
 }
 
 export const authRouter = router({
@@ -50,6 +70,7 @@ export const authRouter = router({
     if (tokens.length > 0) {
       await ctx.db.session.deleteMany({ where: { token: { in: tokens } } });
     }
+    await forgetSsoSession(ctx);
     appendCookies(ctx.resHeaders, clearedAuthCookies(cookieOptions(ctx.env)));
     return { success: true };
   }),

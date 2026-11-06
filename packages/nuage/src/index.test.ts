@@ -3,6 +3,7 @@ import {
   delegatedNuageToken,
   NotConnectedError,
   nuageConfigFromEnv,
+  nuageObjectName,
   storeContractInNuage,
   type SubjectTokens,
   type SubjectTokenStore,
@@ -174,5 +175,83 @@ describe('nuage contract archive', () => {
       OIDC_CLIENT_SECRET: 's',
     });
     await expect(storeContractInNuage(config, memoryStore(live()).store, input)).resolves.toBeUndefined();
+  });
+});
+
+describe('refresh rotation', () => {
+  function strictRegistre(initial = 'r0') {
+    let valid = initial;
+    let serial = 0;
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const url = new URL(request.url);
+        if (url.pathname === '/.well-known/openid-configuration') {
+          return Response.json({ token_endpoint: `${url.origin}/token` });
+        }
+        const form = new URLSearchParams(await request.text());
+        if (form.get('grant_type') === 'refresh_token') {
+          if (form.get('refresh_token') !== valid) return Response.json({ error: 'invalid_grant' }, { status: 400 });
+          await Bun.sleep(20);
+          valid = `r${++serial}`;
+          return Response.json({ access_token: `a${serial}`, refresh_token: valid, expires_in: 900 });
+        }
+        return Response.json({ access_token: 'delegated', expires_in: 300 });
+      },
+    });
+    servers.push(server);
+    const origin = `http://127.0.0.1:${server.port}`;
+    const config = nuageConfigFromEnv({
+      NUAGE_URL: origin,
+      NUAGE_AUDIENCE: 'a',
+      OIDC_ISSUER: origin,
+      OIDC_CLIENT_ID: 'c',
+      OIDC_CLIENT_SECRET: 's',
+    });
+    return config!;
+  }
+
+  test('two concurrent archives for one user both succeed with a strictly rotating refresh token', async () => {
+    const config = strictRegistre();
+    const memory = memoryStore({ accessToken: 'old', refreshToken: 'r0', expiresAt: new Date(0) });
+    const results = await Promise.all([
+      delegatedNuageToken(config, memory.store, 'u1'),
+      delegatedNuageToken(config, memory.store, 'u1'),
+      delegatedNuageToken(config, memory.store, 'u1'),
+    ]);
+    expect(results).toEqual(['delegated', 'delegated', 'delegated']);
+    expect(memory.current()?.refreshToken).toBe('r1');
+  });
+
+  test('a refresh token another process already rotated is re-read instead of reported as not connected', async () => {
+    const config = strictRegistre('r5');
+    const rows: SubjectTokens[] = [
+      { accessToken: 'old', refreshToken: 'r0', expiresAt: new Date(0) },
+      { accessToken: 'old', refreshToken: 'r5', expiresAt: new Date(0) },
+    ];
+    let loads = 0;
+    const store: SubjectTokenStore = {
+      load: async () => rows[Math.min(loads++, rows.length - 1)] ?? null,
+      save: async () => undefined,
+    };
+    await expect(delegatedNuageToken(config, store, 'u2')).resolves.toBe('delegated');
+  });
+});
+
+describe('nuageObjectName', () => {
+  test('replaces slashes, strips control and invisible characters, ensures .pdf', () => {
+    expect(nuageObjectName('2026/001')).toBe('2026-001.pdf');
+    expect(nuageObjectName('a\\b\u0000c\u202Ed.PDF')).toBe('a-bcd.PDF');
+    expect(nuageObjectName('  ')).toBe('document.pdf');
+  });
+
+  test('cuts to 255 bytes without splitting a character', () => {
+    const name = nuageObjectName('é'.repeat(300));
+    expect(Buffer.byteLength(name)).toBeLessThanOrEqual(255);
+    expect(name.endsWith('.pdf')).toBe(true);
+    expect(name).not.toContain('\uFFFD');
+    const emoji = nuageObjectName('😀'.repeat(100));
+    expect(Buffer.byteLength(emoji)).toBeLessThanOrEqual(255);
+    expect(emoji).not.toContain('\uFFFD');
   });
 });
