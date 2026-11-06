@@ -1,10 +1,10 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import type { Prisma, PrismaClient } from '@repo/database';
+import type { Prisma, PrismaClient, SpaceSubscription } from '@repo/database';
 import type Stripe from 'stripe';
 import { z } from 'zod';
 import { resolveEntitlements } from './resolve';
 import { OWNER_ROLE, loadResolveInput, type DirectorySpaceView, type DirectoryView } from './state';
-import { SPACE_METADATA_KEY, syncSubscription, type BillingLogger } from './webhook';
+import { SPACE_METADATA_KEY, syncSubscriptionIn, type BillingLogger } from './webhook';
 
 /** The shortest BILLING_API_TOKEN accepted; anything shorter disables the billing routes. */
 export const MIN_TOKEN_LENGTH = 32;
@@ -199,16 +199,20 @@ type Tx = Prisma.TransactionClient;
 const alreadySubscribed = () =>
   new BillingApiError(409, 'already_subscribed', 'This space already has a subscription');
 
+type CheckoutGate = { row: SpaceSubscription | null; blocked: boolean };
+
 /**
  * Refuses a second checkout while the space has a subscription that has not
  * ended (incomplete and unpaid included) or its last checkout session is
  * still open. A session that completed is synced first, so a subscription
- * whose webhook has not arrived yet still blocks the next checkout.
+ * whose webhook has not arrived yet still blocks the next checkout. The sync
+ * reuses the checkout transaction, so one checkout holds one connection; a
+ * refusal that must keep the sync is returned as `blocked`, thrown after commit.
  */
-async function assertCanCheckOut(deps: BillingDeps, tx: Tx, spaceId: string) {
+async function assertCanCheckOut(deps: BillingDeps, tx: Tx, spaceId: string): Promise<CheckoutGate> {
   const row = await tx.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
   if (row?.stripeSubscriptionId && !ENDED.has(row.status)) throw alreadySubscribed();
-  if (!row?.checkoutSessionId) return row;
+  if (!row?.checkoutSessionId) return { row, blocked: false };
   const session = await deps.stripe.checkout.sessions.retrieve(row.checkoutSessionId);
   if (session.status === 'open') {
     throw new BillingApiError(409, 'checkout_open', 'A checkout is already open for this space');
@@ -216,10 +220,10 @@ async function assertCanCheckOut(deps: BillingDeps, tx: Tx, spaceId: string) {
   const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
   if (session.status === 'complete' && subscriptionId) {
     const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId);
-    await syncSubscription(deps.db, deps.stripe, subscription, deps.logger ?? quiet);
-    if (!ENDED.has(subscription.status)) throw alreadySubscribed();
+    await syncSubscriptionIn(tx, deps.stripe, subscription, deps.logger ?? quiet);
+    if (!ENDED.has(subscription.status)) return { row, blocked: true };
   }
-  return row;
+  return { row, blocked: false };
 }
 
 const quiet = { info() {}, warn() {}, error() {} };
@@ -264,10 +268,11 @@ export async function createCheckout(deps: BillingDeps, body: unknown) {
   const email = input.owner_email.toLowerCase();
   requireOwner(space, email);
   const price = await publishedPrice(deps.db, input.lookup_key);
-  return deps.db.$transaction(
+  const result = await deps.db.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ardoise.checkout:${space.id}`}))`;
-      const row = await assertCanCheckOut(deps, tx, space.id);
+      const { row, blocked } = await assertCanCheckOut(deps, tx, space.id);
+      if (blocked) return null;
       const customer = await customerFor(tx, deps.stripe, space.id, input.space_name, email, row?.stripeCustomerId ?? null);
       const metadata = { [SPACE_METADATA_KEY]: space.id };
       const expiresAt = Math.floor(Date.now() / 1000) + CHECKOUT_TTL_S;
@@ -291,6 +296,8 @@ export async function createCheckout(deps: BillingDeps, body: unknown) {
     },
     { maxWait: 30_000, timeout: 60_000 }
   );
+  if (!result) throw alreadySubscribed();
+  return result;
 }
 
 /** POST /billing/portal: a Stripe billing portal session for a space that has a customer, opened by one of its owners. */

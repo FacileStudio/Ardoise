@@ -165,6 +165,7 @@ describe('billing routes', () => {
     const res = await broken.request('/api/catalog');
     expect(res.status).toBe(500);
     expect(await res.text()).not.toContain(TOKEN);
+    expect(res.headers.get('cache-control')).toBe('no-store');
   });
 
   describe('CORS', () => {
@@ -195,6 +196,20 @@ describe('billing routes', () => {
       expect(res.headers.get('access-control-allow-methods')).toBe('GET');
       expect(res.headers.get('access-control-allow-credentials')).toBeNull();
       expect((await composed().request('/api/catalog', { method: 'POST', headers: { origin: site } })).status).toBe(404);
+    });
+
+    it('does not reflect requested preflight headers on the catalog', async () => {
+      const res = await composed().request('/api/catalog', {
+        method: 'OPTIONS',
+        headers: { origin: site, 'access-control-request-method': 'GET', 'access-control-request-headers': 'x-evil, authorization' },
+      });
+      expect(res.headers.get('access-control-allow-headers')).toBe('Content-Type');
+    });
+
+    it('gives a bare /billing no credentialed CORS', async () => {
+      const res = await composed().request('/billing', { headers: { origin: 'https://ardoise.facile.studio' } });
+      expect(res.headers.get('access-control-allow-origin')).toBeNull();
+      expect(res.headers.get('access-control-allow-credentials')).toBeNull();
     });
 
     it('gives the rest of the billing API no CORS, even to the app origin', async () => {

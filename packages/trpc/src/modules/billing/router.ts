@@ -186,11 +186,23 @@ export const billingRouter = router({
 
   savePlan: platformStaffProcedure.input(planInput).mutation(async ({ ctx, input }) => {
     const before = await ctx.db.plan.findUnique({ where: { key: input.key } });
+    if (before?.isFree && input.isFree === false) {
+      const other = await ctx.db.plan.count({ where: { isFree: true, key: { not: input.key } } });
+      if (other === 0) badRequest('Désignez d’abord une autre offre gratuite');
+    }
     const fields = { name: input.name, sortOrder: input.sortOrder, ...(input.isFree === undefined ? {} : { isFree: input.isFree }) };
-    const after = await ctx.db.$transaction(async (tx) => {
-      if (input.isFree) await tx.plan.updateMany({ where: { isFree: true, key: { not: input.key } }, data: { isFree: false } });
-      return tx.plan.upsert({ where: { key: input.key }, create: { key: input.key, ...fields }, update: fields });
-    });
+    let after;
+    try {
+      after = await ctx.db.$transaction(async (tx) => {
+        if (input.isFree) await tx.plan.updateMany({ where: { isFree: true, key: { not: input.key } }, data: { isFree: false } });
+        return tx.plan.upsert({ where: { key: input.key }, create: { key: input.key, ...fields }, update: fields });
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002' && input.isFree) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Une autre offre vient d’être désignée gratuite', cause: error });
+      }
+      throw error;
+    }
     await audit(ctx, 'plan', after.id, before ? 'UPDATE' : 'CREATE', before, after);
     invalidateCatalog();
     return after;

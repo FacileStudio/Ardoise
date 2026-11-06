@@ -130,42 +130,51 @@ export async function syncSubscription(
   logger: BillingLogger,
   failedAt?: Date
 ): Promise<boolean> {
+  return db.$transaction((tx) => syncSubscriptionIn(tx, stripe, subscription, logger, failedAt), {
+    maxWait: 30_000,
+    timeout: 60_000,
+  });
+}
+
+/** The body of `syncSubscription`, run on a transaction the caller already holds. */
+export async function syncSubscriptionIn(
+  tx: Prisma.TransactionClient,
+  stripe: Stripe,
+  subscription: Stripe.Subscription,
+  logger: BillingLogger,
+  failedAt?: Date
+): Promise<boolean> {
   const spaceId = spaceIdFromMetadata(subscription.metadata);
   const customerId = idOf(subscription.customer);
   if (!spaceId || !customerId) return false;
-  return db.$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ardoise.subscription:${spaceId}`}))`;
-      const row = await tx.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
-      if (!(await trustedCustomer(tx as PrismaClient, stripe, spaceId, customerId, row?.stripeCustomerId))) {
-        logger.warn({ subscription: subscription.id }, '[BILLING] Subscription customer does not match its space, ignored');
-        return false;
-      }
-      const other = row?.stripeSubscriptionId && row.stripeSubscriptionId !== subscription.id ? row : null;
-      if (other && TERMINAL.has(subscription.status)) {
-        await tx.duplicateSubscription.updateMany({
-          where: { stripeSubscriptionId: subscription.id },
-          data: { status: subscription.status },
-        });
-        return false;
-      }
-      if (other && !ENDED.has(other.status)) {
-        await flagDuplicate(tx, logger, spaceId, customerId, subscription, other.stripeSubscriptionId!);
-        return false;
-      }
-      const pastDueSince =
-        subscription.status === 'past_due' ? ((other ? null : row?.pastDueSince) ?? failedAt ?? new Date()) : null;
-      const data = await rowData(tx, subscription, customerId, pastDueSince);
-      await tx.spaceSubscription.upsert({
-        where: { registreSpaceId: spaceId },
-        create: { registreSpaceId: spaceId, ...data },
-        update: data,
-      });
-      await tx.duplicateSubscription.deleteMany({ where: { stripeSubscriptionId: subscription.id } });
-      return true;
-    },
-    { maxWait: 30_000, timeout: 60_000 }
-  );
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ardoise.subscription:${spaceId}`}))`;
+  const row = await tx.spaceSubscription.findUnique({ where: { registreSpaceId: spaceId } });
+  if (!(await trustedCustomer(tx as PrismaClient, stripe, spaceId, customerId, row?.stripeCustomerId))) {
+    logger.warn({ subscription: subscription.id }, '[BILLING] Subscription customer does not match its space, ignored');
+    return false;
+  }
+  const other = row?.stripeSubscriptionId && row.stripeSubscriptionId !== subscription.id ? row : null;
+  if (other && TERMINAL.has(subscription.status)) {
+    await tx.duplicateSubscription.updateMany({
+      where: { stripeSubscriptionId: subscription.id },
+      data: { status: subscription.status },
+    });
+    return false;
+  }
+  if (other && !ENDED.has(other.status)) {
+    await flagDuplicate(tx, logger, spaceId, customerId, subscription, other.stripeSubscriptionId!);
+    return false;
+  }
+  const pastDueSince =
+    subscription.status === 'past_due' ? ((other ? null : row?.pastDueSince) ?? failedAt ?? new Date()) : null;
+  const data = await rowData(tx, subscription, customerId, pastDueSince);
+  await tx.spaceSubscription.upsert({
+    where: { registreSpaceId: spaceId },
+    create: { registreSpaceId: spaceId, ...data },
+    update: data,
+  });
+  await tx.duplicateSubscription.deleteMany({ where: { stripeSubscriptionId: subscription.id } });
+  return true;
 }
 
 function subscriptionIdOf(event: Stripe.Event): string | null {

@@ -71,11 +71,23 @@ export async function loadFeatures(db: PrismaClient): Promise<FeatureDef[]> {
   return rows.map((row) => ({ key: row.key, kind: row.kind, defaultValue: row.defaultValue }));
 }
 
-/** The plan spaces get without a subscription or comp: the plan flagged free, key `free` when none is. */
+/**
+ * The plan spaces get without a subscription or comp: the plan flagged free,
+ * key `free` when none is. Only its published version counts; with none
+ * published, the feature defaults apply.
+ */
 async function freePlan(db: PrismaClient): Promise<PlanValues> {
-  const plan = await db.plan.findFirst({ where: { isFree: true }, select: { key: true } });
+  const plan = await db.plan.findFirst({
+    where: { isFree: true },
+    orderBy: [{ sortOrder: 'asc' }, { key: 'asc' }],
+    select: { key: true },
+  });
   if (!plan) return { key: 'free', values: {} };
-  const version = await grantedVersion(db, plan.key);
+  const version = await db.planVersion.findFirst({
+    where: { plan: { key: plan.key }, status: 'published' },
+    orderBy: { version: 'desc' },
+    include: versionInclude,
+  });
   return version ? toPlanValues(version) : { key: plan.key, values: {} };
 }
 

@@ -2,7 +2,7 @@ import type { Context, Next } from 'hono';
 import { cors } from 'hono/cors';
 
 /** Paths that never get the app's credentialed CORS: the billing API sets its own (catalog) or none. */
-export const isBillingPath = (path: string) => path === '/api/catalog' || path.startsWith('/billing/');
+export const isBillingPath = (path: string) => path === '/api/catalog' || path === '/billing' || path.startsWith('/billing/');
 
 const corsHandler = (allowedOrigins: string[]) => {
   const allowLocal = process.env.NODE_ENV !== 'production';
