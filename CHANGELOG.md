@@ -29,6 +29,12 @@ deploys from the tag. A tag publishes the backend image to
 - A sign-in sets `emailVerified` only when the `email_verified` claim is literally true. A member provisioned from a Registre snapshot without that flag stays unverified and is never linked to a local account by email.
 - Documents take the payment and legal defaults of the space of their client, not the global settings. The new procedures are in the access map and are called as a member of another space by `access.db.test.ts`.
 
+### Fixed
+
+- The platform webhook signed with the stored, encrypted `Settings.webhookSecret`, so no receiver could verify `x-ardoise-signature-256`. It now signs with the decrypted secret, like the per-space webhook. If you copied the stored ciphertext from the database into a receiver as its key, replace it with the secret you entered in the settings.
+- `document.delete` refuses a document that carries an issued invoice or quote number (`PRECONDITION_FAILED`, asks for a credit note), so deleting one can no longer leave a gap in the numbering. Documents without a number stay deletable.
+- Two concurrent `mission.generateInvoice` calls on one mission can no longer both pass the pre-checks: the invoice transaction locks the mission row and re-checks the billing state, so exactly one invoice is created and the other call is refused.
+
 ### Changed
 
 - The global `Settings.next*Number` counters and number formats are no longer read.

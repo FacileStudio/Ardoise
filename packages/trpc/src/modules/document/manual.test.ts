@@ -301,17 +301,27 @@ describe('document.setSignature', () => {
 
 describe('document.delete', () => {
   it('explains which payments block it', async () => {
-    const { caller } = setup({ db: { payment: { count: async () => 2 } } });
+    const { caller } = setup({ document: { invoiceNumber: null }, db: { payment: { count: async () => 2 } } });
 
     await expect(caller.delete({ id: 'doc-1' })).rejects.toThrow('2 payment(s)');
   });
 
   it('removes the document and its stored pdf', async () => {
-    const { caller, deleted } = setup();
+    const { caller, deleted } = setup({ document: { invoiceNumber: null } });
 
     await caller.delete({ id: 'doc-1' });
 
     expect(deleted).toEqual(['documents/doc-1.pdf']);
+  });
+
+  it('refuses an issued invoice and asks for a credit note', async () => {
+    const { caller, deleted } = setup({ document: { invoiceNumber: 'FAC-001' } });
+
+    await expect(caller.delete({ id: 'doc-1' })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('credit note (avoir)'),
+    });
+    expect(deleted).toEqual([]);
   });
 });
 

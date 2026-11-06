@@ -81,7 +81,7 @@ Postgres 16 through Prisma. The schema is split by concern across `prisma/schema
 Document numbering is per space. `DocumentCounter` holds one row per space and type (`invoice`,
 `quote`); `withDocumentNumber` upserts it inside the same transaction as the document insert, so the
 row lock serialises a space's requests and a failed insert gives the number back (continuous, no gap,
-no reuse). The format comes from `SpaceSettings` (`invoiceNumberFormat`, `quoteNumberFormat`). The
+no reuse); `document.delete` refuses numbered documents. The format comes from `SpaceSettings` (`invoiceNumberFormat`, `quoteNumberFormat`). The
 global `Settings.next*Number` columns are no longer read. `SpaceSettings` also holds the payment and
 legal defaults printed on documents and the space's own outbound webhook.
 

@@ -59,6 +59,7 @@ function setup(options: Setup = {}) {
 
   const db: any = {
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
+    $queryRaw: async () => [],
     $transaction: async (run: unknown) =>
       typeof run === 'function'
         ? (run as (tx: unknown) => unknown)(db)

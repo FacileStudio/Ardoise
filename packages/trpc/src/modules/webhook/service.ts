@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@repo/database';
 import type { Logger } from '@repo/logger';
 import { createHmac, randomUUID } from 'node:crypto';
-import { decryptSecretStrict, getSettingsRecord } from '../settings/service';
+import { decryptSecret, decryptSecretStrict, getSettingsRecord } from '../settings/service';
 import { getSpaceSettings } from '../space/settings';
 import { isPlatformStudio } from '../space/studio';
 import { postToSpaceWebhook, type Transport, type Resolver } from './outbound';
@@ -118,7 +118,7 @@ async function dispatchPlatformWebhook({
   const headers = new Headers(plain);
 
   if (settings.webhookSecret) {
-    headers.set('x-ardoise-signature-256', createSignature(settings.webhookSecret, body));
+    headers.set('x-ardoise-signature-256', createSignature(decryptSecret(settings.webhookSecret), body));
   }
 
   try {
