@@ -194,7 +194,7 @@ async function paymentOfInvoice(deps: EventDeps, invoice: Stripe.Invoice) {
   return deps.db.payment.findFirst({ where: { OR: where } });
 }
 
-async function recordInvoice(
+export async function recordInvoice(
   deps: EventDeps,
   paymentId: string,
   invoice: Stripe.Invoice,
@@ -210,10 +210,14 @@ async function recordInvoice(
     paidAt: status === 'PAID' ? new Date() : null,
   };
   try {
+    const existing = await deps.db.paymentInvoice.findUnique({
+      where: { stripeInvoiceId: invoice.id },
+      select: { paidAt: true },
+    });
     await deps.db.paymentInvoice.upsert({
       where: { stripeInvoiceId: invoice.id },
       create: { paymentId, stripeInvoiceId: invoice.id, ...data },
-      update: data,
+      update: { ...data, paidAt: existing?.paidAt ?? data.paidAt },
     });
   } catch (err) {
     logger.error({ err }, 'Failed to record subscription invoice');

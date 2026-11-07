@@ -2,7 +2,15 @@ import { Prisma } from '@repo/database';
 import type { PrismaClient } from '@repo/database';
 import { decimal, format, sum, type Money } from './money';
 import { monthRange, parisMonth } from './months';
-import { LIVE_STATUSES, OPEN_STATUSES, clock, hasStatus, inSpaces, parisOf } from './sql';
+import {
+  LIVE_STATUSES,
+  OPEN_STATUSES,
+  clock,
+  hasStatus,
+  inSpaces,
+  parisOf,
+  seriesAlive,
+} from './sql';
 import { unrequestedInvoicesSql } from './invoices';
 import { overdueSql } from './to-collect';
 import { FORECAST_SOURCES, type ForecastSource, type RevenueOverview } from './types';
@@ -29,7 +37,8 @@ const scheduledSql = (spaceIds: string[], now: Date) => Prisma.sql`
 /**
  * Renewals of an active maintenance series, by card or by bank transfer: a PAID payment that
  * repeats every month or year, counted from its last payment date, only inside the horizon.
- * A cancelled series is no longer PAID, so it projects nothing.
+ * A cancelled series is no longer PAID, and a series whose last payment is older than one cycle plus
+ * a week is stale: neither projects anything.
  */
 const recurringSql = (spaceIds: string[], now: Date) => {
   const { nowLocal, monthStart } = clock(now);
@@ -49,6 +58,7 @@ const recurringSql = (spaceIds: string[], now: Date) => {
         AND p.status::text = 'PAID'
         AND p."paidAt" IS NOT NULL
         AND p.frequency::text IN ('MONTHLY', 'YEARLY')
+        AND ${seriesAlive(now)}
     ) renewal
     WHERE renewal.at > ${nowLocal}
       AND renewal.at < ${monthStart} + interval '12 months'

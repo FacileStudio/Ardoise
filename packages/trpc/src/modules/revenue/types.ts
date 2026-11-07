@@ -46,6 +46,7 @@ export interface RevenueOverview {
     overdue: { amount: string; count: number };
     overdueInvoices: { amount: string; count: number };
     veryLate: { amount: string; count: number };
+    staleRecurring: { amount: string; count: number };
     upcoming: { amount: string; count: number };
     total: string;
     items: OpenPaymentItem[];

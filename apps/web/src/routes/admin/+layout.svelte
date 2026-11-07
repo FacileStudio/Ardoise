@@ -18,7 +18,7 @@
     void platformStaff.load();
     try {
       const rows = await trpc.space.list.query();
-      spaceFilter.setSpaces(rows.map(({ id, name }) => ({ id, name })));
+      spaceFilter.setSpaces(rows.map(({ id, name, role }) => ({ id, name, role })));
       canSeeRevenue = rows.some(({ role }) => role === 'ADMIN' || role === 'OWNER');
     } catch {
       return;

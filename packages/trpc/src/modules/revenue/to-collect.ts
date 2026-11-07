@@ -2,7 +2,7 @@ import { Prisma } from '@repo/database';
 import type { PrismaClient } from '@repo/database';
 import { decimal, format, sum } from './money';
 import { unrequestedInvoicesSql } from './invoices';
-import { OPEN_STATUSES, clock, hasStatus, inSpaces, parisOf } from './sql';
+import { OPEN_STATUSES, clock, hasStatus, inSpaces, parisOf, seriesAlive } from './sql';
 import type { OpenPaymentItem, RevenueOverview } from './types';
 
 const LIST_LIMIT = 100;
@@ -15,6 +15,11 @@ interface TotalRow {
 
 interface InvoiceRow {
   late: string;
+  amount: unknown;
+  count: bigint | number;
+}
+
+interface StaleRow {
   amount: unknown;
   count: bigint | number;
 }
@@ -46,7 +51,16 @@ export async function toCollectRows(db: PrismaClient, spaceIds: string[], now: D
   const overdue = overdueSql(now);
   const { dayStart } = clock(now);
 
-  const [invoices, totals, items] = await Promise.all([
+  const [stale, invoices, totals, items] = await Promise.all([
+    db.$queryRaw<StaleRow[]>(Prisma.sql`
+      SELECT SUM(p.amount) AS amount, COUNT(*) AS count
+      FROM "Payment" p
+      WHERE ${inSpaces(Prisma.sql`p."spaceId"`, spaceIds)}
+        AND p.status::text = 'PAID'
+        AND p."paidAt" IS NOT NULL
+        AND p.frequency::text IN ('MONTHLY', 'YEARLY')
+        AND NOT ${seriesAlive(now)}
+    `),
     db.$queryRaw<InvoiceRow[]>(Prisma.sql`
       SELECT CASE WHEN i.due < ${dayStart} - interval '12 months' THEN 'very' ELSE 'overdue' END AS late,
         SUM(i.amount) AS amount, COUNT(*) AS count
@@ -73,7 +87,7 @@ export async function toCollectRows(db: PrismaClient, spaceIds: string[], now: D
     `),
   ]);
 
-  return { totals, items, invoices };
+  return { totals, items, invoices, stale };
 }
 
 const clientName = (row: ItemRow) =>
@@ -115,6 +129,10 @@ export function toCollectOverview(
     overdue: { amount: format(overdue.amount), count: overdue.count },
     overdueInvoices: { amount: format(invoices.amount), count: invoices.count },
     veryLate: { amount: format(veryLate.amount), count: veryLate.count },
+    staleRecurring: {
+      amount: format(decimal(rows.stale[0]?.amount)),
+      count: Number(rows.stale[0]?.count ?? 0),
+    },
     upcoming: { amount: format(coming.amount), count: coming.count },
     total: format(sum([overdue.amount, coming.amount])),
     items: rows.items.slice(0, LIST_LIMIT).map(itemOf),

@@ -33,26 +33,31 @@ describe.skipIf(!enabled)('revenue: forecast of payments', () => {
     expect(scheduled.total).toBe('1111.00');
   });
 
-  it('projects active series by card or transfer, and nothing for a cancelled one', async () => {
+  it('projects live series by card or transfer, and nothing for cancelled or stale ones', async () => {
     const { seed } = space;
     const series = (amount: number, paidAt: string, extra = {}) =>
       payment(seed, { amount, status: 'PAID', paidAt: at(paidAt), frequency: 'MONTHLY', ...extra });
     await series(30, '2026-11-10T09:00:00Z', { collectionMethod: 'STRIPE' });
-    await series(10, '2026-08-31T10:00:00Z', { collectionMethod: 'STRIPE' });
     await series(5, '2026-11-12T09:00:00Z', { collectionMethod: 'MANUAL' });
+    await series(3, '2026-10-10T09:00:00Z', { collectionMethod: 'MANUAL' });
     await series(600, '2026-03-20T10:00:00Z', { collectionMethod: 'STRIPE', frequency: 'YEARLY' });
     await series(7, '2026-11-10T09:00:00Z', { status: 'CANCELLED' });
     await series(9, '2026-11-10T09:00:00Z', { status: 'PENDING', paidAt: null });
+    await series(10, '2026-08-31T10:00:00Z', { collectionMethod: 'STRIPE' });
+    await series(8, '2025-03-01T10:00:00Z', { collectionMethod: 'MANUAL' });
+    await series(4, '2026-10-05T10:00:00Z', { collectionMethod: 'MANUAL' });
 
-    const { recurring } = (await overviewOf(seed.userId)).forecast.sources;
+    const overview = await overviewOf(seed.userId);
+    const { recurring } = overview.forecast.sources;
     const months = monthsOf(recurring.months);
 
-    expect(months['2026-11']).toBe('10.00');
-    expect(months['2026-12']).toBe('45.00');
-    expect(months['2027-03']).toBe('645.00');
-    expect(months['2027-10']).toBe('45.00');
-    expect(Object.keys(months)).toHaveLength(12);
+    expect(months['2026-11']).toBeUndefined();
+    expect(months['2026-12']).toBe('38.00');
+    expect(months['2027-03']).toBe('638.00');
+    expect(months['2027-10']).toBe('38.00');
+    expect(Object.keys(months)).toHaveLength(11);
     expect(recurring.later).toBe('0.00');
-    expect(recurring.total).toBe('1105.00');
+    expect(recurring.total).toBe('1018.00');
+    expect(overview.toCollect.staleRecurring).toEqual({ amount: '22.00', count: 3 });
   });
 });
