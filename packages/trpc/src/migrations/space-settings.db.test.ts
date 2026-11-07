@@ -5,7 +5,7 @@ import pg from 'pg';
 
 const enabled = !!process.env.TEST_DATABASE_URL;
 const TARGET = '20261106150000_space_settings';
-const PARSE = '20261107120000_counter_parse';
+const PARSE = '20261107110000_counter_parse';
 const MIGRATIONS = join(import.meta.dir, '../../../database/prisma/migrations');
 
 const migrationNames = () =>
