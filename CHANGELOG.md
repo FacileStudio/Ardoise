@@ -14,6 +14,7 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-07
 ### Changed
 
 - The admin sidebar and the client portal (`/app`) show muse's user card and open its user menu: account, settings, theme, help and sign out. The theme choice is stored in `localStorage` (`ardoise.theme`) and applied before the page paints. The language row is hidden because the interface is French
