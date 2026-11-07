@@ -17,13 +17,17 @@ const untouchable = new Proxy({}, { get: (_t, key) => (key === 'then' ? undefine
 const stripeCalls: Array<{ params: any; options: any }> = [];
 const sessions = new Map<string, any>();
 const cancelled: string[] = [];
-let legacyCancelError: { code?: string } | null = null;
+let intentStatus = 'requires_payment_method';
+let subscriptionStatus = 'incomplete';
+let intentMissing = false;
+let createFailure: ((params: any) => Promise<void>) | null = null;
 const fakeStripe = {
   client: {
     checkout: {
       sessions: {
         create: async (params: any, options: any) => {
           stripeCalls.push({ params, options });
+          if (createFailure) await createFailure(params);
           const id = `cs_test_${sessions.size + 1}`;
           const session = {
             id,
@@ -50,12 +54,16 @@ const fakeStripe = {
       },
     },
     paymentIntents: {
-      cancel: async () => {
-        if (legacyCancelError) throw Object.assign(new Error('cannot cancel'), legacyCancelError);
-        return {};
+      retrieve: async () => {
+        if (intentMissing) throw Object.assign(new Error('missing'), { code: 'resource_missing' });
+        return { status: intentStatus };
       },
+      cancel: async () => ({}),
     },
-    subscriptions: { cancel: async (id: string) => void cancelled.push(id) },
+    subscriptions: {
+      retrieve: async () => ({ status: subscriptionStatus }),
+      cancel: async (id: string) => void cancelled.push(id),
+    },
     customers: { create: async () => ({ id: 'cus_new' }) },
     billingPortal: {
       configurations: { list: async () => ({ data: [] }), create: async () => ({ id: 'bpc_1' }) },
@@ -180,7 +188,10 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
     stripeCalls.length = 0;
     sessions.clear();
     cancelled.length = 0;
-    legacyCancelError = null;
+    intentStatus = 'requires_payment_method';
+    subscriptionStatus = 'incomplete';
+    intentMissing = false;
+    createFailure = null;
     mails.length = 0;
     receipts = 0;
   });
@@ -463,7 +474,7 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
     it('refuses a new session while the stored one is complete and waiting for the webhook', async () => {
       const payment = await makePayment();
       await clientA()('portal.checkout', { paymentId: payment.id });
-      sessions.get('cs_test_1').status = 'complete';
+      Object.assign(sessions.get('cs_test_1'), { status: 'complete', payment_status: 'paid' });
 
       expect(await codeOf(clientA()('portal.checkout', { paymentId: payment.id }))).toBe('CONFLICT');
       expect(stripeCalls).toHaveLength(1);
@@ -480,18 +491,76 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
       expect(sessions.get('cs_test_2').amount_total).toBe(12000);
     });
 
-    it('keeps the legacy ids and refuses checkout when the old intent cannot be cancelled', async () => {
-      const payment = await makePayment({ stripePaymentIntentId: 'pi_legacy', stripeSubscriptionId: null });
-      legacyCancelError = { code: 'payment_intent_unexpected_state' };
+    it.each(['succeeded', 'processing'])('keeps the legacy ids and refuses checkout when the old intent is %s', async (status) => {
+      const payment = await makePayment({ stripePaymentIntentId: `pi_legacy_${status}`, stripeSubscriptionId: null });
+      intentStatus = status;
 
       expect(await codeOf(clientA()('portal.checkout', { paymentId: payment.id }))).toBe('CONFLICT');
-      const row = await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
-      expect(row.stripePaymentIntentId).toBe('pi_legacy');
+      expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).stripePaymentIntentId).toBe(`pi_legacy_${status}`);
       expect(stripeCalls).toHaveLength(0);
+    });
 
-      legacyCancelError = { code: 'resource_missing' };
+    it.each(['canceled', 'requires_payment_method', 'MISSING'])('clears a legacy intent that is %s and opens checkout', async (status) => {
+      const payment = await makePayment({ stripePaymentIntentId: `pi_${status}`, stripeSubscriptionId: null });
+      if (status === 'MISSING') intentMissing = true;
+      else intentStatus = status;
+
       await clientA()('portal.checkout', { paymentId: payment.id });
       expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).stripePaymentIntentId).toBeNull();
+      expect(stripeCalls).toHaveLength(1);
+    });
+
+    it('refuses checkout over a live legacy subscription and retires an unpaid one', async () => {
+      const payment = await makePayment({ frequency: 'MONTHLY', amount: 49, totalWithFees: 49, stripeSubscriptionId: 'sub_old' });
+      subscriptionStatus = 'active';
+      expect(await codeOf(clientA()('portal.checkout', { paymentId: payment.id }))).toBe('CONFLICT');
+
+      subscriptionStatus = 'incomplete';
+      await clientA()('portal.checkout', { paymentId: payment.id });
+      expect(cancelled).toEqual(['sub_old']);
+    });
+
+    it('lets a failed bank debit be retried', async () => {
+      const payment = await makePayment();
+      await clientA()('portal.checkout', { paymentId: payment.id });
+      const completed = {
+        mode: 'payment', payment_status: 'unpaid', amount_total: 10000, currency: 'eur',
+        client_reference_id: payment.id, payment_intent: 'pi_sepa',
+        metadata: { payment_id: payment.id, space_id: ids.space },
+      } as Partial<Stripe.Checkout.Session>;
+      Object.assign(sessions.get('cs_test_1'), { status: 'complete', payment_status: 'unpaid', payment_intent: 'pi_sepa' });
+
+      await deliver(sessionEvent('evt_f1', 'checkout.session.completed', completed));
+      expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe('PROCESSING');
+
+      await deliver(sessionEvent('evt_f2', 'checkout.session.async_payment_failed', completed));
+      const row = await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
+      expect(row).toMatchObject({ status: 'PENDING', stripeCheckoutSessionId: null, stripePaymentIntentId: null });
+
+      await clientA()('portal.checkout', { paymentId: payment.id });
+      expect(stripeCalls).toHaveLength(2);
+    });
+
+    it('does not open a second checkout while a completed session is still clearing', async () => {
+      const payment = await makePayment();
+      await clientA()('portal.checkout', { paymentId: payment.id });
+      Object.assign(sessions.get('cs_test_1'), { status: 'complete', payment_status: 'unpaid', payment_intent: 'pi_lag' });
+      intentStatus = 'processing';
+
+      expect(await codeOf(clientA()('portal.checkout', { paymentId: payment.id }))).toBe('CONFLICT');
+      expect(stripeCalls).toHaveLength(1);
+    });
+
+    it('returns the session another request stored when Stripe reports an idempotency clash', async () => {
+      const payment = await makePayment();
+      createFailure = async () => {
+        sessions.set('cs_other', { id: 'cs_other', status: 'open', url: 'https://checkout.stripe.com/c/pay/cs_other' });
+        await prisma.payment.update({ where: { id: payment.id }, data: { stripeCheckoutSessionId: 'cs_other' } });
+        throw Object.assign(new Error('clash'), { type: 'StripeIdempotencyError' });
+      };
+
+      const result = (await clientA()('portal.checkout', { paymentId: payment.id })) as { url: string };
+      expect(result.url).toBe('https://checkout.stripe.com/c/pay/cs_other');
     });
   });
 
@@ -548,11 +617,20 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
       expect(row).toMatchObject({ status: 'PENDING', needsAttention: 'AMOUNT_MISMATCH' });
     });
 
+    it('keeps the first reason of an unhandled flag', async () => {
+      const payment = await makePayment({ status: 'PAID', stripePaymentIntentId: 'pi_first_reason' });
+      await deliver({ id: 'evt_k1', type: 'charge.refunded', data: { object: { id: 'ch', payment_intent: 'pi_first_reason' } } } as never);
+      await deliver({ id: 'evt_k2', type: 'charge.dispute.created', data: { object: { id: 'dp', payment_intent: 'pi_first_reason' } } } as never);
+
+      expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).needsAttention).toBe('REFUNDED');
+    });
+
     it('flags a refund and a dispute, and an admin can dismiss the flag', async () => {
       const payment = await makePayment({ status: 'PAID', stripePaymentIntentId: 'pi_r' });
       await deliver({ id: 'evt_ref', type: 'charge.refunded', data: { object: { id: 'ch_1', payment_intent: 'pi_r' } } } as never);
       expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).needsAttention).toBe('REFUNDED');
 
+      await admin()('payment.dismissAttention', { id: payment.id });
       await deliver({ id: 'evt_dis', type: 'charge.dispute.created', data: { object: { id: 'dp_1', payment_intent: 'pi_r' } } } as never);
       expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).needsAttention).toBe('DISPUTED');
 
@@ -600,6 +678,11 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
       const applied = await sendOpenPaymentLinks(prisma, smtp as never, 'http://app.test', { apply: true });
       expect(applied.sent).toBe(2);
       expect(await prisma.paymentLink.count({ where: { paymentId: { in: [pending.id, overdue.id] } } })).toBe(2);
+      expect(mails).toHaveLength(2);
+
+      const rerun = await sendOpenPaymentLinks(prisma, smtp as never, 'http://app.test', { apply: true });
+      expect(rerun.sent).toBe(0);
+      expect(rerun.skipped.filter((item) => item.why === 'reminded recently')).toHaveLength(2);
       expect(mails).toHaveLength(2);
     });
   });

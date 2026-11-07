@@ -40,8 +40,8 @@ async function flag(
   logger.error({ type: reason, paymentId, ...details }, 'Stripe event needs a human look');
   if (!paymentId || reason === 'UNKNOWN_PAYMENT') return;
 
-  await deps.db.payment.update({
-    where: { id: paymentId },
+  await deps.db.payment.updateMany({
+    where: { id: paymentId, needsAttention: null },
     data: { needsAttention: reason, attentionAt: new Date() },
   });
   try {
@@ -177,6 +177,10 @@ async function onSessionFailed(deps: EventDeps, session: Stripe.Checkout.Session
   await deps.db.payment.updateMany({
     where: { id: payment.id, status: 'PROCESSING' },
     data: { status: isOverdue(payment.dueDate) ? 'PAST_DUE' : 'PENDING' },
+  });
+  await deps.db.payment.updateMany({
+    where: { id: payment.id, stripeCheckoutSessionId: session.id },
+    data: { stripeCheckoutSessionId: null, stripePaymentIntentId: null },
   });
 }
 

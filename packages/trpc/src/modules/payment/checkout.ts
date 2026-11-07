@@ -42,7 +42,10 @@ const hostedUrl = (url: string | null | undefined, host: string): string => {
     const parsed = new URL(url ?? '');
     if (parsed.protocol === 'https:' && parsed.hostname === host) return parsed.toString();
   } catch {
-    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Stripe returned no usable URL' });
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Stripe returned no usable URL',
+    });
   }
   throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Stripe returned no usable URL' });
 };
@@ -67,6 +70,48 @@ function assertPayable(payment: CheckoutPayment): void {
 
 const isGone = (err: unknown) => (err as { code?: string }).code === 'resource_missing';
 
+const IN_FLIGHT_INTENT = ['succeeded', 'processing', 'requires_capture'];
+const LIVE_SUBSCRIPTION = ['active', 'trialing'];
+
+const alreadyOnItsWay = () =>
+  new TRPCError({
+    code: 'CONFLICT',
+    message: 'This payment is already being processed. Please wait for its confirmation.',
+  });
+
+async function retireIntent(stripe: StripeService, id: string): Promise<void> {
+  try {
+    const intent = await stripe.client.paymentIntents.retrieve(id);
+    if (IN_FLIGHT_INTENT.includes(intent.status)) throw alreadyOnItsWay();
+    if (intent.status !== 'canceled') await stripe.client.paymentIntents.cancel(id);
+  } catch (err) {
+    if (err instanceof TRPCError) throw err;
+    if (isGone(err)) return;
+    logger.warn({ err, intent: id }, 'Could not retire a legacy PaymentIntent');
+    throw alreadyOnItsWay();
+  }
+}
+
+async function retireSubscription(stripe: StripeService, id: string): Promise<void> {
+  try {
+    const subscription = await stripe.client.subscriptions.retrieve(id);
+    if (LIVE_SUBSCRIPTION.includes(subscription.status)) throw alreadyOnItsWay();
+    if (!['canceled', 'incomplete_expired'].includes(subscription.status)) {
+      await stripe.client.subscriptions.cancel(id);
+    }
+  } catch (err) {
+    if (err instanceof TRPCError) throw err;
+    if (isGone(err)) return;
+    logger.warn({ err, subscription: id }, 'Could not retire a legacy subscription');
+    throw alreadyOnItsWay();
+  }
+}
+
+/**
+ * Cancels the PaymentIntent or subscription an unpaid payment still holds from the old
+ * flow. Terminal objects count as gone. Anything paid or paying, or anything Stripe cannot
+ * confirm, blocks the new checkout and keeps the ids so the webhook can settle them.
+ */
 async function retireLegacyObjects(
   db: PrismaClient,
   stripe: StripeService,
@@ -75,22 +120,8 @@ async function retireLegacyObjects(
   if (payment.status !== 'PENDING') return;
   if (!payment.stripePaymentIntentId && !payment.stripeSubscriptionId) return;
 
-  try {
-    if (payment.stripePaymentIntentId) {
-      await stripe.client.paymentIntents.cancel(payment.stripePaymentIntentId);
-    }
-    if (payment.stripeSubscriptionId) {
-      await stripe.client.subscriptions.cancel(payment.stripeSubscriptionId);
-    }
-  } catch (err) {
-    if (!isGone(err)) {
-      logger.warn({ err, paymentId: payment.id }, 'Could not cancel legacy Stripe object');
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'This payment is already being processed. Please wait for its confirmation.',
-      });
-    }
-  }
+  if (payment.stripePaymentIntentId) await retireIntent(stripe, payment.stripePaymentIntentId);
+  if (payment.stripeSubscriptionId) await retireSubscription(stripe, payment.stripeSubscriptionId);
 
   await db.payment.updateMany({
     where: { id: payment.id, status: 'PENDING' },
@@ -153,6 +184,29 @@ async function expireQuietly(stripe: StripeService, sessionId: string): Promise<
 }
 
 /**
+ * A completed session blocks a new one only while its money is paid or on its way. A
+ * failed bank debit leaves the session complete but its intent back at
+ * requires_payment_method, which is retried like any unpaid payment.
+ */
+async function isStillPaying(
+  stripe: StripeService,
+  session: { payment_status: string; payment_intent?: unknown; subscription?: unknown }
+): Promise<boolean> {
+  if (session.payment_status === 'paid') return true;
+  const intent = typeof session.payment_intent === 'string' ? session.payment_intent : null;
+  if (intent) {
+    return IN_FLIGHT_INTENT.includes((await stripe.client.paymentIntents.retrieve(intent)).status);
+  }
+  const subscription = typeof session.subscription === 'string' ? session.subscription : null;
+  if (subscription) {
+    return LIVE_SUBSCRIPTION.includes(
+      (await stripe.client.subscriptions.retrieve(subscription)).status
+    );
+  }
+  return false;
+}
+
+/**
  * The stored session if it can be reused, after retiring everything else. A session
  * is reused when it is still open and asks for the same amount, currency, mode and
  * return URL. Any other open session is expired so that two live sessions of one
@@ -175,10 +229,8 @@ async function reuseOrRetire(
   }
 
   if (session.status === 'complete') {
-    throw new TRPCError({
-      code: 'CONFLICT',
-      message: 'A payment for this invoice is already being processed. Please wait for its confirmation.',
-    });
+    if (await isStillPaying(stripe, session)) throw alreadyOnItsWay();
+    return null;
   }
   if (session.status !== 'open') return null;
 
@@ -219,25 +271,30 @@ export async function createPaymentCheckout(
     ? await ensureCustomer(db, stripe, payment)
     : payment.client.stripeCustomerId;
 
-  const session = await stripe.client.checkout.sessions.create(
-    {
-      mode: recurring ? 'subscription' : 'payment',
-      client_reference_id: payment.id,
-      line_items: [lineItem(payment)],
-      metadata,
-      success_url: urls.success,
-      cancel_url: urls.cancel,
-      ...(customer
-        ? { customer }
-        : payment.client.contactEmail
-          ? { customer_email: payment.client.contactEmail }
-          : {}),
-      ...(recurring
-        ? { subscription_data: { metadata } }
-        : { payment_intent_data: { metadata, description: payment.description.slice(0, 250) } }),
-    },
-    { idempotencyKey: idempotencyKey(payment, payment.stripeCheckoutSessionId ?? null) }
-  );
+  let session;
+  try {
+    session = await stripe.client.checkout.sessions.create(
+      {
+        mode: recurring ? 'subscription' : 'payment',
+        client_reference_id: payment.id,
+        line_items: [lineItem(payment)],
+        metadata,
+        success_url: urls.success,
+        cancel_url: urls.cancel,
+        ...(customer
+          ? { customer }
+          : payment.client.contactEmail
+            ? { customer_email: payment.client.contactEmail }
+            : {}),
+        ...(recurring
+          ? { subscription_data: { metadata } }
+          : { payment_intent_data: { metadata, description: payment.description.slice(0, 250) } }),
+      },
+      { idempotencyKey: idempotencyKey(payment, payment.stripeCheckoutSessionId ?? null) }
+    );
+  } catch (err) {
+    return recoverFromRace(db, stripe, payment, err as Error);
+  }
 
   const stored = await db.payment.updateMany({
     where: { id: payment.id, stripeCheckoutSessionId: payment.stripeCheckoutSessionId ?? null },
@@ -258,6 +315,37 @@ export async function createPaymentCheckout(
     });
   }
   return { url: hostedUrl(session.url, STRIPE_HOST) };
+}
+
+const isIdempotencyClash = (err: Error) =>
+  (err as { type?: string }).type === 'StripeIdempotencyError' ||
+  (err as { code?: string }).code === 'idempotency_key_in_use';
+
+/**
+ * Two first checkouts of one payment with different return URLs share an idempotency key and
+ * Stripe refuses the second. The first one stored its session, so hand that one back.
+ */
+async function recoverFromRace(
+  db: PrismaClient,
+  stripe: StripeService,
+  payment: CheckoutPayment,
+  err: Error
+): Promise<{ url: string }> {
+  if (!isIdempotencyClash(err)) throw err;
+  const current = await db.payment.findUnique({
+    where: { id: payment.id },
+    select: { stripeCheckoutSessionId: true },
+  });
+  const stored = current?.stripeCheckoutSessionId;
+  if (stored && stored !== (payment.stripeCheckoutSessionId ?? null)) {
+    const session = await stripe.client.checkout.sessions.retrieve(stored);
+    if (session.status === 'open' && session.url)
+      return { url: hostedUrl(session.url, STRIPE_HOST) };
+  }
+  throw new TRPCError({
+    code: 'CONFLICT',
+    message: 'Another payment attempt just started. Please try again.',
+  });
 }
 
 async function portalConfigurationId(stripe: StripeService): Promise<string | undefined> {
