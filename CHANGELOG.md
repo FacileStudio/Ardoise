@@ -14,6 +14,15 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Fixed
+
+- `numbering.test.ts` took the test-database advisory lock in three sibling `describe` blocks. Bun 1.2.0, the version `mise.toml` pinned, runs the `beforeAll` hooks of sibling blocks before the first block's `afterAll`, so the second lock waited for the first and the file hung. The file now takes the lock once. No application code changed: production invoice and quote numbering was not affected.
+
+### Changed
+
+- `mise.toml`, `mise.lock` and `packageManager` pin Bun 1.3.7, the version CI and both Dockerfiles already use. Bun 1.2.0 also fails 12 webhook and client-IP tests.
+- CI gains a `tests` job: Postgres 16 service, `prisma migrate deploy`, then `bun test` in `packages/trpc`, `apps/backend` and the other test packages. The database-backed tests never ran in CI before.
+
 ## [0.19.3] - 2026-11-07
 
 ### Changed

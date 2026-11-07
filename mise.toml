@@ -8,7 +8,7 @@ lockfile = true
 config_roots = ["apps/backend", "apps/web", "packages/database"]
 
 [tools]
-bun = "1.2.0"
+bun = "1.3.7"
 node = "22.22.1"
 "asdf:mise-plugins/mise-postgres" = "16.15"
 

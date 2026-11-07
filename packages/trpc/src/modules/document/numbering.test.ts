@@ -16,18 +16,22 @@ setDefaultTimeout(30_000);
 
 const enabled = !!process.env.TEST_DATABASE_URL;
 
+let release: () => Promise<void> = async () => {};
+
+beforeAll(async () => {
+  if (enabled) release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
+}, 60_000);
+
+afterAll(async () => {
+  await release();
+}, 60_000);
+
 describe.skipIf(!enabled)('per-space document numbering against Postgres', () => {
-  let release: () => Promise<void> = async () => {};
   let spaceA = '';
   let spaceB = '';
 
-  beforeAll(async () => {
-    release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
-  }, 60_000);
-
   afterAll(async () => {
     await prisma.$executeRawUnsafe('TRUNCATE "Space" CASCADE');
-    await release();
   }, 60_000);
 
   beforeEach(async () => {
@@ -97,17 +101,11 @@ describe.skipIf(!enabled)('per-space document numbering against Postgres', () =>
 });
 
 describe.skipIf(!enabled)('a counter that fell behind', () => {
-  let release: () => Promise<void> = async () => {};
   let spaceId = '';
   let userId = '';
 
-  beforeAll(async () => {
-    release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
-  }, 60_000);
-
   afterAll(async () => {
     await prisma.$executeRawUnsafe('TRUNCATE "User", "Space" CASCADE');
-    await release();
   }, 60_000);
 
   beforeEach(async () => {
@@ -201,16 +199,12 @@ describe.skipIf(!enabled)('a counter that fell behind', () => {
 });
 
 describe.skipIf(!enabled)('stored files of a failed document', () => {
-  let release: () => Promise<void> = async () => {};
-
   beforeAll(async () => {
-    release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
     await prisma.$executeRawUnsafe('TRUNCATE "Space" CASCADE');
   }, 60_000);
 
   afterAll(async () => {
     await prisma.$executeRawUnsafe('TRUNCATE "Space" CASCADE');
-    await release();
   }, 60_000);
 
   it('runs the registered cleanups when the insert fails, and not when it succeeds', async () => {
