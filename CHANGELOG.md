@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-07
+
 > **Before deploying:** apply migration `20261107120000_client_payments`. In the Stripe Dashboard, add `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `charge.refunded` and `charge.dispute.created` to the existing webhook endpoint, and enable card and SEPA Direct Debit under Settings, Payment methods.
 
 ### Added
