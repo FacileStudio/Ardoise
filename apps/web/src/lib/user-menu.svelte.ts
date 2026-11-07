@@ -9,8 +9,9 @@ export const HELP_URL = 'https://facile.studio/docs/ardoise';
 export function userMenuOptions(area: 'admin' | 'client'): UserMenuOptions {
   return {
     accountHref: area === 'admin' ? undefined : null,
-    subscription: area === 'admin' ? { plan: '', href: SPACES_URL } : null,
+    subscription: area === 'admin' ? { href: SPACES_URL } : null,
     helpHref: HELP_URL,
+    locales: ['fr', 'en'],
     onSignOut: () => void authStore.logout(),
     onLocaleChange: rememberLocale,
     theme: theme.preference,

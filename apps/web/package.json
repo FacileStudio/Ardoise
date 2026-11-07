@@ -14,7 +14,7 @@
     "lint": "svelte-kit sync && eslint src"
   },
   "dependencies": {
-    "@facile/muse": "github:FacileStudio/muse#v0.14.2",
+    "@facile/muse": "github:FacileStudio/muse#v0.14.4",
     "@repo/admin": "workspace:*",
     "@repo/i18n": "workspace:*",
     "@repo/logger": "workspace:*",
