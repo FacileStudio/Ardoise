@@ -59,6 +59,13 @@ jobs:
         with:
           bun-version: 1.3.7
 
+      - name: Install Typst
+        run: |
+          set -euo pipefail
+          curl -fsSL https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ --strip-components=1 -C /tmp
+          sudo install /tmp/typst /usr/local/bin/typst
+          typst --version
+
       - name: Install
         run: bun install --frozen-lockfile
 
