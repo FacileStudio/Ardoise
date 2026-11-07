@@ -36,6 +36,8 @@ export const ReceiptDataSchema = z.object({
   providerPhone: z.string(),
   items: z.array(ReceiptItemSchema).optional().default([]),
   tvaRate: z.number().nonnegative().default(20),
+  vatExempt: z.boolean().optional().default(false),
+  vatExemptionMention: z.string().optional().default(''),
 });
 
 export type ReceiptItem = z.infer<typeof ReceiptItemSchema>;
@@ -99,6 +101,8 @@ export class TypstGenerator {
       provider_phone: validated.providerPhone,
       items: this.formatItems(validated.items),
       tva_rate: validated.tvaRate,
+      vat_exempt: validated.vatExempt ? 'true' : 'false',
+      vat_exemption_mention: validated.vatExemptionMention,
     };
 
     return this.compile(this.replaceTemplate(this.templateContent, templateData));

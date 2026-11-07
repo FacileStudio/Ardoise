@@ -181,6 +181,28 @@ describe('missionRouter.delete', () => {
     expect(deleted.length).toBe(0);
   });
 
+  it('only counts generated quotes, so imported ones do not block the delete', async () => {
+    const seen: any[] = [];
+    const deleted: any[] = [];
+    const caller = callerFor({
+      $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
+      mission: { findUnique: async () => missionRow, delete: async (args: any) => deleted.push(args) },
+      document: {
+        count: async ({ where }: any) => {
+          seen.push(where);
+          return where.quoteNumber && where.source !== 'generated' ? 3 : 0;
+        },
+        deleteMany: async () => ({ count: 0 }),
+      },
+      payment: { count: async () => 0 },
+    });
+
+    await caller.delete({ id: 'p-1' });
+
+    expect(deleted.length).toBe(1);
+    expect(seen.find((where) => where.quoteNumber)?.source).toBe('generated');
+  });
+
   it('deletes a mission that holds nothing issued', async () => {
     const deleted: any[] = [];
     const caller = callerFor({

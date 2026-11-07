@@ -5,6 +5,7 @@ import pg from 'pg';
 
 const enabled = !!process.env.TEST_DATABASE_URL;
 const TARGET = '20261106150000_space_settings';
+const PARSE = '20261107120000_counter_parse';
 const MIGRATIONS = join(import.meta.dir, '../../../database/prisma/migrations');
 
 const migrationNames = () =>
@@ -123,6 +124,30 @@ describe.skipIf(!enabled)('migration space_settings', () => {
       { spaceId: 'other', vatExempt: false, vatExemptionMention: null },
       { spaceId: 'studio', vatExempt: true, vatExemptionMention: 'TVA non applicable, article 293 B du CGI' },
     ]);
+    await db.end();
+  });
+
+  it('raises a counter behind the highest default-shape number, and leaves other shapes alone', async () => {
+    const db = await before(async (db) => {
+      await db.query(`INSERT INTO "Settings"(id, "nextInvoiceNumber", "nextQuoteNumber", "updatedAt") VALUES ('global', 1, 1, now())
+        ON CONFLICT (id) DO UPDATE SET "nextInvoiceNumber" = 1, "nextQuoteNumber" = 1`);
+      for (const id of ['behind', 'ahead', 'odd', 'quote']) await space(db, id);
+      await document(db, 'd1', 'behind', { invoice: 'FAC-2026-007' });
+      await document(db, 'd2', 'behind', { invoice: 'FAC-2026-012' });
+      await document(db, 'd3', 'ahead', { invoice: 'FAC-2026-003' });
+      await document(db, 'd4', 'odd', { invoice: '007/2026' });
+      await document(db, 'd5', 'quote', { quote: 'DEVIS-2026-004' });
+    });
+    await apply(db);
+    await db.query("UPDATE \"DocumentCounter\" SET next = 50 WHERE \"spaceId\" = 'ahead'");
+    await db.query(readFileSync(join(MIGRATIONS, PARSE, 'migration.sql'), 'utf8'));
+
+    expect(await counters(db)).toEqual({
+      'behind/invoice': 13,
+      'ahead/invoice': 50,
+      'odd/invoice': 1,
+      'quote/quote': 5,
+    });
     await db.end();
   });
 

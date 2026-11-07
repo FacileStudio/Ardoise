@@ -34,6 +34,8 @@ export const back_contractuel: string = `#set document(
 #let provider_name = "{{provider_name}}"
 #let provider_siret = "{{provider_siret}}"
 ${legalLetDeclarations}
+#let vat_exempt = "{{vat_exempt}}" == "true"
+#let ht = if vat_exempt { "" } else { " HT" }
 
 #let mandataire = providers.at(0)
 #let fmt(n) = str(calc.round(n, digits: 2)) + "\u{00A0}€"
@@ -137,7 +139,7 @@ ${legalLetDeclarations}
   inset: (left: 0pt, right: 0pt, top: 0.6cm, bottom: 0.6cm),
   align: (left, left),
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[DESCRIPTION DES PRESTATIONS],
-  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[TOTAL HT],
+  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[TOTAL#ht],
   ..items.map(item => (
     [#text(size: 9.5pt)[#item.description]],
     [#text(size: 9.5pt, weight: "medium")[#fmt(item.price)]]
@@ -164,12 +166,12 @@ ${legalLetDeclarations}
       table.hline(stroke: 2pt + rgb("#1a1a1a")),
       [],
       [],
-      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL GÉNÉRAL HT],
+      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL GÉNÉRAL#ht],
       text(size: 14pt, weight: "bold", fill: rgb("#1a1a1a"), font: "Satoshi")[#fmt(total_global)],
     )
-    #v(0.4cm)
-    #text(size: 9pt, style: "italic", fill: rgb("#666666"))[
-      TVA non applicable, art. 293 B du CGI
+    #if vat_exemption_mention != "" [
+      #v(0.4cm)
+      #text(size: 9pt, style: "italic", fill: rgb("#666666"))[#vat_exemption_mention]
     ]
   ]
 )
@@ -191,7 +193,7 @@ ${legalLetDeclarations}
   align: (left, left, left),
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[PRESTATAIRE],
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[RÔLE],
-  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[PART HT],
+  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[PART#ht],
   ..providers.map(p => (
     [#text(weight: "bold", size: 9.5pt)[#p.name] \ #text(size: 8pt, fill: rgb("#666666"))[SIRET: #p.siret]],
     [#text(size: 9.5pt)[#p.role]],

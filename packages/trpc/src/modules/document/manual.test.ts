@@ -314,6 +314,14 @@ describe('document.delete', () => {
     expect(deleted).toEqual(['documents/doc-1.pdf']);
   });
 
+  it('lets an imported numbered document be deleted', async () => {
+    const { caller, deleted } = setup({ document: { invoiceNumber: 'EXT-9', source: 'imported' } });
+
+    await caller.delete({ id: 'doc-1' });
+
+    expect(deleted).toEqual(['documents/doc-1.pdf']);
+  });
+
   it('refuses an issued invoice and asks for a credit note', async () => {
     const { caller, deleted } = setup({ document: { invoiceNumber: 'FAC-001' } });
 
