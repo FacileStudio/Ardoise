@@ -558,6 +558,28 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
     expect(leaks).toEqual([]);
   }, 120_000);
 
+  it('shows revenue to space admins and owners only', async () => {
+    const join = async (key: string, role: 'MEMBER' | 'ADMIN') => {
+      const row = await prisma.user.create({
+        data: { email: `${key}@access.test`, firstName: key, lastName: 'T', role: 'MEMBER' },
+      });
+      await prisma.spaceMember.create({ data: { spaceId: ids.spaceA!, userId: row.id, role } });
+      return callerFor({ id: row.id, role: 'MEMBER', email: row.email });
+    };
+    const plain = await join('revenue-member', 'MEMBER');
+    const admin = await join('revenue-admin', 'ADMIN');
+
+    expect(await codeOf(plain('revenue.overview', { spaceId: ids.spaceA }))).toBe('FORBIDDEN');
+    const hidden = (await plain('revenue.overview', {})) as { toCollect: { items: unknown[]; total: string } };
+    expect(hidden.toCollect.items).toEqual([]);
+    expect(hidden.toCollect.total).toBe('0.00');
+
+    const shown = (await admin('revenue.overview', { spaceId: ids.spaceA })) as { toCollect: { items: unknown[] } };
+    expect(shown.toCollect.items).toHaveLength(1);
+    expect(await codeOf(admin('revenue.overview', { spaceId: ids.spaceB }))).toBe('FORBIDDEN');
+    expect(await codeOf(client('revenue.overview', {}))).toBe('FORBIDDEN');
+  });
+
   it('lets nobody but staff change the Stripe and SMTP settings billing reads', async () => {
     const legacy = await prisma.user.create({
       data: {

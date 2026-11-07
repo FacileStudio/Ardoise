@@ -1,6 +1,7 @@
 import { Prisma } from '@repo/database';
 import type { PrismaClient } from '@repo/database';
 import { decimal, format, sum } from './money';
+import { unrequestedInvoicesSql } from './invoices';
 import { OPEN_STATUSES, clock, hasStatus, inSpaces, parisOf } from './sql';
 import type { OpenPaymentItem, RevenueOverview } from './types';
 
@@ -8,6 +9,12 @@ const LIST_LIMIT = 100;
 
 interface TotalRow {
   overdue: boolean;
+  amount: unknown;
+  count: bigint | number;
+}
+
+interface InvoiceRow {
+  late: string;
   amount: unknown;
   count: bigint | number;
 }
@@ -37,8 +44,16 @@ const openWhere = (spaceIds: string[]) =>
 
 export async function toCollectRows(db: PrismaClient, spaceIds: string[], now: Date) {
   const overdue = overdueSql(now);
+  const { dayStart } = clock(now);
 
-  const [totals, items] = await Promise.all([
+  const [invoices, totals, items] = await Promise.all([
+    db.$queryRaw<InvoiceRow[]>(Prisma.sql`
+      SELECT CASE WHEN i.due < ${dayStart} - interval '12 months' THEN 'very' ELSE 'overdue' END AS late,
+        SUM(i.amount) AS amount, COUNT(*) AS count
+      FROM (${unrequestedInvoicesSql(spaceIds)}) i
+      WHERE i.due < ${dayStart}
+      GROUP BY 1
+    `),
     db.$queryRaw<TotalRow[]>(Prisma.sql`
       SELECT ${overdue} AS overdue, SUM(p.amount) AS amount, COUNT(*) AS count
       FROM "Payment" p
@@ -58,7 +73,7 @@ export async function toCollectRows(db: PrismaClient, spaceIds: string[], now: D
     `),
   ]);
 
-  return { totals, items };
+  return { totals, items, invoices };
 }
 
 const clientName = (row: ItemRow) =>
@@ -83,13 +98,25 @@ export function toCollectOverview(
     const row = rows.totals.find((total) => total.overdue === overdue);
     return { amount: decimal(row?.amount), count: Number(row?.count ?? 0) };
   };
-  const late = side(true);
+  const invoiceSide = (late: string) => {
+    const row = rows.invoices.find((invoice) => invoice.late === late);
+    return { amount: decimal(row?.amount), count: Number(row?.count ?? 0) };
+  };
+  const payments = side(true);
+  const invoices = invoiceSide('overdue');
+  const veryLate = invoiceSide('very');
   const coming = side(false);
+  const overdue = {
+    amount: sum([payments.amount, invoices.amount]),
+    count: payments.count + invoices.count,
+  };
 
   return {
-    overdue: { amount: format(late.amount), count: late.count },
+    overdue: { amount: format(overdue.amount), count: overdue.count },
+    overdueInvoices: { amount: format(invoices.amount), count: invoices.count },
+    veryLate: { amount: format(veryLate.amount), count: veryLate.count },
     upcoming: { amount: format(coming.amount), count: coming.count },
-    total: format(sum([late.amount, coming.amount])),
+    total: format(sum([overdue.amount, coming.amount])),
     items: rows.items.slice(0, LIST_LIMIT).map(itemOf),
     truncated: rows.items.length > LIST_LIMIT,
   };

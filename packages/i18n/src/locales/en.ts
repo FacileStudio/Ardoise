@@ -219,7 +219,7 @@ export const en = {
   revenue: {
     title: 'Revenue',
     subtitle: 'What you have collected, and what is still to come from unpaid invoices and signed work.',
-    vatNote: 'Amounts as invoiced. VAT is not split out.',
+    overdueRule: 'Late payments and late invoices are counted under To collect only, never in the forecast.',
     loadFailed: 'The figures could not be loaded.',
     retry: 'Retry',
     empty: 'No data',
@@ -237,6 +237,8 @@ export const en = {
       total: 'Total to collect',
       overdue: 'Overdue',
       upcoming: 'Upcoming',
+      ofInvoices: 'of which {{amount}} in invoices with no payment request',
+      veryLate: 'Invoices more than 12 months late, to check: {{amount}} ({{count}}). Not included in the totals.',
       count: '{{count}} payments',
       emptyTitle: 'Nothing to collect',
       emptyDescription: 'Every payment request is settled.',

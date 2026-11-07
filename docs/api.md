@@ -124,21 +124,25 @@ All scoped to the caller's own `Client` and space; another client's payment answ
 
 | Procedure | Type | Level | Input |
 |---|---|---|---|
-| `overview` | query | space-scoped | `{ spaceId? }` (optional filter, must be one of the caller's spaces; without it, every space the caller belongs to) |
+| `overview` | query | space-scoped, space ADMIN or OWNER | `{ spaceId? }` |
+
+Only owners and admins of a space see its figures. With `spaceId`, a plain member (or a non-member)
+gets `FORBIDDEN`. Without it, only the spaces where the caller is ADMIN or OWNER are summed (none
+means zeros). `payment.list` and `payment.stats` are unchanged and still open to every member.
 
 One call feeds `/admin/revenus`. Amounts are strings with two decimals in EUR, summed by Postgres
-as `numeric`. Months are `YYYY-MM` in `Europe/Paris`. The result holds:
+as `numeric`. Months are `YYYY-MM` in `Europe/Paris`. No tax label is shown. The result holds:
 
-- `collected`: `thisMonth`, `thisYear` and a 12-month series, by payment date. `PAID` payments count at `paidAt`. A subscription counts through its paid `PaymentInvoice` rows, once per renewal, instead of its single `Payment` row.
-- `toCollect`: payments in `PENDING`, `PROCESSING`, `AWAITING_CONFIRMATION` or `PAST_DUE`, split into `overdue` (due date before today in Paris, or `PAST_DUE`) and `upcoming`, plus up to 100 `items`. `PROCESSING` and `AWAITING_CONFIRMATION` are matched by name and only exist once the client payments migration is applied.
-- `forecast`: 12 months from the current month, per source, each with `months`, `undated`, `later` and `total`.
+- `collected`: `thisMonth`, `thisYear` and a 12-month series, by payment date. Each PAID `PaymentInvoice` of a subscription counts once; the `Payment` row itself also counts unless a paid invoice sits within a day of its `paidAt` (a first period recorded only on the row).
+- `toCollect`: payments in `PENDING`, `PROCESSING`, `AWAITING_CONFIRMATION` or `PAST_DUE`, split into `overdue` and `upcoming`, plus up to 100 `items`. `overdue` is `PAST_DUE` or a due date before today in Paris, plus `overdueInvoices` (invoices with no payment request that are late, up to 12 months). `veryLate` holds invoices more than 12 months late: shown apart, in no total. `PROCESSING` and `AWAITING_CONFIRMATION` are matched by name and only exist once the client payments migration is applied.
+- `forecast`: 12 months from the current month, per source, each with `months`, `undated`, `later` and `total`. Overdue payments and overdue invoices are never in the forecast.
 
 | Source | Rule |
 |---|---|
 | `scheduled` | Open payments that are not overdue, in the month of their due date. Beyond the 12 months they go to `later`. |
-| `recurring` | `PAID` payments with `frequency` `MONTHLY` or `YEARLY` and `collectionMethod = STRIPE`. Renewals fall at `paidAt` plus one period, two periods and so on, kept when after now and inside the 12 months. |
-| `unbilled` | Per mission not `CANCELLED` or `PAID`, the latest quote version when it is accepted. Amount: quote `total` minus the `total` of the mission's `facture_prestation` invoices minus its live payments that have no document; kept when above zero. Month of the quote `dueDate`, the current month if that date has passed, `undated` when there is none. |
-| `invoiced` | `facture_prestation` documents with an invoice number, on a mission that is not `CANCELLED`, with no `PENDING`, `PAID`, `PAST_DUE`, `PROCESSING` or `AWAITING_CONFIRMATION` payment (by `documentId` or attachment). Month of `dueDate`, or creation plus `paymentTermsDays`; the current month if already past. |
+| `recurring` | `PAID` payments with `frequency` `MONTHLY` or `YEARLY`, by card or by transfer. Renewals fall at `paidAt` plus 1, 2, 3... periods, kept when after now and inside the 12 months. A cancelled series is not `PAID`, so it projects nothing. `Payment` has no cancel-at-period-end field: Stripe cancellations are immediate. |
+| `unbilled` | Per mission not `CANCELLED` or `PAID`, the latest quote version when accepted. Amount: quote `total` minus the `facture_prestation` invoices of the mission minus its live one-time payments that have no document or belong to an `appel_de_fonds` (an advance on the quote). Recurring payments and payments on other documents are never subtracted; payments on an invoice are not subtracted twice. Month of the quote `dueDate` (current month if past), `undated` without one. |
+| `invoiced` | `facture_prestation` with an invoice number, not imported, on no `PAID` or `CANCELLED` mission, with no live or paid payment (by `documentId` or attachment), not yet due-late. Month of `dueDate`, or creation plus `paymentTermsDays`. |
 
 `cancelled`, `expired` and `failed` payments never count. Signed contracts carry no billable amount in
 the schema, so only accepted quotes drive `unbilled`.

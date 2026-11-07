@@ -221,7 +221,7 @@ export const fr: EnTranslations = {
   revenue: {
     title: 'Revenus',
     subtitle: 'Ce qui est encaissé, et ce qui reste à venir sur les factures impayées et les travaux signés.',
-    vatNote: 'Montants tels que facturés. La TVA n’est pas détaillée.',
+    overdueRule: 'Les paiements et les factures en retard sont comptés uniquement dans À encaisser, jamais dans le prévisionnel.',
     loadFailed: 'Les chiffres n’ont pas pu être chargés.',
     retry: 'Réessayer',
     empty: 'Aucune donnée',
@@ -239,6 +239,8 @@ export const fr: EnTranslations = {
       total: 'Total à encaisser',
       overdue: 'En retard',
       upcoming: 'À venir',
+      ofInvoices: 'dont {{amount}} de factures sans demande de paiement',
+      veryLate: 'Factures en retard de plus de 12 mois, à vérifier : {{amount}} ({{count}}). Non incluses dans les totaux.',
       count: '{{count}} paiements',
       emptyTitle: 'Rien à encaisser',
       emptyDescription: 'Toutes les demandes de paiement sont réglées.',
