@@ -102,6 +102,7 @@
                     invoiceNumberFormat: config.invoiceNumberFormat,
                     quoteNumberFormat: config.quoteNumberFormat,
                     paymentTermsDays: Number(config.paymentTermsDays),
+                    vatExempt: config.vatExempt === true,
                     recoveryFeeAmount: Number(config.recoveryFeeAmount),
                     lateFeeRate: config.lateFeeRate,
                     vatExemptionMention: config.vatExemptionMention.trim() || null,
@@ -226,8 +227,17 @@
                 <Field label="Pénalités de retard">
                     <Input bind:value={config.lateFeeRate} />
                 </Field>
-                <Field label="Mention de TVA" helper="Exemple : TVA non applicable, article 293 B du CGI">
-                    <Input bind:value={config.vatExemptionMention} />
+                <Switch
+                    label="Franchise en base de TVA (micro-entreprise)"
+                    bind:checked={config.vatExempt}
+                />
+                <Field
+                    label="Mention de TVA"
+                    helper={config.vatExempt
+                        ? "Imprimée sur les documents ; par défaut : TVA non applicable, art. 293 B du CGI. Aucune ligne de TVA n'est affichée et le total est sans TVA."
+                        : 'Optionnelle. Les documents affichent la TVA du prestataire.'}
+                >
+                    <Input bind:value={config.vatExemptionMention} placeholder="TVA non applicable, art. 293 B du CGI" />
                 </Field>
                 <Field label="Autres mentions légales" helper="Ajoutées en pied des factures, devis et contrats.">
                     <Textarea bind:value={config.legalMentions} rows={3} />

@@ -42,6 +42,8 @@ export const maintenance: string = `#set document(
 #let railway_estimate = {{railway_estimate}}
 #let items = ({{items}})
 #let tva_rate = {{tva_rate}}
+#let vat_exempt = "{{vat_exempt}}" == "true"
+#let ht = if vat_exempt { "" } else { " HT" }
 ${legalLetDeclarations}
 
 // Header
@@ -125,8 +127,8 @@ ${legalLetDeclarations}
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[DESCRIPTION],
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[QTÉ],
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[UNITÉ],
-  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[P.U. HT],
-  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[TOTAL HT],
+  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[P.U.#ht],
+  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[TOTAL#ht],
   ..items.map(item => (
     [#text(size: 9.5pt)[#item.description]],
     [#text(size: 9.5pt)[#str(item.quantity)]],
@@ -155,16 +157,18 @@ ${legalLetDeclarations}
       row-gutter: 0.4cm,
       align: (left, left),
       inset: (left: 0pt, right: 0pt, top: 0pt, bottom: 0pt),
-      [#text(size: 10pt)[Sous-total HT]],
-      [#text(weight: "medium", font: "Satoshi", size: 10pt)[#fmt(subtotal_with_railway)]],
-      [#text(size: 10pt)[TVA (#tva_rate%)]],
-      [#text(font: "Satoshi", size: 10pt)[#fmt(tva_amount)]],
+      ..if vat_exempt { () } else { (
+        [#text(size: 10pt)[Sous-total HT]],
+        [#text(weight: "medium", font: "Satoshi", size: 10pt)[#fmt(subtotal_with_railway)]],
+        [#text(size: 10pt)[TVA (#tva_rate%)]],
+        [#text(font: "Satoshi", size: 10pt)[#fmt(tva_amount)]],
+      ) },
       [],
       [],
       table.hline(stroke: 2pt + rgb("#1a1a1a")),
       [],
       [],
-      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL ESTIMÉ TTC (mensuel)],
+      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL ESTIMÉ#if not vat_exempt [ TTC] (mensuel)],
       text(size: 14pt, weight: "bold", fill: rgb("#1a1a1a"), font: "Satoshi")[#fmt(total)],
     )
   ]

@@ -88,9 +88,24 @@ async function dispatchSpaceWebhook({ db, log, spaceId, event, actor, data, deps
   }
 }
 
-export async function dispatchConfiguredWebhook(input: DispatchWebhookInput) {
+/** Delivers the event to the space webhook and the platform webhook, and resolves once both attempts ended. */
+export async function deliverConfiguredWebhook(input: DispatchWebhookInput) {
   await dispatchSpaceWebhook(input);
   await dispatchPlatformWebhook(input);
+}
+
+/**
+ * Starts the deliveries and returns at once, so a slow or dead receiver never
+ * holds the request that raised the event. A failure is logged, never thrown.
+ */
+export function dispatchConfiguredWebhook(input: DispatchWebhookInput): Promise<void> {
+  deliverConfiguredWebhook(input).catch((error) => {
+    input.log.error(
+      { type: 'webhook-delivery', event: input.event, error: error instanceof Error ? error.message : 'error' },
+      'Webhook dispatch errored'
+    );
+  });
+  return Promise.resolve();
 }
 
 async function dispatchPlatformWebhook({

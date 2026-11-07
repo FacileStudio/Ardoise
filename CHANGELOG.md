@@ -14,7 +14,7 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
-> **Migration:** `20261106150000_space_settings` creates `SpaceSettings` and `DocumentCounter`. Every existing space gets a `SpaceSettings` row copied from the global `Settings` (number formats and payment defaults), and the invoice and quote counters of each space start after the highest trailing number among its generated documents. Imported documents keep their numbers and are not counted.
+> **Migration:** `20261106150000_space_settings` creates `SpaceSettings` and `DocumentCounter`. Every existing space gets a `SpaceSettings` row copied from the global `Settings` (number formats and payment defaults). Each space that already holds numbered documents gets its invoice and quote counters seeded from the global `Settings.nextInvoiceNumber` and `nextQuoteNumber`, which were above every number ever issued, so no number is reused whatever the old format looked like. Spaces without documents start at 1. The migration also adds partial unique indexes on `(spaceId, invoiceNumber)` and `(spaceId, quoteNumber)`; if a space already holds duplicates it prints a notice and skips that index instead of failing.
 
 ### Added
 
@@ -31,12 +31,18 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Fixed
 
+- VAT regime per space. `SpaceSettings.vatExempt` (franchise en base de TVA, set by migration on every platform studio space, off elsewhere) makes devis, factures, appels de fonds, maintenance and prestation documents print no TVA line, a plain "TOTAL" instead of "TOTAL TTC", no "HT" on the columns, and the mention "TVA non applicable, art. 293 B du CGI" (or the space's own mention). Line amounts and stored totals carry no VAT (rate 0). Other spaces are unchanged. Space admins set it in the space settings page. Before, every document printed a VAT line and TOTAL TTC whatever the regime.
 - The platform webhook signed with the stored, encrypted `Settings.webhookSecret`, so no receiver could verify `x-ardoise-signature-256`. It now signs with the decrypted secret, like the per-space webhook. If you copied the stored ciphertext from the database into a receiver as its key, replace it with the secret you entered in the settings.
 - `document.delete` refuses a document that carries an issued invoice or quote number (`PRECONDITION_FAILED`, asks for a credit note), so deleting one can no longer leave a gap in the numbering. Documents without a number stay deletable.
 - Two concurrent `mission.generateInvoice` calls on one mission can no longer both pass the pre-checks: the invoice transaction locks the mission row and re-checks the billing state, so exactly one invoice is created and the other call is refused.
 
 ### Changed
 
+- `mission.delete` refuses a mission that holds a numbered quote (`PRECONDITION_FAILED`), like invoices and payments, so it cannot leave a gap in the quote numbers.
+- A number format must end with `{{number}}`, used once.
+- Webhook events are no longer awaited by the request that raises them: delivery starts in the background and failures are only logged. The DNS lookup of a space webhook times out after 3 s.
+- A PDF stored for a document whose insert fails is deleted again.
+- The platform webhook only hears platform studio spaces (and platform events); every other space has only its own webhook. This is not new in this release, it is now stated here.
 - The global `Settings.next*Number` counters and number formats are no longer read.
 
 ## [0.14.3] - 2026-11-06

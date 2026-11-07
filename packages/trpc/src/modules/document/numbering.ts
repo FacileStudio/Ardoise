@@ -14,9 +14,9 @@ export function formatNumber(template: string, number: number, now = new Date())
   const month = String(now.getMonth() + 1).padStart(2, '0');
 
   return template
-    .replace('{{year}}', String(now.getFullYear()))
-    .replace('{{month}}', month)
-    .replace('{{number}}', String(number).padStart(3, '0'));
+    .replaceAll('{{year}}', String(now.getFullYear()))
+    .replaceAll('{{month}}', month)
+    .replaceAll('{{number}}', String(number).padStart(3, '0'));
 }
 
 async function allocate(tx: Prisma.TransactionClient, spaceId: string, kind: NumberKind) {
@@ -35,16 +35,25 @@ async function allocate(tx: Prisma.TransactionClient, spaceId: string, kind: Num
  * transaction that must also insert the document. The counter row stays
  * locked until that transaction ends, so two requests of one space never get
  * the same number, and a failed insert rolls the counter back: the sequence
- * has no gap and no reuse. Use only the `tx` given to `issue` for database
+ * has no gap and no reuse. A cleanup registered with `onRollback` (a stored PDF) runs when the transaction fails. Use only the `tx` given to `issue` for database
  * work.
  */
-export function withDocumentNumber<T>(
+export async function withDocumentNumber<T>(
   db: PrismaClient,
   spaceId: string,
   kind: NumberKind,
-  issue: (number: string, tx: Prisma.TransactionClient) => Promise<T>
+  issue: (number: string, tx: Prisma.TransactionClient, onRollback: (cleanup: () => Promise<void>) => void) => Promise<T>
 ): Promise<T> {
-  return db.$transaction(async (tx) => issue(await allocate(tx, spaceId, kind), tx), TRANSACTION);
+  const cleanups: Array<() => Promise<void>> = [];
+  try {
+    return await db.$transaction(
+      async (tx) => issue(await allocate(tx, spaceId, kind), tx, (cleanup) => void cleanups.push(cleanup)),
+      TRANSACTION
+    );
+  } catch (error) {
+    await Promise.allSettled(cleanups.map((cleanup) => cleanup()));
+    throw error;
+  }
 }
 
 export async function previewDocumentNumber(

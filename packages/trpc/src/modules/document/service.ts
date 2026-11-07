@@ -132,6 +132,7 @@ export type DocumentData = {
   recovery_fee_amount?: number;
   vat_exemption_mention?: string;
   legal_mentions?: string;
+  vat_exempt?: boolean;
   railway_estimate?: number;
   project_name?: string;
   deposit_percent?: number | string;
@@ -648,6 +649,7 @@ export async function generateDocument(
     recovery_fee_amount: v.recovery_fee_amount ?? 40,
     vat_exemption_mention: v.vat_exemption_mention || '',
     legal_mentions: v.legal_mentions || '',
+    vat_exempt: v.vat_exempt ? 'true' : 'false',
     railway_estimate: validated.railway_estimate,
 
     invoice_title: v.invoice_title || 'FACTURE',
@@ -715,7 +717,7 @@ export async function loadDocumentContext(
   }
 
   const settings = documentDefaults(await getSpaceSettings(db, client.spaceId));
-  const tvaRate = provider.tvaRate == null ? 20 : Number(provider.tvaRate);
+  const tvaRate = settings.defaultVatExempt ? 0 : provider.tvaRate == null ? 20 : Number(provider.tvaRate);
 
   return { client, provider, settings, tvaRate, scope, missionId: missionId ?? null };
 }
@@ -820,6 +822,7 @@ type SettingsLike = {
   defaultPaymentTermsDays?: number | null;
   defaultLateFeeRate?: string | null;
   defaultRecoveryFeeAmount?: unknown;
+  defaultVatExempt?: boolean;
   defaultVatExemptionMention?: string | null;
   defaultLegalMentions?: string | null;
 };
@@ -858,6 +861,7 @@ export function buildPartyAndLegalData(
     recovery_fee_amount: settings?.defaultRecoveryFeeAmount != null ? Number(settings.defaultRecoveryFeeAmount) : 40,
     vat_exemption_mention: settings?.defaultVatExemptionMention || '',
     legal_mentions: settings?.defaultLegalMentions || '',
+    vat_exempt: settings?.defaultVatExempt === true,
   };
 }
 
@@ -940,6 +944,7 @@ export function generateTypstContent(data: DocumentData): string {
     recovery_fee_amount: data.recovery_fee_amount ?? 40,
     vat_exemption_mention: data.vat_exemption_mention || '',
     legal_mentions: data.legal_mentions || '',
+    vat_exempt: data.vat_exempt ? 'true' : 'false',
     railway_estimate: data.railway_estimate,
 
     // For back_contractuel

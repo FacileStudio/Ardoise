@@ -5,6 +5,7 @@ CREATE TABLE "SpaceSettings" (
     "paymentTermsDays" INTEGER NOT NULL DEFAULT 30,
     "lateFeeRate" TEXT NOT NULL DEFAULT '3 fois le taux d''intérêt légal en vigueur',
     "recoveryFeeAmount" DECIMAL(10,2) NOT NULL DEFAULT 40,
+    "vatExempt" BOOLEAN NOT NULL DEFAULT false,
     "vatExemptionMention" TEXT,
     "legalMentions" TEXT,
     "webhookUrl" TEXT,
@@ -30,7 +31,7 @@ ALTER TABLE "DocumentCounter" ADD CONSTRAINT "DocumentCounter_spaceId_fkey" FORE
 
 INSERT INTO "SpaceSettings" (
     "spaceId", "invoiceNumberFormat", "quoteNumberFormat", "paymentTermsDays",
-    "lateFeeRate", "recoveryFeeAmount", "vatExemptionMention"
+    "lateFeeRate", "recoveryFeeAmount", "vatExempt", "vatExemptionMention"
 )
 SELECT
     s."id",
@@ -39,20 +40,38 @@ SELECT
     COALESCE(g."defaultPaymentTermsDays", 30),
     COALESCE(NULLIF(g."defaultLateFeeRate", ''), '3 fois le taux d''intérêt légal en vigueur'),
     COALESCE(g."defaultRecoveryFeeAmount", 40),
-    NULLIF(g."defaultVatExemptionMention", '')
+    s."platformStudio",
+    CASE WHEN s."platformStudio" THEN COALESCE(NULLIF(g."defaultVatExemptionMention", ''), 'TVA non applicable, art. 293 B du CGI') END
 FROM "Space" s
 LEFT JOIN "Settings" g ON g."id" = 'global';
 
 INSERT INTO "DocumentCounter" ("spaceId", "kind", "next")
-SELECT "spaceId", 'invoice', MAX(substring("invoiceNumber" from '([0-9]+)$')::bigint) + 1
-FROM "Document"
-WHERE "source" = 'generated'
-  AND "invoiceNumber" ~ '(^|[^0-9])[0-9]{1,9}$'
-GROUP BY "spaceId";
+SELECT n."spaceId", 'invoice', GREATEST(COALESCE(g."nextInvoiceNumber", 1), 1)
+FROM (SELECT DISTINCT "spaceId" FROM "Document" WHERE "invoiceNumber" IS NOT NULL) n
+LEFT JOIN "Settings" g ON g."id" = 'global';
 
 INSERT INTO "DocumentCounter" ("spaceId", "kind", "next")
-SELECT "spaceId", 'quote', MAX(substring("quoteNumber" from '([0-9]+)$')::bigint) + 1
-FROM "Document"
-WHERE "source" = 'generated'
-  AND "quoteNumber" ~ '(^|[^0-9])[0-9]{1,9}$'
-GROUP BY "spaceId";
+SELECT n."spaceId", 'quote', GREATEST(COALESCE(g."nextQuoteNumber", 1), 1)
+FROM (SELECT DISTINCT "spaceId" FROM "Document" WHERE "quoteNumber" IS NOT NULL) n
+LEFT JOIN "Settings" g ON g."id" = 'global';
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM "Document" WHERE "invoiceNumber" IS NOT NULL
+        GROUP BY "spaceId", "invoiceNumber" HAVING count(*) > 1
+    ) THEN
+        RAISE NOTICE 'Document_spaceId_invoiceNumber_key skipped: duplicate invoice numbers exist in a space';
+    ELSE
+        CREATE UNIQUE INDEX "Document_spaceId_invoiceNumber_key" ON "Document"("spaceId", "invoiceNumber") WHERE "invoiceNumber" IS NOT NULL;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM "Document" WHERE "quoteNumber" IS NOT NULL
+        GROUP BY "spaceId", "quoteNumber" HAVING count(*) > 1
+    ) THEN
+        RAISE NOTICE 'Document_spaceId_quoteNumber_key skipped: duplicate quote numbers exist in a space';
+    ELSE
+        CREATE UNIQUE INDEX "Document_spaceId_quoteNumber_key" ON "Document"("spaceId", "quoteNumber") WHERE "quoteNumber" IS NOT NULL;
+    END IF;
+END $$;

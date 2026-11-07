@@ -5,7 +5,7 @@ import { prisma } from '@repo/database';
 import { lockTestDatabase } from '@repo/database/test-lock';
 import { appRouter } from '../../index';
 import { encryptSecret } from '../settings/service';
-import { dispatchConfiguredWebhook } from '../webhook/service';
+import { deliverConfiguredWebhook } from '../webhook/service';
 import { buildPartyAndLegalData, loadDocumentContext } from '../document/service';
 
 const enabled = !!process.env.TEST_DATABASE_URL;
@@ -107,6 +107,9 @@ describe.skipIf(!enabled)('space settings against Postgres', () => {
     expect(await codeOf(adminA.space.updateSettings({ id: ids.spaceA!, invoiceNumberFormat: 'FAC-2026' }))).toBe(
       'BAD_REQUEST'
     );
+    for (const format of ['{{number}}/{{year}}', 'FAC{{number}}-{{number}}', 'FAC-{{number}}-X']) {
+      expect(await codeOf(adminA.space.updateSettings({ id: ids.spaceA!, invoiceNumberFormat: format }))).toBe('BAD_REQUEST');
+    }
     expect(await codeOf(adminA.space.updateSettings({ id: ids.spaceA!, platformStudio: true } as never))).toBe(
       'BAD_REQUEST'
     );
@@ -164,7 +167,7 @@ describe.skipIf(!enabled)('space settings against Postgres', () => {
         return 200;
       },
     };
-    await dispatchConfiguredWebhook({
+    await deliverConfiguredWebhook({
       db: prisma,
       log: silent as never,
       spaceId: ids.spaceA!,
@@ -191,7 +194,7 @@ describe.skipIf(!enabled)('space settings against Postgres', () => {
       },
     };
     const send = (spaceId: string) =>
-      dispatchConfiguredWebhook({ db: prisma, log: silent as never, spaceId, event: 'x', data: {}, deps });
+      deliverConfiguredWebhook({ db: prisma, log: silent as never, spaceId, event: 'x', data: {}, deps });
 
     await send(ids.spaceB!);
     expect(called).toBe(0);
@@ -222,11 +225,22 @@ describe.skipIf(!enabled)('space settings against Postgres', () => {
     const partyA = buildPartyAndLegalData(a.client, a.provider, a.settings);
     expect(partyA.payment_terms_days).toBe(45);
     expect(partyA.legal_mentions).toBe('Escompte pour paiement anticipé : néant.');
+    expect(a.tvaRate).toBe(20);
+    expect(partyA.vat_exempt).toBe(false);
+
+    await adminA.space.updateSettings({ id: ids.spaceA!, vatExempt: true });
+    const exempt = await loadDocumentContext(prisma, ids.alice!, clientA.id, provider.id);
+    const partyExempt = buildPartyAndLegalData(exempt.client, exempt.provider, exempt.settings);
+    expect(exempt.tvaRate).toBe(0);
+    expect(partyExempt.vat_exempt).toBe(true);
+    expect(partyExempt.vat_exemption_mention).toBe('TVA non applicable, art. 293 B du CGI');
 
     const b = await loadDocumentContext(prisma, ids.bob!, clientB.id, providerB.id);
     const partyB = buildPartyAndLegalData(b.client, b.provider, b.settings);
     expect(partyB.payment_terms_days).toBe(30);
     expect(partyB.legal_mentions).toBe('');
+    expect(b.tvaRate).toBe(20);
+    expect(partyB.vat_exempt).toBe(false);
     expect(partyB.late_fee_rate).toBe("3 fois le taux d'intérêt légal en vigueur");
 
     await expect(loadDocumentContext(prisma, ids.alice!, clientB.id, providerB.id)).rejects.toMatchObject({ code: 'NOT_FOUND' });

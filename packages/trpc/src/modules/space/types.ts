@@ -50,7 +50,10 @@ const NumberFormat = z
   .trim()
   .min(1)
   .max(60)
-  .refine((value) => value.split('{{number}}').length === 2, 'The format must contain {{number}} exactly once')
+  .refine(
+    (value) => value.endsWith('{{number}}') && value.split('{{number}}').length === 2,
+    'The format must end with {{number}}, used once'
+  )
   .refine((value) => /^[\p{L}\p{N} _./{}-]+$/u.test(value), 'The format holds unsupported characters');
 
 const Mention = z.string().trim().max(1000).nullable();
@@ -63,6 +66,7 @@ export const UpdateSpaceSettingsSchema = z
     paymentTermsDays: z.number().int().min(0).max(365).optional(),
     lateFeeRate: z.string().trim().min(1).max(500).optional(),
     recoveryFeeAmount: z.number().min(0).max(100000).optional(),
+    vatExempt: z.boolean().optional(),
     vatExemptionMention: Mention.optional(),
     legalMentions: Mention.optional(),
     webhookUrl: z.string().trim().url().max(2000).nullable().optional(),

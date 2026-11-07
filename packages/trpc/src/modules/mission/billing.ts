@@ -3,6 +3,7 @@ import { Prisma } from '@repo/database';
 import type { PrismaClient } from '@repo/database';
 import type { StorageService } from '@repo/storage';
 import { withDocumentNumber } from '../document/numbering';
+import { removeStoredPdf } from '../document/manual';
 import { scopeSpaceId } from '../space/service';
 import { generateDocumentWithLogo } from '../document/render';
 import {
@@ -111,7 +112,7 @@ export async function generateQuote(
   );
 
   try {
-    return await withDocumentNumber(db, scopeSpaceId(scope), 'quote', async (quoteNumber, tx) => {
+    return await withDocumentNumber(db, scopeSpaceId(scope), 'quote', async (quoteNumber, tx, onRollback) => {
       const today = new Date();
       const documentData = {
         type: 'devis' as const,
@@ -129,6 +130,7 @@ export async function generateQuote(
 
       const pdf = await generateDocumentWithLogo(documentData, provider.logoUrl, storage);
       const stored = await storeDocumentPdf(storage, pdf);
+      onRollback(() => removeStoredPdf(storage, stored.pdfUrl));
       const { subtotal, tva, total } = totalsOf(lines, tvaRate);
 
       const document = await tx.document.create({
@@ -245,7 +247,7 @@ export async function generateInvoice(
     mission.id
   );
 
-  return withDocumentNumber(db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx) => {
+  return withDocumentNumber(db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx, onRollback) => {
     await tx.$queryRaw`SELECT "id" FROM "Mission" WHERE "id" = ${mission.id} FOR UPDATE`;
     const { currentQuote, plan } = await checkedInvoicePlan(tx as unknown as PrismaClient, userId, input);
     const today = new Date();
@@ -272,6 +274,7 @@ export async function generateInvoice(
 
     const pdf = await generateDocumentWithLogo(documentData, provider.logoUrl, storage);
     const stored = await storeDocumentPdf(storage, pdf);
+      onRollback(() => removeStoredPdf(storage, stored.pdfUrl));
     const { subtotal, tva, total } = totalsOf(plan.lines, tvaRate);
 
     const document = await tx.document.create({

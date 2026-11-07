@@ -30,6 +30,8 @@ export const appel_de_fonds: string = `#set document(
 #let provider_name = "{{provider_name}}"
 #let provider_siret = "{{provider_siret}}"
 ${legalLetDeclarations}
+#let vat_exempt = "{{vat_exempt}}" == "true"
+#let ht = if vat_exempt { "" } else { " HT" }
 
 // Header
 #grid(
@@ -104,7 +106,7 @@ ${legalLetDeclarations}
 
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[BÉNÉFICIAIRE],
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[COORDONNÉES BANCAIRES],
-  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[MONTANT HT],
+  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[MONTANT#ht],
 
   ..providers.map(p => (
     [#text(weight: "bold", size: 9.5pt)[#p.name]],
@@ -135,7 +137,7 @@ ${legalLetDeclarations}
       table.hline(stroke: 2pt + rgb("#1a1a1a")),
       [],
       [],
-      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL DE L'APPEL DE FONDS HT],
+      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL DE L'APPEL DE FONDS#if not vat_exempt [ HT]],
       text(size: 14pt, weight: "bold", fill: rgb("#1a1a1a"), font: "Satoshi")[#fmt(total_appel)],
     )
   ]

@@ -25,7 +25,7 @@ const BLOCKED_V4: Array<[string, number]> = [
 ];
 
 const BLOCKED_V6: Array<[string, number]> = [
-  ['::', 128],
+  ['::', 96],
   ['::1', 128],
   ['64:ff9b::', 96],
   ['64:ff9b:1::', 48],
@@ -61,8 +61,22 @@ export function isPublicAddress(address: string): boolean {
 
 export type Resolver = (hostname: string) => Promise<string[]>;
 
+export const LOOKUP_TIMEOUT_MS = 3_000;
+
 const resolveAll: Resolver = async (hostname) =>
   (await lookup(hostname, { all: true, verbatim: true })).map((entry) => entry.address);
+
+async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error('lookup timeout')), ms);
+  });
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export type SafeTarget = { url: URL; address: string; family: 4 | 6 };
 
@@ -71,7 +85,11 @@ export type SafeTarget = { url: URL; address: string; family: 4 | 6 };
  * https only, no credentials, and every address the name resolves to must be
  * public, so a name that also points inside the network is refused.
  */
-export async function resolveSafeTarget(raw: string, resolver: Resolver = resolveAll): Promise<SafeTarget> {
+export async function resolveSafeTarget(
+  raw: string,
+  resolver: Resolver = resolveAll,
+  lookupTimeoutMs = LOOKUP_TIMEOUT_MS
+): Promise<SafeTarget> {
   let url: URL;
   try {
     url = new URL(raw);
@@ -87,7 +105,7 @@ export async function resolveSafeTarget(raw: string, resolver: Resolver = resolv
     addresses = [host];
   } else {
     try {
-      addresses = await resolver(host);
+      addresses = await withTimeout(resolver(host), lookupTimeoutMs);
     } catch {
       throw new UnsafeWebhookUrlError('The webhook host does not resolve');
     }
