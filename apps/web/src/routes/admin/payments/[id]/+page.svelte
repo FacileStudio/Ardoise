@@ -686,7 +686,7 @@
             </Button>
             {#if showReject}
               <Textarea bind:value={rejectReason} placeholder={$i18n.t('admin.payments.declared.rejectReason')} />
-              <Button variant="danger" class="w-full" disabled={declaredBusy} onclick={handleRejectDeclared}>
+              <Button variant="ghost-danger" class="w-full" disabled={declaredBusy} onclick={handleRejectDeclared}>
                 {$i18n.t('admin.payments.declared.rejectConfirm')}
               </Button>
             {:else}
@@ -732,7 +732,7 @@
             {/if}
 
             <Button
-              variant="danger"
+              variant="ghost-danger"
               class="w-full"
               icon={icons.revoke}
               onclick={() => (showCancelDialog = true)}

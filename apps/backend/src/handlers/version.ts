@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { Context } from 'hono';
 
-export function resolveVersion(source: Record<string, string | undefined> = process.env): string {
-  return source.APP_VERSION?.trim() || 'dev';
+const ROOT_PACKAGE = new URL('../../../../package.json', import.meta.url);
+
+export function resolveVersion(path: URL = ROOT_PACKAGE): string {
+  return (JSON.parse(readFileSync(path, 'utf8')) as { version: string }).version;
 }
 
 export function createVersionHandler(version: string = resolveVersion()) {

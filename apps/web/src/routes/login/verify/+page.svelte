@@ -51,7 +51,7 @@
         {$i18n.t('auth.magicLink.invalidTitle')}
       </h1>
       <Alert tone="danger" class="mt-4">{$i18n.t('auth.magicLink.invalidBody')}</Alert>
-      <Button href={resolve('/login')} variant="outline" size="lg" class="mt-6 w-full">
+      <Button href={resolve('/login')} variant="secondary" size="lg" class="mt-6 w-full">
         {$i18n.t('auth.magicLink.backToLogin')}
       </Button>
     {:else}

@@ -204,7 +204,7 @@
 	<Page width="xl">
 		<PageHeader title="Documents" description="Gérez vos factures, devis et contrats">
 			{#snippet actions()}
-				<Button variant="outline" href={resolve('/admin/documents/import')} icon={ardoise.pdf}>
+				<Button variant="secondary" href={resolve('/admin/documents/import')} icon={ardoise.pdf}>
 					{$i18n.t('import.action')}
 				</Button>
 				<Button href={resolve('/admin/documents/create')} icon={icons.plus}
@@ -390,7 +390,7 @@
 					<Button href={resolve('/admin/documents/create')} icon={icons.plus}>
 						Créer un document
 					</Button>
-					<Button variant="outline" href={resolve('/admin/documents/import')} icon={ardoise.pdf}>
+					<Button variant="secondary" href={resolve('/admin/documents/import')} icon={ardoise.pdf}>
 						{$i18n.t('import.action')}
 					</Button>
 				{/if}

@@ -14,6 +14,11 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- `@facile/muse` v0.14.4 to v0.16.1. Buttons use the `secondary` and `ghost-danger` variants in place of the deprecated `outline` and `danger`.
+- `GET /version` returns the version of the root `package.json`, which the backend image now carries, so it matches the release without any deploy environment change. The `VERSION` build argument and the `APP_VERSION` and `RAILWAY_GIT_COMMIT_SHA` plumbing are gone.
+
 ## [0.19.4] - 2026-11-07
 ### Fixed
 
