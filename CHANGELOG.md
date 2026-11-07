@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-11-07
+
 ### Fixed
 
 - Publishing a plan version reuses the previous version's Stripe price for every price whose amount, currency and interval did not change, moving the unique `stripePriceId` to the new row in the publish transaction. Only changed prices create a new Stripe price and archive the old one, so subscribers stay on their price ids.
