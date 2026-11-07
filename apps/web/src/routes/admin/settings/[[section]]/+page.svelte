@@ -98,8 +98,8 @@
 
   $effect(() => {
     if (!loadedStaff) return;
-    if (requested === 'appearance') void goto(sectionHref(BASE, 'preferences'), { replaceState: true });
-    else if (!route.known) void goto(BASE, { replaceState: true });
+    if (requested === 'appearance') void goto(resolve(sectionHref(BASE, 'preferences') as '/'), { replaceState: true });
+    else if (!route.known) void goto(resolve(BASE as '/'), { replaceState: true });
   });
   let loadedStaff = $state(false);
   const webhookPlaceholder = ['admin.user.created', 'admin.user.updated', 'settings.updated', 'settings.*'].join('\n');
