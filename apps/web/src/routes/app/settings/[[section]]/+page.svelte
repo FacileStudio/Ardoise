@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Page, SettingsLayout, orderSections, sectionHref, settingsRoute } from '@facile/muse';
   import { icons } from '$lib/icons';
@@ -17,8 +18,8 @@
   const route = $derived(settingsRoute(requested, orderSections(sections)));
 
   $effect(() => {
-    if (requested === 'appearance') void goto(sectionHref(BASE, 'preferences'), { replaceState: true });
-    else if (!route.known) void goto(BASE, { replaceState: true });
+    if (requested === 'appearance') void goto(resolve(sectionHref(BASE, 'preferences') as '/'), { replaceState: true });
+    else if (!route.known) void goto(resolve(BASE as '/'), { replaceState: true });
   });
 </script>
 
