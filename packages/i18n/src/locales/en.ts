@@ -220,6 +220,7 @@ export const en = {
     title: 'Revenue',
     subtitle: 'What you have collected, and what is still to come from unpaid invoices and signed work.',
     overdueRule: 'Late payments and late invoices are counted under To collect only, never in the forecast.',
+    taxNote: 'Amounts in euros, {{label}}.',
     remainderNote: 'Link payments to their invoice for an exact remainder.',
     loadFailed: 'The figures could not be loaded.',
     retry: 'Retry',
