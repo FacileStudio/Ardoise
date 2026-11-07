@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.19.3] - 2026-11-07
+
 ### Changed
 
 - `StripeService.createCheckoutSession` no longer passes `payment_method_types: ['card']`. Every Checkout Ardoise opens (client invoice payments, maintenance subscriptions and Facile plan subscriptions) now takes its payment methods from the Stripe account's payment method configuration, so SEPA Direct Debit appears once it is active there. The asynchronous SEPA events (`checkout.session.async_payment_succeeded` and `async_payment_failed`) are already handled by the payment webhook.
