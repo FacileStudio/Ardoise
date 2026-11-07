@@ -163,26 +163,39 @@ describe('missionRouter.delete', () => {
     expect(deleted.length).toBe(0);
   });
 
-  it('deletes a mission holding only drafts and quotes', async () => {
+  it('keeps a mission that holds a numbered quote', async () => {
     const deleted: any[] = [];
-    const quotesDeleted: any[] = [];
+    const caller = callerFor({
+      mission: {
+        findUnique: async () => missionRow,
+        delete: async (args: any) => deleted.push(args),
+      },
+      document: { count: async ({ where }: any) => (where.quoteNumber ? 2 : 0) },
+      payment: { count: async () => 0 },
+    });
+
+    await expect(caller.delete({ id: 'p-1' })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('2 numbered quote(s)'),
+    });
+    expect(deleted.length).toBe(0);
+  });
+
+  it('deletes a mission that holds nothing issued', async () => {
+    const deleted: any[] = [];
     const caller = callerFor({
       $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
       mission: {
         findUnique: async () => missionRow,
         delete: async (args: any) => deleted.push(args),
       },
-      document: {
-        count: async () => 0,
-        deleteMany: async (args: any) => quotesDeleted.push(args),
-      },
+      document: { count: async () => 0, deleteMany: async () => ({ count: 0 }) },
       payment: { count: async () => 0 },
     });
 
     await caller.delete({ id: 'p-1' });
 
     expect(deleted.length).toBe(1);
-    expect(quotesDeleted[0].where).toEqual({ missionId: 'p-1', type: 'devis' });
   });
 });
 

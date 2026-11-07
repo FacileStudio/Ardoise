@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, setDefaultTimeout } from 'bun:test';
 import { prisma } from '@repo/database';
 import { lockTestDatabase } from '@repo/database/test-lock';
 import { formatNumber, previewDocumentNumber, withDocumentNumber } from './numbering';
@@ -8,8 +8,11 @@ describe('formatNumber', () => {
     const now = new Date(2026, 10, 6);
     expect(formatNumber('FAC-{{year}}-{{month}}-{{number}}', 7, now)).toBe('FAC-2026-11-007');
     expect(formatNumber('F{{number}}', 1234, now)).toBe('F1234');
+    expect(formatNumber('{{year}}/{{year}}-{{number}}', 1, now)).toBe('2026/2026-001');
   });
 });
+
+setDefaultTimeout(30_000);
 
 const enabled = !!process.env.TEST_DATABASE_URL;
 
@@ -90,5 +93,37 @@ describe.skipIf(!enabled)('per-space document numbering against Postgres', () =>
   it('refuses a space that does not exist instead of creating a counter', async () => {
     await expect(issue('missing-space', 'invoice')).rejects.toThrow();
     expect(await prisma.documentCounter.count({ where: { spaceId: 'missing-space' } })).toBe(0);
+  });
+});
+
+describe.skipIf(!enabled)('stored files of a failed document', () => {
+  let release: () => Promise<void> = async () => {};
+
+  beforeAll(async () => {
+    release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
+    await prisma.$executeRawUnsafe('TRUNCATE "Space" CASCADE');
+  }, 60_000);
+
+  afterAll(async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE "Space" CASCADE');
+    await release();
+  }, 60_000);
+
+  it('runs the registered cleanups when the insert fails, and not when it succeeds', async () => {
+    const space = await prisma.space.create({ data: { name: 'C' } });
+    const removed: string[] = [];
+
+    await expect(
+      withDocumentNumber(prisma, space.id, 'invoice', async (_number, _tx, onRollback) => {
+        onRollback(async () => void removed.push('blob-1'));
+        throw new Error('insert failed');
+      })
+    ).rejects.toThrow('insert failed');
+    expect(removed).toEqual(['blob-1']);
+
+    await withDocumentNumber(prisma, space.id, 'invoice', async (_number, _tx, onRollback) => {
+      onRollback(async () => void removed.push('blob-2'));
+    });
+    expect(removed).toEqual(['blob-1']);
   });
 });

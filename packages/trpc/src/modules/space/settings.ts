@@ -2,12 +2,15 @@ import type { Prisma, PrismaClient } from '@repo/database';
 
 export const DEFAULT_LATE_FEE_RATE = "3 fois le taux d'intérêt légal en vigueur";
 
+export const DEFAULT_VAT_EXEMPTION_MENTION = 'TVA non applicable, art. 293 B du CGI';
+
 export const SPACE_SETTINGS_DEFAULTS = {
   invoiceNumberFormat: 'FAC-{{year}}-{{number}}',
   quoteNumberFormat: 'DEVIS-{{year}}-{{number}}',
   paymentTermsDays: 30,
   lateFeeRate: DEFAULT_LATE_FEE_RATE,
   recoveryFeeAmount: 40,
+  vatExempt: false,
   vatExemptionMention: null as string | null,
   legalMentions: null as string | null,
   webhookUrl: null as string | null,
@@ -34,6 +37,7 @@ export async function getSpaceSettings(db: Db, spaceId: string): Promise<SpaceSe
     paymentTermsDays: row.paymentTermsDays,
     lateFeeRate: row.lateFeeRate,
     recoveryFeeAmount: Number(row.recoveryFeeAmount),
+    vatExempt: row.vatExempt,
     vatExemptionMention: row.vatExemptionMention,
     legalMentions: row.legalMentions,
     webhookUrl: row.webhookUrl,
@@ -48,7 +52,10 @@ export function documentDefaults(settings: SpaceSettingsValues) {
     defaultPaymentTermsDays: settings.paymentTermsDays,
     defaultLateFeeRate: settings.lateFeeRate,
     defaultRecoveryFeeAmount: settings.recoveryFeeAmount,
-    defaultVatExemptionMention: settings.vatExemptionMention,
+    defaultVatExempt: settings.vatExempt,
+    defaultVatExemptionMention: settings.vatExempt
+      ? settings.vatExemptionMention || DEFAULT_VAT_EXEMPTION_MENTION
+      : settings.vatExemptionMention,
     defaultLegalMentions: settings.legalMentions,
   };
 }

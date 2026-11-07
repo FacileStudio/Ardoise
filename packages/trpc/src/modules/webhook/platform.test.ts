@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { createHmac } from 'node:crypto';
 import type { PrismaClient } from '@repo/database';
 import { encryptSecret } from '../settings/service';
-import { dispatchConfiguredWebhook } from './service';
+import { deliverConfiguredWebhook, dispatchConfiguredWebhook } from './service';
 
 process.env.ENCRYPTION_SECRET ??= 'platform-webhook-test-secret-0123456789';
 
@@ -24,7 +24,7 @@ function run(webhookSecret: string) {
       findUnique: async () => ({ id: 'global', webhookUrl: 'https://hook.example.test/in', webhookSecret, webhookEvents: [] }),
     },
   } as unknown as PrismaClient;
-  return dispatchConfiguredWebhook({ db, log: silent as never, spaceId: null, event: 'settings.updated', data: {} }).then(
+  return deliverConfiguredWebhook({ db, log: silent as never, spaceId: null, event: 'settings.updated', data: {} }).then(
     () => seen
   );
 }
@@ -51,5 +51,23 @@ describe('platform webhook signature', () => {
 
     const expected = `sha256=${createHmac('sha256', 'legacy-plain-secret').update(request!.body).digest('hex')}`;
     expect(request!.headers.get('x-ardoise-signature-256')).toBe(expected);
+  });
+});
+
+describe('dispatchConfiguredWebhook', () => {
+  it('returns before a slow receiver answers and never throws', async () => {
+    let release: () => void = () => {};
+    globalThis.fetch = (() => new Promise<Response>((resolve) => (release = () => resolve(new Response('{}'))))) as unknown as typeof fetch;
+    const db = {
+      settings: { findUnique: async () => ({ id: 'global', webhookUrl: 'https://hook.example.test/in', webhookSecret: null, webhookEvents: [] }) },
+    } as unknown as PrismaClient;
+
+    const started = Date.now();
+    await dispatchConfiguredWebhook({ db, log: silent as never, spaceId: null, event: 'x', data: {} });
+    expect(Date.now() - started).toBeLessThan(200);
+    release();
+
+    const broken = { settings: { findUnique: async () => { throw new Error('db down'); } } } as unknown as PrismaClient;
+    await dispatchConfiguredWebhook({ db: broken, log: silent as never, spaceId: null, event: 'x', data: {} });
   });
 });

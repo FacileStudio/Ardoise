@@ -71,6 +71,17 @@ describe('resolveSafeTarget', () => {
     await refuses('https://localhost/in', async () => ['127.0.0.1', '::1']);
   });
 
+  it('refuses a name whose lookup hangs', async () => {
+    await expect(
+      resolveSafeTarget('https://slow.example.test/in', () => new Promise(() => {}), 20)
+    ).rejects.toBeInstanceOf(UnsafeWebhookUrlError);
+  });
+
+  it('refuses IPv4-compatible IPv6 addresses', async () => {
+    expect(isPublicAddress('::7f00:1')).toBe(false);
+    expect(isPublicAddress('::808:808')).toBe(false);
+  });
+
   it('refuses a name that does not resolve', async () => {
     await refuses('https://nowhere.example.test/in', async () => {
       throw new Error('ENOTFOUND');

@@ -427,14 +427,16 @@ export const missionService = {
   deleteMission: async (db: PrismaClient, userId: string, id: string) => {
     await requireMission(db, userId, id);
 
-    const [invoices, payments] = await Promise.all([
+    const [invoices, quotes, payments] = await Promise.all([
       db.document.count({ where: { missionId: id, invoiceNumber: { not: null } } }),
+      db.document.count({ where: { missionId: id, quoteNumber: { not: null } } }),
       db.payment.count({ where: { missionId: id } }),
     ]);
 
-    if (invoices > 0 || payments > 0) {
+    if (invoices > 0 || quotes > 0 || payments > 0) {
       const blockers = [
         invoices > 0 ? `${invoices} invoice(s)` : null,
+        quotes > 0 ? `${quotes} numbered quote(s) (issued numbers must stay continuous)` : null,
         payments > 0 ? `${payments} payment(s)` : null,
       ].filter(Boolean);
       throw new TRPCError({
@@ -444,7 +446,7 @@ export const missionService = {
     }
 
     await db.$transaction([
-      db.document.deleteMany({ where: { missionId: id, type: 'devis' } }),
+      db.document.deleteMany({ where: { missionId: id, type: 'devis', quoteNumber: null } }),
       db.mission.delete({ where: { id } }),
     ]);
 

@@ -172,7 +172,7 @@ async function createSpecializedPrestation(
   ctx: any
 ) {
   const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-  return withDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx) => {
+  return withDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx, onRollback) => {
     const documentData = {
       type,
       invoice_number: invoiceNumber,
@@ -196,6 +196,7 @@ async function createSpecializedPrestation(
     const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
     const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+    onRollback(() => removeStoredPdf(ctx.storage, stored.pdfUrl));
 
     const document = await tx.document.create({
       data: {
@@ -691,7 +692,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        return await withDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx) => {
+        return await withDocumentNumber(ctx.db, scopeSpaceId(scope), 'invoice', async (invoiceNumber, tx, onRollback) => {
           const documentData = {
             type: 'facture_prestation' as const,
             invoice_number: invoiceNumber,
@@ -714,6 +715,7 @@ export const documentRouter = router({
           const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
           const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+          onRollback(() => removeStoredPdf(ctx.storage, stored.pdfUrl));
 
           const document = await tx.document.create({
             data: {
@@ -783,7 +785,7 @@ export const documentRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { client, provider, settings, tvaRate, scope, missionId } = await loadDocumentContext(ctx.db, ctx.user!.id, input.clientId, input.providerId, input.spaceId, input.missionId);
-        return await withDocumentNumber(ctx.db, scopeSpaceId(scope), 'quote', async (quoteNumber, tx) => {
+        return await withDocumentNumber(ctx.db, scopeSpaceId(scope), 'quote', async (quoteNumber, tx, onRollback) => {
           const documentData = {
             type: 'maintenance' as const,
             quote_number: quoteNumber,
@@ -807,6 +809,7 @@ export const documentRouter = router({
           const legalPersistence = buildDocumentLegalPersistence(client, provider, settings);
 
           const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
+          onRollback(() => removeStoredPdf(ctx.storage, stored.pdfUrl));
 
           const document = await tx.document.create({
             data: {
