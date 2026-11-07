@@ -14,6 +14,7 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.19.4] - 2026-11-07
 ### Fixed
 
 - `numbering.test.ts` took the test-database advisory lock in three sibling `describe` blocks. Bun 1.2.0, the version `mise.toml` pinned, runs the `beforeAll` hooks of sibling blocks before the first block's `afterAll`, so the second lock waited for the first and the file hung. The file now takes the lock once. No application code changed: production invoice and quote numbering was not affected.
