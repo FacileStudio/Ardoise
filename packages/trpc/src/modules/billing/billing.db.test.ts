@@ -747,6 +747,63 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     expect(await createPortal(deps, { ...base, owner_email: 'BOSS@client.fr' })).toEqual({ url: 'https://billing.stripe.com/p/1' });
   });
 
+  describe('republishing a plan', () => {
+    async function republish(prices: { month: number | null; year: number | null }) {
+      await seedBilling(prisma);
+      const { stripe, calls } = fakeStripe();
+      const staff = await staffUser('yann@facile.studio', 'sub_yann');
+      const caller = billingRouter.createCaller({
+        db: prisma,
+        user: { id: staff.id, role: 'MEMBER', email: staff.email },
+        env: { OIDC_ISSUER: ISSUER, BILLING_STAFF_SUBS: 'sub_yann' },
+        getStripe: async () => ({ client: stripe }),
+        log: silent,
+      } as never);
+      const v1 = await versionOf('pro');
+      await caller.publish({ id: v1.id });
+      const before = await prisma.planPrice.findMany({ where: { versionId: v1.id }, orderBy: { interval: 'asc' } });
+      const draft = await caller.createDraft({ planId: v1.planId });
+      await caller.saveDraft({ id: draft.id, values: {}, prices });
+      calls.length = 0;
+      await caller.publish({ id: draft.id });
+      const after = await prisma.planPrice.findMany({ where: { versionId: draft.id }, orderBy: { interval: 'asc' } });
+      const old = await prisma.planPrice.findMany({ where: { versionId: v1.id }, orderBy: { interval: 'asc' } });
+      const archived = calls.filter((c) => c.method === 'prices.update' && (c.args[1] as any).active === false).map((c) => c.args[0]);
+      const created = calls.filter((c) => c.method === 'prices.create').map((c) => (c.args[0] as any).recurring.interval);
+      await prisma.auditLog.deleteMany({ where: { userId: staff.id } });
+      return { before, after, old, archived, created };
+    }
+
+    it('reuses the Stripe prices of an unchanged republish', async () => {
+      const { before, after, old, archived, created } = await republish({ month: 1200, year: 12000 });
+      expect(before.every((row) => row.stripePriceId)).toBe(true);
+      expect(created).toEqual([]);
+      expect(archived).toEqual([]);
+      expect(after.map((row) => row.stripePriceId)).toEqual(before.map((row) => row.stripePriceId));
+      expect(old.map((row) => row.stripePriceId)).toEqual([null, null]);
+    });
+
+    it('creates a Stripe price only for the changed row', async () => {
+      const { before, after, old, archived, created } = await republish({ month: 1500, year: 12000 });
+      expect(created).toEqual(['month']);
+      const [oldMonth, oldYear] = [before.find((r) => r.interval === 'month')!, before.find((r) => r.interval === 'year')!];
+      const newMonth = after.find((r) => r.interval === 'month')!;
+      const newYear = after.find((r) => r.interval === 'year')!;
+      expect(newYear.stripePriceId).toBe(oldYear.stripePriceId);
+      expect(newMonth.stripePriceId).not.toBe(oldMonth.stripePriceId);
+      expect(newMonth.stripePriceId).toBeTruthy();
+      expect(archived).toEqual([oldMonth.stripePriceId]);
+      expect(old.find((r) => r.interval === 'year')!.stripePriceId).toBeNull();
+    });
+
+    it('creates new prices when every row changed', async () => {
+      const { before, after, archived, created } = await republish({ month: 1300, year: 13000 });
+      expect(created.sort()).toEqual(['month', 'year']);
+      expect(archived.sort()).toEqual(before.map((r) => r.stripePriceId).sort());
+      expect(after.every((r) => r.stripePriceId && !before.some((b) => b.stripePriceId === r.stripePriceId))).toBe(true);
+    });
+  });
+
   it('gives lookup keys back when a draft with Stripe prices is deleted', async () => {
     await seedBilling(prisma);
     const { stripe, calls } = fakeStripe();
