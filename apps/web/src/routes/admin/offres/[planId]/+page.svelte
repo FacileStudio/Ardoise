@@ -223,7 +223,7 @@
           <button
             type="button"
             onclick={() => selectVersion(row.id)}
-            class="flex items-center gap-2 rounded-fc-pill border px-3 py-1.5 text-fc-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring {row.id === selectedId ? 'border-fc-accent text-fc-fg' : 'border-fc-border text-fc-fg-muted'}"
+            class="flex items-center gap-2 rounded-fc-pill px-3 py-1.5 text-fc-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring {row.id === selectedId ? 'bg-fc-accent text-fc-accent-fg' : 'bg-fc-surface text-fc-fg-muted'}"
           >
             v{row.version}
             <Badge tone={status.tone}>{status.label}</Badge>
@@ -253,7 +253,7 @@
             </Field>
           </div>
 
-          <div class="flex flex-col divide-y divide-fc-border">
+          <div class="flex flex-col">
             {#each features as feature (feature.id)}
               <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex min-w-0 flex-col">

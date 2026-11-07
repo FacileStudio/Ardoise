@@ -3,6 +3,7 @@
   import { MobileNav, PageTransition, SideBar } from '@facile/muse';
   import { i18n } from '@repo/i18n/svelte';
   import authStore from '$lib/auth-store';
+  import { userMenuOptions } from '$lib/user-menu.svelte';
   import { ardoise } from '$lib/icons';
 
   let { children } = $props();
@@ -24,12 +25,15 @@
     },
   ]);
 
+  const userMenu = $derived(userMenuOptions('client'));
+
   const identity = $derived(
     $authStore.user
       ? {
           name:
             `${$authStore.user.firstName ?? ''} ${$authStore.user.lastName ?? ''}`.trim() ||
             $authStore.user.email,
+          email: $authStore.user.email,
           avatar: $authStore.user.avatarUrl || undefined,
         }
       : undefined
@@ -51,6 +55,7 @@
       user={identity}
       userHref="/app/settings"
       userActive={settingsActive}
+      {userMenu}
       class="h-full"
     />
   </div>
@@ -66,5 +71,6 @@
     user={identity}
     profileHref="/app/settings"
     profileActive={settingsActive}
+    {userMenu}
   />
 </div>

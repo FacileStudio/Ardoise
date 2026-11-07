@@ -146,7 +146,7 @@
         <div class="h-40"></div>
       {:else}
         {#if error}
-          <p class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p class="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         {/if}

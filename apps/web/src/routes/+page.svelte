@@ -6,7 +6,7 @@
 </script>
 
 <div class="min-h-screen bg-background text-foreground">
-  <header class="border-b border-border">
+  <header>
     <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
       <div class="flex h-14 items-center gap-3">
         <iconify-icon icon="solar:bill-list-bold-duotone" width="28" class="text-foreground"></iconify-icon>
@@ -62,7 +62,6 @@
       </div>
     </section>
 
-    <div class="mx-auto max-w-5xl px-6"><div class="h-px bg-border"></div></div>
 
     <section class="mx-auto max-w-5xl px-6 py-20">
       <div class="grid gap-6 md:grid-cols-3">
@@ -83,8 +82,8 @@
             desc: "Suivez l'état de vos paiements : en attente, payées, expirées."
           }
         ] as feature (feature.title)}
-          <div class="rounded-xl border border-border p-6">
-            <div class="mb-3 flex size-10 items-center justify-center rounded-md border border-border">
+          <div class="rounded-xl bg-fc-component p-6">
+            <div class="mb-3 flex size-10 items-center justify-center rounded-md bg-fc-surface">
               <iconify-icon icon={feature.icon} width="20"></iconify-icon>
             </div>
             <h3 class="text-base font-heading font-semibold">{feature.title}</h3>
@@ -94,7 +93,6 @@
       </div>
     </section>
 
-    <div class="mx-auto max-w-5xl px-6"><div class="h-px bg-border"></div></div>
 
     <section class="mx-auto max-w-5xl px-6 py-20 text-center">
       <h2 class="text-3xl font-bold tracking-tight">Prêt à commencer ?</h2>
@@ -112,7 +110,7 @@
     </section>
   </main>
 
-  <footer class="border-t border-border text-center">
+  <footer class="text-center">
     <div class="mx-auto max-w-5xl px-6 py-6 text-sm text-muted-foreground">
       © {new Date().getFullYear()} Ardoise par <a href="https://facile.studio" class="font-semibold underline hover:cursor-pointer">Facile.</a>
     </div>

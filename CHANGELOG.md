@@ -14,6 +14,14 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- The admin sidebar and the client portal (`/app`) show muse's user card and open its user menu: account, settings, theme, help and sign out. The theme choice is stored in `localStorage` (`ardoise.theme`) and applied before the page paints. The language row is hidden because the interface is French
+- Settings use muse's `SettingsLayout`. Admin settings: Profile, Preferences, Company, Billing, Payments, Email, Integrations and Advanced at `/admin/settings/<section>`. Client settings: Profile and Preferences. `/…/settings/appearance` redirects to `preferences`
+- The space settings page is split into General, Numbering, Legal mentions (payment terms, VAT regime), Outgoing webhook, Platform studio and Advanced at `/admin/spaces/<id>/settings/<section>`. The fields, validation and saves are unchanged
+- The admin profile is read-only (identity lives in Registre); the in-settings sign-out and the Appearance tab are gone. Clients keep editing their first and last name, since they have no Facile account
+- muse v0.7.4 to v0.14.1; the landing, login and offers pages lose their decorative borders
+
 ## [0.18.0] - 2026-11-07
 
 ### Added
