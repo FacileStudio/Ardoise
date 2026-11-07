@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-07
+
 > **Migration:** `20261106150000_space_settings` creates `SpaceSettings` and `DocumentCounter`. Every existing space gets a `SpaceSettings` row copied from the global `Settings` (number formats and payment defaults). Each space that already holds numbered documents gets its invoice and quote counters seeded from the global `Settings.nextInvoiceNumber` and `nextQuoteNumber`, which were above every number ever issued, so no number is reused whatever the old format looked like. Spaces without documents start at 1. The migration also adds partial unique indexes on `(spaceId, invoiceNumber)` and `(spaceId, quoteNumber)`; if a space already holds duplicates it prints a notice and skips that index instead of failing.
 
 ### Added
