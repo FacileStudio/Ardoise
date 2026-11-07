@@ -150,7 +150,9 @@ export async function previewPublish(db: PrismaClient, versionId: string): Promi
  * Publishes a draft version. The Stripe product `plan_<key>` is upserted, one
  * recurring price per interval is created with lookup key
  * `plan_<key>_<interval>` and transfer_lookup_key, the version is marked
- * published and the previous one archived in one transaction, and only once
+ * published and the previous one archived in one transaction (a price whose
+ * amount, currency and interval did not change keeps its Stripe price, whose
+ * unique id moves from the old row to the new one in that same transaction), and only once
  * that has committed are the previous version's Stripe prices archived. Every
  * Stripe write carries an idempotency key, so a retry after a failure
  * reuses what Stripe already created.
@@ -165,6 +167,7 @@ export async function publishVersion(
   assertDraft(version);
   const previous = await publishedVersion(db, version.planId);
   const kept = new Set<string>();
+  const assignments: { rowId: string; stripePriceId: string }[] = [];
 
   if (version.prices.length > 0) {
     if (!stripe) {
@@ -172,11 +175,19 @@ export async function publishVersion(
     }
     const product = await upsertProduct(stripe, version.plan);
     for (const price of version.prices) {
-      const stripePriceId = await ensurePrice(stripe, product, version, price);
+      const reusable = price.stripePriceId
+        ? null
+        : previous?.prices.find(
+            (old) =>
+              old.stripePriceId &&
+              old.interval === price.interval &&
+              old.amount === price.amount &&
+              old.currency === price.currency
+          );
+      const candidate = reusable ? { ...price, stripePriceId: reusable.stripePriceId } : price;
+      const stripePriceId = await ensurePrice(stripe, product, version, candidate);
       kept.add(stripePriceId);
-      if (stripePriceId !== price.stripePriceId) {
-        await db.planPrice.update({ where: { id: price.id }, data: { stripePriceId } });
-      }
+      if (stripePriceId !== price.stripePriceId) assignments.push({ rowId: price.id, stripePriceId });
     }
   }
 
@@ -192,6 +203,10 @@ export async function publishVersion(
       where: { planId: version.planId, status: 'published', id: { not: version.id } },
       data: { status: 'archived' },
     });
+    for (const { rowId, stripePriceId } of assignments) {
+      await tx.planPrice.updateMany({ where: { stripePriceId, id: { not: rowId } }, data: { stripePriceId: null } });
+      await tx.planPrice.update({ where: { id: rowId }, data: { stripePriceId } });
+    }
   });
 
   const archiveFailures: string[] = [];
