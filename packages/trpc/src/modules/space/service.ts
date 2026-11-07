@@ -125,22 +125,28 @@ function settingsView(settings: SpaceSettingsValues, canManage: boolean) {
 }
 
 export const spaceService = {
-  async resolveScope(db: PrismaClient, userId: string, spaceId?: string | null): Promise<Scope> {
+  async resolveScope(
+    db: PrismaClient,
+    userId: string,
+    spaceId?: string | null,
+    minimumRole: SpaceRole = 'MEMBER'
+  ): Promise<Scope> {
     if (!spaceId) {
       const memberships = await db.spaceMember.findMany({
         where: { userId },
-        select: { spaceId: true },
+        select: { spaceId: true, role: true },
       });
-      return mintScope({ type: 'spaces', spaceIds: memberships.map((m) => m.spaceId), userId });
+      const allowed =
+        minimumRole === 'MEMBER'
+          ? memberships
+          : memberships.filter((m) => ROLE_WEIGHT[m.role] >= ROLE_WEIGHT[minimumRole]);
+      return mintScope({ type: 'spaces', spaceIds: allowed.map((m) => m.spaceId), userId });
     }
 
     const member = await db.spaceMember.findUnique({
       where: { spaceId_userId: { spaceId, userId } },
     });
-
-    if (!member) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this space' });
-    }
+    requireRole(member, minimumRole);
 
     return mintScope({ type: 'space', spaceId, userId });
   },

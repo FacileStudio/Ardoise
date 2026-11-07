@@ -13,11 +13,13 @@
 
   let collapsed = $state(false);
   let scroller: HTMLElement | null = $state(null);
+  let canSeeRevenue = $state(false);
   onMount(async () => {
     void platformStaff.load();
     try {
       const rows = await trpc.space.list.query();
       spaceFilter.setSpaces(rows.map(({ id, name }) => ({ id, name })));
+      canSeeRevenue = rows.some(({ role }) => role === 'ADMIN' || role === 'OWNER');
     } catch {
       return;
     }
@@ -35,21 +37,23 @@
     { href: '/admin/missions', label: $i18n.t('nav.missions'), icon: ardoise.mission },
     { href: '/admin/documents', label: $i18n.t('nav.documents'), icon: ardoise.document },
     { href: '/admin/payments', label: $i18n.t('nav.payments'), icon: icons.card },
-    { href: '/admin/revenus', label: $i18n.t('nav.revenue'), icon: ardoise.revenue },
+    ...(canSeeRevenue
+      ? [{ href: '/admin/revenus', label: $i18n.t('nav.revenue'), icon: ardoise.revenue }]
+      : []),
     { href: '/admin/statistics', label: $i18n.t('nav.statistics'), icon: icons.dashboard },
     ...(platformStaff.staff
       ? [{ href: '/admin/offres', label: $i18n.t('nav.offers'), icon: ardoise.offer }]
       : []),
   ]);
 
-  const MOBILE_HREFS = [
+  const MOBILE_HREFS = $derived([
     '/admin/clients',
-    '/admin/prestataires',
+    canSeeRevenue ? '/admin/revenus' : '/admin/prestataires',
     '/admin/missions',
     '/admin/documents',
     '/admin/payments',
-    '/admin/revenus',
-  ];
+    '/admin/statistics',
+  ]);
 
   const navPages = $derived(links.map((link) => ({ ...link, active: isActive(link.href) })));
   const mobilePages = $derived(

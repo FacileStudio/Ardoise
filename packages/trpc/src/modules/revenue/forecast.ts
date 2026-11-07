@@ -3,6 +3,7 @@ import type { PrismaClient } from '@repo/database';
 import { decimal, format, sum, type Money } from './money';
 import { monthRange, parisMonth } from './months';
 import { LIVE_STATUSES, OPEN_STATUSES, clock, hasStatus, inSpaces, parisOf } from './sql';
+import { unrequestedInvoicesSql } from './invoices';
 import { overdueSql } from './to-collect';
 import { FORECAST_SOURCES, type ForecastSource, type RevenueOverview } from './types';
 
@@ -26,8 +27,9 @@ const scheduledSql = (spaceIds: string[], now: Date) => Prisma.sql`
 `;
 
 /**
- * Renewals of active subscriptions: a PAID Stripe payment that repeats every month or year,
- * counted from its last payment date, only inside the horizon.
+ * Renewals of an active maintenance series, by card or by bank transfer: a PAID payment that
+ * repeats every month or year, counted from its last payment date, only inside the horizon.
+ * A cancelled series is no longer PAID, so it projects nothing.
  */
 const recurringSql = (spaceIds: string[], now: Date) => {
   const { nowLocal, monthStart } = clock(now);
@@ -47,7 +49,6 @@ const recurringSql = (spaceIds: string[], now: Date) => {
         AND p.status::text = 'PAID'
         AND p."paidAt" IS NOT NULL
         AND p.frequency::text IN ('MONTHLY', 'YEARLY')
-        AND p."collectionMethod"::text = 'STRIPE'
     ) renewal
     WHERE renewal.at > ${nowLocal}
       AND renewal.at < ${monthStart} + interval '12 months'
@@ -56,7 +57,8 @@ const recurringSql = (spaceIds: string[], now: Date) => {
 
 /**
  * Accepted work not invoiced yet: per mission, the latest quote when it is accepted, minus
- * every invoice of the mission and every payment on it that has no invoice. Dated by the
+ * every invoice of the mission and every one-time payment on it that has no document or is an
+ * appel de fonds (an advance on the quote). Recurring payments are never part of the quote. Dated by the
  * quote's dueDate, clamped to the current month when that date has passed.
  */
 const unbilledSql = (spaceIds: string[], now: Date) => {
@@ -83,8 +85,11 @@ const unbilledSql = (spaceIds: string[], now: Date) => {
     ) invoiced ON true
     LEFT JOIN LATERAL (
       SELECT SUM(p.amount) AS amount FROM "Payment" p
+      LEFT JOIN "Document" pd ON pd.id = p."documentId"
       WHERE p."missionId" = q."missionId" AND p."spaceId" = q."spaceId"
-        AND p."documentId" IS NULL AND ${hasStatus(Prisma.sql`p.status`, LIVE_STATUSES)}
+        AND p.frequency::text = 'ONE_TIME'
+        AND ${hasStatus(Prisma.sql`p.status`, LIVE_STATUSES)}
+        AND (p."documentId" IS NULL OR pd.type::text = 'appel_de_fonds')
     ) paid ON true
     WHERE q."acceptedAt" IS NOT NULL
       AND m.status::text NOT IN ('CANCELLED', 'PAID')
@@ -93,30 +98,15 @@ const unbilledSql = (spaceIds: string[], now: Date) => {
 };
 
 /**
- * Invoices issued but never put on a live payment, due at their dueDate (or the payment term
- * after creation), clamped to the current month when that date has passed.
+ * Invoices with no payment request yet that are not late: late ones are listed under "To collect".
  */
 const invoicedSql = (spaceIds: string[], now: Date) => {
-  const { nowLocal } = clock(now);
-  const due = Prisma.sql`COALESCE(d."dueDate", d."createdAt" + d."paymentTermsDays" * interval '1 day')`;
+  const { dayStart } = clock(now);
 
   return Prisma.sql`
-    SELECT 'invoiced' AS source, GREATEST(${parisOf(due)}, ${nowLocal}) AS at, d.total AS amount
-    FROM "Document" d
-    LEFT JOIN "Mission" m ON m.id = d."missionId"
-    WHERE d.type::text = 'facture_prestation'
-      AND d."invoiceNumber" IS NOT NULL
-      AND ${inSpaces(Prisma.sql`d."spaceId"`, spaceIds)}
-      AND (m.id IS NULL OR m.status::text <> 'CANCELLED')
-      AND NOT EXISTS (
-        SELECT 1 FROM "Payment" p
-        WHERE p."documentId" = d.id AND ${hasStatus(Prisma.sql`p.status`, LIVE_STATUSES)}
-      )
-      AND NOT EXISTS (
-        SELECT 1 FROM "PaymentDocument" pd
-        JOIN "Payment" p ON p.id = pd."paymentId"
-        WHERE pd."documentId" = d.id AND ${hasStatus(Prisma.sql`p.status`, LIVE_STATUSES)}
-      )
+    SELECT 'invoiced' AS source, i.due AS at, i.amount AS amount
+    FROM (${unrequestedInvoicesSql(spaceIds)}) i
+    WHERE i.due >= ${dayStart}
   `;
 };
 

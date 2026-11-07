@@ -1,8 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { resolve } from '$app/paths';
   import {
-    Badge,
     BarChart,
     Button,
     EmptyState,
@@ -18,6 +16,7 @@
   import { trpc } from '$lib/trpc';
   import { spaceFilter } from '$lib/space-filter.svelte';
   import { SpaceFilter } from '$lib/ui';
+  import OpenPayments from '$lib/components/revenue/OpenPayments.svelte';
   import ForecastSource from '$lib/components/revenue/ForecastSource.svelte';
   import {
     FORECAST_ORDER,
@@ -80,10 +79,18 @@
       : null
   );
 
-  const hasForecast = $derived(overview ? !isZero(overview.forecast.total) : false);
+  const overdueDelta = $derived.by(() => {
+    if (!overview) return '';
+    const { overdue, overdueInvoices } = overview.toCollect;
+    const count = $i18n.t('revenue.toCollect.count', { count: overdue.count });
+    if (overdueInvoices.count === 0) return count;
+    const invoices = $i18n.t('revenue.toCollect.ofInvoices', {
+      amount: euro(overdueInvoices.amount),
+    });
+    return `${count}, ${invoices}`;
+  });
 
-  const statusTone = (status: string, overdue: boolean) =>
-    overdue ? 'danger' : status === 'PENDING' ? 'warning' : 'info';
+  const hasForecast = $derived(overview ? !isZero(overview.forecast.total) : false);
 </script>
 
 <svelte:head><title>{$i18n.t('revenue.title')} - Ardoise</title></svelte:head>
@@ -145,7 +152,7 @@
         <StatCard
           label={$i18n.t('revenue.toCollect.overdue')}
           value={euro(overview.toCollect.overdue.amount)}
-          delta={$i18n.t('revenue.toCollect.count', { count: overview.toCollect.overdue.count })}
+          delta={overdueDelta}
         />
         <StatCard
           label={$i18n.t('revenue.toCollect.upcoming')}
@@ -154,50 +161,20 @@
         />
       </div>
 
-      {#if overview.toCollect.items.length === 0}
-        <EmptyState
-          title={$i18n.t('revenue.toCollect.emptyTitle')}
-          description={$i18n.t('revenue.toCollect.emptyDescription')}
-        />
-      {:else}
-        <ul class="flex flex-col gap-2">
-          {#each overview.toCollect.items as item (item.id)}
-            <li>
-              <a
-                href={resolve(`/admin/payments/${item.id}`)}
-                aria-label={$i18n.t('revenue.toCollect.openPayment')}
-                class="flex flex-col gap-2 rounded-fc-md bg-fc-component p-4 transition-colors
-                  hover:bg-fc-surface sm:flex-row sm:items-center sm:justify-between"
-              >
-                <span class="flex min-w-0 flex-col gap-1">
-                  <span class="truncate text-fc-sm font-medium text-fc-fg">{item.clientName}</span>
-                  <span class="truncate text-fc-xs text-fc-fg-muted">
-                    {item.missionName
-                      ? $i18n.t('revenue.toCollect.mission', { name: item.missionName })
-                      : ''}
-                    {item.frequency !== 'ONE_TIME'
-                      ? ` ${$i18n.t('revenue.toCollect.recurring')}`
-                      : ''}
-                  </span>
-                </span>
-                <span class="flex flex-wrap items-center gap-3 sm:justify-end">
-                  <Badge tone={statusTone(item.status, item.overdue)}>
-                    {$i18n.t(`revenue.status.${item.status}`)}
-                  </Badge>
-                  <span class="text-fc-xs text-fc-fg-muted">
-                    {$i18n.t('revenue.toCollect.due', { date: day(item.dueDate) })}
-                  </span>
-                  <span class="text-fc-sm font-semibold text-fc-fg">{euro(item.amount)}</span>
-                </span>
-              </a>
-            </li>
-          {/each}
-        </ul>
-        {#if overview.toCollect.truncated}
-          <p class="text-fc-xs text-fc-fg-muted">
-            {$i18n.t('revenue.toCollect.truncated', { count: overview.toCollect.items.length })}
-          </p>
-        {/if}
+      <OpenPayments
+        items={overview.toCollect.items}
+        truncated={overview.toCollect.truncated}
+        {euro}
+        {day}
+      />
+
+      {#if overview.toCollect.veryLate.count > 0}
+        <p class="rounded-fc-md bg-fc-warning/10 p-3 text-fc-xs text-fc-warning">
+          {$i18n.t('revenue.toCollect.veryLate', {
+            amount: euro(overview.toCollect.veryLate.amount),
+            count: overview.toCollect.veryLate.count,
+          })}
+        </p>
       {/if}
     </Section>
 
@@ -238,7 +215,7 @@
         {/each}
       </div>
 
-      <p class="text-fc-xs text-fc-fg-muted">{$i18n.t('revenue.vatNote')}</p>
+      <p class="text-fc-xs text-fc-fg-muted">{$i18n.t('revenue.overdueRule')}</p>
     </Section>
   {/if}
 </Page>
