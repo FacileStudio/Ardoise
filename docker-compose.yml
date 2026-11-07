@@ -17,8 +17,6 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-      args:
-        VERSION: ${APP_VERSION:-}
     environment:
       NODE_ENV: production
       PORT: 3001

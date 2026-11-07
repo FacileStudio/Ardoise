@@ -339,7 +339,7 @@
 				<Button href={resolve('/admin/documents')} variant="ghost" disabled={submitting}>
 					{$i18n.t('import.cancel')}
 				</Button>
-				<Button variant="outline" disabled={submitting || uploading} onclick={() => submit(true)}>
+				<Button variant="secondary" disabled={submitting || uploading} onclick={() => submit(true)}>
 					{$i18n.t('import.submitAnother')}
 				</Button>
 				<Button type="submit" disabled={submitting || uploading}>

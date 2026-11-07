@@ -298,7 +298,7 @@
             <Section title={$i18n.t('spaces.leaveSpace')} card>
                 <div>
                     <Button
-                        variant="danger"
+                        variant="ghost-danger"
                         icon={icons.logout}
                         onclick={() => { showLeaveDialog = true; }}
                     >

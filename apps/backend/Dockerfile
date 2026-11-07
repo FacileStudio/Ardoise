@@ -58,6 +58,9 @@ RUN bun -e "const rewrites = new Map([['apps/backend/package.json', pkg => { del
 
 RUN bun install --no-frozen-lockfile --network-concurrency 8
 
+COPY package.json /tmp/release-package.json
+RUN bun -e "const release = JSON.parse(await Bun.file('/tmp/release-package.json').text()); const pkg = JSON.parse(await Bun.file('package.json').text()); pkg.version = release.version; await Bun.write('package.json', JSON.stringify(pkg, null, 2) + '\n')"
+
 FROM deps AS builder
 WORKDIR /app
 
@@ -88,11 +91,7 @@ WORKDIR /app
 
 COPY --from=typst /bin/typst /usr/local/bin/typst
 
-ARG VERSION=
-ARG RAILWAY_GIT_COMMIT_SHA=
-
 ENV NODE_ENV=production
-ENV APP_VERSION=${VERSION:-${RAILWAY_GIT_COMMIT_SHA:-dev}}
 
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 --gid nodejs backend

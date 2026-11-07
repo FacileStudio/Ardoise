@@ -209,7 +209,7 @@
       <Alert tone="warning" title="{behind} abonnement(s) sur une ancienne version">
         <div class="flex flex-col gap-2">
           <span>Ils gardent leurs anciens droits et leur ancien prix tant qu’ils ne sont pas migrés.</span>
-          <Button variant="outline" size="sm" class="w-fit" onclick={() => (migrateOpen = true)}>
+          <Button variant="secondary" size="sm" class="w-fit" onclick={() => (migrateOpen = true)}>
             Migrer vers la v{published.version}
           </Button>
         </div>
@@ -278,7 +278,7 @@
                   Supprimer le brouillon
                 </Button>
               {/if}
-              <Button variant="outline" onclick={saveDraft} disabled={busy}>Enregistrer</Button>
+              <Button variant="secondary" onclick={saveDraft} disabled={busy}>Enregistrer</Button>
               <Button icon={icons.check} onclick={openPublish} disabled={busy}>Publier</Button>
             </div>
           {/if}
@@ -298,7 +298,7 @@
           <Field label="Offre gratuite" helper="Celle des espaces sans abonnement">
             <Switch bind:checked={meta.isFree} label={meta.isFree ? 'Oui' : 'Non'} />
           </Field>
-          <Button type="submit" variant="outline" disabled={busy}>Enregistrer</Button>
+          <Button type="submit" variant="secondary" disabled={busy}>Enregistrer</Button>
         </form>
       </Card>
     </Section>

@@ -430,7 +430,7 @@
 							{/if}
 							<div class="flex justify-end">
 								<Button
-									variant="outline"
+									variant="secondary"
 									onclick={saveSignature}
 									disabled={savingSignature ||
 										signedUploading ||

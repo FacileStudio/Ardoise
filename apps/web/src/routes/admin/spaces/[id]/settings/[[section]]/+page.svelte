@@ -359,7 +359,7 @@
                     {:else if isOwner}
                         <DangerZone title={$i18n.t('spaces.deleteSpace')} description={$i18n.t('spaces.deleteConfirm', { name: space.name })}>
                             <Button
-                                variant="danger"
+                                variant="ghost-danger"
                                 icon={icons.remove}
                                 onclick={() => { showDeleteDialog = true; }}
                                 disabled={deleting}

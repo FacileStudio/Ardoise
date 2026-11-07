@@ -191,6 +191,6 @@ Workflows in `.github/workflows/`:
 
 - `filet.yml`: runs the filet code-quality check on pushes to `main` and on pull requests.
 - `ci.yml`: install, Prisma generate, typecheck and lint on pushes to `main` and on pull requests.
-- `release.yml`: on a `v*` tag, checks that the tag equals the `package.json` version and that `CHANGELOG.md` has a matching section, runs the same typecheck and lint, pushes `ghcr.io/facilestudio/ardoise` (backend image, `VERSION` build arg set to the tag) and creates the GitHub release from the changelog section.
+- `release.yml`: on a `v*` tag, checks that the tag equals the `package.json` version and that `CHANGELOG.md` has a matching section, runs the same typecheck and lint, pushes `ghcr.io/facilestudio/ardoise` (backend image) and creates the GitHub release from the changelog section.
 
-A tag does not deploy: Dokploy auto-deploys the Compose stack on every push to `main`, and `apps/*/railway.toml` only describe Railway builds. `GET /version` returns the `VERSION` build arg, else `RAILWAY_GIT_COMMIT_SHA`, else `dev`.
+A tag does not deploy: Dokploy auto-deploys the Compose stack on every push to `main`, and `apps/*/railway.toml` only describe Railway builds. `GET /version` returns the `version` of the root `package.json`, which the backend Dockerfile copies into the image, so it always matches the release commit.
