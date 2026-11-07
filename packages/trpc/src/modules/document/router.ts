@@ -422,7 +422,7 @@ export const documentRouter = router({
         'Document not found'
       );
 
-      const issuedNumber = document.invoiceNumber ?? document.quoteNumber;
+      const issuedNumber = document.source === 'generated' ? (document.invoiceNumber ?? document.quoteNumber) : null;
       if (issuedNumber) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',

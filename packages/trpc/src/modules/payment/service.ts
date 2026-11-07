@@ -13,6 +13,7 @@ import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/servi
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
 import { requirePlatformStudio } from '../space/studio';
+import { DEFAULT_VAT_EXEMPTION_MENTION, getSpaceSettings } from '../space/settings';
 import { syncMissionPaid } from '../mission/sync';
 import { isOverdue, startOfDueDay } from './overdue';
 import type {
@@ -980,6 +981,8 @@ export const paymentService = {
       });
     }
 
+    const regime = await getSpaceSettings(db, payment.spaceId);
+
     const receiptData: ReceiptData = {
       receiptNumber: payment.id,
       receiptDate: payment.paidAt
@@ -1005,7 +1008,11 @@ export const paymentService = {
           price: Number(payment.amount),
         },
       ],
-      tvaRate: Number(settings.tvaRate),
+      tvaRate: regime.vatExempt ? 0 : Number(settings.tvaRate),
+      vatExempt: regime.vatExempt,
+      vatExemptionMention: regime.vatExempt
+        ? regime.vatExemptionMention || DEFAULT_VAT_EXEMPTION_MENTION
+        : (regime.vatExemptionMention ?? ''),
     };
 
     let logoPath: string | undefined;

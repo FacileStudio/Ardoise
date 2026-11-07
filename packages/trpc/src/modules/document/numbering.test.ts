@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, setDefaultTimeout } from 'bun:test';
-import { prisma } from '@repo/database';
+import { Prisma, prisma } from '@repo/database';
 import { lockTestDatabase } from '@repo/database/test-lock';
 import { formatNumber, previewDocumentNumber, withDocumentNumber } from './numbering';
 
@@ -93,6 +93,110 @@ describe.skipIf(!enabled)('per-space document numbering against Postgres', () =>
   it('refuses a space that does not exist instead of creating a counter', async () => {
     await expect(issue('missing-space', 'invoice')).rejects.toThrow();
     expect(await prisma.documentCounter.count({ where: { spaceId: 'missing-space' } })).toBe(0);
+  });
+});
+
+describe.skipIf(!enabled)('a counter that fell behind', () => {
+  let release: () => Promise<void> = async () => {};
+  let spaceId = '';
+  let userId = '';
+
+  beforeAll(async () => {
+    release = await lockTestDatabase(process.env.TEST_DATABASE_URL!);
+  }, 60_000);
+
+  afterAll(async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE "User", "Space" CASCADE');
+    await release();
+  }, 60_000);
+
+  beforeEach(async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE "User", "Space" CASCADE');
+    userId = (await prisma.user.create({ data: { email: 'n@x.test', firstName: 'n', lastName: 'n', role: 'MEMBER' } })).id;
+    spaceId = (await prisma.space.create({ data: { name: 'N' } })).id;
+  });
+
+  const insert = (tx: Prisma.TransactionClient, number: string) =>
+    tx.document.create({
+      data: {
+        type: 'facture_prestation',
+        name: `${number}.pdf`,
+        invoiceNumber: number,
+        clientName: 'c',
+        providerName: 'p',
+        items: [],
+        subtotal: 1,
+        tva: 0,
+        total: 1,
+        createdBy: userId,
+        spaceId,
+      },
+    });
+
+  const year = new Date().getFullYear();
+
+  it('moves past the numbers that exist and issues the next free one', async () => {
+    for (const n of ['001', '002', '007']) {
+      await prisma.document.create({
+        data: {
+          type: 'facture_prestation', name: 'x', invoiceNumber: `FAC-${year}-${n}`, clientName: 'c', providerName: 'p',
+          items: [], subtotal: 1, tva: 0, total: 1, createdBy: userId, spaceId,
+        },
+      });
+    }
+    let calls = 0;
+
+    const number = await withDocumentNumber(prisma, spaceId, 'invoice', async (candidate, tx) => {
+      calls += 1;
+      await insert(tx, candidate);
+      return candidate;
+    });
+
+    expect(number).toBe(`FAC-${year}-008`);
+    expect(calls).toBe(2);
+    expect(await previewDocumentNumber(prisma, spaceId, 'invoice')).toBe(`FAC-${year}-009`);
+  });
+
+  it('runs a cleanup registered by each failed attempt', async () => {
+    await prisma.document.create({
+      data: {
+        type: 'facture_prestation', name: 'x', invoiceNumber: `FAC-${year}-001`, clientName: 'c', providerName: 'p',
+        items: [], subtotal: 1, tva: 0, total: 1, createdBy: userId, spaceId,
+      },
+    });
+    const removed: string[] = [];
+
+    await withDocumentNumber(prisma, spaceId, 'invoice', async (candidate, tx, onRollback) => {
+      onRollback(async () => void removed.push(candidate));
+      await insert(tx, candidate);
+    });
+
+    expect(removed).toEqual([`FAC-${year}-001`]);
+  });
+
+  it('gives up after a bounded number of attempts when every number is taken', async () => {
+    let calls = 0;
+
+    await expect(
+      withDocumentNumber(prisma, spaceId, 'invoice', async (_candidate, tx) => {
+        calls += 1;
+        await insert(tx, 'ALWAYS-TAKEN');
+        await insert(tx, 'ALWAYS-TAKEN');
+      })
+    ).rejects.toMatchObject({ code: 'P2002' });
+    expect(calls).toBe(20);
+  }, 60_000);
+
+  it('does not retry a failure that is not a number conflict', async () => {
+    let calls = 0;
+
+    await expect(
+      withDocumentNumber(prisma, spaceId, 'invoice', async () => {
+        calls += 1;
+        throw new Error('boom');
+      })
+    ).rejects.toThrow('boom');
+    expect(calls).toBe(1);
   });
 });
 

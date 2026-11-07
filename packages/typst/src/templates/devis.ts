@@ -189,7 +189,7 @@ ${legalLetDeclarations}
   #v(0.4cm)
   #text(size: 9.5pt)[
     Devis valable jusqu'au #validity_date. \\
-    #if deposit_percent != "" [Un acompte de #deposit_percent\\u{00A0}% du montant HT est dû à la commande. \\ ]
+    #if deposit_percent != "" [Un acompte de #deposit_percent\\u{00A0}% du montant#ht est dû à la commande. \\ ]
     Délai de paiement : #payment_terms_days jours à compter de la date de facture.
   ]
 ]

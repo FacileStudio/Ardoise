@@ -429,7 +429,7 @@ export const missionService = {
 
     const [invoices, quotes, payments] = await Promise.all([
       db.document.count({ where: { missionId: id, invoiceNumber: { not: null } } }),
-      db.document.count({ where: { missionId: id, quoteNumber: { not: null } } }),
+      db.document.count({ where: { missionId: id, source: 'generated', quoteNumber: { not: null } } }),
       db.payment.count({ where: { missionId: id } }),
     ]);
 
@@ -446,7 +446,9 @@ export const missionService = {
     }
 
     await db.$transaction([
-      db.document.deleteMany({ where: { missionId: id, type: 'devis', quoteNumber: null } }),
+      db.document.deleteMany({
+        where: { missionId: id, type: 'devis', OR: [{ quoteNumber: null }, { source: 'imported' }] },
+      }),
       db.mission.delete({ where: { id } }),
     ]);
 

@@ -34,6 +34,9 @@ export const receipt: string = `#set document(
 
 #let items = ({{items}})
 #let tva_rate = {{tva_rate}}
+#let vat_exempt = "{{vat_exempt}}" == "true"
+#let vat_exemption_mention = "{{vat_exemption_mention}}"
+#let ht = if vat_exempt { "" } else { " HT" }
 
 // Header
 #grid(
@@ -113,8 +116,8 @@ export const receipt: string = `#set document(
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[DESCRIPTION],
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[QTÉ],
   text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[UNITÉ],
-  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[P.U. HT],
-  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[TOTAL HT],
+  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[P.U.#ht],
+  text(weight: "bold", font: "Satoshi", size: 9.5pt, tracking: 0.3pt)[TOTAL#ht],
   ..items.map(item => (
     [#text(size: 9.5pt)[#item.description]],
     [#text(size: 9.5pt)[#str(item.quantity)]],
@@ -138,16 +141,18 @@ export const receipt: string = `#set document(
       row-gutter: 0.4cm,
       align: (left, left),
       inset: (left: 0pt, right: 0pt, top: 0pt, bottom: 0pt),
-      [#text(size: 10pt)[Sous-total HT]],
-      [#text(weight: "medium", font: "Satoshi", size: 10pt)[#fmt(subtotal)]],
-      [#text(size: 10pt)[TVA (#tva_rate%)]],
-      [#text(font: "Satoshi", size: 10pt)[#fmt(tva_amount)]],
+      ..if vat_exempt { () } else { (
+        [#text(size: 10pt)[Sous-total HT]],
+        [#text(weight: "medium", font: "Satoshi", size: 10pt)[#fmt(subtotal)]],
+        [#text(size: 10pt)[TVA (#tva_rate%)]],
+        [#text(font: "Satoshi", size: 10pt)[#fmt(tva_amount)]],
+      ) },
       [],
       [],
       table.hline(stroke: 2pt + rgb("#1a1a1a")),
       [],
       [],
-      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL TTC],
+      text(size: 13pt, weight: "bold", font: "Satoshi")[TOTAL#if not vat_exempt [ TTC]],
       text(size: 14pt, weight: "bold", fill: rgb("#1a1a1a"), font: "Satoshi")[#fmt(total)],
     )
   ]
@@ -185,7 +190,7 @@ export const receipt: string = `#set document(
 #v(0.6cm)
 #text(size: 8pt, fill: rgb("#888888"))[
   #provider_name – Développeur Freelance \
-  TVA non applicable, article 293 B du CGI \
+  #if vat_exemption_mention != "" [#vat_exemption_mention \ ]
   Ce reçu atteste du paiement intégral de la prestation.
 ]
 `;
