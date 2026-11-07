@@ -15,6 +15,7 @@ const silent = { debug() {}, error() {}, info() {}, warn() {}, child() { return 
 const untouchable = new Proxy({}, { get: (_t, key) => (key === 'then' ? undefined : () => { throw new Error('unreachable'); }) });
 
 const stripeCalls: Array<{ params: any; options: any }> = [];
+const customerCalls: Array<{ params: any; options: any }> = [];
 const sessions = new Map<string, any>();
 const cancelled: string[] = [];
 let intentStatus = 'requires_payment_method';
@@ -64,7 +65,12 @@ const fakeStripe = {
       retrieve: async () => ({ status: subscriptionStatus }),
       cancel: async (id: string) => void cancelled.push(id),
     },
-    customers: { create: async () => ({ id: 'cus_new' }) },
+    customers: {
+      create: async (params: any, options: any) => {
+        customerCalls.push({ params, options });
+        return { id: 'cus_new' };
+      },
+    },
     billingPortal: {
       configurations: { list: async () => ({ data: [] }), create: async () => ({ id: 'bpc_1' }) },
       sessions: { create: async () => ({ url: 'https://billing.stripe.com/p/session/x' }) },
@@ -186,6 +192,7 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
 
   beforeEach(() => {
     stripeCalls.length = 0;
+    customerCalls.length = 0;
     sessions.clear();
     cancelled.length = 0;
     intentStatus = 'requires_payment_method';
@@ -281,6 +288,7 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
       const maintenance = await makePayment({ frequency: 'MONTHLY', amount: 49, totalWithFees: 49, description: 'Maintenance' });
       await clientA()('portal.checkout', { paymentId: maintenance.id });
       expect(stripeCalls[0]!.params.mode).toBe('subscription');
+      expect(stripeCalls[0]!.params).not.toHaveProperty('payment_method_types');
       expect(stripeCalls[0]!.params.customer).toBe('cus_new');
       expect(stripeCalls[0]!.params.line_items[0].price_data).toMatchObject({ unit_amount: 4900, recurring: { interval: 'month' } });
       expect(stripeCalls[0]!.params.subscription_data.metadata.payment_id).toBe(maintenance.id);
@@ -288,6 +296,86 @@ describe.skipIf(!enabled)('client payments against Postgres', () => {
       await prisma.payment.update({ where: { id: maintenance.id }, data: { stripeSubscriptionId: 'sub_1', status: 'PAID' } });
       const portal = (await clientA()('portal.manageMaintenance', { paymentId: maintenance.id })) as { url: string };
       expect(portal.url).toBe('https://billing.stripe.com/p/session/x');
+    });
+  });
+
+  describe('payment methods and customer footer', () => {
+    const maintenance = () => makePayment({ frequency: 'MONTHLY', amount: 49, totalWithFees: 49, description: 'Maintenance' });
+    const freshCustomer = () => prisma.client.update({ where: { id: ids.clientA }, data: { stripeCustomerId: null } });
+    const addProvider = (data: Record<string, unknown>) => prisma.provider.create({ data: { name: 'Seller', spaceId: ids.space, ...data } as never });
+
+    beforeEach(async () => {
+      await prisma.provider.deleteMany({ where: { spaceId: ids.space } });
+      await prisma.spaceSettings.deleteMany({ where: { spaceId: ids.space } });
+      await freshCustomer();
+    });
+
+    afterAll(async () => {
+      await prisma.provider.deleteMany({ where: { spaceId: ids.space } });
+      await prisma.spaceSettings.deleteMany({ where: { spaceId: ids.space } });
+    });
+
+    it('lets Checkout pick the payment methods for one-time and recurring payments', async () => {
+      const once = await makePayment();
+      await clientA()('portal.checkout', { paymentId: once.id });
+      await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+      expect(stripeCalls).toHaveLength(2);
+      for (const call of stripeCalls) expect(call.params).not.toHaveProperty('payment_method_types');
+    });
+
+    it('prints the space seller and exemption mention on a VAT-exempt space', async () => {
+      await addProvider({ name: 'Marie Martin EI', siret: '123 456 789 00012' });
+      await prisma.spaceSettings.create({ data: { spaceId: ids.space, vatExempt: true } });
+      await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+      expect(customerCalls[0]!.params.invoice_settings).toEqual({
+        footer: 'Marie Martin EI · SIRET 123 456 789 00012 · TVA non applicable, art. 293 B du CGI',
+      });
+    });
+
+    it('prints the space own exemption mention when it set one', async () => {
+      await addProvider({ name: 'Marie Martin EI', siret: '123' });
+      await prisma.spaceSettings.create({ data: { spaceId: ids.space, vatExempt: true, vatExemptionMention: 'Exonere de TVA' } });
+      await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+      expect(customerCalls[0]!.params.invoice_settings.footer).toBe('Marie Martin EI · SIRET 123 · Exonere de TVA');
+    });
+
+    it('prints the VAT number on a space subject to VAT, and skips it when absent', async () => {
+      await addProvider({ name: 'Acme SAS', siret: '987', tvaIntracom: 'FR12987654321' });
+      await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+      expect(customerCalls[0]!.params.invoice_settings.footer).toBe('Acme SAS · SIRET 987 · TVA FR12987654321');
+
+      await prisma.provider.updateMany({ where: { spaceId: ids.space }, data: { tvaIntracom: null } });
+      await freshCustomer();
+      await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+      expect(customerCalls[1]!.params.invoice_settings.footer).toBe('Acme SAS · SIRET 987');
+    });
+
+    it('never borrows another space identity and sets no footer without a provider', async () => {
+      await prisma.provider.create({ data: { name: 'Yann THEVENIN EI', siret: '924', spaceId: null } });
+      try {
+        const other = await prisma.space.findFirstOrThrow({ where: { name: 'Other' } });
+        await prisma.provider.create({ data: { name: 'Other seller', siret: '555', spaceId: other.id } });
+        await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+        expect(customerCalls[0]!.params.invoice_settings.footer).toBe('Yann THEVENIN EI · SIRET 924');
+        await prisma.provider.deleteMany({ where: { spaceId: null } });
+        await freshCustomer();
+        await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+        expect(customerCalls[1]!.params).not.toHaveProperty('invoice_settings');
+      } finally {
+        await prisma.provider.deleteMany({ where: { spaceId: null } });
+        await prisma.provider.deleteMany({ where: { name: 'Other seller' } });
+      }
+    });
+
+    it('puts the footer in the customer idempotency key', async () => {
+      await addProvider({ name: 'Acme SAS', siret: '987' });
+      await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+      await prisma.provider.updateMany({ where: { spaceId: ids.space }, data: { siret: '988' } });
+      await freshCustomer();
+      await clientA()('portal.checkout', { paymentId: (await maintenance()).id });
+      const [first, second] = customerCalls.map((c) => c.options.idempotencyKey);
+      expect(first).toStartWith(`customer:${ids.clientA}:`);
+      expect(first).not.toBe(second);
     });
   });
 

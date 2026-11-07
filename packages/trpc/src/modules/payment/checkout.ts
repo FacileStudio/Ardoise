@@ -4,6 +4,8 @@ import type { StripeService } from '@repo/stripe';
 import { logger } from '@repo/logger';
 import { requirePlatformStudio } from '../space/studio';
 import { isPayableStatus, expectedCents } from './amounts';
+import { paymentFooter } from './footer';
+import { digest } from '../billing/api';
 
 const PORTAL_TAG = 'ardoise-maintenance';
 const STRIPE_HOST = 'checkout.stripe.com';
@@ -13,6 +15,7 @@ export interface CheckoutPayment {
   id: string;
   spaceId: string;
   clientId: string;
+  missionId?: string | null;
   status: string;
   frequency: 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
   collectionMethod: 'STRIPE' | 'MANUAL';
@@ -139,13 +142,15 @@ async function ensureCustomer(
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'The client has no contact email' });
   }
 
+  const footer = await paymentFooter(db, payment);
   const customer = await stripe.client.customers.create(
     {
       email: payment.client.contactEmail,
       name: payment.client.companyName,
+      ...(footer ? { invoice_settings: { footer } } : {}),
       metadata: { clientId: payment.clientId, spaceId: payment.spaceId },
     },
-    { idempotencyKey: `customer:${payment.clientId}` }
+    { idempotencyKey: `customer:${payment.clientId}:${digest(footer ?? '')}` }
   );
 
   const claimed = await db.client.updateMany({

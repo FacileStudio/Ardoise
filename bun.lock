@@ -47,7 +47,7 @@
       "name": "@repo/web",
       "version": "0.0.0",
       "dependencies": {
-        "@facile/muse": "github:FacileStudio/muse#v0.14.2",
+        "@facile/muse": "github:FacileStudio/muse#v0.14.4",
         "@repo/admin": "workspace:*",
         "@repo/i18n": "workspace:*",
         "@repo/logger": "workspace:*",
@@ -431,7 +431,7 @@
 
     "@facile/magiclink": ["@facile/magiclink@github:FacileStudio/magiclink#76568b1", {}, "FacileStudio-magiclink-76568b1", "sha512-r0c7ShWiIo83HTkPBQemcdMKxokCxwk6LSV283u28eFLzcwB6aS5bv1mg5AOybODp3wdx2mY+Orpt5pAuM0xYg=="],
 
-    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#69aca01", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-69aca01", "sha512-wgh+j+Hg+VwxPo0r8kPfbxsCTIkcCXX6y6L5G8YICC4VcXnY8VHJAaQBQEsY+wJNs5om//cLxO8E/BqSfzZxcA=="],
+    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#dd8011c", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-dd8011c", "sha512-L4rm6ojsizFQmuWqBXs2hg0QULKa6DtqA3gSH1d74ayMK68tvwVsXeG8IQ4XhPWqzeNiIE/q+DyLy7EIUTqV/g=="],
 
     "@hapi/bourne": ["@hapi/bourne@3.0.0", "", {}, "sha512-Waj1cwPXJDucOib4a3bAISsKJVb15MKi9IvmTI/7ssVEm6sywXGjVJDhl6/umt1pK1ZS7PacXU3A1PmFKHEZ2w=="],
 

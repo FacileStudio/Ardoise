@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- `StripeService.createCheckoutSession` no longer passes `payment_method_types: ['card']`. Every Checkout Ardoise opens (client invoice payments, maintenance subscriptions and Facile plan subscriptions) now takes its payment methods from the Stripe account's payment method configuration, so SEPA Direct Debit appears once it is active there. The asynchronous SEPA events (`checkout.session.async_payment_succeeded` and `async_payment_failed`) are already handled by the payment webhook.
+- Stripe customers created for client maintenance subscriptions carry an invoice footer built from the payment's space: the lead provider of the payment's mission (else the space's oldest provider) with its SIRET, then the space's VAT exemption mention when `vatExempt` is on, or the provider's VAT number otherwise. A space with no provider gets no footer. The footer is part of the customer idempotency key. Customers that already exist are not updated.
+- `@facile/muse` v0.14.2 to v0.14.4: the user menu offers French and English only (`locales`), the language switch re-renders live, the Subscription row no longer needs a `plan`, and a single-slice `DonutChart` draws a clean ring.
+
 ## [0.19.2] - 2026-11-07
 
 ### Fixed
