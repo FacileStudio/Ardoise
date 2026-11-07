@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- `@facile/muse` v0.14.1 to v0.14.2: the user menu clamps itself inside the viewport at the right edge of a header.
+- The language picked in the user menu or in Preferences is kept across reloads (`fc_locale` cookie). French stays the default when nothing was chosen. The app no longer forces French on every load.
+- The admin user menu has a Subscription row that opens `https://sso.facile.studio/spaces`.
+
 ## [0.19.0] - 2026-11-07
 ### Changed
 
