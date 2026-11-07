@@ -16,7 +16,7 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Added
 
-- A Revenus page (`/admin/revenus`), for space admins and owners only, with what is collected (this month, this year, the last 12 months), what is still to collect (overdue payments and invoices, upcoming payments, and a separate figure for invoices more than 12 months late) and a 12-month forecast by source: open payments by due date, recurring maintenance by card or transfer, accepted quotes not yet invoiced (remainder only, dated by the quote date or "not dated") and invoices without a payment request. No probability is applied. Amounts are summed in Postgres in Europe/Paris through the new `revenue.overview` procedure. French and English strings.
+- A Revenus page (`/admin/revenus`), for space admins and owners only, with what is collected (this month, this year, the last 12 months), what is still to collect (overdue payments and invoices, upcoming payments, and a separate figure for invoices more than 12 months late) and a 12-month forecast by source: open payments by due date, recurring maintenance by card or transfer, accepted quotes not yet invoiced (remainder only, dated by the quote date or "not dated") and invoices without a payment request. No probability is applied. Amounts are summed in Postgres in Europe/Paris through the new `revenue.overview` procedure. French and English strings. Amounts carry a "TTC" note, left out when every space in scope is VAT exempt (`SpaceSettings.vatExempt`).
 
 ## [0.17.0] - 2026-11-07
 

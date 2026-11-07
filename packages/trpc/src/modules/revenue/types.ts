@@ -37,6 +37,7 @@ export interface ForecastSourceTotals {
 export interface RevenueOverview {
   currency: 'EUR';
   timeZone: string;
+  taxLabel: 'TTC' | null;
   collected: {
     thisMonth: string;
     thisYear: string;

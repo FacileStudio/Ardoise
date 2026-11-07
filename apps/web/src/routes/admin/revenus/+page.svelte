@@ -225,6 +225,7 @@
       </div>
 
       <p class="text-fc-xs text-fc-fg-muted">
+        {#if overview.taxLabel}{$i18n.t('revenue.taxNote', { label: overview.taxLabel })}{/if}
         {$i18n.t('revenue.overdueRule')}
         {$i18n.t('revenue.remainderNote')}
       </p>

@@ -55,6 +55,20 @@ describe.skipIf(!enabled)('revenue: isolation and roles', () => {
     expect(onlyB.forecast.sources.invoiced.total).toBe('3333.00');
   });
 
+  it('labels amounts TTC unless every space in scope is VAT exempt', async () => {
+    await prisma.spaceSettings.upsert({
+      where: { spaceId: a.spaceId },
+      create: { spaceId: a.spaceId, vatExempt: true },
+      update: { vatExempt: true },
+    });
+
+    expect((await overviewOf(a.userId)).taxLabel).toBeNull();
+    expect((await overviewOf(b.userId, b.spaceId)).taxLabel).toBe('TTC');
+
+    await prisma.spaceSettings.update({ where: { spaceId: a.spaceId }, data: { vatExempt: false } });
+    expect((await overviewOf(a.userId)).taxLabel).toBe('TTC');
+  });
+
   it('refuses a space the caller does not belong to', async () => {
     await expect(overviewOf(a.userId, b.spaceId)).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });

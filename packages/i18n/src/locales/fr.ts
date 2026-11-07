@@ -222,6 +222,7 @@ export const fr: EnTranslations = {
     title: 'Revenus',
     subtitle: 'Ce qui est encaissé, et ce qui reste à venir sur les factures impayées et les travaux signés.',
     overdueRule: 'Les paiements et les factures en retard sont comptés uniquement dans À encaisser, jamais dans le prévisionnel.',
+    taxNote: 'Montants en euros {{label}}.',
     remainderNote: 'Liez les paiements à leur facture pour un reste exact.',
     loadFailed: 'Les chiffres n’ont pas pu être chargés.',
     retry: 'Réessayer',
