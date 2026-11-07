@@ -6,24 +6,26 @@
   import {
     Alert,
     Button,
-    Divider,
     Field,
     Input,
     Page,
-    PageHeader,
     SecretField,
+    SettingsLayout,
     SettingsRow,
     SettingsSection,
     Spinner,
     StatusDot,
-    Tabs,
     Textarea,
+    orderSections,
+    sectionHref,
+    settingsRoute,
     toast,
   } from '@facile/muse';
+  import { goto } from '$app/navigation';
   import { icons } from '$lib/icons';
   import { loadAuthConfig, type AuthConfig } from '$lib/auth-config';
   import ProfileSection from '$lib/components/settings/ProfileSection.svelte';
-  import AppearanceSection from '$lib/components/settings/AppearanceSection.svelte';
+  import PreferencesPanel from '$lib/components/settings/PreferencesPanel.svelte';
   import { ImageUpload } from '$lib/ui';
   import { platformStaff } from '$lib/platform-staff.svelte';
 
@@ -75,22 +77,31 @@
     defaultRecoveryFeeAmount?: number | string;
   };
 
+  const BASE = '/admin/settings';
   const SECTIONS = [
-    { id: 'profile', label: 'Profil', staff: false },
-    { id: 'appearance', label: 'Apparence', staff: false },
-    { id: 'company', label: 'Entreprise', staff: true },
-    { id: 'billing', label: 'Facturation', staff: true },
-    { id: 'payments', label: 'Paiements', staff: true },
-    { id: 'email', label: 'Email', staff: true },
-    { id: 'integrations', label: 'Intégrations', staff: true },
-    { id: 'advanced', label: 'Avancé', staff: false },
+    { id: 'profile', label: 'Profil', icon: icons.userCircle, staff: false },
+    { id: 'preferences', label: 'Préférences', icon: icons.palette, staff: false },
+    { id: 'company', label: 'Entreprise', icon: icons.space, staff: true },
+    { id: 'billing', label: 'Facturation', icon: icons.card, staff: true },
+    { id: 'payments', label: 'Paiements', icon: icons.card, staff: true },
+    { id: 'email', label: 'Email', icon: icons.mail, staff: true },
+    { id: 'integrations', label: 'Intégrations', icon: icons.plug, staff: true },
+    { id: 'advanced', label: 'Avancé', icon: icons.settings, staff: false },
   ] as const;
 
   const visible = $derived(SECTIONS.filter((s) => !s.staff || platformStaff.staff));
-  const section = $derived(
-    visible.some((s) => s.id === page.params.section) ? page.params.section! : 'profile'
+  const sections = $derived(
+    visible.map(({ id, label, icon }) => ({ id, label, icon, href: sectionHref(BASE, id) }))
   );
-  const tabs = $derived(visible.map(({ id, label }) => ({ id, label, href: `/admin/settings/${id}` })));
+  const requested = $derived(page.params.section);
+  const route = $derived(settingsRoute(requested, orderSections(sections)));
+
+  $effect(() => {
+    if (!loadedStaff) return;
+    if (requested === 'appearance') void goto(sectionHref(BASE, 'preferences'), { replaceState: true });
+    else if (!route.known) void goto(BASE, { replaceState: true });
+  });
+  let loadedStaff = $state(false);
   const webhookPlaceholder = ['admin.user.created', 'admin.user.updated', 'settings.updated', 'settings.*'].join('\n');
 
   let authConfig = $state<AuthConfig | null>(null);
@@ -114,6 +125,7 @@
   onMount(async () => {
     authConfig = await loadAuthConfig();
     await platformStaff.load();
+    loadedStaff = true;
     if (platformStaff.staff) await loadSettings();
     else loading = false;
   });
@@ -245,63 +257,61 @@
 {/snippet}
 
 <Page width="xl">
-  <div class="flex flex-col gap-4">
-    <PageHeader title="Réglages" />
-    <Tabs items={tabs} value={section} label="Sections des réglages" />
-    <Divider class="my-0" />
-  </div>
-
-  {#if section === 'profile'}
-    <ProfileSection area="admin" />
-  {:else if section === 'appearance'}
-    <AppearanceSection />
-  {:else if section === 'advanced'}
-    <SettingsSection
-      title="Espaces"
-      description="Les espaces viennent de Registre et décident qui voit quels clients."
-    >
-      <SettingsRow label="Espaces et membres">
-        <Button variant="ghost" href={resolve('/admin/spaces')}>Gérer les espaces</Button>
-      </SettingsRow>
-    </SettingsSection>
-    <SettingsSection title="Instance" description="Faits utiles quand quelque chose casse.">
-      <SettingsRow label="Application">
-        <span class="text-fc-sm text-fc-fg">Ardoise</span>
-      </SettingsRow>
-      <SettingsRow label="Connexion du personnel">
-        <StatusDot
-          tone={authConfig?.oidcEnabled ? 'success' : 'danger'}
-          label={authConfig?.oidcEnabled ? 'Facile SSO' : 'SSO non configuré'}
-        />
-      </SettingsRow>
-      <SettingsRow label="Portail client">
-        <StatusDot
-          tone={authConfig?.clientMagicLink ? 'success' : 'neutral'}
-          label="Lien de connexion par email"
-        />
-      </SettingsRow>
-    </SettingsSection>
-  {:else if loading}
-    <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
-  {:else if loadFailed}
-    <Alert tone="danger" title="Impossible de charger les paramètres" role="alert">
-      <p class="mb-3">Rien n'a été modifié. Réessayez avant de saisir quoi que ce soit.</p>
-      <Button variant="ghost" icon={icons.refresh} onclick={loadSettings}>Réessayer</Button>
-    </Alert>
-  {:else}
-    <svelte:boundary>
-      {@render configSection()}
-      {#snippet failed(error, reset)}
-        <Alert tone="danger" title="Cette section ne peut pas s'afficher" role="alert">
-          <p class="mb-3">{error instanceof Error ? error.message : 'Erreur inattendue.'}</p>
-          <Button variant="ghost" icon={icons.refresh} onclick={reset}>Réessayer</Button>
+  <SettingsLayout {sections} active={requested} backHref={BASE} title="Réglages">
+    {#snippet children(id)}
+      {#if id === 'profile'}
+        <ProfileSection area="admin" />
+      {:else if id === 'preferences'}
+        <PreferencesPanel />
+      {:else if id === 'advanced'}
+        <SettingsSection
+          title="Espaces"
+          description="Les espaces viennent de Registre et décident qui voit quels clients."
+        >
+          <SettingsRow label="Espaces et membres">
+            <Button variant="ghost" href={resolve('/admin/spaces')}>Gérer les espaces</Button>
+          </SettingsRow>
+        </SettingsSection>
+        <SettingsSection title="Instance" description="Faits utiles quand quelque chose casse.">
+          <SettingsRow label="Application">
+            <span class="text-fc-sm text-fc-fg">Ardoise</span>
+          </SettingsRow>
+          <SettingsRow label="Connexion du personnel">
+            <StatusDot
+              tone={authConfig?.oidcEnabled ? 'success' : 'danger'}
+              label={authConfig?.oidcEnabled ? 'Facile SSO' : 'SSO non configuré'}
+            />
+          </SettingsRow>
+          <SettingsRow label="Portail client">
+            <StatusDot
+              tone={authConfig?.clientMagicLink ? 'success' : 'neutral'}
+              label="Lien de connexion par email"
+            />
+          </SettingsRow>
+        </SettingsSection>
+      {:else if loading}
+        <div class="flex min-h-[40dvh] items-center justify-center"><Spinner size="lg" /></div>
+      {:else if loadFailed}
+        <Alert tone="danger" title="Impossible de charger les paramètres" role="alert">
+          <p class="mb-3">Rien n'a été modifié. Réessayez avant de saisir quoi que ce soit.</p>
+          <Button variant="ghost" icon={icons.refresh} onclick={loadSettings}>Réessayer</Button>
         </Alert>
-      {/snippet}
-    </svelte:boundary>
-  {/if}
+      {:else}
+        <svelte:boundary>
+          {@render configSection(id)}
+          {#snippet failed(error, reset)}
+            <Alert tone="danger" title="Cette section ne peut pas s'afficher" role="alert">
+              <p class="mb-3">{error instanceof Error ? error.message : 'Erreur inattendue.'}</p>
+              <Button variant="ghost" icon={icons.refresh} onclick={reset}>Réessayer</Button>
+            </Alert>
+          {/snippet}
+        </svelte:boundary>
+      {/if}
+    {/snippet}
+  </SettingsLayout>
 </Page>
 
-{#snippet configSection()}
+{#snippet configSection(section: string)}
   {#if section === 'company'}
     <SettingsSection title="Entreprise" description="Identité affichée sur vos documents.">
       <SettingsRow label="Nom commercial" stacked>

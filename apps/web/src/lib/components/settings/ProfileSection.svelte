@@ -1,12 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    Avatar,
-    Badge,
     Button,
-    ConfirmModal,
     Field,
     Input,
+    ProfileCard,
+    ProfileSection as FacileProfile,
     SettingsRow,
     SettingsSection,
     Spinner,
@@ -29,8 +28,6 @@
   let firstName = $state($authStore.user?.firstName ?? '');
   let lastName = $state($authStore.user?.lastName ?? '');
   let saving = $state(false);
-
-  let loggingOut = $state(false);
 
   const user = $derived($authStore.user);
   const staff = $derived(area === 'admin');
@@ -73,50 +70,36 @@
 {#if !loaded}
   <div class="flex min-h-[30dvh] items-center justify-center"><Spinner size="lg" /></div>
 {:else}
-  <SettingsSection title="Identité" description="Comment vous apparaissez dans Ardoise.">
-    <SettingsRow label="Photo">
-      <div class="flex items-center gap-3">
-        <Avatar name={fullName || user?.email || ''} src={avatarUrl} size="lg" />
-        {#if staff}
-          <Badge tone="admin">Administrateur</Badge>
-        {/if}
-      </div>
-    </SettingsRow>
-    <SettingsRow
-      label="Nom complet"
-      description={staff ? 'Fourni par le SSO, il se met à jour à chaque connexion.' : undefined}
-      stacked
-    >
-      <div class="grid gap-4 sm:grid-cols-2">
-        <Field label="Prénom">
-          <Input bind:value={firstName} disabled={staff} />
-        </Field>
-        <Field label="Nom">
-          <Input bind:value={lastName} disabled={staff} />
-        </Field>
-      </div>
-    </SettingsRow>
-    <SettingsRow
-      label="Adresse email"
-      description={staff ? 'Gérée par le SSO.' : 'Les liens de connexion sont envoyés à cette adresse.'}
-      stacked
-    >
-      <Field>
-        <Input value={user?.email ?? ''} disabled />
-      </Field>
-    </SettingsRow>
-    {#if !staff}
-      <SettingsRow>
-        <Button
-          icon={icons.check}
-          disabled={saving || !dirty || !firstName.trim() || !lastName.trim()}
-          onclick={saveProfile}
-        >
-          {saving ? 'Enregistrement...' : 'Enregistrer'}
-        </Button>
-      </SettingsRow>
-    {/if}
-  </SettingsSection>
+  {#if staff}
+    <FacileProfile
+      name={fullName || user?.email || ''}
+      email={user?.email}
+      avatar={avatarUrl}
+      role="Administrateur"
+    />
+  {:else}
+    <SettingsSection title="Profil" description="Comment vous apparaissez dans Ardoise." bare>
+      <ProfileCard name={fullName || user?.email || ''} email={user?.email} avatar={avatarUrl}>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <Field label="Prénom">
+            <Input bind:value={firstName} />
+          </Field>
+          <Field label="Nom">
+            <Input bind:value={lastName} />
+          </Field>
+        </div>
+        <div>
+          <Button
+            icon={icons.check}
+            disabled={saving || !dirty || !firstName.trim() || !lastName.trim()}
+            onclick={saveProfile}
+          >
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
+          </Button>
+        </div>
+      </ProfileCard>
+    </SettingsSection>
+  {/if}
 
   {#if company}
     <SettingsSection title="Entreprise" description="Informations enregistrées par votre prestataire.">
@@ -141,21 +124,4 @@
       />
     </SettingsSection>
   {/if}
-
-  <SettingsSection title="Session" description="Cet appareil uniquement.">
-    <SettingsRow label="Déconnexion" description="Vous devrez vous reconnecter pour revenir ici.">
-      <Button variant="danger" icon={icons.logout} onclick={() => (loggingOut = true)}>
-        Déconnexion
-      </Button>
-    </SettingsRow>
-  </SettingsSection>
 {/if}
-
-<ConfirmModal
-  bind:open={loggingOut}
-  title="Se déconnecter d'Ardoise ?"
-  description="Vos données restent en place. Vous devrez vous reconnecter sur cet appareil."
-  confirmLabel="Déconnexion"
-  cancelLabel="Annuler"
-  onConfirm={() => authStore.logout()}
-/>

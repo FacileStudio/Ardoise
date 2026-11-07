@@ -34,6 +34,15 @@
 
     <meta name="robots" content="noindex, nofollow" />
 
+    <script>
+      try {
+        var t = localStorage.getItem('ardoise.theme');
+        var r = document.documentElement.classList;
+        r.toggle('dark', t === 'dark');
+        r.toggle('light', t === 'light');
+      } catch (e) {}
+    </script>
+
     %sveltekit.head%
 
     <title>Ardoise — Facturation et paiement</title>

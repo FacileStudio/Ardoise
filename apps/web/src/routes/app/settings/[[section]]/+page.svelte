@@ -1,19 +1,25 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { Divider, Page, PageHeader, Tabs } from '@facile/muse';
+  import { Page, SettingsLayout, orderSections, sectionHref, settingsRoute } from '@facile/muse';
   import { icons } from '$lib/icons';
   import ProfileSection from '$lib/components/settings/ProfileSection.svelte';
-  import AppearanceSection from '$lib/components/settings/AppearanceSection.svelte';
+  import PreferencesPanel from '$lib/components/settings/PreferencesPanel.svelte';
 
-  const SECTIONS = [
-    { id: 'profile', label: 'Profil', icon: icons.userCircle },
-    { id: 'appearance', label: 'Apparence', icon: icons.palette },
-  ] as const;
+  const BASE = '/app/settings';
 
-  const section = $derived(
-    SECTIONS.some((s) => s.id === page.params.section) ? page.params.section! : 'profile'
-  );
-  const tabs = SECTIONS.map((s) => ({ ...s, href: `/app/settings/${s.id}` }));
+  const sections = [
+    { id: 'profile', label: 'Profil', icon: icons.userCircle, href: sectionHref(BASE, 'profile') },
+    { id: 'preferences', label: 'Préférences', icon: icons.palette, href: sectionHref(BASE, 'preferences') },
+  ];
+
+  const requested = $derived(page.params.section);
+  const route = $derived(settingsRoute(requested, orderSections(sections)));
+
+  $effect(() => {
+    if (requested === 'appearance') void goto(sectionHref(BASE, 'preferences'), { replaceState: true });
+    else if (!route.known) void goto(BASE, { replaceState: true });
+  });
 </script>
 
 <svelte:head>
@@ -21,15 +27,13 @@
 </svelte:head>
 
 <Page width="lg">
-  <div class="flex flex-col gap-4">
-    <PageHeader title="Réglages" />
-    <Tabs items={tabs} value={section} label="Sections des réglages" />
-    <Divider class="my-0" />
-  </div>
-
-  {#if section === 'profile'}
-    <ProfileSection area="client" />
-  {:else}
-    <AppearanceSection />
-  {/if}
+  <SettingsLayout {sections} active={requested} backHref={BASE} title="Réglages">
+    {#snippet children(id)}
+      {#if id === 'profile'}
+        <ProfileSection area="client" />
+      {:else if id === 'preferences'}
+        <PreferencesPanel />
+      {/if}
+    {/snippet}
+  </SettingsLayout>
 </Page>
