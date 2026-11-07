@@ -62,7 +62,7 @@ const ACCESS: Record<string, Access> = {
      space.updateMemberRole space.leave space.getSettings space.updateSettings
      mission.list mission.getById mission.create mission.update mission.setPrestations mission.generateQuote
      mission.acceptQuote mission.generateInvoice mission.setStatus mission.attachDocument
-     mission.detachDocument mission.createPayment mission.delete`
+     mission.detachDocument mission.createPayment mission.delete revenue.overview`
   ),
   ...each(
     'platform-staff',

@@ -55,7 +55,7 @@ apps/
       /           Landing page
       /login      Unified login (redirects by role)
       /app/       Client routes (payments, profile, settings)
-      /admin/     Admin routes (clients, payments, documents, spaces, settings)
+      /admin/     Admin routes (clients, payments, revenus, documents, spaces, settings)
       /legal/     Legal pages (privacy, terms, cookies)
 
 packages/
@@ -94,7 +94,7 @@ The web app (`apps/web`) serves both client and admin interfaces from a single S
 
 ### tRPC modules
 
-Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe, billing. Procedure levels: `publicProcedure`, `protectedProcedure` (own account), `clientProcedure` (portal), `memberProcedure` (space work, always scoped with `resolveScope`/`requireRowScope`), `platformStaffProcedure` (`PLATFORM_STAFF_SUBS`). Every procedure is classified in `packages/trpc/src/access.db.test.ts`; add new ones there.
+Each module lives in `packages/trpc/src/modules/[name]/` with `router.ts` and `service.ts`. Modules: auth, user, client, mission, payment, settings, document, media, admin, stripe, billing, revenue. Procedure levels: `publicProcedure`, `protectedProcedure` (own account), `clientProcedure` (portal), `memberProcedure` (space work, always scoped with `resolveScope`/`requireRowScope`), `platformStaffProcedure` (`PLATFORM_STAFF_SUBS`). Every procedure is classified in `packages/trpc/src/access.db.test.ts`; add new ones there.
 
 ### Authentication
 
