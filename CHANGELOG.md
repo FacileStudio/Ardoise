@@ -14,6 +14,10 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Added
+
+- A Revenus page (`/admin/revenus`) with what is collected (this month, this year, the last 12 months), what is still to collect split into overdue and upcoming, and a 12-month forecast by source: open payments by due date, recurring Stripe subscriptions, accepted quotes not yet invoiced (remainder only, dated by the quote date or "not dated") and invoices without a payment request. No probability is applied and VAT is not split. Amounts are summed in Postgres in Europe/Paris, per space of the caller, through the new `revenue.overview` procedure. French and English strings.
+
 ## [0.17.0] - 2026-11-07
 
 ### Changed

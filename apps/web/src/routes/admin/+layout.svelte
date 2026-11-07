@@ -35,6 +35,7 @@
     { href: '/admin/missions', label: $i18n.t('nav.missions'), icon: ardoise.mission },
     { href: '/admin/documents', label: $i18n.t('nav.documents'), icon: ardoise.document },
     { href: '/admin/payments', label: $i18n.t('nav.payments'), icon: icons.card },
+    { href: '/admin/revenus', label: $i18n.t('nav.revenue'), icon: ardoise.revenue },
     { href: '/admin/statistics', label: $i18n.t('nav.statistics'), icon: icons.dashboard },
     ...(platformStaff.staff
       ? [{ href: '/admin/offres', label: $i18n.t('nav.offers'), icon: ardoise.offer }]
@@ -47,7 +48,7 @@
     '/admin/missions',
     '/admin/documents',
     '/admin/payments',
-    '/admin/statistics',
+    '/admin/revenus',
   ];
 
   const navPages = $derived(links.map((link) => ({ ...link, active: isActive(link.href) })));
