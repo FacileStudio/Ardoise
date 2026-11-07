@@ -27,7 +27,10 @@ deploys from the tag. A tag publishes the backend image to
 ### Changed
 
 - At most one Checkout Session per payment is live. The stored session is reused when it is still open with the same amount, currency, mode and return URL, and expired otherwise; a completed one blocks a new session until the webhook settles it. The idempotency key no longer contains the return URLs (and so no pay token): it is the payment id, amount and previous session id. Changing the amount of a Stripe payment expires its open session.
-- A legacy PaymentIntent or subscription is cleared only when Stripe confirms the cancel; if the cancel fails, the ids stay for the webhook and the new checkout is refused.
+- A failed bank debit can be retried: the failed session and intent ids are cleared when `async_payment_failed` arrives, and a completed session blocks a new checkout only while its money is paid or still clearing (checked on the PaymentIntent or subscription).
+- A legacy PaymentIntent or subscription is retrieved first. Terminal or unpaid ones are cancelled and cleared; succeeded, processing or active ones, and anything Stripe cannot confirm, keep their ids for the webhook and refuse the new checkout.
+- Two first checkouts that clash on the idempotency key return the session the first one stored instead of an error. An unhandled `needsAttention` flag keeps its first reason.
+- `scripts/send-open-payment-links.ts` skips payments reminded within `SINCE_DAYS` (7), so a rerun mails nobody twice.
 - Money that no rule can settle is stored on the payment (`needsAttention`: `DUPLICATE_PAYMENT`, `DUPLICATE_SUBSCRIPTION`, `AMOUNT_MISMATCH`, `REFUNDED`, `DISPUTED`), shown on the admin payment page until dismissed, and emailed to the space members. A second subscription for one payment is cancelled at once. `charge.refunded` and `charge.dispute.created` flag the payment.
 - A rejected declaration restores the status the payment had before it was declared. Pay links are revoked when the payment is paid or cancelled.
 - The client IP walks `X-Forwarded-For` right to left, skipping private and Cloudflare ranges (ported from tronc), and reads `CF-Connecting-IP` only when the last hop is a Cloudflare edge. Visitors behind one edge no longer share a rate-limit bucket, and the audit IP is the visitor.

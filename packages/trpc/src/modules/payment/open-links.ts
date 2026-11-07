@@ -14,14 +14,16 @@ export interface OpenLinksResult {
 
 /**
  * Issues a pay link and mails a reminder for every open Stripe payment of a platform
- * studio space, overdue ones included. Meant to run once after the move to pay links, so
+ * studio space, overdue ones included, unless it was reminded within `sinceDays` (7), so a rerun
+ * mails nobody twice. A link's token is stored hashed and cannot be sent again, so each mail
+ * carries a fresh link and older ones stay valid until they expire. Meant to run once after the move to pay links, so
  * payments created before it get a link. Without `apply` it only reports.
  */
 export async function sendOpenPaymentLinks(
   db: PrismaClient,
   smtp: SMTPClient,
   frontendUrl: string,
-  options: { apply: boolean }
+  options: { apply: boolean; sinceDays?: number }
 ): Promise<OpenLinksResult> {
   const payments = await db.payment.findMany({
     where: {
@@ -48,6 +50,11 @@ export async function sendOpenPaymentLinks(
     }
     if (payment.stripeSubscriptionId && payment.status !== 'PENDING') {
       result.skipped.push({ paymentId: payment.id, why: 'live subscription, managed in the portal' });
+      continue;
+    }
+    const since = Date.now() - (options.sinceDays ?? 7) * 86_400_000;
+    if (payment.lastReminderSentAt && payment.lastReminderSentAt.getTime() > since) {
+      result.skipped.push({ paymentId: payment.id, why: 'reminded recently' });
       continue;
     }
     if (!options.apply) {
