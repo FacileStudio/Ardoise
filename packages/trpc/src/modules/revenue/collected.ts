@@ -14,9 +14,10 @@ const MONTHS = 12;
 
 /**
  * Money received, by Paris month of the payment date. A subscription is one Payment row paid
- * again at every renewal, so each of its PAID invoices counts. The row itself counts too, unless a
- * paid invoice already covers its paidAt (within a day), which keeps a first period recorded only
- * on the row.
+ * again at every renewal, so each of its PAID invoices counts. The row itself counts too, unless an
+ * invoice covers its period: its paidAt falls in the invoice period (a day of grace), or in the
+ * invoice's month when it has no period, or the payment is MANUAL and has any paid invoice. This keeps
+ * a first period recorded only on the row.
  */
 export async function collectedRows(
   db: PrismaClient,
@@ -38,7 +39,13 @@ export async function collectedRows(
         AND NOT EXISTS (
           SELECT 1 FROM "PaymentInvoice" i
           WHERE i."paymentId" = p.id AND i.status::text = 'PAID' AND i."paidAt" IS NOT NULL
-            AND abs(extract(epoch FROM (i."paidAt" - p."paidAt"))) < 86400
+            AND (
+              p."collectionMethod"::text = 'MANUAL'
+              OR (i."periodStart" IS NOT NULL AND i."periodEnd" IS NOT NULL
+                AND p."paidAt" >= i."periodStart" AND p."paidAt" <= i."periodEnd" + interval '1 day')
+              OR ((i."periodStart" IS NULL OR i."periodEnd" IS NULL)
+                AND date_trunc('month', ${parisOf(invoicePaidAt)}) = date_trunc('month', ${parisOf(paidAt)}))
+            )
         )
       UNION ALL
       SELECT ${parisOf(invoicePaidAt)} AS at, i.amount AS amount

@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 
-export type SpaceOption = { id: string; name: string };
+export type SpaceOption = { id: string; name: string; role?: string };
 
 const STORAGE_KEY = 'ardoise:space-filter';
 
@@ -34,6 +34,16 @@ let selected = $state<string | null>(load());
 export const spaceFilter = {
   get spaces(): SpaceOption[] {
     return spaces;
+  },
+
+  get adminSpaces(): SpaceOption[] {
+    return spaces.filter((space) => space.role === 'ADMIN' || space.role === 'OWNER');
+  },
+
+  get adminSpaceId(): string | undefined {
+    return this.adminSpaces.some((space) => space.id === selected)
+      ? (selected ?? undefined)
+      : undefined;
   },
 
   get spaceId(): string | undefined {

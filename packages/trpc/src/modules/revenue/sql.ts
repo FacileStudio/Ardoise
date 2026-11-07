@@ -40,3 +40,14 @@ export const inSpaces = (column: Prisma.Sql, spaceIds: string[]) =>
 
 export const hasStatus = (column: Prisma.Sql, statuses: string[]) =>
   Prisma.sql`${column}::text = ANY(${statuses}::text[])`;
+
+const GRACE_DAYS = 7;
+
+/**
+ * A recurring series is alive when its last PAID occurrence is within one cycle, plus a grace of
+ * seven days, of now. Older ones are stale: nobody knows if they still run, so they are not projected.
+ */
+export const seriesAlive = (now: Date) =>
+  Prisma.sql`${parisOf(Prisma.sql`p."paidAt"`)} >= ${clock(now).nowLocal}
+    - (CASE p.frequency::text WHEN 'MONTHLY' THEN interval '1 month' ELSE interval '1 year' END)
+    - interval '${Prisma.raw(String(GRACE_DAYS))} days'`;

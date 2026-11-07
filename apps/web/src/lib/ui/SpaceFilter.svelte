@@ -4,18 +4,22 @@
   import { i18n } from '@repo/i18n/svelte';
   import { spaceFilter } from '$lib/space-filter.svelte';
 
-  let { class: className = '' }: { class?: string } = $props();
+  let { class: className = '', adminOnly = false }: { class?: string; adminOnly?: boolean } =
+    $props();
+
+  const options = $derived(adminOnly ? spaceFilter.adminSpaces : spaceFilter.spaces);
+  const current = $derived(adminOnly ? spaceFilter.adminSpaceId : spaceFilter.spaceId);
 </script>
 
-{#if spaceFilter.spaces.length > 1}
+{#if options.length > 1}
   <Select
-    value={spaceFilter.spaceId ?? ''}
+    value={current ?? ''}
     onchange={(event) => spaceFilter.select(event.currentTarget.value || null)}
     aria-label={$i18n.t('nav.filterBySpace')}
     class={cn('sm:w-56', className)}
   >
     <option value="">{$i18n.t('nav.allSpaces')}</option>
-    {#each spaceFilter.spaces as space (space.id)}
+    {#each options as space (space.id)}
       <option value={space.id}>{space.name}</option>
     {/each}
   </Select>

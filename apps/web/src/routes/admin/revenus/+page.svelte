@@ -38,7 +38,7 @@
     loading = true;
     failed = false;
     try {
-      overview = await trpc.revenue.overview.query({ spaceId: spaceFilter.spaceId });
+      overview = await trpc.revenue.overview.query({ spaceId: spaceFilter.adminSpaceId });
     } catch (err) {
       logger.error({ err }, 'Failed to load revenue');
       failed = true;
@@ -98,7 +98,7 @@
 <Page width="xl">
   <PageHeader title={$i18n.t('revenue.title')} description={$i18n.t('revenue.subtitle')}>
     {#snippet actions()}
-      <SpaceFilter />
+      <SpaceFilter adminOnly />
     {/snippet}
   </PageHeader>
 
@@ -168,6 +168,15 @@
         {day}
       />
 
+      {#if overview.toCollect.staleRecurring.count > 0}
+        <p class="rounded-fc-md bg-fc-warning/10 p-3 text-fc-xs text-fc-warning">
+          {$i18n.t('revenue.toCollect.staleRecurring', {
+            amount: euro(overview.toCollect.staleRecurring.amount),
+            count: overview.toCollect.staleRecurring.count,
+          })}
+        </p>
+      {/if}
+
       {#if overview.toCollect.veryLate.count > 0}
         <p class="rounded-fc-md bg-fc-warning/10 p-3 text-fc-xs text-fc-warning">
           {$i18n.t('revenue.toCollect.veryLate', {
@@ -215,7 +224,10 @@
         {/each}
       </div>
 
-      <p class="text-fc-xs text-fc-fg-muted">{$i18n.t('revenue.overdueRule')}</p>
+      <p class="text-fc-xs text-fc-fg-muted">
+        {$i18n.t('revenue.overdueRule')}
+        {$i18n.t('revenue.remainderNote')}
+      </p>
     </Section>
   {/if}
 </Page>

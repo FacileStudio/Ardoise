@@ -49,27 +49,42 @@ describe.skipIf(!enabled)('revenue: collected', () => {
   });
 
   it('counts each paid invoice of a subscription once, and a first period no invoice covers', async () => {
-    const covered = await payment(seed, {
-      amount: 30,
-      status: 'PAID',
-      paidAt: at('2026-11-10T09:00:00Z'),
-      frequency: 'MONTHLY',
-      collectionMethod: 'STRIPE',
-    });
-    const uncovered = await payment(seed, {
-      amount: 70,
-      status: 'PAID',
-      paidAt: at('2026-02-10T09:00:00Z'),
-      frequency: 'MONTHLY',
-      collectionMethod: 'STRIPE',
-    });
-    const record = (paymentId: string, id: string, amount: number, paidAt: string) =>
-      prisma.paymentInvoice.create({
-        data: { paymentId, stripeInvoiceId: id, amount, status: 'PAID', paidAt: at(paidAt) },
+    const sub = (amount: number, paidAt: string, extra = {}) =>
+      payment(seed, {
+        amount,
+        status: 'PAID',
+        paidAt: at(paidAt),
+        frequency: 'MONTHLY',
+        collectionMethod: 'STRIPE',
+        ...extra,
       });
+    const record = (paymentId: string, id: string, amount: number, paidAt: string, period = {}) =>
+      prisma.paymentInvoice.create({
+        data: {
+          paymentId,
+          stripeInvoiceId: id,
+          amount,
+          status: 'PAID',
+          paidAt: at(paidAt),
+          ...period,
+        },
+      });
+    const span = (from: string, to: string) => ({ periodStart: at(from), periodEnd: at(to) });
+    const covered = await sub(30, '2026-11-10T09:00:00Z');
+    const uncovered = await sub(70, '2026-02-10T09:00:00Z');
+    const manual = await sub(11, '2026-04-10T09:00:00Z', { collectionMethod: 'MANUAL' });
+    const dated = await sub(13, '2026-06-10T09:00:00Z');
     await record(covered.id, 'in_1', 30, '2026-10-10T09:00:00Z');
     await record(covered.id, 'in_2', 30, '2026-11-10T09:00:00Z');
     await record(uncovered.id, 'in_3', 70, '2026-03-10T09:00:00Z');
+    await record(manual.id, 'in_4', 11, '2026-05-10T09:00:00Z');
+    await record(
+      dated.id,
+      'in_5',
+      13,
+      '2026-06-10T09:00:30Z',
+      span('2026-05-10T09:00:00Z', '2026-06-10T09:00:00Z')
+    );
 
     const months = monthsOf((await overviewOf(seed.userId)).collected.months);
 
@@ -77,5 +92,8 @@ describe.skipIf(!enabled)('revenue: collected', () => {
     expect(months['2026-11']).toBe('130.40');
     expect(months['2026-02']).toBe('70.00');
     expect(months['2026-03']).toBe('70.00');
+    expect(months['2026-04']).toBeUndefined();
+    expect(months['2026-05']).toBe('11.00');
+    expect(months['2026-06']).toBe('13.00');
   });
 });
