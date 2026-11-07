@@ -5,10 +5,10 @@
   import { browser } from '$app/environment';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Spinner, Toaster, provideLocale } from '@facile/muse';
-  import { setLocale } from '@repo/i18n/svelte';
+  import { Spinner, Toaster, provideLocale, type Locale } from '@facile/muse';
   import { isMember, type SessionUser } from '@repo/auth-shared';
   import { theme } from '$lib/theme.svelte';
+  import { DEFAULT_LOCALE, applyLocale, chosenLocale } from '$lib/locale';
   import SmtpRequiredModal from '$lib/components/SmtpRequiredModal.svelte';
   import mdi from '$lib/icons/mdi.json';
   import solar from '$lib/icons/solar.json';
@@ -17,8 +17,9 @@
   let { children } = $props();
 
   let verified = $state(false);
+  let language = $state<Locale>(DEFAULT_LOCALE);
 
-  provideLocale(() => 'fr');
+  provideLocale(() => language);
 
   if (browser) {
     void import('iconify-icon').then(({ addCollection }) => {
@@ -28,10 +29,12 @@
   }
 
   onMount(async () => {
+    const chosen = chosenLocale() ?? DEFAULT_LOCALE;
+    language = chosen;
+    applyLocale(chosen);
     const serverUser = page.data.user as SessionUser | undefined;
     if (serverUser) authStore.setAuth(serverUser);
     else await authStore.init();
-    setLocale('fr');
     theme.restore();
     if (page.url.pathname === '/login') verified = await verifySession();
   });
