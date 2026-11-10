@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-10
+
 ### Added
 
 - Ardoise honours Registre erasures. It polls `GET /api/directory/deletions` every ten minutes and accepts Registre's signed push on `POST /api/registre/deletions`. The person's account becomes an anonymised tombstone (`User.anonymizedAt`, migration `20261110150000_add_user_anonymized_at`): identities, sessions, magic links, memberships, invitations, avatar files, personal comps and overrides go, audit rows lose the person's email, subject, IP and user agent. Invoices, quotes, contracts and payments stay byte for byte. See `docs/erasure.md`.
