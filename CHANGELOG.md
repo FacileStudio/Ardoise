@@ -14,6 +14,10 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Fixed
+
+- An `appel_de_fonds` reference no longer sits in the invoice number index, so a later invoice can take the same number and the sequence never skips past it. Migration `20261111090000_appel_de_fonds_ref_index` narrows `Document_spaceId_invoiceNumber_key` to non-`appel_de_fonds` rows and adds `Document_spaceId_appelDeFondsRef_key` for the references. No row changes.
+
 ### Changed
 
 - Licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`). See `LICENSE`.
