@@ -370,6 +370,7 @@ Not tRPC — these exist because of raw bodies, redirects, or callers that canno
 | `PUT` | `/api/integrations/glouton/clients/{id}` | Bearer `GLOUTON_API_TOKEN` | Updates and links that client. A payload whose `updatedAt` is not newer than the stored one changes nothing and answers `skipped: true` |
 | `POST` | `/api/integrations/glouton/clients/{id}/unlink` | Bearer `GLOUTON_API_TOKEN` | Clears `gloutonCompanyId` |
 | `GET` | `/api/integrations/glouton/clients/{id}` | Bearer `GLOUTON_API_TOKEN` | `{data: ClientPayload}`. All four answer 404 when Glouton is not configured, 401 on a wrong token, 400 on an invalid payload, 422 when `registreSpaceId` is null or matches no space |
+| `POST` | `/api/registre/deletions` | Registre-signed `secevent+jwt` (RS256, issuer JWKS) | Registre's user.deleted push. Anonymises the person (see [Erasure](erasure.md)). 202 `{status:"erased"\|"unknown"}`, 400 when the token does not verify, 503 when the issuer keys cannot be read, 500 when the erasure failed. Mounted only when OIDC is configured |
 | `GET` | `/auth/config` | none | Whether OIDC is enabled |
 | `GET` | `/auth/oidc` | none | Starts the OIDC authorization flow |
 | `GET` | `/auth/oidc/callback` | none | Exchanges the code, signs in an existing user, sets auth cookies, redirects to `OIDC_SUCCESS_URL` with `?oidc=success` or `?error=<code>` |

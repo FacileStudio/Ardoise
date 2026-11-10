@@ -114,6 +114,10 @@ Documents made outside Ardoise come in through `document.import` (`source = impo
 
 Facile SSO (Registre) is the only staff login, in `apps/backend/src/oidc/` (see `docs/architecture.md`). Production refuses to boot without `OIDC_ISSUER`. `resolveUser` (`apps/backend/src/oidc/identity.ts`) finds the user by `(issuer, sub)`, then by verified email, else creates them, and every sign-in sets `role = MEMBER` (never ADMIN) plus `firstName`, `lastName` (split from the `name` claim, since Registre sends no given/family names) and `ssoPictureUrl`. MEMBER grants nothing alone: spaces come from Registre membership, platform powers from `PLATFORM_STAFF_SUBS`. `user.updateProfile` and `user.deleteOwnAccount` refuse SSO accounts. See "Access model" in `docs/architecture.md`, including `Space.platformStudio` (only those spaces use the platform Stripe, SMTP, Plume, Nuage and shared providers). `GET /auth/config` returns `oidc_enabled` and `client_magic_link`.
 
+### Erasure
+
+A Registre erasure anonymises, never deletes (`apps/backend/src/registre/erasure.ts`, `docs/erasure.md`): `Document.createdBy` cascades from `User`, so deleting a user would delete invoices. The poller (`registre/deletions.ts`) and the signed push on `POST /api/registre/deletions` both call `erasePerson`. A new model that holds personal data must be added to `erasePerson` and to `docs/erasure.md`, and `erasure.db.test.ts` scans every text and jsonb column for leftovers.
+
 ### Prisma
 
 Multi-file schema in `packages/database/prisma/schema/`. Core models: User, Client, Mission, Payment, Document, Settings, Media. The `@repo/database` package has conditional exports (browser stub vs. real client) to prevent Node.js imports in the browser.
