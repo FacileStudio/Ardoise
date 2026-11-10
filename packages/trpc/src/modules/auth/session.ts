@@ -13,6 +13,7 @@ export interface LoginGate {
   isBanned: boolean;
   isSuspended: boolean;
   suspendedUntil: Date | null;
+  anonymizedAt?: Date | null;
 }
 
 export const sessionUserSelection = {
@@ -50,9 +51,11 @@ export const loginGateSelection = {
   isBanned: true,
   isSuspended: true,
   suspendedUntil: true,
+  anonymizedAt: true,
 } as const;
 
 export const loginBlockReason = (user: LoginGate, now = new Date()): string | null => {
+  if (user.anonymizedAt) return 'This account was erased';
   if (user.isBanned || user.status === 'BANNED') return 'This account is banned';
   const suspended = user.isSuspended || user.status === 'SUSPENDED';
   if (suspended && (!user.suspendedUntil || user.suspendedUntil > now)) {

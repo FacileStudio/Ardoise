@@ -24,6 +24,9 @@ import { prisma } from '@repo/database';
 import { DirectoryClient, SyncPath } from './registre/directory';
 import { applySnapshot, buildImport } from './registre/spaces';
 import { startDirectorySync } from './registre/boot';
+import { erasePerson } from './registre/erasure';
+import { DeletionsPath, createDeletionHandler, startDeletionPolling } from './registre/deletions';
+import { loadProvider } from './oidc/provider';
 import { createBillingRoutes } from './handlers/billing';
 import { startBilling } from './billing';
 import { getStripeService } from '@repo/trpc/settings';
@@ -66,6 +69,16 @@ const directory =
       }).syncer
     : null;
 
+const erase = issuer
+  ? async (subject: string) => {
+      const outcome = await erasePerson({ db: prisma, issuer, removeFile: (key) => storage.delete(key) }, subject);
+      if (outcome.status === 'erased') requestEntitlementPush();
+      return outcome;
+    }
+  : null;
+
+if (registre && erase) startDeletionPolling({ source: registre, erase, logger });
+
 startBilling({
   db: prisma,
   registre,
@@ -106,6 +119,21 @@ if (directory) {
     directory.nudge();
     return c.body(null, 202);
   });
+}
+
+if (issuer && erase) {
+  app.post(
+    DeletionsPath,
+    createDeletionHandler({
+      clientId: env.OIDC_CLIENT_ID!,
+      keys: async () => {
+        const provider = await loadProvider(issuer);
+        return { issuer: provider.issuer, keys: provider.jwks };
+      },
+      erase,
+      logger,
+    })
+  );
 }
 
 app.get('/docs/openapi.json', openApiHandler);

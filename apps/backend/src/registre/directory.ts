@@ -54,6 +54,18 @@ export interface Snapshot {
   people?: DirectoryPerson[];
 }
 
+/** One person Registre erased, as its deletions listing names them. */
+export interface DeletedPerson {
+  sub: string;
+  deleted_at: string;
+}
+
+/** One page of Registre's deletions listing; `nextCursor` is set when another page follows. */
+export interface DeletionPage {
+  deleted: DeletedPerson[];
+  nextCursor?: string;
+}
+
 /** The largest directory response read, so a broken peer cannot exhaust memory. */
 const MaxResponseBytes = 16 * 1024 * 1024;
 
@@ -162,6 +174,33 @@ export class DirectoryClient implements SnapshotSource {
     }
     await response.body?.cancel().catch(() => {});
     throw new DirectoryUnavailableError(`/api/directory/entitlements answered ${response.status}`);
+  }
+
+  /**
+   * Lists one page of the people Registre erased in its sixty-day window
+   * (GET /api/directory/deletions), resuming after `cursor` when given.
+   */
+  async deletions(cursor?: string): Promise<DeletionPage> {
+    const path = `/api/directory/deletions${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`;
+    const response = await this.send('GET', path);
+    if (response.status !== 200) {
+      await response.body?.cancel().catch(() => {});
+      throw new DirectoryUnavailableError(`/api/directory/deletions answered ${response.status}`);
+    }
+    let page: { deleted?: unknown; next_cursor?: unknown };
+    try {
+      page = JSON.parse(await readCapped(response, MaxResponseBytes));
+    } catch (error) {
+      if (error instanceof DirectoryUnavailableError) throw error;
+      throw new DirectoryUnavailableError(`decode the deletions: ${String(error)}`);
+    }
+    if (!Array.isArray(page.deleted)) throw new DirectoryUnavailableError('the deletions carry no list');
+    const deleted = page.deleted.filter(
+      (row): row is DeletedPerson => typeof row?.sub === 'string' && row.sub.trim() !== ''
+    );
+    return typeof page.next_cursor === 'string' && page.next_cursor
+      ? { deleted, nextCursor: page.next_cursor }
+      : { deleted };
   }
 
   /** Sends one authenticated request with the timeout. */
