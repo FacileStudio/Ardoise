@@ -136,4 +136,31 @@ describe.skipIf(!enabled)('document create routes against Postgres', () => {
 
     expect(document.invoiceNumber).toBe(`FAC-${year}-002`);
   });
+
+  it('removes the stored pdf of a contract or appel de fonds whose insert fails', async () => {
+    const contract = { ...parties(), contract_reference: 'C-1', contract_date: '2026-11-10' };
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "Document" ADD CONSTRAINT "test_reject_insert" CHECK (type::text NOT IN ('contrat_prestation', 'contrat_maintenance', 'back_contractuel', 'appel_de_fonds')) NOT VALID`
+    );
+    try {
+      const attempts = [
+        () => caller.document.createContratPrestation(contract),
+        () => caller.document.createContratMaintenance({ ...contract, maintenance_period: '12 mois' }),
+        () =>
+          caller.document.createBackContractuel({
+            ...contract,
+            project_name: 'Projet',
+            valid_until: '2026-12-10',
+            providers: [{ id: ids.provider, role: 'Dev', amount: 100 }],
+          }),
+        () => appel('ADF-001'),
+      ];
+      for (const attempt of attempts) await expect(attempt()).rejects.toThrow();
+    } finally {
+      await prisma.$executeRawUnsafe('ALTER TABLE "Document" DROP CONSTRAINT "test_reject_insert"');
+    }
+
+    expect(uploads).toHaveLength(4);
+    expect(deletes.sort()).toEqual([...uploads].sort());
+  });
 });

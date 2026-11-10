@@ -51,6 +51,7 @@ import {
   updateDocument,
   setDocumentSignature,
   removeStoredPdf,
+  writeOrRemovePdf,
 } from './manual';
 import { logger } from '@repo/logger';
 import type { ServerEnv } from '@repo/env';
@@ -908,19 +909,21 @@ export const documentRouter = router({
 
         const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
 
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'back_contractuel',
-            name: fileName,
-            contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
-            items: input.items || [],
-            subtotal,
-            tva,
-            total,
-            tvaRate,
-          },
-        });
+        const document = await writeOrRemovePdf(ctx.storage, stored, () =>
+          ctx.db.document.create({
+            data: {
+              type: 'back_contractuel',
+              name: fileName,
+              contractRef: input.contract_reference,
+              ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+              items: input.items || [],
+              subtotal,
+              tva,
+              total,
+              tvaRate,
+            },
+          })
+        );
 
         archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
@@ -1004,19 +1007,21 @@ export const documentRouter = router({
 
         const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
 
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'appel_de_fonds',
-            name: fileName,
-            invoiceNumber: input.global_invoice_ref,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
-            items: input.items || [],
-            subtotal,
-            tva,
-            total,
-            tvaRate,
-          },
-        });
+        const document = await writeOrRemovePdf(ctx.storage, stored, () =>
+          ctx.db.document.create({
+            data: {
+              type: 'appel_de_fonds',
+              name: fileName,
+              invoiceNumber: input.global_invoice_ref,
+              ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+              items: input.items || [],
+              subtotal,
+              tva,
+              total,
+              tvaRate,
+            },
+          })
+        );
 
         return {
           document,
@@ -1089,19 +1094,21 @@ export const documentRouter = router({
 
         const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
 
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'contrat_prestation',
-            name: fileName,
-            contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
-            items: [],
-            subtotal: 0,
-            tva: 0,
-            total: 0,
-            tvaRate,
-          },
-        });
+        const document = await writeOrRemovePdf(ctx.storage, stored, () =>
+          ctx.db.document.create({
+            data: {
+              type: 'contrat_prestation',
+              name: fileName,
+              contractRef: input.contract_reference,
+              ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+              items: [],
+              subtotal: 0,
+              tva: 0,
+              total: 0,
+              tvaRate,
+            },
+          })
+        );
 
         archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
@@ -1176,19 +1183,21 @@ export const documentRouter = router({
 
         const stored = await storeDocumentPdf(ctx.storage, pdfBuffer);
 
-        const document = await ctx.db.document.create({
-          data: {
-            type: 'contrat_maintenance',
-            name: fileName,
-            contractRef: input.contract_reference,
-            ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
-            items: [],
-            subtotal: 0,
-            tva: 0,
-            total: 0,
-            tvaRate,
-          },
-        });
+        const document = await writeOrRemovePdf(ctx.storage, stored, () =>
+          ctx.db.document.create({
+            data: {
+              type: 'contrat_maintenance',
+              name: fileName,
+              contractRef: input.contract_reference,
+              ...buildDocumentPersistenceBase(documentData, input.providerId, pdfBuffer.length, ctx.user!.id, legalPersistence, scope, missionId, stored),
+              items: [],
+              subtotal: 0,
+              tva: 0,
+              total: 0,
+              tvaRate,
+            },
+          })
+        );
 
         archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
