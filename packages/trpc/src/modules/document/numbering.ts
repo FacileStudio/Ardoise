@@ -56,14 +56,15 @@ function numberPattern(template: string): string {
 /**
  * After a number turned out to be taken, moves the counter past it: to one
  * above the highest number of the space that matches the format, and at least
- * one past the number that failed. The move only ever raises the counter, so
- * concurrent callers cannot lower it or skip more than needed.
+ * one past the number that failed. An appel de fonds reference is free text
+ * outside the sequence, so it never counts. The move only ever raises the
+ * counter, so concurrent callers cannot lower it or skip more than needed.
  */
 async function advancePast(db: PrismaClient, spaceId: string, kind: NumberKind, failed: number) {
   const settings = await getSpaceSettings(db, spaceId);
   const pattern = numberPattern(settings[FORMAT_FIELD[kind]]);
   const rows = await db.$queryRawUnsafe<Array<{ max: number | null }>>(
-    `SELECT MAX(substring("${COLUMN[kind]}" from $2)::bigint)::int AS max FROM "Document" WHERE "spaceId" = $1 AND "${COLUMN[kind]}" ~ $2`,
+    `SELECT MAX(substring("${COLUMN[kind]}" from $2)::bigint)::int AS max FROM "Document" WHERE "spaceId" = $1 AND "type" <> 'appel_de_fonds' AND "${COLUMN[kind]}" ~ $2`,
     spaceId,
     pattern
   );
