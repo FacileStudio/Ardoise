@@ -163,4 +163,26 @@ describe.skipIf(!enabled)('document create routes against Postgres', () => {
     expect(uploads).toHaveLength(4);
     expect(deletes.sort()).toEqual([...uploads].sort());
   });
+
+  it('links every prestation invoice to its mission through the missionId column', async () => {
+    const event = { event_date: 'd', event_time: 't', event_location: 'l', service_duration: 's', bar_setup_type: 'b' };
+    const shoot = { shoot_date: 'd', shoot_time: 't', shoot_location: 'l', shoot_duration: 's' };
+    const training = { training_date: 'd', training_time: 't', training_location: 'l', training_duration: 's', training_topic: 'x' };
+    const site = { site_address: 'a', site_name: 'n', work_start_date: 'd', work_type: 'w' };
+    const base = { ...parties(), ...dates, items, missionId: ids.mission };
+    const created = [
+      await caller.document.createPrestationBarman({ ...base, ...event }),
+      await caller.document.createPrestationPhoto({ ...base, ...shoot, shoot_type: 'p' }),
+      await caller.document.createPrestationVideo({ ...base, ...shoot, video_type: 'v' }),
+      await caller.document.createPrestationDesign({ ...base, project_name: 'p', project_type: 't', delivery_date: 'd' }),
+      await caller.document.createPrestationDev({ ...base, project_name: 'p', tech_stack: 't', delivery_date: 'd' }),
+      await caller.document.createPrestationFormation({ ...base, ...training }),
+      await caller.document.createPrestationBtp({ ...base, ...site }),
+    ];
+
+    for (const { document } of created) {
+      expect(document.missionId).toBe(ids.mission);
+      expect(document.serviceData).not.toHaveProperty('missionId');
+    }
+  });
 });

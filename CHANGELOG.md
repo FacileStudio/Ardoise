@@ -16,6 +16,7 @@ deploys from the tag. A tag publishes the backend image to
 
 ### Fixed
 
+- The `prestation_*` create routes store `missionId` in the column instead of `serviceData`, so those invoices link to their mission. Existing rows are left as they are.
 - A failed insert of a `contrat_prestation`, `contrat_maintenance`, `back_contractuel` or `appel_de_fonds` now removes the PDF it had stored.
 - An `appel_de_fonds` reference no longer sits in the invoice number index, so a later invoice can take the same number and the sequence never skips past it. Migration `20261111090000_appel_de_fonds_ref_index` narrows `Document_spaceId_invoiceNumber_key` to non-`appel_de_fonds` rows and adds `Document_spaceId_appelDeFondsRef_key` for the references. No row changes.
 
