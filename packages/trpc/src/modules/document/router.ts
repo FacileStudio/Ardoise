@@ -1232,11 +1232,11 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationBarmanInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, missionId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_barman',
           'prestation_barman',
-          { invoice_date, due_date, clientId, providerId, items, spaceId },
+          { invoice_date, due_date, clientId, providerId, items, spaceId, missionId },
           typeSpecific,
           ctx
         );
@@ -1266,11 +1266,11 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationPhotoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, missionId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_photo',
           'prestation_photo',
-          { invoice_date, due_date, clientId, providerId, items, spaceId },
+          { invoice_date, due_date, clientId, providerId, items, spaceId, missionId },
           typeSpecific,
           ctx
         );
@@ -1300,11 +1300,11 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationVideoInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, missionId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_video',
           'prestation_video',
-          { invoice_date, due_date, clientId, providerId, items, spaceId },
+          { invoice_date, due_date, clientId, providerId, items, spaceId, missionId },
           typeSpecific,
           ctx
         );
@@ -1334,11 +1334,11 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationDesignInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, missionId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_design',
           'prestation_design',
-          { invoice_date, due_date, clientId, providerId, items, spaceId },
+          { invoice_date, due_date, clientId, providerId, items, spaceId, missionId },
           typeSpecific,
           ctx
         );
@@ -1368,11 +1368,11 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationDevInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, missionId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_dev',
           'prestation_dev',
-          { invoice_date, due_date, clientId, providerId, items, spaceId },
+          { invoice_date, due_date, clientId, providerId, items, spaceId, missionId },
           typeSpecific,
           ctx
         );
@@ -1402,11 +1402,11 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationFormationInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, missionId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_formation',
           'prestation_formation',
-          { invoice_date, due_date, clientId, providerId, items, spaceId },
+          { invoice_date, due_date, clientId, providerId, items, spaceId, missionId },
           typeSpecific,
           ctx
         );
@@ -1436,11 +1436,11 @@ export const documentRouter = router({
     .input(spaceScoped(PrestationBtpInputSchema))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { invoice_date, due_date, clientId, providerId, items, spaceId, ...typeSpecific } = input;
+        const { invoice_date, due_date, clientId, providerId, items, spaceId, missionId, ...typeSpecific } = input;
         return await createSpecializedPrestation(
           'prestation_btp',
           'prestation_btp',
-          { invoice_date, due_date, clientId, providerId, items, spaceId },
+          { invoice_date, due_date, clientId, providerId, items, spaceId, missionId },
           typeSpecific,
           ctx
         );
