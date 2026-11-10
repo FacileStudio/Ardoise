@@ -202,19 +202,30 @@ export async function storeUploadedPdf(storage: StorageService, userId: string, 
   return { ...stored, fileSize: data.length };
 }
 
+/**
+ * Runs the database write of a document whose PDF is already stored, and
+ * removes that PDF when the write fails, so a failed insert leaves no orphan.
+ */
+export async function writeOrRemovePdf<T>(
+  storage: StorageService,
+  stored: { pdfUrl: string },
+  write: () => Promise<T>
+): Promise<T> {
+  try {
+    return await write();
+  } catch (error) {
+    await removeStoredPdf(storage, stored.pdfUrl);
+    throw error;
+  }
+}
+
 async function persistWithPdf<T>(
   storage: StorageService,
   uploadKey: string,
   stored: { pdfUrl: string },
   write: () => Promise<T>
 ): Promise<T> {
-  let result: T;
-  try {
-    result = await write();
-  } catch (error) {
-    await removeStoredPdf(storage, stored.pdfUrl);
-    throw error;
-  }
+  const result = await writeOrRemovePdf(storage, stored, write);
   await storage.delete(uploadKey).catch(() => false);
   return result;
 }
