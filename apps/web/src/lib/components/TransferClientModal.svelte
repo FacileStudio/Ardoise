@@ -9,12 +9,12 @@
 		clientId,
 		currentSpaceId,
 		onDone,
-	} = $props<{
+	}: {
 		open: boolean;
 		clientId: string;
 		currentSpaceId: string;
 		onDone?: (relocated: boolean) => void;
-	}>();
+	} = $props();
 
 	let target = $state('');
 	let mode = $state<'copy' | 'move'>('copy');

@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "@repo/trpc": "workspace:*",
-    "@trpc/client": "^11.9.0"
+    "@trpc/client": "^11.28.0"
   }
 }

@@ -22,17 +22,17 @@
     "@repo/trpc": "workspace:*",
     "@repo/types": "workspace:*",
     "@scalar/hono-api-reference": "0.10.19",
-    "@trpc/server": "^11.9.0",
-    "hono": "^4.11.7",
-    "jose": "^6.1.3",
+    "@trpc/server": "^11.28.0",
+    "hono": "^4.13.18",
+    "jose": "^6.2.17",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/stripe": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.8",
-    "eslint": "^9.39.2",
+    "@types/bun": "^1.4.4",
+    "eslint": "^9.39.5",
     "typescript": "^5.9.3"
   }
 }
