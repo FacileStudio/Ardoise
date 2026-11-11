@@ -1,7 +1,7 @@
 {
   "name": "Ardoise",
   "short_name": "Ardoise",
-  "description": "Facturation et paiement auto-hébergés pour un studio.",
+  "description": "Quotes that become invoices in one click, Stripe payments, automatic reminders and PDF receipts.",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -12,15 +12,10 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
     }
   ],
-  "theme_color": "#0a0a0a",
-  "background_color": "#0a0a0a",
+  "theme_color": "#fafafa",
+  "background_color": "#fafafa",
   "display": "standalone",
   "start_url": "/"
 }
