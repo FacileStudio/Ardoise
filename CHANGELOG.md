@@ -14,8 +14,13 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-11-11
+
 ### Fixed
 
+- Dependencies: clear the douane high and medium findings (193 to 4). In-range refresh of every workspace: vite 7.3.8, @sveltejs/kit 2.70.4, svelte 5.57.3, prisma 7.10.1 (its dev server pulled the hono, h3, effect, valibot and mysql2 findings), lodash 4.18.1, rollup, flatted, devalue, postcss and the brace-expansion, minimatch 3 and 9, picomatch, nanoid copies. Root `overrides` pin cookie ^0.7.2 and esbuild ^0.28.1. stripe stays on 20.3.0: 20.4 retypes `apiVersion` to `2026-02-25.clover`, an API version change that needs its own release.
+- `TransferClientModal` types its props on the destructuring instead of `$props<T>()`, which svelte 5.57 no longer accepts.
+- Left open: minimatch 10 under @typescript-eslint (lint only, the fix is minimatch 11), @sveltejs/kit findings fixed only in 3.0.0 (low) and deepmerge (no fix).
 - The `prestation_*` create routes store `missionId` in the column instead of `serviceData`, so those invoices link to their mission. Existing rows are left as they are.
 - A failed insert of a `contrat_prestation`, `contrat_maintenance`, `back_contractuel` or `appel_de_fonds` now removes the PDF it had stored.
 - An `appel_de_fonds` reference no longer sits in the invoice number index, so a later invoice can take the same number and the sequence never skips past it. Migration `20261111090000_appel_de_fonds_ref_index` narrows `Document_spaceId_invoiceNumber_key` to non-`appel_de_fonds` rows and adds `Document_spaceId_appelDeFondsRef_key` for the references. No row changes.
