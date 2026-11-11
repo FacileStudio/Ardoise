@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-11-11
+
+### Fixed
+
+- Brand: favicons, touch and manifest icons, the link preview image and `site.webmanifest` come from muse v0.19.0's brand generator, and `apps/web/src/app.html` carries its head block: the catalog title "Ardoise · Invoice, get paid, move on", its description, theme colours and Open Graph and Twitter tags. The `robots` noindex tag stays.
+
 ## [0.20.1] - 2026-11-11
 
 ### Fixed
