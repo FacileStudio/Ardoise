@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.8] - 2026-11-13
+
 ### Changed
 
 - Web: `@facile/muse` moves from v0.16.1 to v0.21.0.
