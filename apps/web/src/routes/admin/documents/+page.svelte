@@ -14,6 +14,7 @@
 		Table,
 		Tabs,
 		toast,
+		Tooltip,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
 	import { Pagination, SearchInput, SpaceFilter } from '$lib/ui';
@@ -287,27 +288,33 @@
 												onsent={() => loadDocuments()}
 											/>
 										{/if}
-										<Button
-											variant="ghost"
-											size="sm"
-											icon={icons.download}
-											aria-label="Télécharger"
-											onclick={() => handleDownload(doc.id)}
-										/>
-										<Button
-											variant="ghost"
-											size="sm"
-											icon={icons.edit}
-											aria-label={$i18n.t('import.detail.title')}
-											href={resolve(`/admin/documents/${doc.id}`)}
-										/>
-										<Button
-											variant="ghost-danger"
-											size="sm"
-											icon={icons.remove}
-											aria-label="Supprimer"
-											onclick={() => askDelete(doc)}
-										/>
+										<Tooltip text="Télécharger" describe={false} class="contents">
+											<Button
+												variant="ghost"
+												size="sm"
+												icon={icons.download}
+												aria-label="Télécharger"
+												onclick={() => handleDownload(doc.id)}
+											/>
+										</Tooltip>
+										<Tooltip text={$i18n.t('import.detail.title')} describe={false} class="contents">
+											<Button
+												variant="ghost"
+												size="sm"
+												icon={icons.edit}
+												aria-label={$i18n.t('import.detail.title')}
+												href={resolve(`/admin/documents/${doc.id}`)}
+											/>
+										</Tooltip>
+										<Tooltip text="Supprimer" describe={false} class="contents">
+											<Button
+												variant="ghost-danger"
+												size="sm"
+												icon={icons.remove}
+												aria-label="Supprimer"
+												onclick={() => askDelete(doc)}
+											/>
+										</Tooltip>
 									</div>
 								</td>
 							</tr>
@@ -348,27 +355,33 @@
 										onsent={() => loadDocuments()}
 									/>
 								{/if}
-								<Button
-									variant="ghost"
-									size="lg"
-									icon={icons.download}
-									aria-label="Télécharger"
-									onclick={() => handleDownload(doc.id)}
-								/>
-								<Button
-									variant="ghost"
-									size="lg"
-									icon={icons.edit}
-									aria-label={$i18n.t('import.detail.title')}
-									href={resolve(`/admin/documents/${doc.id}`)}
-								/>
-								<Button
-									variant="ghost-danger"
-									size="lg"
-									icon={icons.remove}
-									aria-label="Supprimer"
-									onclick={() => askDelete(doc)}
-								/>
+								<Tooltip text="Télécharger" describe={false} class="contents">
+									<Button
+										variant="ghost"
+										size="lg"
+										icon={icons.download}
+										aria-label="Télécharger"
+										onclick={() => handleDownload(doc.id)}
+									/>
+								</Tooltip>
+								<Tooltip text={$i18n.t('import.detail.title')} describe={false} class="contents">
+									<Button
+										variant="ghost"
+										size="lg"
+										icon={icons.edit}
+										aria-label={$i18n.t('import.detail.title')}
+										href={resolve(`/admin/documents/${doc.id}`)}
+									/>
+								</Tooltip>
+								<Tooltip text="Supprimer" describe={false} class="contents">
+									<Button
+										variant="ghost-danger"
+										size="lg"
+										icon={icons.remove}
+										aria-label="Supprimer"
+										onclick={() => askDelete(doc)}
+									/>
+								</Tooltip>
 							</div>
 						</div>
 					</Card>

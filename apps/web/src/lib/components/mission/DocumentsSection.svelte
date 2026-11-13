@@ -8,7 +8,7 @@
 	import SignatureStatus from '$lib/components/SignatureStatus.svelte';
 	import SendForSignature from '$lib/components/SendForSignature.svelte';
 	import { onMount } from 'svelte';
-	import { Button, ConfirmModal, Section } from '@facile/muse';
+	import { Button, ConfirmModal, Section, Tooltip } from '@facile/muse';
 	import { icons } from '$lib/icons';
 
 	interface Props {
@@ -87,21 +87,25 @@
 						{#if SIGNABLE_TYPES.includes(doc.type) && doc.signatureStatus === 'none'}
 							<SendForSignature documentId={doc.id} enabled={signatureEnabled} onsent={onChange} />
 						{/if}
-						<Button
-							variant="ghost"
-							size="sm"
-							icon={icons.download}
-							aria-label="Télécharger"
-							onclick={() => downloadDocument(doc.id)}
-						/>
-						<Button
-							variant="ghost-danger"
-							size="sm"
-							icon={icons.revoke}
-							aria-label="Détacher de la mission"
-							disabled={busy}
-							onclick={() => askDetach(doc.id)}
-						/>
+						<Tooltip text="Télécharger" describe={false} class="contents">
+							<Button
+								variant="ghost"
+								size="sm"
+								icon={icons.download}
+								aria-label="Télécharger"
+								onclick={() => downloadDocument(doc.id)}
+							/>
+						</Tooltip>
+						<Tooltip text="Détacher de la mission" describe={false} class="contents">
+							<Button
+								variant="ghost-danger"
+								size="sm"
+								icon={icons.revoke}
+								aria-label="Détacher de la mission"
+								disabled={busy}
+								onclick={() => askDetach(doc.id)}
+							/>
+						</Tooltip>
 					</div>
 				</li>
 			{/each}

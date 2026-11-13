@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Dropzone, EmptyState, UploadProgress } from '@facile/muse';
+	import { Button, Dropzone, EmptyState, UploadProgress, Tooltip } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { i18n } from '@repo/i18n/svelte';
 	import { icons, ardoise } from '$lib/icons';
@@ -123,13 +123,15 @@
 				<Button variant="ghost" size="sm" onclick={() => (replacing = true)}>
 					{$i18n.t('import.drop.replace')}
 				</Button>
-				<Button
-					variant="ghost-danger"
-					size="sm"
-					icon={icons.remove}
-					aria-label={$i18n.t('import.drop.remove')}
-					onclick={clear}
-				/>
+				<Tooltip text={$i18n.t('import.drop.remove')} describe={false} class="contents">
+					<Button
+						variant="ghost-danger"
+						size="sm"
+						icon={icons.remove}
+						aria-label={$i18n.t('import.drop.remove')}
+						onclick={clear}
+					/>
+				</Tooltip>
 			</div>
 		</div>
 		<iframe

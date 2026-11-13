@@ -20,6 +20,7 @@
     Spinner,
     Textarea,
     toast,
+    Tooltip,
   } from '@facile/muse';
   import { icons, ardoise } from '$lib/icons';
   import { logger } from '@repo/logger';
@@ -518,12 +519,14 @@
                 <div class="flex items-center gap-3 rounded-fc-md bg-fc-surface p-2">
                   <Icon icon={ardoise.document} size={16} class="text-fc-fg-muted" />
                   <span class="flex-1 text-fc-sm font-medium text-fc-fg">{file}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={icons.download}
-                    aria-label="Télécharger le fichier"
-                  />
+                  <Tooltip text="Télécharger le fichier" describe={false} class="contents">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={icons.download}
+                      aria-label="Télécharger le fichier"
+                    />
+                  </Tooltip>
                 </div>
               {/each}
             </div>

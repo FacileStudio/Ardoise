@@ -2,7 +2,7 @@
 	import { trpc } from '$lib/trpc';
 	import { runAction } from '$lib/mission-actions';
 	import { formatEuro } from '$lib/mission';
-	import { Button, Input, Section, Select } from '@facile/muse';
+	import { Button, Input, Section, Select, Tooltip } from '@facile/muse';
 	import { icons } from '$lib/icons';
 
 	interface Props {
@@ -144,13 +144,15 @@
 						{/each}
 					</Select>
 					{#if editable}
-						<Button
-							variant="ghost-danger"
-							size="sm"
-							icon={icons.remove}
-							aria-label="Retirer la prestation"
-							onclick={() => removeRow(index)}
-						/>
+						<Tooltip text="Retirer la prestation" describe={false} class="contents">
+							<Button
+								variant="ghost-danger"
+								size="sm"
+								icon={icons.remove}
+								aria-label="Retirer la prestation"
+								onclick={() => removeRow(index)}
+							/>
+						</Tooltip>
 					{/if}
 				</li>
 			{/each}

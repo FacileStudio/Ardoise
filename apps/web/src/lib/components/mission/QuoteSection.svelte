@@ -3,7 +3,7 @@
 	import { runAction } from '$lib/mission-actions';
 	import { downloadDocument } from '$lib/download-document';
 	import { formatEuro, formatDate } from '$lib/mission';
-	import { Alert, Badge, Button, Section } from '@facile/muse';
+	import { Alert, Badge, Button, Section, Tooltip } from '@facile/muse';
 	import { icons } from '$lib/icons';
 
 	interface Props {
@@ -96,13 +96,15 @@
 					</div>
 					<div class="flex items-center gap-2">
 						<Badge tone={state.variant}>{state.label}</Badge>
-						<Button
-							variant="ghost"
-							size="sm"
-							icon={icons.download}
-							aria-label="Télécharger"
-							onclick={() => downloadDocument(quote.id)}
-						/>
+						<Tooltip text="Télécharger" describe={false} class="contents">
+							<Button
+								variant="ghost"
+								size="sm"
+								icon={icons.download}
+								aria-label="Télécharger"
+								onclick={() => downloadDocument(quote.id)}
+							/>
+						</Tooltip>
 					</div>
 				</li>
 			{/each}

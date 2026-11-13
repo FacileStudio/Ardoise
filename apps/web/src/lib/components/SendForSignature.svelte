@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, toast } from '@facile/muse';
+	import { Button, toast, Tooltip } from '@facile/muse';
 	import { logger } from '@repo/logger';
 	import { trpc } from '$lib/trpc';
 	import { ardoise } from '$lib/icons';
@@ -36,13 +36,14 @@
 	}
 </script>
 
-<Button
-	variant="ghost"
-	size="sm"
-	icon={ardoise.signature}
-	disabled={!enabled || loading}
-	{title}
-	onclick={send}
->
-	{loading ? 'Envoi...' : 'Envoyer pour signature'}
-</Button>
+<Tooltip text={title}>
+	<Button
+		variant="ghost"
+		size="sm"
+		icon={ardoise.signature}
+		disabled={!enabled || loading}
+		onclick={send}
+	>
+		{loading ? 'Envoi...' : 'Envoyer pour signature'}
+	</Button>
+</Tooltip>

@@ -22,6 +22,7 @@
         Spinner,
         Table,
         toast,
+        Tooltip,
     } from '@facile/muse';
     import { icons } from '$lib/icons';
     import authStore from '$lib/auth-store';
@@ -252,13 +253,15 @@
                             <td>{@render roleCell(m, isCurrentUser)}</td>
                             <td class="text-right">
                                 {#if canManage && !isCurrentUser && m.role !== 'OWNER'}
-                                    <Button
-                                        variant="ghost-danger"
-                                        size="sm"
-                                        icon={icons.remove}
-                                        aria-label={$i18n.t('spaces.removeMember')}
-                                        onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
-                                    />
+                                    <Tooltip text={$i18n.t('spaces.removeMember')} describe={false} class="contents">
+                                      <Button
+                                          variant="ghost-danger"
+                                          size="sm"
+                                          icon={icons.remove}
+                                          aria-label={$i18n.t('spaces.removeMember')}
+                                          onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
+                                      />
+                                    </Tooltip>
                                 {/if}
                             </td>
                         </tr>
@@ -279,13 +282,15 @@
                                 <span class="truncate text-fc-xs text-fc-fg-muted">{m.user.email}</span>
                             </div>
                             {#if canManage && !isCurrentUser && m.role !== 'OWNER'}
-                                <Button
-                                    variant="ghost-danger"
-                                    size="sm"
-                                    icon={icons.remove}
-                                    aria-label={$i18n.t('spaces.removeMember')}
-                                    onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
-                                />
+                                <Tooltip text={$i18n.t('spaces.removeMember')} describe={false} class="contents">
+                                  <Button
+                                      variant="ghost-danger"
+                                      size="sm"
+                                      icon={icons.remove}
+                                      aria-label={$i18n.t('spaces.removeMember')}
+                                      onclick={() => { confirmRemove = m; showRemoveDialog = true; }}
+                                  />
+                                </Tooltip>
                             {/if}
                         </div>
                         {@render roleCell(m, isCurrentUser)}

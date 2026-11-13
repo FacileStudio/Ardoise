@@ -14,6 +14,7 @@
 		Spinner,
 		StatCard,
 		Table,
+		Tooltip,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
 	import { Pagination, SearchInput, SpaceFilter } from '$lib/ui';
@@ -300,27 +301,33 @@
 								<td class="text-fc-fg-muted">{formatDate(client.createdAt)}</td>
 								<td>
 									<div class="flex items-center justify-end gap-1">
-										<Button
-											variant="ghost"
-											size="sm"
-											icon={icons.edit}
-											aria-label={$i18n.t('admin.clients.editClient')}
-											href={resolve(`/admin/clients/${client.id}`)}
-										/>
-										<Button
-											variant="ghost"
-											size="sm"
-											icon={ardoise.transfer}
-											aria-label="Copier / déplacer"
-											onclick={() => openTransfer(client)}
-										/>
-										<Button
-											variant="ghost-danger"
-											size="sm"
-											icon={icons.remove}
-											aria-label={$i18n.t('admin.clients.deleteClient')}
-											onclick={() => askDelete(client)}
-										/>
+										<Tooltip text={$i18n.t('admin.clients.editClient')} describe={false} class="contents">
+											<Button
+												variant="ghost"
+												size="sm"
+												icon={icons.edit}
+												aria-label={$i18n.t('admin.clients.editClient')}
+												href={resolve(`/admin/clients/${client.id}`)}
+											/>
+										</Tooltip>
+										<Tooltip text="Copier / déplacer" describe={false} class="contents">
+											<Button
+												variant="ghost"
+												size="sm"
+												icon={ardoise.transfer}
+												aria-label="Copier / déplacer"
+												onclick={() => openTransfer(client)}
+											/>
+										</Tooltip>
+										<Tooltip text={$i18n.t('admin.clients.deleteClient')} describe={false} class="contents">
+											<Button
+												variant="ghost-danger"
+												size="sm"
+												icon={icons.remove}
+												aria-label={$i18n.t('admin.clients.deleteClient')}
+												onclick={() => askDelete(client)}
+											/>
+										</Tooltip>
 									</div>
 								</td>
 							</tr>
@@ -355,20 +362,24 @@
 								<Badge tone="neutral">Aucun accès</Badge>
 							{/if}
 							<div class="flex items-center gap-1">
-								<Button
-									variant="ghost"
-									size="lg"
-									icon={ardoise.transfer}
-									aria-label="Copier / déplacer"
-									onclick={() => openTransfer(client)}
-								/>
-								<Button
-									variant="ghost-danger"
-									size="lg"
-									icon={icons.remove}
-									aria-label={$i18n.t('admin.clients.deleteClient')}
-									onclick={() => askDelete(client)}
-								/>
+								<Tooltip text="Copier / déplacer" describe={false} class="contents">
+									<Button
+										variant="ghost"
+										size="lg"
+										icon={ardoise.transfer}
+										aria-label="Copier / déplacer"
+										onclick={() => openTransfer(client)}
+									/>
+								</Tooltip>
+								<Tooltip text={$i18n.t('admin.clients.deleteClient')} describe={false} class="contents">
+									<Button
+										variant="ghost-danger"
+										size="lg"
+										icon={icons.remove}
+										aria-label={$i18n.t('admin.clients.deleteClient')}
+										onclick={() => askDelete(client)}
+									/>
+								</Tooltip>
 							</div>
 						</div>
 					</Card>

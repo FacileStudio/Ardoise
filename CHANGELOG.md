@@ -14,6 +14,14 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- Web: `@facile/muse` moves from v0.16.1 to v0.21.0.
+
+### Fixed
+
+- Web: every icon-only button (edit, delete, transfer, download, pagination arrows) shows its label in a muse tooltip on hover and keyboard focus. "Envoyer pour signature" shows its hint in a muse tooltip instead of the native `title`.
+
 ## [0.20.7] - 2026-11-13
 
 ### Fixed

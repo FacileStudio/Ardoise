@@ -14,6 +14,7 @@
 		Spinner,
 		Table,
 		toast,
+		Tooltip,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
 	import { Pagination, SearchInput } from '$lib/ui';
@@ -243,20 +244,24 @@
 								<td class="font-medium text-fc-fg">{provider.tvaRate}%</td>
 								<td>
 									<div class="flex justify-end gap-1">
-										<Button
-											variant="ghost"
-											size="sm"
-											icon={icons.edit}
-											aria-label="Modifier"
-											href={resolve(`/admin/prestataires/${provider.id}`)}
-										/>
-										<Button
-											variant="ghost-danger"
-											size="sm"
-											icon={icons.remove}
-											aria-label="Supprimer"
-											onclick={() => askDelete(provider)}
-										/>
+										<Tooltip text="Modifier" describe={false} class="contents">
+											<Button
+												variant="ghost"
+												size="sm"
+												icon={icons.edit}
+												aria-label="Modifier"
+												href={resolve(`/admin/prestataires/${provider.id}`)}
+											/>
+										</Tooltip>
+										<Tooltip text="Supprimer" describe={false} class="contents">
+											<Button
+												variant="ghost-danger"
+												size="sm"
+												icon={icons.remove}
+												aria-label="Supprimer"
+												onclick={() => askDelete(provider)}
+											/>
+										</Tooltip>
 									</div>
 								</td>
 							</tr>
