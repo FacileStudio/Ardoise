@@ -16,6 +16,17 @@
         r.toggle('light', t === 'light');
       } catch (e) {}
     </script>
+    <script>
+      (function () {
+        if (location.hostname !== 'ardoise.facile.studio') return;
+        if (location.pathname.indexOf('/pay/') === 0) return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://vision.facile.studio/s.js';
+        s.setAttribute('data-mask', '');
+        document.head.appendChild(s);
+      })();
+    </script>
 
     %sveltekit.head%
     <title>Ardoise · Invoice, get paid, move on</title>
