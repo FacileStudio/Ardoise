@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.4] - 2026-11-13
+
+### Fixed
+
+- Erasure: `erasePerson` now also anonymises the customer record linked to the erased account (`Client.userId`). A client who deletes their own portal account no longer leaves their name and email on that `Client` row: the contact name becomes `Compte supprimé`, the contact email is cleared, and audit rows about that client lose the same name and email. The company, billing, tax and Stripe fields stay, and so does every issued document: a document carries its own copy of the client block and serves the PDF stored at issue, and no template prints the contact. The DB test downloads an issued invoice and a re-rendered one before and after the erasure and compares them, the stored PDF byte for byte and the re-rendered one with only typst's clock masked. `docs/erasure.md` gives the field-by-field rule and the Glouton case left to the owner.
+
 ## [0.20.3] - 2026-11-13
 
 ### Fixed
