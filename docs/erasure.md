@@ -11,6 +11,8 @@ the account. It never deletes the account row and never touches an issued docume
 - Everything that belongs only to the account goes: Registre identities, sessions, magic links,
   memberships, pending invitations, avatar files, personal comps and overrides, and the person's
   trace in audit rows.
+- The customer record linked to the account (`Client.userId`) keeps the company, but loses the
+  person: its contact name becomes `Compte supprimé` and its contact email is cleared.
 - Invoices, quotes, contracts, payments and the records they hang off stay exactly as issued,
   numbers, totals, issuer and client blocks included.
 - An anonymised account cannot sign in: it has no identity row left, its email matches nobody, and
@@ -22,6 +24,21 @@ the account. It never deletes the account row and never touches an issued docume
 Why keep the documents: French tax and commercial law require a business to keep its invoices and
 accounting records, unaltered, for several years. Erasure rights do not apply to data a business is
 legally required to keep, so the issued records stay and only the account behind the login goes.
+
+Why clearing the contact changes no issued document: a document never reads the `Client` row
+after it is issued.
+
+- At issue, Ardoise copies the client block onto the document (`Document.clientName` from
+  `Client.companyName`, plus `clientSiret`, `clientTvaIntracom`, `clientAddress`, `clientCity`,
+  `clientPostalCode`, `clientCountry`) and stores the rendered PDF (`pdfUrl`, `pdfHash`).
+- A download serves the stored PDF. A document with no stored PDF is rendered again from its own
+  row and the provider's bank details, never from `Client`.
+- No template prints the contact name or email. They only address emails (reminders, receipts,
+  magic links) and Plume signature requests.
+
+The DB test downloads an issued invoice and a re-rendered one before and after a self-deletion and
+compares them: the stored PDF byte for byte, the re-rendered one with only the render clock (dates
+and PDF instance id) masked.
 
 ## How Ardoise learns of an erasure
 
@@ -79,13 +96,16 @@ record)**, **keep (not personal)**.
 | `EntitlementOverride` of scope `person` with the person's subject or email | delete | |
 | `EntitlementOverride.createdBy`, `CompedSpace.createdBy` equal to the person's email | anonymise | Row kept, author becomes the placeholder email |
 | `AuditLog.ipAddress`, `AuditLog.userAgent` on the person's own rows | anonymise | Set to null |
-| `AuditLog.changes` | anonymise | The person's email and subject become the placeholder; their first and last name too, in rows about their own user |
+| `AuditLog.changes` | anonymise | The person's email and subject become the placeholder; their first and last name too, in rows about their own user, and the linked client's contact name and email in rows about that client |
 | `AuditLog` row, `userId`, `entity`, `entityId`, `action`, `createdAt` | keep (legal record) | The trail of who changed what, now pointing at the tombstone |
 | `Document` (every type: `devis`, `facture_prestation`, `appel_de_fonds`, contracts, `prestation_*`) | keep (legal record) | Untouched, `updatedAt` included. `providerName`, `providerEmail`, `providerPhone` and the rest of the issuer block, the client block, `name`, `items`, `serviceData`, numbers, totals, `pdfUrl`, `pdfHash` |
 | `Document.createdBy` | keep (legal record) | Points at the tombstone |
 | Stored PDFs under `uploads/<user id>/` | keep (legal record) | The folder name is the uuid, not the person |
 | `Payment`, `PaymentInvoice`, `PaymentDocument`, `PaymentLink` | keep (legal record) | Untouched |
-| `Client` (a space's customer) | keep (legal record) | Untouched; see the cases below for a `Client.userId` link |
+| `Client.contactFirstName`, `Client.contactLastName` on the record linked to the account (`Client.userId`) | anonymise | `Compte`, `supprimé` |
+| `Client.contactEmail` on the record linked to the account | anonymise | Set to null, so no reminder or receipt is mailed to it |
+| `Client` company, billing, tax and Stripe fields, `userId` | keep (legal record) | The space's customer. Issued documents carry their own copy |
+| `Client` rows not linked to the account | keep (legal record) | Another space's customer that only shares the email; see the leftover check |
 | `Mission`, `MissionProvider`, `Prestation` | keep (legal record) | Untouched |
 | `Provider` | keep (not personal) | The space's issuing business; see the cases below |
 | `Space`, `SpaceSettings`, `DocumentCounter`, `SpaceSubscription`, `CompedSpace` | keep (not personal) | Keyed on the space, never on the person |
@@ -111,7 +131,7 @@ erasure code:
 | Table.column | Why |
 |---|---|
 | `Provider.email` | A provider record (the space's issuing business) that uses the person's own email |
-| `Client.contactEmail` | The person is also recorded as a customer contact of some space |
+| `Client.contactEmail` | The person is also the contact of a customer record not linked to their account |
 | `Settings.companyEmail` | The platform company email is the person's |
 
 Any other non-zero count is a failure: `User.email`, `Account.accountId`, `Session.*`,
@@ -131,18 +151,22 @@ read zero. The script does not scan names or `jsonb`, so it cannot see `Document
 - **`Provider` rows that are the person's own business** (a freelancer invoicing under their name).
   Kept, because the space issues new documents from them. Anonymising them would change what future
   invoices print.
-- **A `Client` row linked to the erased account** (`Client.userId`). Unreachable today: clients
-  sign in with magic links and never hold a Registre identity. If it ever happens the client row
-  stays untouched.
+- **A `Client` row linked to the erased account** (`Client.userId`) through a Registre notice.
+  Unreachable today: clients sign in with magic links and never hold a Registre identity. If it
+  ever happens, the contact name and email are anonymised as for a self-deletion.
 - **Accounts never linked to a Registre identity** (signed in only before Registre, with an old
   `oidc` provider row). A notice names a subject only, so Ardoise cannot map it to them and answers
   "unknown". Find and erase them by hand if a person asks.
 - **Audit rows that mention the person by a former name** (one that differs from the name on the
   account at erasure). Only the current name is scrubbed.
-- **A client who deletes their own account** keeps their `Client` row (contact name and email
-  included) and its payments, missions and documents: they are the space's customer record. Before
-  this went through `erasePerson`, the `User` delete cascaded to the `Client` row and its payments,
-  and failed outright once the client had a mission.
+- **A client who deletes their own account** keeps their `Client` row (company, billing and tax
+  fields) and its payments, missions and documents: they are the space's customer record. Its
+  contact name and email are anonymised. Before this went through `erasePerson`, the `User` delete
+  cascaded to the `Client` row and its payments, and failed outright once the client had a mission.
+- **A client linked to a Glouton company** (`Client.gloutonCompanyId`). The erasure sends nothing
+  to Glouton, so Glouton keeps its own copy of the contact, and a later Glouton write with a newer
+  `updatedAt` can put a contact name and email back on the row. Unlink or edit it in Glouton by hand
+  if the person asks.
 - **The push needs a dashboard edit.** Set `deletion_uri` on Registre's `ardoise` client to
   `https://api-ardoise.facile.studio/api/registre/deletions` for erasures within minutes instead of
   at the next poll.

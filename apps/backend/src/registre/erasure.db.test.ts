@@ -53,11 +53,7 @@ const clara = {
   lastName: 'Brightwater',
 };
 
-const customerRecordColumns = [
-  'Client.contactEmail',
-  'Client.contactFirstName',
-  'Client.contactLastName',
-];
+const clientContactColumns = new Set(['contactFirstName', 'contactLastName', 'contactEmail']);
 
 const legalRecordColumns = new Set([
   'Document.providerName',
@@ -542,7 +538,21 @@ describe.skipIf(!url)('Registre erasure', () => {
 
   test('a client deleting their own account goes through the same anonymisation', async () => {
     const space = await db.space.findFirstOrThrow({ where: { registreSpaceId: 'r-atelier' } });
-    const provider = await db.provider.findFirstOrThrow({ where: { spaceId: space.id } });
+    const provider = await db.provider.create({
+      data: {
+        name: 'Atelier Studio',
+        email: 'billing@atelier.test',
+        phone: '0102030405',
+        address: '1 rue de l’Atelier',
+        city: 'Paris',
+        postalCode: '75011',
+        siret: '12345678900022',
+        bankName: 'Banque Atelier',
+        iban: 'FR7612345678901234567890123',
+        bic: 'ATELFRPP',
+        spaceId: space.id,
+      },
+    });
     const user = await db.user.create({
       data: {
         email: clara.email,
@@ -585,21 +595,69 @@ describe.skipIf(!url)('Registre erasure', () => {
         contactLastName: clara.lastName,
         contactEmail: clara.email,
         companyName: 'Lune SARL',
+        billingAddress: '4 quai des Chartrons',
+        billingCity: 'Bordeaux',
+        billingPostalCode: '33000',
+        billingCountry: 'France',
+        siret: '55512345600019',
+        tvaIntracom: 'FR12555123456',
         spaceId: space.id,
       },
     });
     const mission = await db.mission.create({
       data: { name: 'Boutique', clientId: customer.id, spaceId: space.id },
     });
+    const refonte = await db.mission.create({
+      data: {
+        name: 'Refonte',
+        clientId: customer.id,
+        spaceId: space.id,
+        providers: { create: { providerId: provider.id, role: 'LEAD' } },
+        prestations: {
+          create: { description: 'Refonte', quantity: 1, unit: 'forfait', unitPrice: 600, position: 0 },
+        },
+      },
+    });
+    const files = new Map<string, Buffer>();
+    const staff = appRouter.createCaller({
+      req: new Request('http://api.test'),
+      resHeaders: new Headers(),
+      user: { id: ids.bob, role: 'MEMBER', email: 'bob@example.test' },
+      db,
+      storage: {
+        upload: async (key: string, body: Buffer) => void files.set(key, Buffer.from(body)),
+        getFileUrl: (key: string) => `https://api.example.test/storage/${key}`,
+        download: async (key: string) => files.get(key)!,
+        delete: async (key: string) => void files.delete(key),
+      },
+      env: { OIDC_ISSUER: issuer, ENCRYPTION_SECRET: 'x'.repeat(32) },
+      apiOrigin: 'https://api.example.test',
+      appOrigin: 'https://app.example.test',
+      log: { ...silent, debug: () => {}, error: () => {} },
+    } as never);
+    const quote = await staff.mission.generateQuote({ id: refonte.id, validityDays: 30 });
+    await staff.mission.acceptQuote({ id: refonte.id, documentId: quote.id });
+    const issued = await staff.mission.generateInvoice({ id: refonte.id, kind: 'TOTAL' });
+    expect(issued.clientName).toBe('Lune SARL');
+    expect(issued.pdfUrl).toBeTruthy();
     const invoice = await db.document.create({
       data: {
         type: 'facture_prestation',
         name: 'Facture Lune SARL',
         invoiceNumber: 'FAC-2026-0002',
         clientName: 'Lune SARL',
+        clientAddress: '4 quai des Chartrons',
+        clientCity: 'Bordeaux',
+        clientPostalCode: '33000',
+        clientSiret: '55512345600019',
         providerId: provider.id,
         providerName: 'Atelier Studio',
-        items: [{ description: 'Boutique', quantity: 1, unitPrice: 800 }],
+        providerSiret: '12345678900022',
+        providerEmail: 'billing@atelier.test',
+        providerPhone: '0102030405',
+        providerAddress: '1 rue de l’Atelier',
+        providerCity: 'Paris',
+        items: [{ description: 'Boutique', quantity: 1, unit: 'forfait', price: 800 }],
         subtotal: 800,
         tva: 0,
         total: 800,
@@ -638,9 +696,42 @@ describe.skipIf(!url)('Registre erasure', () => {
         userAgent: 'Safari',
       },
     });
+    await db.auditLog.create({
+      data: {
+        userId: ids.bob,
+        entity: 'client',
+        entityId: customer.id,
+        action: 'CREATE',
+        changes: {
+          after: {
+            contactFirstName: clara.firstName,
+            contactLastName: clara.lastName,
+            contactEmail: clara.email,
+          },
+        },
+      },
+    });
+    const keptTables = kept.filter((table) => table !== 'Client');
     const keptBefore = Object.fromEntries(
-      await Promise.all(kept.map(async (table) => [table, await rows(table)]))
+      await Promise.all(keptTables.map(async (table) => [table, await rows(table)]))
     );
+    const clientBefore = await db.client.findUniqueOrThrow({ where: { id: customer.id } });
+    const clockFree = (pdf: string) =>
+      Buffer.from(pdf, 'base64')
+        .toString('latin1')
+        .replace(/\/(Creation|Mod)Date\s*\(D:[^)]*\)/g, '/$1Date()')
+        .replace(/<xmp(?:MM)?:(\w+Date|InstanceID)>[^<]*</g, '<$1><')
+        .replace(/\/ID\s*\[\s*\([^)]*\)\s*\([^)]*\)\s*\]/g, '/ID[]');
+    const rendered = async () => {
+      const stored = (await staff.document.download({ id: issued.id })).pdf;
+      const rerendered = (await staff.document.download({ id: invoice.id })).pdf;
+      return { stored, rerendered: clockFree(rerendered) };
+    };
+    const renderedBefore = await rendered();
+    expect(Buffer.from(renderedBefore.stored, 'base64').subarray(0, 5).toString()).toBe('%PDF-');
+    expect(renderedBefore.rerendered.startsWith('%PDF-')).toBe(true);
+    expect(await rendered()).toEqual(renderedBefore);
+    const storedBefore = new Map(files);
     removed.splice(0);
 
     const caller = appRouter.createCaller({
@@ -654,8 +745,26 @@ describe.skipIf(!url)('Registre erasure', () => {
     } as never);
     expect(await caller.user.deleteOwnAccount()).toEqual({ status: 'erased' });
 
-    for (const table of kept) expect(await rows(table)).toEqual(keptBefore[table]);
-    expect(await mentions(clara)).toEqual(customerRecordColumns);
+    for (const table of keptTables) expect(await rows(table)).toEqual(keptBefore[table]);
+    expect(await rendered()).toEqual(renderedBefore);
+    expect(files).toEqual(storedBefore);
+    expect(await mentions(clara)).toEqual([]);
+    const clientAfter = await db.client.findUniqueOrThrow({ where: { id: customer.id } });
+    expect([
+      clientAfter.contactFirstName,
+      clientAfter.contactLastName,
+      clientAfter.contactEmail,
+    ]).toEqual([ERASED_FIRST_NAME, ERASED_LAST_NAME, null]);
+    const untouched = (row: typeof clientBefore) =>
+      Object.entries(row).filter(
+        ([column]) => !clientContactColumns.has(column) && column !== 'updatedAt'
+      );
+    expect(untouched(clientAfter)).toEqual(untouched(clientBefore));
+    expect(
+      await db.client.count({
+        where: { contactFirstName: 'Paula', contactEmail: 'paula@customer.test' },
+      })
+    ).toBe(1);
     const tombstone = await db.user.findUniqueOrThrow({ where: { id: user.id } });
     expect(tombstone.email).toBe(erasedEmail(user.id));
     expect([tombstone.firstName, tombstone.lastName, tombstone.lastLoginIp]).toEqual([

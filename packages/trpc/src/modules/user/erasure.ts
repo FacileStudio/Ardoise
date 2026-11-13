@@ -8,8 +8,9 @@ import type { Prisma, PrismaClient } from '@repo/database';
  * `User`, so the account stays as a tombstone with every personal field
  * replaced. What goes is the person's own account: identities, sessions,
  * magic links, memberships, pending invitations, avatar files, personal
- * comps and overrides, and their trace in audit rows. `docs/erasure.md` lists
- * every field and why.
+ * comps and overrides, the contact name and email of the customer record
+ * linked to the account, and their trace in audit rows. `docs/erasure.md`
+ * lists every field and why.
  */
 
 type Tx = Prisma.TransactionClient;
@@ -77,6 +78,35 @@ async function scrubAudit(tx: Tx, value: string, placeholder: string, entityId?:
       AND (${entityId ?? null}::text IS NULL OR "entityId" = ${entityId ?? null}::text)`;
 }
 
+/**
+ * Replaces the contact name and email on every customer record linked to the
+ * account. The company, billing and tax fields stay: issued documents carry
+ * their own copy of them, and the space still bills that company.
+ */
+async function anonymiseOwnClients(tx: Tx, userId: string) {
+  const clients = await tx.client.findMany({
+    where: { userId },
+    select: { id: true, contactFirstName: true, contactLastName: true, contactEmail: true },
+  });
+  for (const client of clients) {
+    if (client.contactEmail) {
+      for (const email of new Set([client.contactEmail, client.contactEmail.toLowerCase()])) {
+        await scrubAudit(tx, email, erasedEmail(userId));
+      }
+    }
+    await scrubAudit(tx, client.contactFirstName, ERASED_FIRST_NAME, client.id);
+    await scrubAudit(tx, client.contactLastName, ERASED_LAST_NAME, client.id);
+    await tx.client.update({
+      where: { id: client.id },
+      data: {
+        contactFirstName: ERASED_FIRST_NAME,
+        contactLastName: ERASED_LAST_NAME,
+        contactEmail: null,
+      },
+    });
+  }
+}
+
 /** Anonymises one account in place and removes everything that belongs only to it. */
 async function anonymise(
   tx: Tx,
@@ -102,6 +132,7 @@ async function anonymise(
     where: { userId: user.id },
     data: { ipAddress: null, userAgent: null },
   });
+  await anonymiseOwnClients(tx, user.id);
   for (const email of emails) await scrubAudit(tx, email, placeholder);
   for (const subject of subjects) await scrubAudit(tx, subject, 'erased');
   await scrubAudit(tx, user.firstName, ERASED_FIRST_NAME, user.id);
