@@ -14,6 +14,10 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Fixed
+
+- `POST /billing/portal` passes its own portal configuration (tagged `ardoise-suite`, created once). Stripe live mode has no default configuration, so the suite subscription portal failed for every space.
+
 ## [0.20.6] - 2026-11-13
 
 ### Changed
