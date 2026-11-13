@@ -116,8 +116,8 @@ function fakeDb(targetMember: unknown): any {
         if (model === '$transaction') {
           return async (arg: any) => (typeof arg === 'function' ? arg(db) : Promise.all(arg));
         }
-        const row = ROWS[model];
-        if (!row) return undefined;
+        if (model === '$executeRaw') return async () => 0;
+        const row = ROWS[model] ?? (() => ({}));
         return new Proxy(
           {},
           {
@@ -161,7 +161,7 @@ function caller(
     },
     user: { id: 'u1', role, email: 'a@b.fr' },
     log: { debug() {}, error() {}, info() {}, warn() {} },
-    storage: {},
+    storage: { delete: async () => true },
     env: { OIDC_ISSUER: 'oidc', PLATFORM_STAFF_SUBS: 'sub-staff' },
     req: new Request('http://x'),
     resHeaders: new Headers(),

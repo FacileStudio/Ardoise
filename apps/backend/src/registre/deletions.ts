@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { decodeProtectedHeader, errors, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import type { DeletionPage } from './directory';
-import type { ErasureOutcome } from './erasure';
+import type { ErasureOutcome } from '@repo/trpc/erasure';
 
 /**
  * How Ardoise learns of Registre erasures. `GET /api/directory/deletions` is

@@ -1,5 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { type PrismaClient } from '@repo/database';
+import { requestEntitlementPush } from '../billing/push';
+import { erasePerson, type ErasureDeps } from './erasure';
 
 const NO_PASSWORD = { password: true } as const;
 
@@ -46,20 +48,18 @@ export const userService = {
     }
   },
 
-  deleteOwnAccount: async (db: PrismaClient, userId: string) => {
-    const user = await db.user.findUnique({ where: { id: userId } });
+  deleteOwnAccount: async (deps: ErasureDeps, userId: string) => {
+    const outcome = await erasePerson(deps, { userId });
 
-    if (!user) {
+    if (outcome.status === 'unknown') {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'User not found',
       });
     }
 
-    return await db.user.delete({
-      where: { id: userId },
-      omit: NO_PASSWORD,
-    });
+    requestEntitlementPush();
+    return { status: outcome.status };
   },
 };
 

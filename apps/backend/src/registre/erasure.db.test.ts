@@ -4,6 +4,7 @@ import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type CryptoKey 
 import { lockTestDatabase } from '@repo/database/test-lock';
 import type { PrismaClient } from '@repo/database';
 import { loginBlockReason } from '@repo/trpc/auth/session';
+import { appRouter } from '@repo/trpc';
 
 import { PrismaClient as Client } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -11,7 +12,7 @@ import pg from 'pg';
 
 import { resolveUser } from '../oidc/identity';
 import { DeletionsPath, UserDeletedEvent, createDeletionHandler, pollDeletions } from './deletions';
-import { ERASED_FIRST_NAME, ERASED_LAST_NAME, erasedEmail, erasePerson } from './erasure';
+import { ERASED_FIRST_NAME, ERASED_LAST_NAME, erasedEmail, erasePerson } from '@repo/trpc/erasure';
 
 /**
  * Erases a person through the real push handler against a migrated Postgres
@@ -45,6 +46,19 @@ const kept = [
   'Space',
 ];
 
+const clara = {
+  sub: 'sub-clara-2c8d40',
+  email: 'Clara.Brightwater@example.test',
+  firstName: 'Clarabel',
+  lastName: 'Brightwater',
+};
+
+const customerRecordColumns = [
+  'Client.contactEmail',
+  'Client.contactFirstName',
+  'Client.contactLastName',
+];
+
 const legalRecordColumns = new Set([
   'Document.providerName',
   'Document.providerEmail',
@@ -65,7 +79,7 @@ describe.skipIf(!url)('Registre erasure', () => {
   let release: () => Promise<void> = async () => {};
 
   const erase = (subject: string) =>
-    erasePerson({ db, issuer, removeFile: async (key) => void removed.push(key) }, subject);
+    erasePerson({ db, issuer, removeFile: async (key) => void removed.push(key) }, { subject });
   const app = new Hono().post(
     DeletionsPath,
     createDeletionHandler({
@@ -109,16 +123,16 @@ describe.skipIf(!url)('Registre erasure', () => {
     return out;
   };
 
-  const mentions = async () => {
+  const mentions = async (person: typeof erin = erin) => {
     const columns = await pool.query(
       `SELECT table_name, column_name FROM information_schema.columns
        WHERE table_schema = 'public' AND data_type IN ('text', 'character varying', 'jsonb', 'json', 'ARRAY')`
     );
     const needles = [
-      erin.email.toLowerCase(),
-      erin.sub.toLowerCase(),
-      erin.firstName.toLowerCase(),
-      erin.lastName.toLowerCase(),
+      person.email.toLowerCase(),
+      person.sub.toLowerCase(),
+      person.firstName.toLowerCase(),
+      person.lastName.toLowerCase(),
     ];
     const found: string[] = [];
     for (const { table_name, column_name } of columns.rows) {
@@ -524,5 +538,139 @@ describe.skipIf(!url)('Registre erasure', () => {
     expect(await db.document.count({ where: { createdBy: fresh.id } })).toBe(0);
     expect(await db.spaceMember.count({ where: { userId: fresh.id } })).toBe(0);
     expect(await db.account.count({ where: { userId: ids.erin } })).toBe(0);
+  }, 120_000);
+
+  test('a client deleting their own account goes through the same anonymisation', async () => {
+    const space = await db.space.findFirstOrThrow({ where: { registreSpaceId: 'r-atelier' } });
+    const provider = await db.provider.findFirstOrThrow({ where: { spaceId: space.id } });
+    const user = await db.user.create({
+      data: {
+        email: clara.email,
+        firstName: clara.firstName,
+        lastName: clara.lastName,
+        role: 'CLIENT',
+        emailVerified: true,
+        lastLoginAt: new Date(),
+        lastLoginIp: '198.51.100.4',
+        accounts: {
+          create: { id: crypto.randomUUID(), providerId: issuer, accountId: clara.sub },
+        },
+        sessions: {
+          create: {
+            id: crypto.randomUUID(),
+            token: crypto.randomUUID(),
+            expiresAt: new Date(Date.now() + 3600_000),
+            ipAddress: '198.51.100.4',
+            userAgent: 'Safari',
+          },
+        },
+        magicLinks: {
+          create: { tokenHash: crypto.randomUUID(), expiresAt: new Date(Date.now() + 900_000) },
+        },
+      },
+    });
+    await db.media.create({
+      data: {
+        url: 'https://api.example.test/storage/c.png',
+        key: `uploads/${user.id}/avatar.png`,
+        mimeType: 'image/png',
+        size: 1,
+        avatarUserId: user.id,
+      },
+    });
+    const customer = await db.client.create({
+      data: {
+        userId: user.id,
+        contactFirstName: clara.firstName,
+        contactLastName: clara.lastName,
+        contactEmail: clara.email,
+        companyName: 'Lune SARL',
+        spaceId: space.id,
+      },
+    });
+    const mission = await db.mission.create({
+      data: { name: 'Boutique', clientId: customer.id, spaceId: space.id },
+    });
+    const invoice = await db.document.create({
+      data: {
+        type: 'facture_prestation',
+        name: 'Facture Lune SARL',
+        invoiceNumber: 'FAC-2026-0002',
+        clientName: 'Lune SARL',
+        providerId: provider.id,
+        providerName: 'Atelier Studio',
+        items: [{ description: 'Boutique', quantity: 1, unitPrice: 800 }],
+        subtotal: 800,
+        tva: 0,
+        total: 800,
+        issuedAt: new Date('2026-10-20T10:00:00Z'),
+        createdBy: ids.bob!,
+        spaceId: space.id,
+        missionId: mission.id,
+      },
+    });
+    await db.payment.create({
+      data: {
+        clientId: customer.id,
+        spaceId: space.id,
+        missionId: mission.id,
+        documentId: invoice.id,
+        amount: 800,
+        totalWithFees: 800,
+        description: 'FAC-2026-0002',
+        status: 'PAID',
+        collectionMethod: 'MANUAL',
+        dueDate: new Date('2026-11-20T00:00:00Z'),
+        paidAt: new Date('2026-10-25T00:00:00Z'),
+      },
+    });
+    await db.compedPerson.create({
+      data: { email: clara.email.toLowerCase(), reason: 'friend', planKey: 'pro' },
+    });
+    await db.auditLog.create({
+      data: {
+        userId: user.id,
+        entity: 'client',
+        entityId: customer.id,
+        action: 'UPDATE',
+        changes: { after: { email: clara.email.toLowerCase(), sub: clara.sub } },
+        ipAddress: '198.51.100.4',
+        userAgent: 'Safari',
+      },
+    });
+    const keptBefore = Object.fromEntries(
+      await Promise.all(kept.map(async (table) => [table, await rows(table)]))
+    );
+    removed.splice(0);
+
+    const caller = appRouter.createCaller({
+      req: new Request('http://api.test'),
+      resHeaders: new Headers(),
+      user: { id: user.id, role: 'CLIENT', email: clara.email },
+      db,
+      storage: { delete: async (key: string) => void removed.push(key) },
+      env: { OIDC_ISSUER: issuer, ENCRYPTION_SECRET: 'x'.repeat(32) },
+      log: { ...silent, debug: () => {}, error: () => {} },
+    } as never);
+    expect(await caller.user.deleteOwnAccount()).toEqual({ status: 'erased' });
+
+    for (const table of kept) expect(await rows(table)).toEqual(keptBefore[table]);
+    expect(await mentions(clara)).toEqual(customerRecordColumns);
+    const tombstone = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(tombstone.email).toBe(erasedEmail(user.id));
+    expect([tombstone.firstName, tombstone.lastName, tombstone.lastLoginIp]).toEqual([
+      ERASED_FIRST_NAME,
+      ERASED_LAST_NAME,
+      null,
+    ]);
+    expect(loginBlockReason(tombstone)).not.toBeNull();
+    expect(await db.client.count({ where: { userId: user.id } })).toBe(1);
+    expect(await db.payment.count({ where: { clientId: customer.id } })).toBe(1);
+    expect(await db.session.count({ where: { userId: user.id } })).toBe(0);
+    expect(await db.magicLink.count({ where: { userId: user.id } })).toBe(0);
+    expect(await db.account.count({ where: { userId: user.id } })).toBe(0);
+    expect(await db.compedPerson.count()).toBe(0);
+    expect(removed).toEqual([`uploads/${user.id}/avatar.png`]);
+    expect(await caller.user.deleteOwnAccount().catch((error) => error.code)).toBe('NOT_FOUND');
   }, 120_000);
 });

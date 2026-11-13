@@ -13,7 +13,8 @@
     "./open-payment-links": "./src/modules/payment/open-links.ts",
     "./auth/session": "./src/modules/auth/session.ts",
     "./auth/sso-tokens": "./src/modules/auth/sso-tokens.ts",
-    "./auth/service": "./src/modules/auth/service.ts"
+    "./auth/service": "./src/modules/auth/service.ts",
+    "./erasure": "./src/modules/user/erasure.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

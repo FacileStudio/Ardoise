@@ -31,10 +31,9 @@ describe('userService password hash exposure', () => {
 
     await userService.getProfile(db, 'u1');
     await userService.updateProfile(db, 'u1', { firstName: 'X' });
-    await userService.deleteOwnAccount(db, 'u1');
 
     const returning = calls.filter((c) => c.op !== 'user.findUnique' || c.args.include);
-    expect(returning.length).toBe(3);
+    expect(returning.length).toBe(2);
     for (const call of returning) {
       expect(call.args.omit).toEqual({ password: true });
     }

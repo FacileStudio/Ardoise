@@ -30,9 +30,10 @@ export const userRouter = router({
     }),
 
   /**
-   * Only a client portal account deletes itself here. A Facile SSO account
-   * belongs to Registre, and deleting its row would cascade to every document
-   * it created in shared spaces.
+   * Only a client portal account erases itself here, through the same
+   * anonymisation as a Registre erasure notice: the account becomes a
+   * tombstone and every issued document and payment stays. A Facile SSO
+   * account belongs to Registre, which erases it and notifies Ardoise.
    */
   deleteOwnAccount: protectedProcedure.mutation(async ({ ctx }) => {
     if (ctx.user.role !== 'CLIENT') {
@@ -41,7 +42,14 @@ export const userRouter = router({
         message: 'Facile SSO accounts are deleted in Registre (sso.facile.studio)',
       });
     }
-    return userService.deleteOwnAccount(ctx.db, ctx.user.id);
+    return userService.deleteOwnAccount(
+      {
+        db: ctx.db,
+        issuer: ctx.env.OIDC_ISSUER ?? '',
+        removeFile: (key) => ctx.storage.delete(key),
+      },
+      ctx.user.id
+    );
   }),
 });
 

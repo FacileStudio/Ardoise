@@ -1,7 +1,7 @@
 # Erasure
 
-When Registre erases a person, Ardoise anonymises their account. It never deletes the account row
-and never touches an issued document.
+When Registre erases a person, or a client deletes their own portal account, Ardoise anonymises
+the account. It never deletes the account row and never touches an issued document.
 
 ## The rule
 
@@ -27,7 +27,15 @@ legally required to keep, so the issued records stay and only the account behind
 
 Registre holds a self-deletion for 30 days, then deletes the account and writes one deletion notice
 per suite application. Ardoise takes it two ways. Both call `erasePerson`
-(`apps/backend/src/registre/erasure.ts`), which runs in one transaction under an advisory lock.
+(`packages/trpc/src/modules/user/erasure.ts`, exported as `@repo/trpc/erasure`) with
+`{ subject }`, which runs in one transaction under an advisory lock.
+
+A client portal account (magic link, no Registre identity) erases itself with
+`user.deleteOwnAccount`, which calls the same `erasePerson` with `{ userId }`: the same tombstone,
+the same deletions, the same kept records. It scrubs every identity subject the account still
+holds. Nothing goes back to Registre: Registre has no app-facing deletion call, a client has no
+Registre account, and a Facile SSO account is refused here because the person deletes it on their
+Registre account page, which then notifies Ardoise as above.
 
 | Path | Where | Authentication | Answer |
 |---|---|---|---|
@@ -109,7 +117,7 @@ erasure code:
 Any other non-zero count is a failure: `User.email`, `Account.accountId`, `Session.*`,
 `Invitation.email`, `CompedPerson.*`, `EntitlementOverride.*` and `CompedSpace.createdBy` must all
 read zero. The script does not scan names or `jsonb`, so it cannot see `Document.providerName` or
-`AuditLog.changes`; the DB test (`apps/backend/src/registre/erasure.db.test.ts`) does.
+`AuditLog.changes`; the DB test (`apps/backend/src/registre/erasure.db.test.ts`) does, for both paths.
 
 ## Cases left to the owner
 
@@ -131,9 +139,10 @@ read zero. The script does not scan names or `jsonb`, so it cannot see `Document
   "unknown". Find and erase them by hand if a person asks.
 - **Audit rows that mention the person by a former name** (one that differs from the name on the
   account at erasure). Only the current name is scrubbed.
-- **The client self-deletion path** (`user.deleteOwnAccount`) still deletes the `User` row. Its
-  `Client` row cascades, and so do that client's payments when no mission blocks it. That path
-  predates this page and is not a Registre erasure.
+- **A client who deletes their own account** keeps their `Client` row (contact name and email
+  included) and its payments, missions and documents: they are the space's customer record. Before
+  this went through `erasePerson`, the `User` delete cascaded to the `Client` row and its payments,
+  and failed outright once the client had a mission.
 - **The push needs a dashboard edit.** Set `deletion_uri` on Registre's `ardoise` client to
   `https://api-ardoise.facile.studio/api/registre/deletions` for erasures within minutes instead of
   at the next poll.

@@ -24,7 +24,7 @@ import { prisma } from '@repo/database';
 import { DirectoryClient, SyncPath } from './registre/directory';
 import { applySnapshot, buildImport } from './registre/spaces';
 import { startDirectorySync } from './registre/boot';
-import { erasePerson } from './registre/erasure';
+import { erasePerson } from '@repo/trpc/erasure';
 import { DeletionsPath, createDeletionHandler, startDeletionPolling } from './registre/deletions';
 import { loadProvider } from './oidc/provider';
 import { createBillingRoutes } from './handlers/billing';
@@ -71,7 +71,7 @@ const directory =
 
 const erase = issuer
   ? async (subject: string) => {
-      const outcome = await erasePerson({ db: prisma, issuer, removeFile: (key) => storage.delete(key) }, subject);
+      const outcome = await erasePerson({ db: prisma, issuer, removeFile: (key) => storage.delete(key) }, { subject });
       if (outcome.status === 'erased') requestEntitlementPush();
       return outcome;
     }
