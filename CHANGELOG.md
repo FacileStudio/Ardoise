@@ -14,6 +14,10 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Changed
+
+- Billing seed: `courrier.mailboxes` and `echo.max_call_minutes` are unlimited (-1) on Solo, Pro and Studio, and so is their feature default. `echo.recording` stays off on Solo. A seed never edits existing rows, so it cannot undo or redo this in a database that already has the catalog; production moved to these values through plan versions v4.
+
 ## [0.20.5] - 2026-11-13
 
 ### Changed

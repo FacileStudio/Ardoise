@@ -13,8 +13,8 @@ interface SeedFeature {
 /** The six suite features with the contract's Solo, Pro and Studio values. */
 export const SEED_FEATURES: SeedFeature[] = [
   { key: 'nuage.storage_gb', app: 'nuage', kind: 'limit', unit: 'Go', description: 'Stockage Nuage', values: { solo: 5, pro: 100, studio: 500 } },
-  { key: 'courrier.mailboxes', app: 'courrier', kind: 'limit', unit: 'boîtes', description: 'Boîtes mail Courrier', values: { solo: 1, pro: 5, studio: -1 } },
-  { key: 'echo.max_call_minutes', app: 'echo', kind: 'limit', unit: 'minutes', description: 'Durée maximale d’un appel Écho', values: { solo: 40, pro: -1, studio: -1 } },
+  { key: 'courrier.mailboxes', app: 'courrier', kind: 'limit', unit: 'boîtes', description: 'Boîtes mail Courrier', values: { solo: -1, pro: -1, studio: -1 } },
+  { key: 'echo.max_call_minutes', app: 'echo', kind: 'limit', unit: 'minutes', description: 'Durée maximale d’un appel Écho', values: { solo: -1, pro: -1, studio: -1 } },
   { key: 'echo.max_participants', app: 'echo', kind: 'limit', unit: 'participants', description: 'Participants par appel Écho', values: { solo: 4, pro: 25, studio: 100 } },
   { key: 'echo.recording', app: 'echo', kind: 'bool', unit: null, description: 'Enregistrement des appels Écho', values: { solo: false, pro: true, studio: true } },
   { key: 'glouton.access', app: 'glouton', kind: 'bool', unit: null, description: 'Accès à Glouton', values: { solo: false, pro: true, studio: true } },
