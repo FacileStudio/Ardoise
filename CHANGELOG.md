@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-11-13
+
+### Fixed
+
+- Erasure: `user.deleteOwnAccount` (a client deleting their own portal account) now anonymises through `erasePerson`, the same function a Registre deletion notice runs, instead of deleting the `User` row. The row delete cascaded to the client's `Client` row and its payments, failed with a foreign-key error once the client had a mission, and left their email and name in audit rows and personal comps. The account becomes the same tombstone, and documents, payments, missions and the `Client` record stay as issued. `erasePerson` moved to `packages/trpc/src/modules/user/erasure.ts` (`@repo/trpc/erasure`) and takes `{ subject }` or `{ userId }`. The procedure now answers `{ status: 'erased' }`.
+
 ## [0.20.2] - 2026-11-11
 
 ### Fixed

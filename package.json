@@ -1,7 +1,7 @@
 {
   "name": "ardoise",
   "license": "AGPL-3.0-only",
-  "version": "0.20.2",
+  "version": "0.20.3",
   "private": true,
   "workspaces": [
     "apps/*",
