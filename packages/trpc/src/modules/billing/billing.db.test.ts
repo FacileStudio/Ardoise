@@ -178,6 +178,9 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
     const facile = await spaceStatus(prisma, directory, 'spc_facile');
     expect(facile).toMatchObject({ plan: 'solo', comped: false });
     expect(facile.entitlements['glouton.access']).toBe(false);
+    expect(facile.entitlements['courrier.mailboxes']).toBe(-1);
+    expect(facile.entitlements['echo.max_call_minutes']).toBe(-1);
+    expect(facile.entitlements['echo.recording']).toBe(false);
   });
 
   it('matches comps by subject or verified email only, never an unverified snapshot email', async () => {
