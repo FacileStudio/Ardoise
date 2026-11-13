@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.9] - 2026-11-13
+
+### Added
+
+- feat(web): `app.html` loads Vision's `s.js` on `ardoise.facile.studio` only, with `data-mask` so ids in the path are recorded as `:id`. Payment-link pages (`/pay/<token>`) never load it: the token is base64url and can be all letters, which the mask would not catch. Ardoise sends no CSP, so no policy changes.
+
 ## [0.20.8] - 2026-11-13
 
 ### Changed
