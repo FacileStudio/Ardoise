@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Icon } from '@facile/muse';
+  import { Button, Icon, Tooltip } from '@facile/muse';
   import { cn } from '@repo/utils';
   import { icons } from '$lib/icons';
 
@@ -39,14 +39,16 @@
 </script>
 
 <nav class={cn('flex items-center justify-center gap-1', className)} aria-label="Pagination">
-  <Button
-    variant="ghost"
-    icon={icons.chevronLeft}
-    aria-label="Page précédente"
-    disabled={currentPage === 1}
-    onclick={() => goToPage(currentPage - 1)}
-    class="w-9 px-0"
-  />
+  <Tooltip text="Page précédente" describe={false} class="contents">
+    <Button
+      variant="ghost"
+      icon={icons.chevronLeft}
+      aria-label="Page précédente"
+      disabled={currentPage === 1}
+      onclick={() => goToPage(currentPage - 1)}
+      class="w-9 px-0"
+    />
+  </Tooltip>
 
   {#each pages as pageNum, idx (idx)}
     {#if pageNum === '...'}
@@ -65,12 +67,14 @@
     {/if}
   {/each}
 
-  <Button
-    variant="ghost"
-    icon={icons.arrow}
-    aria-label="Page suivante"
-    disabled={currentPage === totalPages}
-    onclick={() => goToPage(currentPage + 1)}
-    class="w-9 px-0"
-  />
+  <Tooltip text="Page suivante" describe={false} class="contents">
+    <Button
+      variant="ghost"
+      icon={icons.arrow}
+      aria-label="Page suivante"
+      disabled={currentPage === totalPages}
+      onclick={() => goToPage(currentPage + 1)}
+      class="w-9 px-0"
+    />
+  </Tooltip>
 </nav>

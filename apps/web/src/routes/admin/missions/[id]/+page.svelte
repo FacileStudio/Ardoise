@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Badge, Button, ConfirmModal, Page, PageHeader, Spinner, toast } from '@facile/muse';
+	import { Alert, Badge, Button, ConfirmModal, Page, PageHeader, Spinner, toast, Tooltip } from '@facile/muse';
 	import { icons } from '$lib/icons';
 	import { i18n } from '@repo/i18n/svelte';
 	import { logger } from '@repo/logger';
@@ -95,13 +95,15 @@
 						Annuler la mission
 					</Button>
 				{/if}
-				<Button
-					variant="ghost-danger"
-					icon={icons.remove}
-					aria-label="Supprimer la mission"
-					disabled={busy}
-					onclick={() => (confirmDelete = true)}
-				/>
+				<Tooltip text="Supprimer la mission" describe={false} class="contents">
+					<Button
+						variant="ghost-danger"
+						icon={icons.remove}
+						aria-label="Supprimer la mission"
+						disabled={busy}
+						onclick={() => (confirmDelete = true)}
+					/>
+				</Tooltip>
 			{/snippet}
 		</PageHeader>
 

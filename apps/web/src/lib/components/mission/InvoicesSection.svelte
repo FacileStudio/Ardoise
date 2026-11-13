@@ -11,7 +11,7 @@
 		formatEuro,
 		formatDate,
 	} from '$lib/mission';
-	import { Badge, Button, Section, Select } from '@facile/muse';
+	import { Badge, Button, Section, Select, Tooltip } from '@facile/muse';
 	import { icons } from '$lib/icons';
 
 	interface Props {
@@ -125,13 +125,15 @@
 								{#if invoice.dueDate}· échéance {formatDate(invoice.dueDate)}{/if}
 							</div>
 						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							icon={icons.download}
-							aria-label="Télécharger"
-							onclick={() => downloadDocument(invoice.id)}
-						/>
+						<Tooltip text="Télécharger" describe={false} class="contents">
+							<Button
+								variant="ghost"
+								size="sm"
+								icon={icons.download}
+								aria-label="Télécharger"
+								onclick={() => downloadDocument(invoice.id)}
+							/>
+						</Tooltip>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">

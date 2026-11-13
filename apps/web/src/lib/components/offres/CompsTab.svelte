@@ -14,6 +14,7 @@
     Table,
     Textarea,
     toast,
+    Tooltip,
   } from '@facile/muse';
   import { trpc } from '$lib/trpc';
   import { icons, ardoise } from '$lib/icons';
@@ -131,9 +132,13 @@
               <td class="text-fc-fg-muted">{formatDate(comp.createdAt)}</td>
               <td>
                 <div class="flex justify-end gap-1">
-                  <Button variant="ghost" size="sm" icon={icons.edit} aria-label="Modifier" onclick={() => edit(comp)} />
-                  <Button variant="ghost-danger" size="sm" icon={icons.remove} aria-label="Retirer"
-                    onclick={() => ((pending = comp), (confirm = true))} />
+                  <Tooltip text="Modifier" describe={false} class="contents">
+                    <Button variant="ghost" size="sm" icon={icons.edit} aria-label="Modifier" onclick={() => edit(comp)} />
+                  </Tooltip>
+                  <Tooltip text="Retirer" describe={false} class="contents">
+                    <Button variant="ghost-danger" size="sm" icon={icons.remove} aria-label="Retirer"
+                      onclick={() => ((pending = comp), (confirm = true))} />
+                  </Tooltip>
                 </div>
               </td>
             </tr>
@@ -150,8 +155,10 @@
               {planName(comp.planKey)} · {comp.registreSub ? comp.reason : 'Inactif: identifiant Registre manquant'}
             </span>
           </button>
-          <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Retirer"
-            onclick={() => ((pending = comp), (confirm = true))} />
+          <Tooltip text="Retirer" describe={false} class="contents">
+            <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Retirer"
+              onclick={() => ((pending = comp), (confirm = true))} />
+          </Tooltip>
         </Card>
       {/each}
     </div>

@@ -15,6 +15,7 @@
 		Table,
 		Tabs,
 		toast,
+		Tooltip,
 	} from '@facile/muse';
 	import { icons, ardoise } from '$lib/icons';
 	import { Pagination, SearchInput, SpaceFilter } from '$lib/ui';
@@ -402,14 +403,16 @@
 								<td>
 									<div class="flex items-center justify-end gap-1">
 										{#if payment.status === 'PENDING'}
-											<Button
-												variant="ghost-danger"
-												size="sm"
-												icon={icons.revoke}
-												aria-label={$i18n.t('admin.payments.cancelPayment')}
-												disabled={actionLoading === payment.id}
-												onclick={() => askCancel(payment)}
-											/>
+											<Tooltip text={$i18n.t('admin.payments.cancelPayment')} describe={false} class="contents">
+												<Button
+													variant="ghost-danger"
+													size="sm"
+													icon={icons.revoke}
+													aria-label={$i18n.t('admin.payments.cancelPayment')}
+													disabled={actionLoading === payment.id}
+													onclick={() => askCancel(payment)}
+												/>
+											</Tooltip>
 										{/if}
 									</div>
 								</td>
@@ -442,14 +445,16 @@
 								>
 							</div>
 							{#if payment.status === 'PENDING'}
-								<Button
-									variant="ghost-danger"
-									size="lg"
-									icon={icons.revoke}
-									aria-label={$i18n.t('admin.payments.cancelPayment')}
-									disabled={actionLoading === payment.id}
-									onclick={() => askCancel(payment)}
-								/>
+								<Tooltip text={$i18n.t('admin.payments.cancelPayment')} describe={false} class="contents">
+									<Button
+										variant="ghost-danger"
+										size="lg"
+										icon={icons.revoke}
+										aria-label={$i18n.t('admin.payments.cancelPayment')}
+										disabled={actionLoading === payment.id}
+										onclick={() => askCancel(payment)}
+									/>
+								</Tooltip>
 							{/if}
 						</div>
 					</Card>

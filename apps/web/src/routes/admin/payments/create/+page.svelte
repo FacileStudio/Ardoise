@@ -19,6 +19,7 @@
     Switch,
     Textarea,
     toast,
+    Tooltip,
   } from '@facile/muse';
   import { icons, ardoise } from '$lib/icons';
   import { logger } from '@repo/logger';
@@ -332,13 +333,15 @@
                   </div>
                 </div>
               </div>
-              <Button
-                variant="ghost-danger"
-                size="sm"
-                icon={icons.remove}
-                aria-label="Retirer le document"
-                onclick={() => removeDocument(docId)}
-              />
+              <Tooltip text="Retirer le document" describe={false} class="contents">
+                <Button
+                  variant="ghost-danger"
+                  size="sm"
+                  icon={icons.remove}
+                  aria-label="Retirer le document"
+                  onclick={() => removeDocument(docId)}
+                />
+              </Tooltip>
             </div>
           {/if}
         {/each}

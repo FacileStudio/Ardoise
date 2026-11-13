@@ -13,6 +13,7 @@
     Table,
     Textarea,
     toast,
+    Tooltip,
   } from '@facile/muse';
   import { trpc } from '$lib/trpc';
   import { icons, ardoise } from '$lib/icons';
@@ -132,7 +133,9 @@
               <td class="text-fc-fg">{formatValue(feature.defaultValue, feature.unit)}</td>
               <td>
                 <div class="flex justify-end">
-                  <Button variant="ghost" size="sm" icon={icons.edit} aria-label="Modifier" onclick={() => edit(feature)} />
+                  <Tooltip text="Modifier" describe={false} class="contents">
+                    <Button variant="ghost" size="sm" icon={icons.edit} aria-label="Modifier" onclick={() => edit(feature)} />
+                  </Tooltip>
                 </div>
               </td>
             </tr>
@@ -149,7 +152,9 @@
               Par défaut: {formatValue(feature.defaultValue, feature.unit)}
             </span>
           </div>
-          <Button variant="ghost" size="lg" icon={icons.edit} aria-label="Modifier" onclick={() => edit(feature)} />
+          <Tooltip text="Modifier" describe={false} class="contents">
+            <Button variant="ghost" size="lg" icon={icons.edit} aria-label="Modifier" onclick={() => edit(feature)} />
+          </Tooltip>
         </Card>
       {/each}
     </div>

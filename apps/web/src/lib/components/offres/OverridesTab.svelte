@@ -14,6 +14,7 @@
     Table,
     Textarea,
     toast,
+    Tooltip,
   } from '@facile/muse';
   import { trpc } from '$lib/trpc';
   import { icons, ardoise } from '$lib/icons';
@@ -159,8 +160,10 @@
               <td class="text-fc-fg-muted">{expired(override) ? 'Expirée' : formatDate(override.expiresAt)}</td>
               <td>
                 <div class="flex justify-end">
-                  <Button variant="ghost-danger" size="sm" icon={icons.remove} aria-label="Supprimer"
-                    onclick={() => ((pending = override), (confirm = true))} />
+                  <Tooltip text="Supprimer" describe={false} class="contents">
+                    <Button variant="ghost-danger" size="sm" icon={icons.remove} aria-label="Supprimer"
+                      onclick={() => ((pending = override), (confirm = true))} />
+                  </Tooltip>
                 </div>
               </td>
             </tr>
@@ -173,8 +176,10 @@
         <Card class="flex flex-col gap-2">
           <div class="flex items-center justify-between gap-2">
             <span class="truncate font-mono text-fc-sm text-fc-fg">{override.feature.key} = {formatValue(override.value)}</span>
-            <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Supprimer"
-              onclick={() => ((pending = override), (confirm = true))} />
+            <Tooltip text="Supprimer" describe={false} class="contents">
+              <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Supprimer"
+                onclick={() => ((pending = override), (confirm = true))} />
+            </Tooltip>
           </div>
           <span class="truncate text-fc-xs text-fc-fg-muted">
             {override.registreSpaceId ?? override.personEmail ?? override.personSub}

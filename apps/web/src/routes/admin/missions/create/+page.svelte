@@ -14,6 +14,7 @@
 		Select,
 		Textarea,
 		toast,
+		Tooltip,
 	} from '@facile/muse';
 	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
@@ -162,14 +163,16 @@
 								<span class="font-medium text-fc-fg">{providerName(link.providerId)}</span>
 								<span class="text-fc-fg-muted"> · {ROLE_LABELS[link.role]}</span>
 							</span>
-							<Button
-								type="button"
-								variant="ghost-danger"
-								size="sm"
-								icon={icons.remove}
-								aria-label="Retirer"
-								onclick={() => removeProvider(link.providerId)}
-							/>
+							<Tooltip text="Retirer" describe={false} class="contents">
+								<Button
+									type="button"
+									variant="ghost-danger"
+									size="sm"
+									icon={icons.remove}
+									aria-label="Retirer"
+									onclick={() => removeProvider(link.providerId)}
+								/>
+							</Tooltip>
 						</li>
 					{/each}
 				</ul>

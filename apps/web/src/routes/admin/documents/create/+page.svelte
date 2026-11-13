@@ -18,6 +18,7 @@
 		Spinner,
 		Textarea,
 		toast,
+		Tooltip,
 	} from '@facile/muse';
 	import { icons } from '$lib/icons';
 	import { logger } from '@repo/logger';
@@ -658,13 +659,15 @@
 			<div class="text-fc-sm font-medium text-fc-fg">{title}</div>
 			<div class="text-fc-xs text-fc-fg-muted">{subtitle}</div>
 		</div>
-		<Button
-			variant="ghost-danger"
-			size="sm"
-			icon={icons.remove}
-			aria-label="Supprimer"
-			onclick={onremove}
-		/>
+		<Tooltip text="Supprimer" describe={false} class="contents">
+			<Button
+				variant="ghost-danger"
+				size="sm"
+				icon={icons.remove}
+				aria-label="Supprimer"
+				onclick={onremove}
+			/>
+		</Tooltip>
 	</div>
 {/snippet}
 

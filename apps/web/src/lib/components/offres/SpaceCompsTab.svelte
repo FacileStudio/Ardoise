@@ -13,6 +13,7 @@
     Table,
     Textarea,
     toast,
+    Tooltip,
   } from '@facile/muse';
   import { trpc } from '$lib/trpc';
   import { icons, ardoise } from '$lib/icons';
@@ -117,9 +118,13 @@
               <td class="text-fc-fg-muted">{formatDate(row.createdAt)}</td>
               <td>
                 <div class="flex justify-end gap-1">
-                  <Button variant="ghost" size="sm" icon={icons.edit} aria-label="Modifier" onclick={() => edit(row)} />
-                  <Button variant="ghost-danger" size="sm" icon={icons.remove} aria-label="Retirer"
-                    onclick={() => ((pending = row), (confirm = true))} />
+                  <Tooltip text="Modifier" describe={false} class="contents">
+                    <Button variant="ghost" size="sm" icon={icons.edit} aria-label="Modifier" onclick={() => edit(row)} />
+                  </Tooltip>
+                  <Tooltip text="Retirer" describe={false} class="contents">
+                    <Button variant="ghost-danger" size="sm" icon={icons.remove} aria-label="Retirer"
+                      onclick={() => ((pending = row), (confirm = true))} />
+                  </Tooltip>
                 </div>
               </td>
             </tr>
@@ -134,8 +139,10 @@
             <span class="truncate font-mono text-fc-xs text-fc-fg">{row.registreSpaceId}</span>
             <span class="text-fc-xs text-fc-fg-muted">{planName(row.planKey)} · {row.reason}</span>
           </button>
-          <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Retirer"
-            onclick={() => ((pending = row), (confirm = true))} />
+          <Tooltip text="Retirer" describe={false} class="contents">
+            <Button variant="ghost-danger" size="lg" icon={icons.remove} aria-label="Retirer"
+              onclick={() => ((pending = row), (confirm = true))} />
+          </Tooltip>
         </Card>
       {/each}
     </div>
