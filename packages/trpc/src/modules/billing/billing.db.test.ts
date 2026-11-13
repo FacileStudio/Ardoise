@@ -3,7 +3,7 @@ import { lockTestDatabase } from '@repo/database/test-lock';
 import { prisma } from '@repo/database';
 import type Stripe from 'stripe';
 import { billingRouter } from './router';
-import { VAT_EXEMPT_FOOTER, createCheckout, createPortal, cachedCatalog, digest, invalidateCatalog, spaceStatus } from './api';
+import { VAT_EXEMPT_FOOTER, createCheckout, createPortal, SUITE_PORTAL_TAG, cachedCatalog, digest, invalidateCatalog, spaceStatus } from './api';
 import { EntitlementPusher, StaleRevisionError, type EntitlementsPush } from './push';
 import { seedBilling } from './seed';
 import { adminRouter } from '../admin/router';
@@ -742,12 +742,34 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
 
   it('opens the portal only for an owner', async () => {
     await prisma.spaceSubscription.create({ data: { registreSpaceId: 'spc_client', stripeCustomerId: 'cus_new' } });
-    const stripe = { billingPortal: { sessions: { create: async () => ({ url: 'https://billing.stripe.com/p/1' }) } } } as never;
+    const configs: { id: string; metadata: Record<string, string> }[] = [{ id: 'bpc_maint', metadata: { ardoise: 'ardoise-maintenance' } }];
+    const sessions: { configuration?: string }[] = [];
+    const stripe = {
+      billingPortal: {
+        configurations: {
+          list: async () => ({ data: configs }),
+          create: async (params: { metadata: Record<string, string> }) => {
+            const created = { id: `bpc_${configs.length}`, metadata: params.metadata };
+            configs.push(created);
+            return created;
+          },
+        },
+        sessions: {
+          create: async (params: { configuration?: string }) => {
+            sessions.push(params);
+            return { url: 'https://billing.stripe.com/p/1' };
+          },
+        },
+      },
+    } as never;
     const deps = { db: prisma, stripe, directory, redirectOrigins: new Set(['https://sso.facile.studio']) };
     const base = { space_id: 'spc_client', return_url: 'https://sso.facile.studio/x' };
     await expect(createPortal(deps, base)).rejects.toMatchObject({ code: 'invalid_body' });
     await expect(createPortal(deps, { ...base, owner_email: 'guest@client.fr' })).rejects.toMatchObject({ code: 'not_owner' });
     expect(await createPortal(deps, { ...base, owner_email: 'BOSS@client.fr' })).toEqual({ url: 'https://billing.stripe.com/p/1' });
+    await createPortal(deps, { ...base, owner_email: 'BOSS@client.fr' });
+    expect(configs.map((config) => config.metadata.ardoise)).toEqual(['ardoise-maintenance', SUITE_PORTAL_TAG]);
+    expect(sessions.map((session) => session.configuration)).toEqual(['bpc_1', 'bpc_1']);
   });
 
   describe('republishing a plan', () => {

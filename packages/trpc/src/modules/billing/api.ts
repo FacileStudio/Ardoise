@@ -316,6 +316,35 @@ export async function createPortal(deps: BillingDeps, body: unknown) {
   const session = await deps.stripe.billingPortal.sessions.create({
     customer: row.stripeCustomerId,
     return_url: parsed.data.return_url,
+    configuration: await suitePortalConfiguration(deps.stripe),
   });
   return { url: session.url };
+}
+
+/** Metadata tag of the portal configuration Ardoise owns for suite subscriptions. */
+export const SUITE_PORTAL_TAG = 'ardoise-suite';
+
+/**
+ * The id of the suite subscription portal configuration, created once when missing.
+ * Live mode has no default configuration until one is saved in the Dashboard,
+ * so a portal session without an explicit configuration fails there.
+ */
+export async function suitePortalConfiguration(stripe: Stripe): Promise<string> {
+  const existing = await stripe.billingPortal.configurations.list({ active: true, limit: 100 });
+  const found = existing.data.find((config) => config.metadata?.ardoise === SUITE_PORTAL_TAG);
+  if (found) return found.id;
+  const created = await stripe.billingPortal.configurations.create(
+    {
+      metadata: { ardoise: SUITE_PORTAL_TAG },
+      business_profile: { headline: 'Facile' },
+      features: {
+        invoice_history: { enabled: true },
+        payment_method_update: { enabled: true },
+        customer_update: { enabled: true, allowed_updates: ['address', 'name', 'tax_id'] },
+        subscription_cancel: { enabled: true, mode: 'at_period_end' },
+      },
+    },
+    { idempotencyKey: `portal-configuration:${SUITE_PORTAL_TAG}` }
+  );
+  return created.id;
 }
