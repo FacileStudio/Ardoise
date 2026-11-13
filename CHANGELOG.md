@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.20.5] - 2026-11-13
+
+### Changed
+
+- Deploy: healthchecks run every 30 s with a 1 s start interval, and the Postgres service restarts unless stopped.
+
 ## [0.20.4] - 2026-11-13
 
 ### Fixed
