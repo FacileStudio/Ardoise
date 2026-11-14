@@ -3,11 +3,15 @@ import type { Locale, Translations, InterpolationParams } from './types';
 import { createTranslator, detectBrowserLocale } from './utils/translator';
 import { en } from './locales/en';
 import { fr } from './locales/fr';
+import { es } from './locales/es';
+import { de } from './locales/de';
 import { defaultLocale, supportedLocales } from './index';
 
 const translationsMap: Record<Locale, Translations> = {
   en,
   fr,
+  es,
+  de,
 };
 
 function getStoredLocale(): Locale | null {

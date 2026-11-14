@@ -13,7 +13,7 @@ export function chosenLocale(): Locale | null {
 }
 
 export function applyLocale(locale: Locale) {
-  setLocale(locale === 'fr' ? 'fr' : 'en');
+  setLocale(locale);
 }
 
 export function rememberLocale(locale: Locale) {

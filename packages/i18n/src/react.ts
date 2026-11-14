@@ -3,11 +3,15 @@ import type { Locale, Translations, InterpolationParams } from './types';
 import { createTranslator } from './utils/translator';
 import { en } from './locales/en';
 import { fr } from './locales/fr';
+import { es } from './locales/es';
+import { de } from './locales/de';
 import { defaultLocale, supportedLocales } from './index';
 
 const translationsMap: Record<Locale, Translations> = {
   en,
   fr,
+  es,
+  de,
 };
 
 let currentLocale: Locale = defaultLocale;
