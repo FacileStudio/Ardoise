@@ -14,6 +14,10 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-14
+
+## [0.23.0] - 2026-11-14
+
 ### Added
 
 - Every space can send its contracts for signature from its own Plume account: a space admin pastes a Plume API token in Settings > Signature (Plume). Ardoise checks it, registers its signed webhook in that account and keeps both encrypted. Facile Studio's spaces keep the platform account. A space with no account of its own never uses the platform's.
