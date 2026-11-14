@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-11-14
+
+### Fixed
+
+- fix(web): while `OPEN_TO_NEW_ACCOUNTS` is false, every plan button on the landing links to the Suite plans (https://suite.facile.studio/#tarifs) and the free plan's button reads "Voir les offres" instead of "Commencer gratuitement", so no button leads to a sign-up that refuses new accounts. Open again, the buttons go back to muse's sign-up defaults.
+
 ## [0.22.1] - 2026-11-14
 
 ### Fixed
