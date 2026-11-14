@@ -14,6 +14,24 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-14
+
+### Added
+
+- feat(i18n): es and de locales. The landing is translated in full; the signed-in app falls back to the English strings.
+- feat(web): three cards on the landing (compliant invoices with the 293 B mention, deposit or full invoice from the accepted quote, contract signed in Plume and filed in Nuage), a `FeatureSplit` list, a `WorksWith` row (Plume, Nuage, Glouton) and the per-app plan note on muse `PricingPlans`.
+
+### Changed
+
+- feat(web): the landing speaks to freelancers: new slogan "Du devis au paiement, sans paperasse.", title, meta description and footer tagline in fr, en, es and de. The "Paiement en ligne" and "Espace client" cards, the card-payment claims and "de Facile Studio" are gone.
+- feat(web): one flag, `OPEN_TO_NEW_ACCOUNTS` in `LandingActions.svelte`, picks the hero buttons. While Ardoise's Registre client is limited to assigned accounts it stays false: "Voir les offres" first, "Se connecter avec Facile" second, and a line saying Ardoise opens to every account soon. Set to true, the hero shows the muse sign-up and sign-in pair.
+- feat(web): the demo ends on a bank transfer marked as paid by hand, and the toast sits inside the window.
+- build(web): muse v0.24.0.
+
+### Fixed
+
+- fix(web): the landing icons rendered as empty grey squares. The local Solar and MDI subsets are now registered with muse `registerIcons` and drawn by its `Icon`, so they render server side with no `iconify-icon` fetch.
+
 ## [0.21.0] - 2026-11-14
 
 ### Added
