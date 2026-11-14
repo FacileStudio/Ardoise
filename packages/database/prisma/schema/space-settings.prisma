@@ -15,6 +15,10 @@ model SpaceSettings {
   webhookSecret String?
   webhookEvents String[] @default([])
 
+  plumeApiToken      String?
+  plumeWebhookSecret String?
+  plumeWebhookId     String?
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 

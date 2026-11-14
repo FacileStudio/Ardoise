@@ -80,7 +80,7 @@ jobs:
       - name: Test
         run: |
           set -euo pipefail
-          for dir in packages/trpc apps/backend packages/admin packages/glouton packages/nuage packages/plume packages/storage packages/typst; do
+          for dir in packages/trpc apps/backend packages/admin packages/glouton packages/nuage packages/plume packages/smtp packages/storage packages/typst; do
             echo "::group::$dir"
             (cd "$dir" && bun test)
             echo "::endgroup::"

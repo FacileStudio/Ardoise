@@ -31,7 +31,8 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type { Prisma, PrismaClient } from '@repo/database';
 import { parseStorageKey } from '../media/service';
-import { isPlatformStudio, providersOfSpace, requirePlatformStudio } from '../space/studio';
+import { providersOfSpace } from '../space/studio';
+import { plumeConfigForSpace } from './plume-account';
 import type { StorageService } from '@repo/storage';
 import { nuageConfigFromEnv, storeContractInNuage } from '@repo/nuage';
 import { accountTokenStore } from '../auth/sso-tokens';
@@ -78,29 +79,25 @@ function rethrowUnexpected(error: unknown, fallbackMessage: string): never {
 const SIGNABLE_TYPES: string[] = ['contrat_prestation', 'contrat_maintenance', 'back_contractuel'];
 
 /**
- * Archives a contract in the creating user's private Ardoise folder in Nuage,
- * fire and forget, only for a platform studio space. Ardoise acts for that user
- * with a token Registre issues by exchange from the user's stored SSO session.
+ * Archives a contract in the creating user's own private Ardoise folder in
+ * Nuage, fire and forget, in any space. Ardoise acts for that user, never for
+ * the platform: the Nuage token is one Registre issues by exchange from that
+ * user's stored SSO session, so the file lands in their Nuage or nowhere.
  */
-function archiveContract(
+export function archiveContract(
   db: PrismaClient,
   env: ServerEnv,
-  document: { id: string; name: string; spaceId: string },
+  document: { id: string; name: string },
   pdf: Buffer,
   userId: string
-) {
-  void isPlatformStudio(db, document.spaceId)
-    .then((studio) =>
-      studio && env.OIDC_ISSUER
-        ? storeContractInNuage(nuageConfigFromEnv(env), accountTokenStore(db, env.OIDC_ISSUER, env.ENCRYPTION_SECRET), {
-            userId,
-            filename: document.name,
-            pdf,
-            linkedTo: `ardoise:contract:${document.id}`,
-          })
-        : undefined
-    )
-    .catch(() => undefined);
+): Promise<void> {
+  if (!env.OIDC_ISSUER) return Promise.resolve();
+  return storeContractInNuage(nuageConfigFromEnv(env), accountTokenStore(db, env.OIDC_ISSUER, env.ENCRYPTION_SECRET), {
+    userId,
+    filename: document.name,
+    pdf,
+    linkedTo: `ardoise:contract:${document.id}`,
+  }).catch(() => undefined);
 }
 
 async function fetchProvidersByIds(db: PrismaClient, spaceId: string, ids: string[]) {
@@ -521,22 +518,18 @@ export const documentRouter = router({
     .input(z.object({ spaceId: z.string().min(1).optional() }).optional())
     .query(async ({ ctx, input }) => {
       if (plumeConfigFromEnv(ctx.env) === null) return { enabled: false };
-      if (input?.spaceId) {
-        const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input.spaceId);
-        return { enabled: await isPlatformStudio(ctx.db, scopeSpaceId(scope)) };
+      const scope = await spaceService.resolveScope(ctx.db, ctx.user.id, input?.spaceId);
+      const spaceIds = scope.type === 'space' ? [scope.spaceId] : scope.spaceIds;
+      for (const spaceId of spaceIds) {
+        if (await plumeConfigForSpace(ctx.db, ctx.env, spaceId)) return { enabled: true };
       }
-      const studio = await ctx.db.spaceMember.findFirst({
-        where: { userId: ctx.user.id, space: { platformStudio: true } },
-        select: { id: true },
-      });
-      return { enabled: studio !== null };
+      return { enabled: false };
     }),
 
   sendForSignature: memberProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const plume = plumeConfigFromEnv(ctx.env);
-      if (!plume) {
+      if (!plumeConfigFromEnv(ctx.env)) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: 'Plume is not configured on this server.',
@@ -549,7 +542,13 @@ export const documentRouter = router({
         await ctx.db.document.findUnique({ where: { id: input.id } }),
         'Document not found'
       );
-      await requirePlatformStudio(ctx.db, document.spaceId);
+      const plume = await plumeConfigForSpace(ctx.db, ctx.env, document.spaceId);
+      if (!plume) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Connect your Plume account in the space settings first.',
+        });
+      }
 
       if (!SIGNABLE_TYPES.includes(document.type)) {
         throw new TRPCError({
@@ -925,7 +924,7 @@ export const documentRouter = router({
           })
         );
 
-        archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
+        void archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
         return {
           document,
@@ -1110,7 +1109,7 @@ export const documentRouter = router({
           })
         );
 
-        archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
+        void archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
         return {
           document,
@@ -1199,7 +1198,7 @@ export const documentRouter = router({
           })
         );
 
-        archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
+        void archiveContract(ctx.db, ctx.env, document, pdfBuffer, ctx.user.id);
 
         return {
           document,

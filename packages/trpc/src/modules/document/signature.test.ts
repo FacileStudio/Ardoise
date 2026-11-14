@@ -47,6 +47,7 @@ function setup(document: Record<string, unknown>, env: Record<string, unknown> =
     },
     spaceMember: { findUnique: async () => ({ role: 'MEMBER' }), findMany: async () => [{ spaceId: 'space-a' }] },
     space: { findUnique: async () => ({ platformStudio: env.STUDIO !== false }) },
+    spaceSettings: { findUnique: async () => null },
   };
   const ctx = {
     db: db as PrismaClient,
@@ -70,10 +71,10 @@ describe('document.sendForSignature', () => {
     await expect(caller.sendForSignature({ id: 'doc-1' })).rejects.toThrow('not configured');
   });
 
-  it('refuses a space that is not a platform studio space', async () => {
+  it('refuses a space outside the platform studio that has not connected its own Plume account', async () => {
     const { caller, updates } = setup(stored(), { ...PLUME_ENV, STUDIO: false });
 
-    await expect(caller.sendForSignature({ id: 'doc-1' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(caller.sendForSignature({ id: 'doc-1' })).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
     expect(updates).toEqual([]);
   });
 

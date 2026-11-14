@@ -5,6 +5,7 @@ import type { AuthManager } from '@repo/auth';
 import type { ServerEnv } from '@repo/env';
 import { authCookies, issueSession } from '@repo/trpc/auth/session';
 import { saveSsoTokens } from '@repo/trpc/auth/sso-tokens';
+import { ensureFirstSpace } from '@repo/trpc/first-space';
 import { clientIp } from '@repo/trpc/client-ip';
 import { logger } from '../lib/logger';
 import { oidcConfig } from './config';
@@ -70,6 +71,9 @@ export function createOIDCRoutes(
         const user = await resolveUser(prisma, config.issuer, claims);
         await saveSsoTokens(prisma, config.issuer, claims.sub, tokens, env.ENCRYPTION_SECRET).catch(
           (error) => logger.warn({ code: errorCode(error) }, '[OIDC] Could not keep the Registre tokens')
+        );
+        await ensureFirstSpace(prisma, user).catch((error) =>
+          logger.warn({ code: errorCode(error) }, '[OIDC] Could not create the first space')
         );
 
         const session = await issueSession(prisma, authManager, user, {

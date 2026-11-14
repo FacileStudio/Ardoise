@@ -160,12 +160,30 @@ Ardoise is multi-tenant by Registre space.
   engine and audit logs, `/admin/offres` and `billing.*`, `space.setPlatformStudio`, and writes to
   shared providers. One middleware (`platformStaffProcedure`) decides it; an empty list means nobody.
 - `Space.platformStudio` marks the platform operator's own spaces. Only those may collect Stripe
-  payments on the platform account, mail their clients through the platform SMTP (payment
-  requests, reminders, welcome and magic links), send contracts to Plume, archive them in Nuage
-  and use the shared providers. The platform webhook only hears their events. Other spaces keep
-  manual payments, documents and their own providers. The check lives in the function that spends
-  the resource (`generateAndSendReceipt`, `createPayment`, `sendReminder`, `cancelPayment`,
-  `ensureClientSignUrl`, `dispatchConfiguredWebhook`, ...), so every caller inherits it. Staff flip the flag with `space.setPlatformStudio`, which writes an audit row.
+  payments on the platform account (checkout, maintenance subscriptions, receipts), give clients a
+  portal sign-in (welcome and magic links), receive the space webhook and use the shared
+  providers. The check lives in the function that spends the resource (`generateAndSendReceipt`,
+  `createPayment`, `cancelPayment`, `dispatchConfiguredWebhook`, ...), so every caller inherits
+  it. Staff flip the flag with `space.setPlatformStudio`, which writes an audit row.
+- Every space, studio or not, may send contracts to Plume, archive them in Nuage and mail payment
+  reminders, each on its own behalf:
+  - Plume uses the space's own Plume account: an admin pastes a Plume API token
+    (`space.connectPlume`); Ardoise checks it, registers `POST /webhooks/plume` in that account
+    with a fresh secret and keeps both sealed in `SpaceSettings`. A studio space without one falls
+    back to `PLUME_API_TOKEN`; any other space has no Plume until it connects
+    (`plumeConfigForSpace` in `document/plume-account.ts`). The webhook accepts an event only
+    under a secret of the document's own space.
+  - Nuage archives in the creating user's own Nuage, with a Registre token exchanged from that
+    user's stored session (`archiveContract`), never a platform credential.
+  - A reminder from a non-studio space covers a manual payment only. It leaves through the
+    platform SMTP with `From: "<provider on the invoice, else space name> via Ardoise"` on the
+    platform's own address (never a user-supplied one) and `Reply-To` the member's account email.
+    `reserveTenantEmail` caps it at 10 per hour and 50 per rolling day per space, under a
+    per-space advisory lock, in the `OutboundEmail` ledger (space, kind and time, no recipient).
+    The payment link shows that issuer and its provider's bank account and takes a declared
+    transfer. Studio spaces keep the platform sender and no cap.
+- A Facile account that belongs to no space gets one empty, local space it owns at sign-in
+  (`ensureFirstSpace`, `modules/space/first-space.ts`): Registre creates no space at sign-up.
 - CLIENT portal accounts are unchanged: magic links, scoped to their own `Client` row.
 
 Code lives in `apps/backend/src/oidc/`, one job per file:

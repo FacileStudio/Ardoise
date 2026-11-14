@@ -14,6 +14,23 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+### Added
+
+- Every space can send its contracts for signature from its own Plume account: a space admin pastes a Plume API token in Settings > Signature (Plume). Ardoise checks it, registers its signed webhook in that account and keeps both encrypted. Facile Studio's spaces keep the platform account. A space with no account of its own never uses the platform's.
+- Contracts of every space are archived in the creating user's own Nuage, through that user's Facile SSO session.
+- Every space can send payment reminders for manual payments. They go out as "<provider> via Ardoise" on the platform address, with replies to the member who sent them, capped at 10 per hour and 50 per day per space, and 50 per day per member across spaces. The payment link shows that provider's name and bank account and accepts a declared transfer.
+- A brand-new Facile account gets an empty space of its own on its first sign-in.
+- Migration `20261114120000_tenant_outbound` (additive): three nullable Plume columns on `SpaceSettings` and the `OutboundEmail` ledger (space, sender, kind, time; no recipient).
+
+### Security
+
+- `POST /webhooks/plume` accepts an event only under a secret of the document's own space, so no Plume account can move another space's document.
+- `isolation.prod-copy.test.ts` sweeps every space-scoped procedure across spaces on a restored production copy (opt-in with `PROD_COPY_DATABASE_URL`, local hosts only).
+
+### Unchanged
+
+- Stripe collection, receipts, the client portal sign-in and the space webhook stay limited to Facile Studio's spaces.
+
 ## [0.22.4] - 2026-11-14
 
 ### Fixed

@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@repo/database';
 import { logger } from '@repo/logger';
-import { isPlatformStudio } from '../space/studio';
-import { PlumeError, contractExternalRef, getSigners, plumeConfigFromEnv, signingUrlFor, type PlumeEnv } from '@repo/plume';
+import { PlumeError, contractExternalRef, getSigners, signingUrlFor, type PlumeEnv } from '@repo/plume';
+import { plumeConfigForSpace } from './plume-account';
 
 type SignableDocument = {
   id: string;
@@ -37,9 +37,9 @@ export async function ensureClientSignUrl(
 ): Promise<string | null> {
   if (document.plumeClientSignUrl) return document.plumeClientSignUrl;
 
-  const plume = plumeConfigFromEnv(ctx.env);
-  if (!plume || !document.plumeDocumentId) return null;
-  if (!(await isPlatformStudio(ctx.db, document.spaceId))) return null;
+  if (!document.plumeDocumentId) return null;
+  const plume = await plumeConfigForSpace(ctx.db, ctx.env, document.spaceId);
+  if (!plume) return null;
 
   const client = await resolveSignatureClient(ctx.db, document);
   if (!client?.contactEmail) return null;

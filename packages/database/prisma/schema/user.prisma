@@ -33,6 +33,7 @@ model User {
   spaceMembers   SpaceMember[]
   invitations    Invitation[]
   magicLinks     MagicLink[]
+  outboundEmails OutboundEmail[]
 
   profileSyncedAt DateTime?
   anonymizedAt    DateTime?

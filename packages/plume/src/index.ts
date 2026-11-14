@@ -134,7 +134,7 @@ export function parseSignatureEvent(raw: string): SignatureEvent | null {
   };
 }
 
-async function call(config: PlumeConfig, path: string, init: RequestInit): Promise<any> {
+async function call(config: Pick<PlumeConfig, 'url' | 'token'>, path: string, init: RequestInit): Promise<any> {
   let response: Response;
   try {
     response = await fetch(`${config.url}${path}`, {
@@ -231,4 +231,30 @@ export async function sendForSignature(
     url: safeHttpUrl(created.document.url) ?? safeHttpUrl(`${config.url}/documents/${id}`),
     signers: parseSigners(created.signers),
   };
+}
+
+/** Proves a Plume API token works by reading the account it belongs to. */
+export async function checkAccount(config: Pick<PlumeConfig, 'url' | 'token'>): Promise<void> {
+  await call(config, '/api/auth/me', { method: 'GET' });
+}
+
+/** Registers `url` as a signed webhook of the token's Plume account and returns its id. */
+export async function registerWebhook(
+  config: Pick<PlumeConfig, 'url' | 'token'>,
+  url: string,
+  secret: string
+): Promise<string> {
+  const created = await call(config, '/api/webhooks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, secret }),
+  });
+  const id = text(created?.id);
+  if (!id) throw new PlumeError('Plume returned no webhook id');
+  return id;
+}
+
+/** Removes a webhook from the token's Plume account. */
+export async function deleteWebhook(config: Pick<PlumeConfig, 'url' | 'token'>, id: string): Promise<void> {
+  await call(config, `/api/webhooks/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

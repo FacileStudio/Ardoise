@@ -26,7 +26,7 @@
         settingsRoute,
         toast,
     } from '@facile/muse';
-    import { icons } from '$lib/icons';
+    import { ardoise, icons } from '$lib/icons';
     import { platformStaff } from '$lib/platform-staff.svelte';
 
     let space: any = $state(null);
@@ -45,6 +45,8 @@
     let savingConfig = $state(false);
     let savingWebhook = $state(false);
     let savingStudio = $state(false);
+    let plumeToken = $state('');
+    let savingPlume = $state(false);
 
     const formatHelp = 'Variables : {{year}}, {{month}} et {{number}} (obligatoire, une seule fois).';
     const spaceId = $derived($page.params.id as string);
@@ -87,6 +89,7 @@
                   { id: 'numbering', label: 'Numérotation', icon: icons.edit, href: sectionHref(base, 'numbering') },
                   { id: 'legal', label: 'Mentions légales', icon: icons.shield, href: sectionHref(base, 'legal') },
                   { id: 'webhook', label: 'Webhook sortant', icon: icons.plug, href: sectionHref(base, 'webhook') },
+                  { id: 'plume', label: 'Signature (Plume)', icon: ardoise.plume, href: sectionHref(base, 'plume') },
               ]
             : []),
         ...(platformStaff.staff
@@ -166,6 +169,23 @@
             toast.danger(err?.message || $i18n.t('common.actions.error'));
         } finally {
             savingWebhook = false;
+        }
+    }
+
+    async function setPlume(connect: boolean) {
+        savingPlume = true;
+        try {
+            const result = connect
+                ? await trpc.space.connectPlume.mutate({ id: spaceId, token: plumeToken.trim() })
+                : await trpc.space.disconnectPlume.mutate({ id: spaceId });
+            config = { ...config, plumeConnected: result.plumeConnected };
+            plumeToken = '';
+            toast.success($i18n.t('admin.settings.actions.saved'));
+        } catch (err: any) {
+            logger.error({ err }, 'Failed to change the Plume connection');
+            toast.danger(err?.message || $i18n.t('common.actions.error'));
+        } finally {
+            savingPlume = false;
         }
     }
 
@@ -335,10 +355,36 @@
                             </div>
                         </SettingsRow>
                     </SettingsSection>
+                {:else if id === 'plume' && config}
+                    <SettingsSection
+                        title="Signature (Plume)"
+                        description="Les contrats de cet espace partent en signature depuis votre propre compte Plume. Créez un jeton dans Plume, Paramètres > API, puis collez-le ici. Ardoise enregistre son webhook dans ce compte pour suivre les signatures."
+                    >
+                        {#if config.plumeConnected}
+                            <SettingsRow>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <span class="text-sm text-fc-success">Compte Plume connecté.</span>
+                                    <Button variant="ghost" icon={icons.remove} onclick={() => setPlume(false)} disabled={savingPlume}>
+                                        Déconnecter
+                                    </Button>
+                                </div>
+                            </SettingsRow>
+                        {/if}
+                        <SettingsRow stacked>
+                            <Field label="Jeton d'API Plume" helper={config.plumeConnected ? 'Collez un nouveau jeton pour changer de compte. Les contrats déjà envoyés ne seront plus suivis : marquez-les signés à la main.' : 'Le jeton reste chiffré et ne s’affiche plus ensuite.'}>
+                                <SecretField bind:value={plumeToken} editable placeholder="Jeton Plume" />
+                            </Field>
+                        </SettingsRow>
+                        <SettingsRow>
+                            <Button icon={icons.check} onclick={() => setPlume(true)} disabled={savingPlume || plumeToken.trim().length < 16}>
+                                {savingPlume ? $i18n.t('spaces.saving') : 'Connecter'}
+                            </Button>
+                        </SettingsRow>
+                    </SettingsSection>
                 {:else if id === 'studio' && platformStaff.staff}
                     <SettingsSection
                         title="Studio de la plateforme"
-                        description="Seul un espace marqué ainsi peut utiliser le Stripe, le SMTP, Plume, Nuage et le webhook de la plateforme, ainsi que les prestataires partagés. Réservé à l'équipe Facile Studio."
+                        description="Seul un espace marqué ainsi peut utiliser le Stripe de la plateforme, le portail client, le compte Plume et le webhook de la plateforme, ainsi que les prestataires partagés. Réservé à l'équipe Facile Studio."
                     >
                         <SettingsRow>
                             <Switch

@@ -11,9 +11,23 @@ import {
   plumeConfigFromEnv,
   verifyWebhookSignature,
 } from '@repo/plume';
+import { plumeWebhookSecretsFor } from '@repo/trpc/plume-account';
 import { logger } from '../lib/logger';
 
 const HANDLED_EVENTS = [COMPLETED_EVENT, ARCHIVED_EVENT, DECLINED_EVENT];
+
+/**
+ * The secrets an event may be signed with: those of the space that owns the
+ * document it names, so one tenant's Plume account can never move another
+ * space's document. An event naming no known document can only carry the
+ * platform secret (Plume's test delivery, or a foreign ref to ignore).
+ */
+async function secretsForDocument(env: ServerEnv, documentId: string | null, platformSecret: string): Promise<string[]> {
+  if (!documentId) return [platformSecret];
+  const document = await prisma.document.findUnique({ where: { id: documentId }, select: { spaceId: true } });
+  if (!document) return [platformSecret];
+  return plumeWebhookSecretsFor(prisma, env, document.spaceId);
+}
 
 export const createPlumeWebhookHandler = (env: ServerEnv) => {
   const config = plumeConfigFromEnv(env);
@@ -23,16 +37,15 @@ export const createPlumeWebhookHandler = (env: ServerEnv) => {
 
     const rawBody = await c.req.text();
     const signature = c.req.header(PLUME_SIGNATURE_HEADER);
-    if (!verifyWebhookSignature(config.webhookSecret, rawBody, signature)) {
+    const event = parseSignatureEvent(rawBody);
+    const documentId = event ? documentIdFromExternalRef(event.externalRef) : null;
+    const secrets = await secretsForDocument(env, documentId, config.webhookSecret);
+    if (!secrets.some((secret) => verifyWebhookSignature(secret, rawBody, signature))) {
       return c.json({ error: 'Invalid signature' }, 401);
     }
 
-    const event = parseSignatureEvent(rawBody);
-    if (!event) return c.json({ ignored: true });
+    if (!event || !documentId) return c.json({ ignored: true });
     if (!HANDLED_EVENTS.includes(event.eventType)) return c.json({ ignored: true });
-
-    const documentId = documentIdFromExternalRef(event.externalRef);
-    if (!documentId) return c.json({ ignored: true });
 
     const plumeDocumentId = event.plumeDocumentId ? { plumeDocumentId: event.plumeDocumentId } : {};
     let changed = 0;
