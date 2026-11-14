@@ -3,6 +3,8 @@ import type { PrismaClient } from '@repo/types';
 import { accountTokenStore, clearSsoTokens, saveSsoTokens } from './sso-tokens';
 
 const SECRET = 'x'.repeat(32);
+const ACCESS = 'plaintext-access-token-4f9d2b7e-1c3a-4e8b-9a60-d5b7c2e81f34';
+const REFRESH = 'plaintext-refresh-token-8a1e6c3d-7b2f-4d95-b0c4-3e9a5f7d2b16';
 const ISSUER = 'https://sso.example.test';
 
 function fakeDb() {
@@ -27,12 +29,12 @@ function fakeDb() {
 describe('SSO token storage', () => {
   test('seals both tokens at rest and reads them back', async () => {
     const { db, row } = fakeDb();
-    await saveSsoTokens(db, ISSUER, 'sub-1', { accessToken: 'at', refreshToken: 'rt', expiresIn: 900 }, SECRET);
-    expect(row.accessToken).not.toContain('at');
-    expect(row.refreshToken).not.toBe('rt');
+    await saveSsoTokens(db, ISSUER, 'sub-1', { accessToken: ACCESS, refreshToken: REFRESH, expiresIn: 900 }, SECRET);
+    expect(row.accessToken).not.toContain(ACCESS);
+    expect(row.refreshToken).not.toContain(REFRESH);
     const loaded = await accountTokenStore(db, ISSUER, SECRET).load('u1');
-    expect(loaded?.accessToken).toBe('at');
-    expect(loaded?.refreshToken).toBe('rt');
+    expect(loaded?.accessToken).toBe(ACCESS);
+    expect(loaded?.refreshToken).toBe(REFRESH);
     expect(loaded?.expiresAt?.getTime()).toBeGreaterThan(Date.now());
   });
 
