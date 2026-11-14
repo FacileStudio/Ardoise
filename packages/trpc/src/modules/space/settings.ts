@@ -16,6 +16,7 @@ export const SPACE_SETTINGS_DEFAULTS = {
   webhookUrl: null as string | null,
   webhookSecret: null as string | null,
   webhookEvents: [] as string[],
+  plumeConnected: false,
 };
 
 export type SpaceSettingsValues = typeof SPACE_SETTINGS_DEFAULTS;
@@ -43,6 +44,7 @@ export async function getSpaceSettings(db: Db, spaceId: string): Promise<SpaceSe
     webhookUrl: row.webhookUrl,
     webhookSecret: row.webhookSecret,
     webhookEvents: row.webhookEvents,
+    plumeConnected: row.plumeApiToken !== null,
   };
 }
 

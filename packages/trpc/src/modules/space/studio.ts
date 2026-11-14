@@ -4,9 +4,11 @@ import type { Prisma, PrismaClient } from '@repo/database';
 /**
  * A space marked `platformStudio` belongs to the platform operator's studio.
  * Only such a space may spend platform resources on its clients: the platform
- * Stripe account, SMTP, Plume and Nuage, and the shared (space-less)
- * providers. Platform staff set the flag (space.setPlatformStudio); a space
- * mirrored from Registre starts without it.
+ * Stripe account, the client portal sign-in, the space webhook, the platform
+ * Plume account and the shared (space-less) providers. Other spaces use Plume
+ * with their own account and mail capped reminders under their own name.
+ * Platform staff set the flag (space.setPlatformStudio); a space mirrored from
+ * Registre starts without it.
  */
 export async function isPlatformStudio(db: PrismaClient, spaceId: string): Promise<boolean> {
   const space = await db.space.findUnique({ where: { id: spaceId }, select: { platformStudio: true } });
@@ -18,7 +20,7 @@ export async function requirePlatformStudio(db: PrismaClient, spaceId: string): 
   if (!(await isPlatformStudio(db, spaceId))) {
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'Online payments, emails and signatures are not enabled for this space',
+      message: 'Online payments and the client portal are not enabled for this space',
     });
   }
 }

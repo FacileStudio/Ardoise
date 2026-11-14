@@ -76,3 +76,7 @@ export const UpdateSpaceSettingsSchema = z
   .strict();
 
 export type UpdateSpaceSettingsInput = z.infer<typeof UpdateSpaceSettingsSchema>;
+
+export const ConnectPlumeSchema = z
+  .object({ id: z.string().min(1), token: z.string().trim().min(16).max(512) })
+  .strict();

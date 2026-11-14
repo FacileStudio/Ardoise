@@ -12,7 +12,15 @@ import {
   UpdateMemberRoleSchema,
   LeaveSpaceSchema,
   UpdateSpaceSettingsSchema,
+  ConnectPlumeSchema,
 } from './types';
+import { connectPlume, disconnectPlume } from '../document/plume-account';
+
+const plumeActor = (ctx: { user: { id: string }; ipAddress?: string; userAgent?: string }) => ({
+  userId: ctx.user.id,
+  ipAddress: ctx.ipAddress,
+  userAgent: ctx.userAgent,
+});
 
 export const spaceRouter = router({
   list: memberProcedure.query(async ({ ctx }) => {
@@ -48,6 +56,16 @@ export const spaceRouter = router({
       { userId: ctx.user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent },
       input
     );
+  }),
+
+  connectPlume: memberProcedure.input(ConnectPlumeSchema).mutation(async ({ ctx, input }) => {
+    await spaceService.resolveScope(ctx.db, ctx.user.id, input.id, 'ADMIN');
+    return connectPlume(ctx.db, ctx.env, plumeActor(ctx), input.id, input.token);
+  }),
+
+  disconnectPlume: memberProcedure.input(GetSpaceSchema).mutation(async ({ ctx, input }) => {
+    await spaceService.resolveScope(ctx.db, ctx.user.id, input.id, 'ADMIN');
+    return disconnectPlume(ctx.db, ctx.env, plumeActor(ctx), input.id);
   }),
 
   delete: memberProcedure.input(GetSpaceSchema).mutation(async ({ ctx, input }) => {

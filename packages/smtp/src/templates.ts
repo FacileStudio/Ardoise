@@ -1,4 +1,4 @@
-import type { SMTPClient, EmailAttachment } from './client';
+import type { SMTPClient, EmailAttachment, EmailSender } from './client';
 
 function escapeHtml(str: string): string {
   return str
@@ -35,6 +35,7 @@ export interface PaymentReminderData {
   clientName?: string;
   invoiceNumber?: string;
   daysUntilDue?: number;
+  sender?: EmailSender;
 }
 
 export interface PaymentDeclaredData {
@@ -244,6 +245,7 @@ export class EmailTemplates {
       clientName = 'Client',
       invoiceNumber = 'N/A',
       daysUntilDue,
+      sender,
     } = data;
 
     const formattedAmount = new Intl.NumberFormat('fr-FR', {
@@ -316,8 +318,12 @@ export class EmailTemplates {
       <p>Si vous avez déjà effectué ce paiement, veuillez ignorer ce message.</p>
 
       <div class="footer">
-        <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
-        <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+        ${
+          sender
+            ? `<p>Envoyé par ${escapeHtml(sender.name)} avec Ardoise. Pour toute question, répondez à ce message.</p>`
+            : `<p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
+        <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>`
+        }
       </div>
     </div>
   </div>
@@ -326,6 +332,7 @@ export class EmailTemplates {
     `.trim();
 
     await this.smtpClient.sendEmail({
+      sender,
       to: clientEmail,
       subject:
         urgencyLevel === 'urgent'

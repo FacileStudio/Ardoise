@@ -21,6 +21,7 @@ model Space {
   providers   Provider[]
   settings    SpaceSettings?
   counters    DocumentCounter[]
+  outboundEmails OutboundEmail[]
 }
 
 model SpaceMember {

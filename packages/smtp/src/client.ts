@@ -23,6 +23,27 @@ export interface SendEmailOptions {
   html: string;
   text?: string;
   attachments?: EmailAttachment[];
+  sender?: EmailSender;
+}
+
+/**
+ * Who a message is sent for. The address is always the platform's own From
+ * address; only the display name changes, and replies go to `replyTo`.
+ */
+export interface EmailSender {
+  name: string;
+  replyTo?: string;
+}
+
+/** The bare address of a From header such as `"Name" <a@b.c>` or `a@b.c`. */
+export function fromAddress(from: string): string {
+  const match = /<([^<>\s]+@[^<>\s]+)>\s*$/.exec(from);
+  return (match ? match[1] : from).trim();
+}
+
+/** A display name that cannot carry a header break or an address of its own. */
+export function senderName(name: string): string {
+  return name.replace(/[\r\n<>"@\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 78) || 'Ardoise';
 }
 
 export class SMTPClient {
@@ -44,10 +65,11 @@ export class SMTPClient {
   }
 
   async sendEmail(options: SendEmailOptions): Promise<void> {
-    const { to, subject, html, text, attachments } = options;
+    const { to, subject, html, text, attachments, sender } = options;
 
     await this.transporter.sendMail({
-      from: this.from,
+      from: sender ? { name: senderName(sender.name), address: fromAddress(this.from) } : this.from,
+      ...(sender?.replyTo ? { replyTo: sender.replyTo } : {}),
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       html,

@@ -35,6 +35,7 @@ interface DeclarablePayment {
   id: string;
   spaceId: string;
   frequency: string;
+  collectionMethod: string;
 }
 
 async function audit(
@@ -56,14 +57,18 @@ async function audit(
   });
 }
 
-/** The client says they paid another way. The payment waits for an admin to confirm it. */
+/**
+ * The client says they paid another way. The payment waits for an admin to
+ * confirm it. Any space may take a declaration on a manual payment; one on a
+ * Stripe payment needs the platform studio, whose Stripe it would replace.
+ */
 export async function declarePayment(
   db: PrismaClient,
   payment: DeclarablePayment,
   input: DeclarePaymentInput,
   actor: Actor
 ): Promise<void> {
-  await requirePlatformStudio(db, payment.spaceId);
+  if (payment.collectionMethod !== 'MANUAL') await requirePlatformStudio(db, payment.spaceId);
   if (payment.frequency !== 'ONE_TIME') {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only one-time payments can be declared' });
   }

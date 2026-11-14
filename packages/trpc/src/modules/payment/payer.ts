@@ -2,10 +2,12 @@ import type { PrismaClient } from '@repo/database';
 import { getSettingsRecord } from '../settings/service';
 import { isPlatformStudio } from '../space/studio';
 import { isPayableStatus, paymentReference } from './amounts';
+import { paymentIssuer } from './tenant-mail';
 
 type PayerPayment = {
   id: string;
   spaceId: string;
+  documentId: string | null;
   status: string;
   frequency: 'ONE_TIME' | 'MONTHLY' | 'YEARLY';
   collectionMethod: 'STRIPE' | 'MANUAL';
@@ -37,16 +39,23 @@ export interface PayerView {
   bank: { bankName: string | null; iban: string; bic: string | null } | null;
 }
 
+/** The platform studio's own name and bank account, from the company settings. */
+async function platformIssuer(db: PrismaClient) {
+  const settings = await getSettingsRecord(db);
+  return {
+    name: settings.companyName ?? null,
+    bank: settings.iban ? { bankName: settings.bankName, iban: settings.iban, bic: settings.bic } : null,
+  };
+}
+
 /**
  * What a payer may see of one payment: amount, reference, issuer and the ways to
  * settle it. Never a client address, id of another record or a Stripe identifier.
  */
 export async function payerView(db: PrismaClient, payment: PayerPayment): Promise<PayerView> {
-  const [studio, settings] = await Promise.all([
-    isPlatformStudio(db, payment.spaceId),
-    getSettingsRecord(db),
-  ]);
-  const payable = studio && isPayableStatus(payment.status);
+  const studio = await isPlatformStudio(db, payment.spaceId);
+  const issuer = studio ? await platformIssuer(db) : await paymentIssuer(db, payment);
+  const payable = (studio || payment.collectionMethod === 'MANUAL') && isPayableStatus(payment.status);
   const recurring = payment.frequency !== 'ONE_TIME';
 
   return {
@@ -57,8 +66,9 @@ export async function payerView(db: PrismaClient, payment: PayerPayment): Promis
     dueDate: payment.dueDate.toISOString(),
     status: payment.status,
     frequency: payment.frequency,
-    issuer: settings.companyName ?? null,
+    issuer: issuer.name,
     canPayOnline:
+      studio &&
       payable &&
       payment.collectionMethod === 'STRIPE' &&
       (!payment.stripeSubscriptionId || payment.status === 'PENDING'),
@@ -76,8 +86,6 @@ export async function payerView(db: PrismaClient, payment: PayerPayment): Promis
           paidOn: payment.declaredPaidOn?.toISOString() ?? null,
         }
       : null,
-    bank: studio && settings.iban
-      ? { bankName: settings.bankName, iban: settings.iban, bic: settings.bic }
-      : null,
+    bank: issuer.bank,
   };
 }

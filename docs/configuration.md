@@ -55,7 +55,7 @@ boot. Empty values count as unset.
 | Variable | Description |
 |---|---|
 | `NUAGE_URL`, `NUAGE_AUDIENCE` | Archive generated contract PDFs in the creating user's private Ardoise folder in Nuage (app folders, `PUT /api/app/object`). `NUAGE_AUDIENCE` is Nuage's Registre client id, and `NUAGE_URL` also needs `OIDC_ISSUER`. Ardoise refreshes the user's stored Registre session, exchanges it (RFC 8693, scope `nuage.write`) and uploads with the 5-minute token. A user who has not signed in since Ardoise began keeping SSO tokens is skipped and logged. Fire and forget: a Nuage failure is logged and never blocks document creation |
-| `PLUME_URL`, `PLUME_API_TOKEN`, `PLUME_WEBHOOK_SECRET` | Send contracts for signature. The secret (16+ characters) signs `POST /webhooks/plume` |
+| `PLUME_URL`, `PLUME_API_TOKEN`, `PLUME_WEBHOOK_SECRET` | Send contracts for signature. `PLUME_URL` is the Plume every space uses. The token and secret are the platform studio's own Plume account; other spaces connect their own account in the space settings (`BACKEND_URL` must be reachable from Plume, since Ardoise registers `{BACKEND_URL}/webhooks/plume` in that account). The secret (16+ characters) signs `POST /webhooks/plume` for studio documents |
 | `GLOUTON_URL` | Glouton base URL. Ardoise posts events to `{GLOUTON_URL}/api/integrations/ardoise/webhook` and links client pages to `{GLOUTON_URL}/app/contacts/companies/{id}` |
 | `GLOUTON_API_TOKEN` | Bearer token Glouton sends on `/api/integrations/glouton/*`. Same value as Glouton's `ARDOISE_API_TOKEN` |
 | `GLOUTON_WEBHOOK_SECRET` | 16+ characters. Signs outbound events in `X-Ardoise-Signature-256`. Same value as Glouton's `ARDOISE_WEBHOOK_SECRET` |

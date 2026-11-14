@@ -10,7 +10,8 @@ import { Prisma } from '@repo/database';
 import { cleanupTempFile, downloadStoredFileToTempPath } from '../settings/service';
 import { logger } from '@repo/logger';
 import { scopeWhere, requireRowScope, type Scope } from '../space/service';
-import { requirePlatformStudio } from '../space/studio';
+import { isPlatformStudio, requirePlatformStudio } from '../space/studio';
+import { paymentIssuer, reserveTenantEmail, tenantSender } from './tenant-mail';
 import { DEFAULT_VAT_EXEMPTION_MENTION, getSpaceSettings } from '../space/settings';
 import { syncMissionPaid } from '../mission/sync';
 import { isOverdue, startOfDueDay } from './overdue';
@@ -626,7 +627,8 @@ export const paymentService = {
       }),
       'Payment not found'
     );
-    await requirePlatformStudio(db, payment.spaceId);
+    const studio = await isPlatformStudio(db, payment.spaceId);
+    if (!studio && payment.collectionMethod !== 'MANUAL') await requirePlatformStudio(db, payment.spaceId);
 
     if (payment.status !== 'PENDING') {
       throw new TRPCError({
@@ -660,10 +662,14 @@ export const paymentService = {
       (new Date(payment.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     );
 
+    const sender = studio ? undefined : await tenantSender(db, (await paymentIssuer(db, payment)).name, userId);
+    if (!studio) await reserveTenantEmail(db, { spaceId: payment.spaceId, userId }, 'payment.reminder');
+
     try {
       const link = await issuePaymentLink(db, payment.id, env.FRONTEND_URL || appOrigin);
       const emailTemplates = new EmailTemplates(smtpClient);
       await emailTemplates.sendPaymentReminder({
+        sender,
         clientEmail,
         paymentLink: link.url,
         amount: Number(payment.amount),

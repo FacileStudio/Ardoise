@@ -1,0 +1,13 @@
+model OutboundEmail {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Text
+  spaceId   String   @db.Text
+  userId    String   @db.Text
+  kind      String   @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId, createdAt])
+  @@index([userId, createdAt])
+}
