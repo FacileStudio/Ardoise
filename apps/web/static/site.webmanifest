@@ -1,7 +1,7 @@
 {
   "name": "Ardoise",
   "short_name": "Ardoise",
-  "description": "Quotes that become invoices in one click, Stripe payments, automatic reminders and PDF receipts.",
+  "description": "Send quotes, turn them into compliant invoices and track every payment. The contract goes out for signature in Plume.",
   "icons": [
     {
       "src": "/icon-192.png",
