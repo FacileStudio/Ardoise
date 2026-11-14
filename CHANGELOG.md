@@ -14,6 +14,16 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-11-14
+
+### Fixed
+
+- fix(web): the link preview image, manifest and static head show the landing's pitch ("From quote to paid, without the paperwork.") instead of the old "Invoice, get paid, move on" with Stripe payments and automatic reminders. "Free to start." stays out while Ardoise is closed to new accounts.
+
+### Changed
+
+- build(web): muse v0.25.1. The shared pricing note renders once under the plans.
+
 ## [0.22.0] - 2026-11-14
 
 ### Added
