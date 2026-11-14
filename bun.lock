@@ -47,8 +47,8 @@
       "name": "@repo/web",
       "version": "0.0.0",
       "dependencies": {
-        "@facile/mise-en-scene": "github:FacileStudio/mise-en-scene#v0.2.1",
-        "@facile/muse": "github:FacileStudio/muse#v0.22.1",
+        "@facile/mise-en-scene": "github:FacileStudio/mise-en-scene#v0.2.2",
+        "@facile/muse": "github:FacileStudio/muse#v0.23.0",
         "@repo/admin": "workspace:*",
         "@repo/i18n": "workspace:*",
         "@repo/logger": "workspace:*",
@@ -428,9 +428,9 @@
 
     "@facile/magiclink": ["@facile/magiclink@github:FacileStudio/magiclink#76568b1", {}, "FacileStudio-magiclink-76568b1", "sha512-r0c7ShWiIo83HTkPBQemcdMKxokCxwk6LSV283u28eFLzcwB6aS5bv1mg5AOybODp3wdx2mY+Orpt5pAuM0xYg=="],
 
-    "@facile/mise-en-scene": ["@facile/mise-en-scene@github:FacileStudio/mise-en-scene#29d936d", { "peerDependencies": { "svelte": "^5.29.0" } }, "FacileStudio-mise-en-scene-29d936d", "sha512-ZWvqtesVLNlH4i+oEBHh/obcLTDhdK+JFtnQYnwxrfEERCG2F111AxzEJ9syJkp2NFztic+oz/o4Y6pSh/KCtA=="],
+    "@facile/mise-en-scene": ["@facile/mise-en-scene@github:FacileStudio/mise-en-scene#7050c6c", { "peerDependencies": { "svelte": "^5.29.0" } }, "FacileStudio-mise-en-scene-7050c6c", "sha512-qXj5cCxgAwYeck9aLtPqx38D3H2csCHA1xUySzpabHH18QGZyDLSLMj8HuXwMieASr3axBLF7V59lS6GvVtEpQ=="],
 
-    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#2c4a17e", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-2c4a17e", "sha512-bphgSE6YX8nt7VDzRj0g+4bTlb90lYzlOojjrm9ZvZnAMS3VbLoyMatiIFE4Veuvrendc+ehjg3IHTXMy4/1xw=="],
+    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#709a22d", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-709a22d", "sha512-YXi7YAF8R1qfUBmx3nWKfeKXo+utYj4dXmqA3IHdrX9Fvp49avnKZ5vTdfl51i1IbnBiy/SydMxzgUH2vo0drQ=="],
 
     "@hapi/bourne": ["@hapi/bourne@3.0.0", "", {}, "sha512-Waj1cwPXJDucOib4a3bAISsKJVb15MKi9IvmTI/7ssVEm6sywXGjVJDhl6/umt1pK1ZS7PacXU3A1PmFKHEZ2w=="],
 
