@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.22.4] - 2026-11-14
+
+### Fixed
+
+- test(trpc): the SSO token seal test asserted that random ciphertext did not contain the two-letter token "at", which base64 output can contain by chance. It now seals long distinctive tokens. No runtime change.
+
 ## [0.22.3] - 2026-11-14
 
 ### Fixed
