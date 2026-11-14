@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.22.3] - 2026-11-14
+
+### Fixed
+
+- While new accounts stay closed, the Pro and Studio buttons read "Voir les offres" (fr, en, es, de) like the free one, instead of "Choisir Pro" next to a link to the Suite plans. muse v0.26.0 `ctaLabel`; when `OPEN_TO_NEW_ACCOUNTS` flips, the labels go back to the defaults and every button opens `https://sso.facile.studio/signup?lang=<locale>`.
+
 ## [0.22.2] - 2026-11-14
 
 ### Fixed
