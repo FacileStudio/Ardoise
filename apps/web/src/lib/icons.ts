@@ -1,4 +1,28 @@
-import { icons } from '@facile/muse';
+import { icons, registerIcons } from '@facile/muse';
+import mdi from './icons/mdi.json';
+import solar from './icons/solar.json';
+
+type IconSet = {
+  prefix: string;
+  width?: number;
+  height?: number;
+  icons: Record<string, { body: string; width?: number; height?: number }>;
+};
+
+function flatten(set: IconSet) {
+  return Object.fromEntries(
+    Object.entries(set.icons).map(([name, icon]) => [
+      `${set.prefix}:${name}`,
+      {
+        body: icon.body,
+        width: icon.width ?? set.width ?? 24,
+        height: icon.height ?? set.height ?? 24,
+      },
+    ])
+  );
+}
+
+registerIcons({ ...flatten(solar), ...flatten(mdi) });
 
 export const ardoise = {
   brand: 'solar:bill-list-bold-duotone',
@@ -18,6 +42,10 @@ export const ardoise = {
   transfer: 'solar:transfer-horizontal-linear',
   more: 'solar:menu-dots-linear',
   tick: 'mdi:check',
+  numbering: 'solar:hashtag-linear',
+  plume: 'solar:pen-new-square-bold-duotone',
+  nuage: 'solar:cloud-bold-duotone',
+  glouton: 'solar:magnet-wave-bold-duotone',
 } as const;
 
 export { icons };

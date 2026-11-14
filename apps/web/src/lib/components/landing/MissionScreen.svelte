@@ -17,6 +17,7 @@
     compact: boolean;
     acceptButton?: HTMLElement;
     invoiceButton?: HTMLElement;
+    paidButton?: HTMLElement;
   }
 
   const QUOTE_NUMBER = ' · DEVIS-2026-014';
@@ -24,7 +25,13 @@
   const ORDER: Phase[] = ['quoted', 'accepted', 'invoiced', 'paid'];
   const TONES = { quoted: 'info', accepted: 'info', invoiced: 'warning', paid: 'success' } as const;
 
-  let { phase, compact, acceptButton = $bindable(), invoiceButton = $bindable() }: Props = $props();
+  let {
+    phase,
+    compact,
+    acceptButton = $bindable(),
+    invoiceButton = $bindable(),
+    paidButton = $bindable(),
+  }: Props = $props();
 
   const t = $derived($i18n.t);
   const reached = (step: Phase) => ORDER.indexOf(phase) >= ORDER.indexOf(step);
@@ -92,6 +99,10 @@
               <Badge tone={reached('paid') ? 'success' : 'warning'}>
                 <Roll value={t(`landing.demo.payment.${reached('paid') ? 'paid' : 'pending'}`)} />
               </Badge>
+              <span class="qd-paid" class:qd-gone={reached('paid')} bind:this={paidButton}>
+                <Button variant="ghost" size="sm" tabindex={-1}>{t('landing.demo.markPaid')}</Button
+                >
+              </span>
             </div>
             <div class="qd-vat">{t('landing.demo.vat')}</div>
           </div>
@@ -187,9 +198,11 @@
     gap: 4px;
   }
   .qd-row-title {
+    overflow: hidden;
     font-size: var(--text-fc-sm);
     font-weight: 700;
     white-space: nowrap;
+    text-overflow: ellipsis;
   }
   .qd-row-meta,
   .qd-vat {
@@ -198,11 +211,22 @@
   }
   .qd-pay {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 4px 8px;
     margin-top: 4px;
     font-size: var(--text-fc-xs);
     font-variant-numeric: tabular-nums;
+  }
+  .qd-pay > :global(*) {
+    flex-shrink: 0;
+  }
+  .qd-paid {
+    margin-left: auto;
+    transition: opacity 200ms ease;
+  }
+  .qd-gone {
+    opacity: 0;
   }
   .qd-empty {
     margin: 0;

@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import { fade } from 'svelte/transition';
   import { Bar, Cursor, Stage, Window, cursorAt, type Act } from '@facile/mise-en-scene';
+  import { Icon } from '@facile/muse';
   import { i18n } from '@repo/i18n/svelte';
   import { ardoise } from '$lib/icons';
   import MissionScreen, { AMOUNT, type Phase } from './MissionScreen.svelte';
@@ -18,6 +19,7 @@
   let cursor = $state(cursorAt());
   let acceptButton = $state<HTMLElement>();
   let invoiceButton = $state<HTMLElement>();
+  let paidButton = $state<HTMLElement>();
 
   const t = $derived($i18n.t);
 
@@ -46,10 +48,10 @@
     await press(act, acceptButton, 'accepted');
     await act.wait(700);
     await press(act, invoiceButton, 'invoiced');
-    await act.move(cursor, { x: cursor.x - 40, y: cursor.y + 150 }, 500);
+    await act.wait(900);
+    await press(act, paidButton, 'paid');
+    await act.move(cursor, { x: cursor.x + 60, y: cursor.y + 40 }, 400);
     cursor.visible = false;
-    await act.wait(1400);
-    phase = 'paid';
     await act.wait(2400);
     reset();
     await act.wait(600);
@@ -58,13 +60,13 @@
 
 {#snippet nav()}
   <div class="qd-brand">
-    <iconify-icon icon={ardoise.brand} width="20" height="20"></iconify-icon>
+    <Icon icon={ardoise.brand} size={20} />
     <span>Ardoise</span>
   </div>
   <div class="qd-nav">
     {#each NAV as item, i (i)}
       <div class="qd-nav-item" class:qd-nav-active={item.w === 0}>
-        <iconify-icon icon={item.icon} width="16" height="16"></iconify-icon>
+        <Icon icon={item.icon} size={16} />
         {#if item.w === 0}
           <span>{t('landing.demo.missions')}</span>
         {:else}
@@ -91,17 +93,16 @@
         : 'top:24px;left:56px;width:848px;height:470px'}
       sidebar={compact ? undefined : nav}
     >
-      <MissionScreen {phase} {compact} bind:acceptButton bind:invoiceButton />
+      <MissionScreen {phase} {compact} bind:acceptButton bind:invoiceButton bind:paidButton />
     </Window>
 
     {#if phase === 'paid'}
       <div
         class="qd-toast"
-        style={compact ? 'top:476px;left:40px' : 'top:470px;left:620px'}
+        style={compact ? 'top:132px;left:32px' : 'top:426px;left:600px'}
         transition:fade={{ duration: 250 }}
       >
-        <iconify-icon icon={ardoise.tick} width="18" height="18" class="qd-toast-icon"
-        ></iconify-icon>
+        <Icon icon={ardoise.tick} size={18} class="qd-toast-icon" />
         <span>{t('landing.demo.received')}</span>
         <span class="qd-toast-amount">{AMOUNT}</span>
       </div>
@@ -162,7 +163,7 @@
     color: var(--color-fc-fg-muted);
     font-weight: 400;
   }
-  .qd-toast-icon {
+  :global(.qd-toast-icon) {
     color: var(--color-fc-success);
   }
 </style>

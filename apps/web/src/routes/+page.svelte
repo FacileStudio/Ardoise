@@ -1,38 +1,91 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import authStore from '$lib/auth-store';
-  import { isMember } from '@repo/auth-shared';
   import { i18n } from '@repo/i18n/svelte';
-  import { Button, LandingFooter, LandingHeader, TextElevate } from '@facile/muse';
+  import {
+    Button,
+    FeatureSplit,
+    LANDING_HEADING,
+    LandingFooter,
+    LandingHeader,
+    PricingPlans,
+    TextElevate,
+    WorksWith,
+    type FeatureItem,
+    type WorksWithApp,
+  } from '@facile/muse';
   import { ardoise } from '$lib/icons';
   import { rememberLocale } from '$lib/locale';
   import QuoteToInvoiceDemo from '$lib/components/landing/QuoteToInvoiceDemo.svelte';
-  import 'iconify-icon';
+  import LandingCards from '$lib/components/landing/LandingCards.svelte';
+  import LandingActions, {
+    OPEN_TO_NEW_ACCOUNTS,
+    SUITE_PRICING,
+  } from '$lib/components/landing/LandingActions.svelte';
 
   const t = $derived($i18n.t);
-  const user = $derived($authStore.session ? $authStore.user : null);
-  const target = $derived(
-    user
-      ? isMember(user)
-        ? { href: resolve('/admin'), label: t('landing.hero.admin') }
-        : { href: resolve('/app'), label: t('landing.hero.portal') }
-      : { href: resolve('/login'), label: t('landing.hero.signIn') }
-  );
+  const signedIn = $derived(Boolean($authStore.session && $authStore.user));
 
-  const features = $derived([
-    { icon: ardoise.mission, key: 'missions' },
-    { icon: ardoise.invoice, key: 'invoice' },
-    { icon: ardoise.payment, key: 'payment' },
-    { icon: ardoise.client, key: 'portal' },
+  const features: FeatureItem[] = $derived([
+    {
+      icon: ardoise.mission,
+      title: t('landing.features.missions.title'),
+      text: t('landing.features.missions.body'),
+    },
+    {
+      icon: ardoise.payment,
+      title: t('landing.features.payments.title'),
+      text: t('landing.features.payments.body'),
+    },
+    {
+      icon: ardoise.pdf,
+      title: t('landing.features.pdf.title'),
+      text: t('landing.features.pdf.body'),
+    },
+    {
+      icon: ardoise.numbering,
+      title: t('landing.features.numbering.title'),
+      text: t('landing.features.numbering.body'),
+    },
+    {
+      icon: ardoise.client,
+      title: t('landing.features.clients.title'),
+      text: t('landing.features.clients.body'),
+    },
   ]);
 
-  const links = $derived([{ href: '#features', label: t('landing.nav.features') }]);
+  const apps: WorksWithApp[] = $derived([
+    {
+      name: 'Plume',
+      icon: ardoise.plume,
+      line: t('landing.with.plume'),
+      href: 'https://plume.facile.studio',
+    },
+    {
+      name: 'Nuage',
+      icon: ardoise.nuage,
+      line: t('landing.with.nuage'),
+      href: 'https://nuage.facile.studio',
+    },
+    {
+      name: 'Glouton',
+      icon: ardoise.glouton,
+      line: t('landing.with.glouton'),
+      href: 'https://glouton.facile.studio',
+    },
+  ]);
+
+  const links = $derived([
+    { href: '#features', label: t('landing.nav.features') },
+    { href: '#pricing', label: t('landing.nav.pricing') },
+  ]);
   const columns = $derived([
     {
       title: t('landing.footer.product'),
       links: [
         { href: '#features', label: t('landing.nav.features') },
-        { href: resolve('/login'), label: t('landing.hero.signIn') },
+        { href: '#pricing', label: t('landing.nav.pricing') },
+        { href: resolve('/login'), label: t('landing.footer.clients') },
       ],
     },
   ]);
@@ -46,7 +99,9 @@
 <div class="min-h-dvh overflow-x-clip bg-fc-page text-fc-fg">
   <LandingHeader appName="Ardoise" icon={ardoise.brand} {links} skipHref="#main">
     {#snippet actions()}
-      <Button href={target.href}>{target.label}</Button>
+      {#if !signedIn}
+        <Button href={resolve('/login')} variant="secondary">{t('landing.hero.signIn')}</Button>
+      {/if}
     {/snippet}
   </LandingHeader>
 
@@ -57,39 +112,58 @@
         <span class="block"><TextElevate text={t('landing.hero.line2')} delay={0.25} /></span>
       </h1>
       <p class="mx-auto mt-6 max-w-xl text-fc-md text-fc-fg-muted">{t('landing.hero.body')}</p>
-      <div class="mt-10 flex justify-center">
-        <Button href={target.href} size="lg" icon="solar:arrow-right-linear">{target.label}</Button>
+      <div class="mt-10">
+        <LandingActions />
       </div>
+      {#if !OPEN_TO_NEW_ACCOUNTS && !signedIn}
+        <p class="mt-4 text-fc-sm text-fc-fg-muted">{t('landing.hero.soon')}</p>
+      {/if}
     </section>
 
     <section class="mx-auto max-w-5xl px-4 pb-8 sm:px-6">
       <QuoteToInvoiceDemo />
     </section>
 
-    <section id="features" class="mx-auto max-w-5xl scroll-mt-20 px-4 py-12 sm:px-6">
-      <ul class="grid gap-4 sm:grid-cols-2">
-        {#each features as feature (feature.key)}
-          <li class="rounded-fc-lg bg-fc-component p-6">
-            <div class="mb-4 flex size-10 items-center justify-center rounded-fc-md bg-fc-surface">
-              <iconify-icon icon={feature.icon} width="20" height="20" class="block shrink-0"
-              ></iconify-icon>
-            </div>
-            <h2 class="text-fc-lg font-bold">{t(`landing.features.${feature.key}.title`)}</h2>
-            <p class="mt-1.5 text-fc-sm text-fc-fg-muted">
-              {t(`landing.features.${feature.key}.body`)}
-            </p>
-          </li>
-        {/each}
-      </ul>
-    </section>
+    <LandingCards />
+
+    <FeatureSplit
+      id="features"
+      class="mx-auto w-full max-w-5xl scroll-mt-20 px-4 py-12 sm:px-6"
+      title={t('landing.features.title')}
+      description={t('landing.features.line')}
+      {features}
+    />
+
+    <WorksWith
+      class="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6"
+      {apps}
+      description={t('landing.with.line')}
+    />
 
     <section class="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6">
       <h2 class="font-fc-title text-fc-2xl font-bold tracking-tight">{t('landing.cta.title')}</h2>
-      <p class="mt-4 text-fc-sm text-fc-fg-muted">{t('landing.cta.body')}</p>
-      <div class="mt-8 flex justify-center">
-        <Button href={target.href} size="lg">{target.label}</Button>
+      {#if !signedIn}
+        <p class="mt-4 text-fc-sm text-fc-fg-muted">
+          {OPEN_TO_NEW_ACCOUNTS ? t('landing.cta.open') : t('landing.cta.soon')}
+        </p>
+      {/if}
+      <div class="mt-8">
+        <LandingActions />
       </div>
+      <a href={resolve('/login')} class="mt-6 inline-block text-fc-sm text-fc-fg-muted underline">
+        {t('landing.cta.client')}
+      </a>
     </section>
+    <PricingPlans
+      id="pricing"
+      class="mx-auto w-full max-w-5xl scroll-mt-20 px-4 py-12 sm:px-6"
+      title={t('landing.pricing.title')}
+      headingClass={LANDING_HEADING}
+      highlightOnly
+      notes={{ '*': t(OPEN_TO_NEW_ACCOUNTS ? 'landing.pricing.note' : 'landing.pricing.soon') }}
+      recommended="pro"
+      suiteHref={SUITE_PRICING}
+    />
   </main>
 
   <LandingFooter
