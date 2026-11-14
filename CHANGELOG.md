@@ -14,6 +14,17 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-14
+
+### Added
+
+- feat(web): a mise-en-scene demo on the landing: a quote is accepted, becomes a full invoice, then the payment lands. The demo invoice carries "TVA non applicable, art. 293 B du CGI". It switches to a compact layout on phones.
+
+### Changed
+
+- feat(web): the signed-out landing uses muse `LandingHeader`, `LandingFooter` and `TextElevate`, four short feature blocks and one closing call to action. Its copy moved into the en and fr catalogs under `landing.*`. Signed-in visitors still get a button to `/admin` or `/app`.
+- build(web): muse v0.23.0 with the Magnetik fonts, and `@facile/mise-en-scene` v0.2.2.
+
 ## [0.20.9] - 2026-11-13
 
 ### Added
