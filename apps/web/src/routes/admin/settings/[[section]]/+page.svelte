@@ -26,6 +26,7 @@
   import { loadAuthConfig, type AuthConfig } from '$lib/auth-config';
   import ProfileSection from '$lib/components/settings/ProfileSection.svelte';
   import PreferencesPanel from '$lib/components/settings/PreferencesPanel.svelte';
+  import { SPACES_URL } from '$lib/user-menu.svelte';
   import { ImageUpload } from '$lib/ui';
   import { platformStaff } from '$lib/platform-staff.svelte';
 
@@ -262,7 +263,7 @@
       {#if id === 'profile'}
         <ProfileSection area="admin" />
       {:else if id === 'preferences'}
-        <PreferencesPanel />
+        <PreferencesPanel subscriptionHref={SPACES_URL} />
       {:else if id === 'advanced'}
         <SettingsSection
           title="Espaces"
