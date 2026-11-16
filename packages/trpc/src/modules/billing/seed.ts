@@ -10,7 +10,7 @@ interface SeedFeature {
   values: { solo: EntitlementValue; pro: EntitlementValue; studio: EntitlementValue };
 }
 
-/** The six suite features with the contract's Solo, Pro and Studio values. */
+/** The seven suite features with the contract's Solo, Pro and Studio values. */
 export const SEED_FEATURES: SeedFeature[] = [
   { key: 'nuage.storage_gb', app: 'nuage', kind: 'limit', unit: 'Go', description: 'Stockage Nuage', values: { solo: 5, pro: 100, studio: 500 } },
   { key: 'courrier.mailboxes', app: 'courrier', kind: 'limit', unit: 'boîtes', description: 'Boîtes mail Courrier', values: { solo: -1, pro: -1, studio: -1 } },
@@ -18,6 +18,7 @@ export const SEED_FEATURES: SeedFeature[] = [
   { key: 'echo.max_participants', app: 'echo', kind: 'limit', unit: 'participants', description: 'Participants par appel Écho', values: { solo: 4, pro: 25, studio: 100 } },
   { key: 'echo.recording', app: 'echo', kind: 'bool', unit: null, description: 'Enregistrement des appels Écho', values: { solo: false, pro: true, studio: true } },
   { key: 'glouton.access', app: 'glouton', kind: 'bool', unit: null, description: 'Accès à Glouton', values: { solo: false, pro: true, studio: true } },
+  { key: 'ai.monthly_budget_usd', app: 'bulle', kind: 'limit', unit: '$', description: 'Budget IA mensuel Bulle, 0 pour le défaut du serveur, -1 pour aucun plafond', values: { solo: 0, pro: 0, studio: 0 } },
 ];
 
 /** The three tiers, with their prices in cents (none for Solo). */
@@ -58,7 +59,7 @@ export interface SeedResult {
 }
 
 /**
- * Seeds the billing catalog: the six features with Solo defaults, Solo, Pro
+ * Seeds the billing catalog: the seven features with Solo defaults, Solo, Pro
  * and Studio as DRAFT version 1 with the contract values and prices, and the
  * comped owners on Studio. A comp grants nothing until it carries the
  * owner's Registre subject: `compSubs` (BILLING_SEED_COMP_SUBS) fills the
