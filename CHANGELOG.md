@@ -14,6 +14,12 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-11-16
+
+### Added
+
+- billing: the suite catalog declares `ai.monthly_budget_usd` (Bulle's monthly AI budget, 0 on every plan, meaning Bulle's own default), so Registre can grant operators an unlimited budget.
+
 ## [0.24.0] - 2026-11-16
 
 ### Added
