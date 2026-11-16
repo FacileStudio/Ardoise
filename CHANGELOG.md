@@ -14,6 +14,14 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-16
+
+### Added
+
+- Catalog (`/admin/catalogue`): each space keeps the services and products it sells, grouped by category and pack, with a default quantity, unit, list price and one-off or monthly billing. Items can be edited, archived (hidden from the picker, kept for history) or deleted.
+- Mission prestations can be added from the catalog in one pick. The line copies the item, stays editable, and remembers the item and its list price at pick time, so a negotiated price shows its gap (for example "prix négocié -10 %"). Deleting an item keeps the line's text and price. Issued quotes and invoices keep their own frozen lines.
+- Migration `20261116120000_catalog` (additive): the `CatalogItem` table (cascades with its space) and two nullable `Prestation` columns, `catalogItemId` (set null on delete) and `listUnitPrice`.
+
 ## [0.23.1] - 2026-11-16
 
 ### Security
