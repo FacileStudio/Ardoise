@@ -19,7 +19,8 @@ model Space {
   payments    Payment[]
   missions Mission[]
   providers   Provider[]
-  settings    SpaceSettings?
+  catalogItems CatalogItem[]
+  settings   SpaceSettings?
   counters    DocumentCounter[]
   outboundEmails OutboundEmail[]
 }

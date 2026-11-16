@@ -9,6 +9,7 @@ import { payLinkRouter } from './modules/payment/pay-router';
 import { settingsRouter } from './modules/settings/router';
 import { documentRouter } from './modules/document/router';
 import { providerRouter } from './modules/provider/router';
+import { catalogRouter } from './modules/catalog/router';
 import { spaceRouter } from './modules/space/router';
 import { missionRouter } from './modules/mission/router';
 import { magicLinkRouter } from './modules/magic-link/router';
@@ -28,6 +29,7 @@ export const appRouter = router({
   settings: settingsRouter,
   document: documentRouter,
   provider: providerRouter,
+  catalog: catalogRouter,
   space: spaceRouter,
   mission: missionRouter,
   magicLink: magicLinkRouter,

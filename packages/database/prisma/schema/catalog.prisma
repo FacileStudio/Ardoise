@@ -1,0 +1,29 @@
+enum CatalogBilling {
+  ONE_TIME
+  MONTHLY
+}
+
+model CatalogItem {
+  id String @id @default(cuid())
+
+  spaceId String
+  space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  category    String?
+  pack        String?
+  name        String
+  description String?
+  quantity    Decimal        @default(1) @db.Decimal(10, 2)
+  unit        String         @default("jour")
+  unitPrice   Decimal        @db.Decimal(10, 2)
+  billing     CatalogBilling @default(ONE_TIME)
+  active      Boolean        @default(true)
+  position    Int            @default(0)
+
+  prestations Prestation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([spaceId, active])
+}

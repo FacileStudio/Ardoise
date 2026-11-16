@@ -211,6 +211,7 @@ export const en = {
     missions: 'Missions',
     signatures: 'Signatures',
     providers: 'Providers',
+    catalog: 'Catalog',
     myInvoices: 'My invoices',
     allSpaces: 'All spaces',
     space: 'Space',

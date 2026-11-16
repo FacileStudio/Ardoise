@@ -72,6 +72,8 @@ export const PrestationLineSchema = z.object({
   unit: z.string().trim().min(1).max(30).default('jour'),
   unitPrice: z.number().nonnegative().max(10000000),
   providerId: z.string().min(1).nullable().optional(),
+  catalogItemId: z.string().min(1).nullable().optional(),
+  listUnitPrice: z.number().nonnegative().max(10000000).nullable().optional(),
 });
 
 export const SetPrestationsSchema = z.object({

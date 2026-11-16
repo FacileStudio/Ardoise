@@ -85,6 +85,10 @@ function setup(options: Setup = {}) {
       count: async () => 1,
     },
     space: { findUnique: async () => ({ platformStudio: true }) },
+    catalogItem: {
+      count: async ({ where }: any) =>
+        where.spaceId === 'space-a' ? where.id.in.filter((id: string) => id === 'cat-logo').length : 0,
+    },
     prestation: {
       deleteMany: async () => ({}),
       createMany: async (args: any) => {
@@ -172,6 +176,28 @@ describe('missionRouter.setPrestations', () => {
     await expect(caller.setPrestations({ id: 'm-1', prestations: [line] })).rejects.toThrow(
       'locked once the mission is fully invoiced'
     );
+  });
+
+  it('keeps the catalog link and list price when the price is negotiated', async () => {
+    const { caller, mission } = setup();
+
+    await caller.setPrestations({
+      id: 'm-1',
+      prestations: [{ ...line, unitPrice: 250, catalogItemId: 'cat-logo', listUnitPrice: 300 }, line],
+    });
+
+    expect((mission.prestations as any[]).map((p) => [p.unitPrice, p.catalogItemId, p.listUnitPrice])).toEqual([
+      [250, 'cat-logo', 300],
+      [300, null, null],
+    ]);
+  });
+
+  it("refuses a catalog item from another space", async () => {
+    const { caller } = setup();
+
+    await expect(
+      caller.setPrestations({ id: 'm-1', prestations: [{ ...line, catalogItemId: 'cat-elsewhere' }] })
+    ).rejects.toThrow("belong to the mission's space");
   });
 
   it('rejects a negative price', async () => {
