@@ -250,6 +250,16 @@ export const missionService = {
       });
     }
 
+    const catalogIds = [...new Set(lines.flatMap((line) => (line.catalogItemId ? [line.catalogItemId] : [])))];
+    const ownItems = await db.catalogItem.count({ where: { id: { in: catalogIds }, spaceId: mission.spaceId } });
+
+    if (ownItems !== catalogIds.length) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: "A prestation catalog item must belong to the mission's space",
+      });
+    }
+
     await db.$transaction([
       db.prestation.deleteMany({ where: { missionId: id } }),
       db.prestation.createMany({
@@ -261,6 +271,8 @@ export const missionService = {
           unit: line.unit,
           unitPrice: line.unitPrice,
           providerId: line.providerId ?? null,
+          catalogItemId: line.catalogItemId ?? null,
+          listUnitPrice: line.catalogItemId ? (line.listUnitPrice ?? null) : null,
         })),
       }),
     ]);

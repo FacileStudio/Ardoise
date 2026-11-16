@@ -73,9 +73,14 @@ model Prestation {
   providerId String?
   provider   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
+  catalogItemId String?
+  catalogItem   CatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  listUnitPrice Decimal?     @db.Decimal(10, 2)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([missionId])
   @@index([providerId])
+  @@index([catalogItemId])
 }

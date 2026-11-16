@@ -36,6 +36,7 @@
     { href: '/admin/clients', label: $i18n.t('nav.clients'), icon: ardoise.client },
     { href: '/admin/prestataires', label: $i18n.t('nav.providers'), icon: ardoise.provider },
     { href: '/admin/missions', label: $i18n.t('nav.missions'), icon: ardoise.mission },
+    { href: '/admin/catalogue', label: $i18n.t('nav.catalog'), icon: ardoise.catalog },
     { href: '/admin/documents', label: $i18n.t('nav.documents'), icon: ardoise.document },
     { href: '/admin/payments', label: $i18n.t('nav.payments'), icon: icons.card },
     ...(canSeeRevenue

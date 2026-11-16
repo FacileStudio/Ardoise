@@ -213,6 +213,7 @@ export const fr: EnTranslations = {
     missions: 'Missions',
     signatures: 'Signatures',
     providers: 'Prestataires',
+    catalog: 'Catalogue',
     myInvoices: 'Mes factures',
     allSpaces: 'Tous les espaces',
     space: 'Espace',

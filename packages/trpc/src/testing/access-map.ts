@@ -52,6 +52,7 @@ export const ACCESS: Record<string, Access> = {
      document.createPrestationDev document.previewPrestationFormation document.createPrestationFormation
      document.previewPrestationBtp document.createPrestationBtp
      provider.list provider.get provider.create provider.update provider.delete
+     catalog.list catalog.create catalog.update catalog.delete
      space.get space.update space.delete space.getMembers space.addMember space.removeMember
      space.updateMemberRole space.leave space.getSettings space.updateSettings space.connectPlume space.disconnectPlume
      mission.list mission.getById mission.create mission.update mission.setPrestations mission.generateQuote
@@ -86,6 +87,7 @@ export function inputFor(ids: Record<string, string | undefined>, path: string):
     document: ids.documentB,
     mission: ids.missionB,
     provider: ids.providerB,
+    catalog: ids.catalogItemB,
     space: ids.spaceB,
   };
   const line = { description: 'Line', quantity: 1, price: 100, unit_price: 100, unit: 'u', total: 100 };
@@ -165,6 +167,8 @@ export function inputFor(ids: Record<string, string | undefined>, path: string):
   };
   const overrides: Record<string, Record<string, unknown>> = {
     'provider.update': { id: ids.providerB, data: { iban: 'FR76-ATTACKER' } },
+    'catalog.create': { name: 'Logo', unitPrice: 300 },
+    'catalog.update': { id: ids.catalogItemB, data: { unitPrice: 1 } },
     'client.create': { createCredentials: false },
     'document.setSignature': { status: 'signed', signedAt: new Date('2026-01-02') },
     'space.update': { id: ids.spaceB, name: 'Space B' },

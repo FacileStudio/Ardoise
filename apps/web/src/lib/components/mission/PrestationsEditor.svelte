@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { trpc } from '$lib/trpc';
+	import { resolve } from '$app/paths';
 	import { runAction } from '$lib/mission-actions';
 	import { formatEuro } from '$lib/mission';
 	import { Button, Input, Section, Select, Tooltip } from '@facile/muse';
 	import { icons } from '$lib/icons';
+	import { priceGap, type CatalogItem } from '$lib/catalog';
+	import CatalogPicker from '$lib/components/catalog/CatalogPicker.svelte';
 
 	interface Props {
 		mission: any;
@@ -16,6 +19,8 @@
 		unit: string;
 		unitPrice: number | null;
 		providerId: string;
+		catalogItemId: string | null;
+		listUnitPrice: number | null;
 	}
 
 	let { mission, onChange }: Props = $props();
@@ -27,11 +32,12 @@
 			unit: p.unit,
 			unitPrice: Number(p.unitPrice),
 			providerId: p.providerId ?? '',
+			catalogItemId: p.catalogItemId ?? null,
+			listUnitPrice: p.listUnitPrice == null ? null : Number(p.listUnitPrice),
 		}));
 
 	let rows: Row[] = $state(fromMission());
 	let saving = $state(false);
-
 	const editable = $derived(mission.billing.canEditPrestations);
 	const providers = $derived(mission.providers.map((link: any) => link.provider));
 	const dirty = $derived(JSON.stringify(rows) !== JSON.stringify(fromMission()));
@@ -44,7 +50,27 @@
 	);
 
 	function addRow() {
-		rows.push({ description: '', quantity: 1, unit: 'jour', unitPrice: 0, providerId: '' });
+		rows.push({
+			description: '',
+			quantity: 1,
+			unit: 'jour',
+			unitPrice: 0,
+			providerId: '',
+			catalogItemId: null,
+			listUnitPrice: null,
+		});
+	}
+
+	function addFromCatalog(item: CatalogItem) {
+		rows.push({
+			description: item.name,
+			quantity: Number(item.quantity),
+			unit: item.unit,
+			unitPrice: Number(item.unitPrice),
+			providerId: '',
+			catalogItemId: item.id,
+			listUnitPrice: Number(item.unitPrice),
+		});
 	}
 
 	function removeRow(index: number) {
@@ -64,6 +90,8 @@
 						unit: r.unit || 'jour',
 						unitPrice: r.unitPrice as number,
 						providerId: r.providerId || null,
+						catalogItemId: r.catalogItemId,
+						listUnitPrice: r.listUnitPrice,
 					})),
 				}),
 			'Prestations enregistrées',
@@ -79,6 +107,7 @@
 <Section title="Prestations" card>
 	{#snippet actions()}
 		{#if editable}
+			<CatalogPicker spaceId={mission.spaceId} onPick={addFromCatalog} />
 			<Button variant="ghost" size="sm" icon={icons.plus} onclick={addRow}>
 				Ajouter une prestation
 			</Button>
@@ -154,6 +183,13 @@
 							/>
 						</Tooltip>
 					{/if}
+					{#if row.catalogItemId && row.listUnitPrice != null}
+						{@const gap = priceGap(row.unitPrice, row.listUnitPrice)}
+						<p class="col-span-full text-fc-xs text-fc-fg-muted">
+							Catalogue {formatEuro(row.listUnitPrice)} / {row.unit}{#if gap !== null}
+								· prix négocié {gap > 0 ? '+' : ''}{gap.toLocaleString('fr-FR')} %{/if}
+						</p>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -175,7 +211,9 @@
 		{/if}
 	{:else}
 		<p class="text-fc-sm text-fc-fg-muted">
-			Ajoutez les prestations de la mission : le devis et la facture se génèrent à partir d'elles.
+			Ajoutez les prestations de la mission, à la main ou depuis votre
+				<a href={resolve('/admin/catalogue')} class="text-fc-fg underline">catalogue</a> : le devis et la facture
+				se génèrent à partir d'elles.
 		</p>
 	{/if}
 </Section>

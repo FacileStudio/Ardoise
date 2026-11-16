@@ -104,6 +104,7 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
           documents: true,
           payments: true,
           providers: true,
+          catalogItems: true,
           settings: true,
           counters: true,
         },
@@ -185,6 +186,9 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
           missionId: mission.id,
         },
       });
+      const catalogItem = await prisma.catalogItem.create({
+        data: { spaceId: space.id, name: `Catalog ${key}`, unitPrice: 300, quantity: 10 },
+      });
       const payment = await prisma.payment.create({
         data: {
           clientId: row.id,
@@ -201,6 +205,7 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
       Object.assign(ids, {
         [`space${key}`]: space.id,
         [`provider${key}`]: provider.id,
+        [`catalogItem${key}`]: catalogItem.id,
         [`client${key}`]: row.id,
         [`mission${key}`]: mission.id,
         [`document${key}`]: document.id,
@@ -357,7 +362,7 @@ describe.skipIf(!enabled)('procedure access against Postgres', () => {
   it('never lets a member of space A read or change space B', async () => {
     resetSends();
     let before = await spaceB();
-    const secrets = [ids.clientB, ids.paymentB, ids.documentB, ids.missionB, ids.providerB, 'FR76-B', 'Client B'];
+    const secrets = [ids.clientB, ids.paymentB, ids.documentB, ids.missionB, ids.providerB, ids.catalogItemB, 'FR76-B', 'Client B'];
     const leaks: string[] = [];
     for (const path of paths('space-scoped')) {
       let output: unknown;
