@@ -161,7 +161,7 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
   beforeEach(reset);
 
   it('seeds idempotently; comps grant only the personal scope of their Registre subject', async () => {
-    expect(await seedBilling(prisma)).toEqual({ features: 6, plans: 3, versions: 3, comps: 4, subjects: 0 });
+    expect(await seedBilling(prisma)).toEqual({ features: 7, plans: 3, versions: 3, comps: 4, subjects: 0 });
     expect(await seedBilling(prisma, 'yann@facile.studio=sub_yann,broken')).toEqual({
       features: 0, plans: 0, versions: 0, comps: 0, subjects: 1,
     });
@@ -856,7 +856,7 @@ describe.skipIf(!enabled)('billing against Postgres', () => {
 
   it('answers CONFLICT, never a 500, when two drafts race; seeds safely from two boots at once', async () => {
     const seeds = await Promise.all([seedBilling(prisma), seedBilling(prisma), seedBilling(prisma)]);
-    expect(seeds.reduce((sum, r) => sum + r.features, 0)).toBe(6);
+    expect(seeds.reduce((sum, r) => sum + r.features, 0)).toBe(7);
     expect(await prisma.plan.count()).toBe(3);
     expect(await prisma.plan.count({ where: { isFree: true } })).toBe(1);
 
