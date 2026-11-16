@@ -14,6 +14,8 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-11-16
+
 ### Security
 
 - The web app serves its own pinned copy of the Vision tracker at `/vision-tracker.js` instead of loading a script from `vision.facile.studio`, so no other origin runs code in the signed-in session.
