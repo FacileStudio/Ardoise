@@ -14,6 +14,13 @@ deploys from the tag. A tag publishes the backend image to
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-11-16
+
+### Changed
+
+- The web app uses muse v0.32.0.
+- The user menu no longer holds the preferences block. Theme, language and the subscription link live on the settings page.
+
 ## [0.24.1] - 2026-11-16
 
 ### Added
